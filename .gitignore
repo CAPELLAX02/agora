@@ -1,0 +1,13 @@
+# İşletim sistemi
+.DS_Store
+Thumbs.db
+
+# Editör / IDE
+.idea/
+.vscode/
+*.swp
+
+# Ortam değişkenleri
+.env
+.env.*
+!.env.example
