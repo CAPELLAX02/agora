@@ -215,6 +215,7 @@ stateDiagram-v2
 | `enrollments` | id, student_program_id FK, section_id FK, term_id, course_id (denormalize), registration_item_id, attempt_no smallint, is_repeat, attendance_status CK(`CONTINUING, ATTENDANCE_FAIL`), weighted_score numeric(5,2), letter_grade text, grade_points numeric(3,2), ects_snapshot numeric(4,1), credit_snapshot numeric(4,1), counts_in_gpa bool, superseded_by_id FK→enrollments, status CK(`ENROLLED, DROPPED, COMPLETED`), grade_published_at, created_at, version | UQ(student_program_id, section_id). Index(student_program_id, course_id). **Tekrar alınan derste** eski kaydın `counts_in_gpa=false`, `superseded_by_id`=yeni kayıt ("son not geçerli") |
 | `transfer_credits` | id, student_program_id, course_id (yerel karşılık), source_type CK(`TRANSFER, EXEMPTION, MOOC`), source_institution, source_course_name, letter_grade, ects, credited_term_id, decision_ref, decided_by, decided_at | Muafiyet/intibak, edX/Coursera |
 | `term_results` | id, student_program_id, term_id, attempted_ects, earned_ects, term_gpa (YANO), cumulative_ects, cumulative_gpa (GANO), standing CK(`NORMAL, HONOR, HIGH_HONOR`), computed_at | UQ(student_program_id, term_id). Not ilanında olayla yeniden hesaplanır |
+| `risk_scores` | student_program_id, term_id, score smallint CK(0–100), level CK(`LOW, MEDIUM, HIGH`), signals jsonb, computed_at — PK(student_program_id, term_id) | DW'deki gece işi hesaplar ve buraya geri yazar. Sadece danışman ve fakülte kapsamı okur ([05 · OLAP §8](05-analitik-olap.md)) |
 
 ---
 
