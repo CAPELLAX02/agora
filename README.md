@@ -2,7 +2,7 @@
 
 Ankara Üniversitesi'nin Öğrenci Bilgi Sistemi (OBS) ve e-Kampüs sistemlerini tek bir modern, bütünleşik ve güvenli platformda birleştiren bitirme projesi.
 
-> Proje detayları, mimari ve yol haritası ileride buraya eklenecektir.
+> Analiz, mimari ve yol haritası dokümanları için: [`docs/`](docs/README.md)
 
 ## Monorepo Yapısı
 
