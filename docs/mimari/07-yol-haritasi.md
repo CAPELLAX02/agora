@@ -1,6 +1,6 @@
 # 07 · Yol Haritası ve Geliştirme Sırası
 
-> **Durum:** Taslak v0.1 · Karar bekleyen konular §5'te.
+> **Durum:** Taslak v0.2 · Kararlar §5'te.
 
 ## 1. Kritik Karar: Önce Backend mi, Frontend mi?
 
@@ -124,16 +124,16 @@ flowchart LR
 - `backend/` altına sadece sen yazarsın. Ben backend kodunu chat'te gösteririm ve istersen code review yaparım.
 - Her dilim sonunda doküman ve sözleşme güncellenir.
 
-## 5. Senin Kararını Bekleyen Konular
+## 5. Kararlar (2026-10-05)
 
-| # | Soru | Önerim |
+| # | Konu | Karar |
 | --- | --- | --- |
-| 1 | Geliştirme sırası: A, B ya da C? | **C** |
-| 2 | OpenAPI sözleşmesini kim yazsın? (taslak ben + inceleme sen / tamamen sen) | Taslak ben, karar sen |
-| 3 | Ortak paketler (`packages/api-types`, `packages/i18n`) + pnpm workspaces eklensin mi? | Evet (mobil fazında değer kazanır) |
-| 4 | Migration aracı: goose / golang-migrate / kendi migrator'ımız? | goose (düz SQL, Go API'si de var) |
-| 5 | JWT: elle (stdlib Ed25519) mi, kütüphane mi? | Elle + kapsamlı testler (öğrenme değeri yüksek) |
-| 6 | SQL: elle pgx mi, sqlc (koddan üretim) mi? | Önce elle pgx. sqlc'yi Faz 9'da karşılaştırma olarak deneyebiliriz |
-| 7 | Kapsama ek kampüs yaşamı özellikleri (yemekhane menüsü, ring saatleri, etkinlik/kulüp) "Agora" adına uygun P2 olarak eklensin mi? | Opsiyonel P2 |
-| 8 | Bitirme projesi teslim takvimi (ara rapor, final, sunum tarihleri) nedir? | Takvimi buna göre sabitleyelim |
-| 9 | Seed'de Bilgisayar Mühendisliği'nin gerçek (halka açık) ders planını kullanalım mı? | Evet |
+| 1 | Geliştirme sırası | **C — sözleşme önce, dikey dilimler**. Başlangıçta Go temelleri ağırdan alınır, backend temeli önce atılır |
+| 2 | OpenAPI sözleşmesi | Taslak Claude, inceleme ve son karar Ahmet |
+| 3 | Ortak paketler (`packages/api-types`, `packages/i18n`) | Evet, pnpm workspaces ile (ihtiyaç doğduğunda) |
+| 4 | Migration aracı | goose (düz SQL) |
+| 5 | JWT | Stdlib Ed25519 ile elle + kapsamlı testler |
+| 6 | SQL erişimi | Elle yazılmış SQL + pgx. sqlc Faz 9'da karşılaştırma olarak denenebilir |
+| 7 | Kampüs yaşamı özellikleri | Opsiyonel P2 |
+| 8 | Teslim takvimi | **Açık**. Tarihler öğrenilince fazlar sabitlenecek |
+| 9 | Seed müfredatı | Bilgisayar Mühendisliği'nin halka açık gerçek ders planı kullanılacak |
