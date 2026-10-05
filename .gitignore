@@ -11,3 +11,9 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# Go
+backend/bin/
+*.test
+*.out
+coverage.html
