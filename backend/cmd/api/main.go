@@ -3,12 +3,24 @@ package main
 import (
 	"log"
 	"net/http"
+	"time"
 )
 
-func main()  {
-	mux := http.NewServeMux()
+const version = "0.1.0"
 
-	mux.HandleFunc("GET /healthz", healthz)
+type application struct {
+	version   string
+	startedAt time.Time
+}
+
+func main() {
+	app := &application{
+		version:   version,
+		startedAt: time.Now(),
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /healthz", app.healthz)
 
 	addr := ":8080"
 	log.Printf("Agora API %s adresinde dinliyor.", addr)
@@ -16,10 +28,4 @@ func main()  {
 	if err := http.ListenAndServe(addr, mux); err != nil {
 		log.Fatal(err)
 	}
-}
-
-func healthz(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status":"ok"}`))
 }
