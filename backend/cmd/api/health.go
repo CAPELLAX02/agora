@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"net/http"
 	"time"
 
@@ -22,6 +21,6 @@ func (app *application) healthz(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := httpx.WriteJSON(w, http.StatusOK, res); err != nil {
-		log.Printf("Healthz: %v", err)
+		app.logger.Error("healthz yanıtı yazılamadı", "err", err)
 	}
 }
