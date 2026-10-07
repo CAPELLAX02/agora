@@ -10,7 +10,10 @@ services:
       POSTGRES_USER: agora
       POSTGRES_PASSWORD: agora_dev_password
       POSTGRES_DB: agora
-      TZ: Europe/Istanbul
+      # Sunucu UTC'de çalışır. timestamptz değerleri zaten mutlak zamandır,
+      # Europe/Istanbul dönüşümü sadece görüntüleme katmanında yapılır.
+      PGTZ: UTC
+      TZ: UTC
     ports:
       - "5432:5432"
     volumes:
