@@ -12,7 +12,9 @@ import (
 	"time"
 
 	"github.com/CAPELLAX02/agora/backend/internal/platform/config"
+	"github.com/CAPELLAX02/agora/backend/internal/platform/db"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/logging"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const version = "0.1.0"
@@ -20,6 +22,8 @@ const version = "0.1.0"
 type application struct {
 	cfg       config.Config
 	logger    *slog.Logger
+	db        *pgxpool.Pool
+	checks    map[string]pinger
 	version   string
 	startedAt time.Time
 }
@@ -38,20 +42,37 @@ func run() error {
 	}
 
 	logger := logging.New(os.Stdout, cfg.Env, cfg.LogLevel)
-	logger.Debug("yapılandırma yüklendi",
-		"read_timeout", cfg.ReadTimeout,
-		"write_timeout", cfg.WriteTimeout,
-		"idle_timeout", cfg.IdleTimeout,
-		"shutdown_timeout", cfg.ShutdownTimeout)
+	logger.Debug("yapılandırma yüklendi", "config", cfg)
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	pool, err := db.Open(
+		ctx,
+		db.Options{
+			URL:             cfg.DatabaseURL,
+			MaxConns:        int32(cfg.DBMaxConns),
+			MinConns:        int32(cfg.DBMinConns),
+			MaxConnLifetime: cfg.DBMaxConnLifetime,
+			MaxConnIdleTime: cfg.DBMaxConnIdleTime,
+		},
+	)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+	logger.Info("veritabanı bağlantı havuzu hazır", "max_conns", cfg.DBMaxConns)
 
 	app := &application{
 		cfg:       cfg,
 		logger:    logger,
+		db:        pool,
+		checks:    map[string]pinger{"postgres": pool},
 		version:   version,
 		startedAt: time.Now(),
 	}
 
-	srv := &http.Server{
+	server := &http.Server{
 		Addr:              cfg.HTTPAddr,
 		Handler:           app.routes(),
 		ReadHeaderTimeout: cfg.ReadTimeout,
@@ -61,16 +82,13 @@ func run() error {
 		ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelError),
 	}
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
 	serverErr := make(chan error, 1)
 
 	go func() {
 		logger.Info("HTTP sunucusu başlatılıyor",
 			"addr", cfg.HTTPAddr, "env", cfg.Env, "version", version)
 
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			serverErr <- err
 		}
 	}()
@@ -86,7 +104,7 @@ func run() error {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 	defer cancel()
 
-	if err := srv.Shutdown(shutdownCtx); err != nil {
+	if err := server.Shutdown(shutdownCtx); err != nil {
 		return fmt.Errorf("graceful shutdown: %w", err)
 	}
 

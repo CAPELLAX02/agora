@@ -10,6 +10,7 @@ func (app *application) routes() http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /healthz", app.healthz)
+	mux.HandleFunc("GET /readyz", app.readyz)
 
 	return httpx.Chain(
 		httpx.WithProblemFallback(mux),

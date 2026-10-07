@@ -1,11 +1,15 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -55,6 +59,7 @@ func TestRoutes(t *testing.T) {
 		wantStatus int
 	}{
 		{http.MethodGet, "/healthz", http.StatusOK},
+		{http.MethodGet, "/readyz", http.StatusOK},
 		{http.MethodPost, "/healthz", http.StatusMethodNotAllowed},
 		{http.MethodGet, "/olmayan-yol", http.StatusNotFound},
 	}
@@ -77,6 +82,70 @@ func TestRoutes(t *testing.T) {
 			}
 			if resp.Header.Get("X-Request-Id") == "" {
 				t.Error("yanıtta X-Request-Id başlığı yok")
+			}
+		})
+	}
+}
+
+// fakePinger, testlerde gerçek bir veritabanı yerine kullanılan sahte bağımlılıktır.
+type fakePinger struct {
+	err error
+}
+
+func (f fakePinger) Ping(ctx context.Context) error {
+	return f.err
+}
+
+func TestReadyz(t *testing.T) {
+	tests := []struct {
+		name       string
+		checks     map[string]pinger
+		wantStatus int
+		want       readinessResponse
+	}{
+		{
+			name:       "tüm bağımlılıklar hazır",
+			checks:     map[string]pinger{"postgres": fakePinger{}},
+			wantStatus: http.StatusOK,
+			want:       readinessResponse{Status: "ready", Checks: map[string]string{"postgres": "ok"}},
+		},
+		{
+			name: "bir bağımlılık yanıt vermiyor",
+			checks: map[string]pinger{
+				"postgres": fakePinger{err: errors.New("bağlantı reddedildi")},
+				"redis":    fakePinger{},
+			},
+			wantStatus: http.StatusServiceUnavailable,
+			want: readinessResponse{
+				Status: "not_ready",
+				Checks: map[string]string{"postgres": "unavailable", "redis": "ok"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			app := &application{
+				logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+				checks: tt.checks,
+			}
+
+			rec := httptest.NewRecorder()
+			app.readyz(rec, httptest.NewRequest(http.MethodGet, "/readyz", nil))
+
+			if rec.Code != tt.wantStatus {
+				t.Errorf("durum = %d, want %d", rec.Code, tt.wantStatus)
+			}
+
+			var got readinessResponse
+			if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+				t.Fatalf("gövde çözülemedi: %v\n%s", err, rec.Body.String())
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("readyz = %+v, want %+v", got, tt.want)
+			}
+			if strings.Contains(rec.Body.String(), "reddedildi") {
+				t.Error("hata ayrıntısı istemciye sızdı")
 			}
 		})
 	}
