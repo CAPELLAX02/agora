@@ -80,7 +80,7 @@ func run() error {
 		return fmt.Errorf("http sunucusu: %w", err)
 	case <-ctx.Done():
 		logger.Info("kapanma sinyali alındı, devam eden istekler tamamlanıyor",
-			"timeout", cfg.ShutdownTimeout)
+			"timeout", cfg.ShutdownTimeout.String())
 	}
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)

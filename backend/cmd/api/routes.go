@@ -1,11 +1,20 @@
 package main
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/CAPELLAX02/agora/backend/internal/platform/httpx"
+)
 
 func (app *application) routes() http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /healthz", app.healthz)
 
-	return mux
+	return httpx.Chain(
+		httpx.WithProblemFallback(mux),
+		httpx.RequestID,
+		httpx.AccessLog(app.logger),
+		httpx.Recover(app.logger),
+	)
 }
