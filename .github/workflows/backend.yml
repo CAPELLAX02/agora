@@ -1,0 +1,68 @@
+# Backend CI: her push ve pull request'te biçim, statik analiz, güvenlik açığı
+# taraması ve tüm testler (gerçek PostgreSQL ile entegrasyon testleri dahil).
+name: backend
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  check:
+    name: biçim, analiz, test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: Biçim (gofmt)
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "Biçimlendirilmesi gereken dosyalar:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: go.mod düzenli mi (go mod tidy)
+        run: go mod tidy -diff
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: staticcheck
+        run: go run honnef.co/go/tools/cmd/staticcheck@v0.8.1 ./...
+
+      - name: govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
+
+      # testcontainers, GitHub'ın Ubuntu makinesindeki Docker'ı kullanarak her
+      # entegrasyon testi için geçici bir PostgreSQL 18 başlatır.
+      - name: Testler (race dedektörü + entegrasyon)
+        run: go test -race -count=1 -coverprofile=coverage.out ./...
+
+      - name: Kapsama özeti
+        run: go tool cover -func=coverage.out | tail -1

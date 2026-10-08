@@ -4,7 +4,9 @@
 # tüm komutlara ortam değişkeni olarak aktarılır.
 
 BACKEND := backend
-GOOSE   := github.com/pressly/goose/v3/cmd/goose@v3.28.0
+GOOSE       := github.com/pressly/goose/v3/cmd/goose@v3.28.0
+STATICCHECK := honnef.co/go/tools/cmd/staticcheck@v0.8.1
+GOVULNCHECK := golang.org/x/vuln/cmd/govulncheck@v1.8.0
 
 -include .env
 export
@@ -12,7 +14,7 @@ export
 .DEFAULT_GOAL := help
 
 .PHONY: help up down ps logs psql api migrate-up migrate-down migrate-status migration seed \
-        test test-unit cover vet fmt check
+        test test-unit cover vet lint vuln fmt check
 
 help: ## Komutları listeler
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -76,10 +78,19 @@ cover: ## Test kapsama raporunu tarayıcıda açar
 vet: ## go vet çalıştırır
 	go -C $(BACKEND) vet ./...
 
+lint: ## staticcheck ile statik analiz yapar
+	go -C $(BACKEND) run $(STATICCHECK) ./...
+
+vuln: ## Bağımlılıklardaki bilinen güvenlik açıklarını tarar (govulncheck)
+	go -C $(BACKEND) run $(GOVULNCHECK) ./...
+
 fmt: ## Tüm Go dosyalarını biçimlendirir
 	gofmt -w $(BACKEND)
 
-check: ## CI ile aynı kontroller: biçim, vet, test
+check: ## CI ile aynı kontroller: biçim, go.mod, vet, staticcheck, güvenlik, test
 	@test -z "$$(gofmt -l $(BACKEND))" || (echo "biçimlendirilmesi gereken dosyalar:"; gofmt -l $(BACKEND); exit 1)
+	go -C $(BACKEND) mod tidy -diff
 	go -C $(BACKEND) vet ./...
+	go -C $(BACKEND) run $(STATICCHECK) ./...
+	go -C $(BACKEND) run $(GOVULNCHECK) ./...
 	go -C $(BACKEND) test -race ./...
