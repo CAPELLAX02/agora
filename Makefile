@@ -4,6 +4,10 @@
 # tüm komutlara ortam değişkeni olarak aktarılır.
 
 BACKEND := backend
+WEB     := web
+# pnpm, corepack ile web/package.json'daki "packageManager" sürümüyle çalışır: ayrıca kurulmaz.
+# corepack sürümü çalışma dizinindeki package.json'dan okur, bu yüzden önce web/'e geçilir.
+PNPM    := cd $(WEB) && COREPACK_ENABLE_DOWNLOAD_PROMPT=0 corepack pnpm
 GOOSE       := github.com/pressly/goose/v3/cmd/goose@v3.28.0
 STATICCHECK := honnef.co/go/tools/cmd/staticcheck@v0.8.1
 GOVULNCHECK := golang.org/x/vuln/cmd/govulncheck@v1.8.0
@@ -15,7 +19,8 @@ export
 .DEFAULT_GOAL := help
 
 .PHONY: help up down ps logs psql redis api worker migrate-up migrate-down migrate-status migration seed seed-synthetic \
-        test test-unit cover vet lint vuln fmt contract-lint check
+        test test-unit cover vet lint vuln fmt contract-lint check \
+        web-install web-dev web-codegen web-check
 
 help: ## Komutları listeler
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -108,3 +113,17 @@ check: ## CI ile aynı kontroller: biçim, go.mod, vet, staticcheck, güvenlik, 
 	go -C $(BACKEND) run $(STATICCHECK) ./...
 	go -C $(BACKEND) run $(GOVULNCHECK) ./...
 	go -C $(BACKEND) test -race ./...
+
+# --- Web ---------------------------------------------------------------------
+
+web-install: ## Web bağımlılıklarını kurar (lockfile'a birebir uyar)
+	$(PNPM) install --frozen-lockfile
+
+web-dev: ## Web geliştirme sunucusu: http://localhost:5173 (API isteklerini :8080'e aktarır)
+	$(PNPM) dev
+
+web-codegen: ## OpenAPI sözleşmesinden RTK Query istemcisini üretir
+	$(PNPM) codegen
+
+web-check: ## Web: biçim, lint, tip kontrolü, test ve build (CI ile aynı)
+	$(PNPM) check
