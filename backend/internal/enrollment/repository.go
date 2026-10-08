@@ -113,7 +113,12 @@ func (r *Repository) ListStudentPrograms(ctx context.Context, f StudentFilter) (
 		w.Add("sp.class_level = $1", f.ClassLevel)
 	}
 	if f.Query != "" {
-		w.Add("(s.student_no ILIKE $1 OR (pe.first_name || ' ' || pe.last_name) ILIKE $1)", "%"+f.Query+"%")
+		// Her dal kendi trigram index'ini kullanır (00014). Bkz. iam.ListUsers.
+		w.Add(`s.id IN (
+			SELECT id FROM people.students WHERE student_no ILIKE $1
+			UNION
+			SELECT s2.id FROM people.persons p2 JOIN people.students s2 ON s2.person_id = p2.id
+			WHERE (p2.first_name || ' ' || p2.last_name) ILIKE $1)`, "%"+f.Query+"%")
 	}
 	if f.After != nil {
 		w.Add("(s.student_no, sp.id) > ($1, $2::uuid)", f.After.StudentNo, f.After.ID)

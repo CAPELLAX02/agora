@@ -1,21 +1,30 @@
-// Komut seed, geliştirme ortamı için örnek kullanıcılar oluşturur.
+// Komut seed, geliştirme ortamı için veri oluşturur.
 //
-// Organizasyon verisi (fakülte, bölüm) SQL seed'inden gelir, bu yüzden önce
-// "make seed" ile o yüklenmiş olmalıdır. Komut tekrar çalıştırılabilir: var olan
-// kullanıcılar atlanır. Production ortamında çalışmayı reddeder.
+// Varsayılan olarak tanıdık rollere sahip birkaç demo kullanıcısı oluşturur, demo
+// öğrencilerini programa kaydeder ve danışman atar. -synthetic ile ayrıca ~92 bin
+// öğrenci ve ~10 bin akademisyenden oluşan gerçekçi bir veri seti üretir (yük
+// testleri ve demo için).
+//
+// Organizasyon verisi (fakülte, bölüm, program) SQL seed'lerinden gelir, bu yüzden
+// önce "make seed" ile onlar yüklenmiş olmalıdır. Komut tekrar çalıştırılabilir: var
+// olan kayıtlar atlanır. Production ortamında çalışmayı reddeder.
 package main
 
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"os"
 	"os/signal"
 	"runtime"
 	"syscall"
+	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/CAPELLAX02/agora/backend/internal/enrollment"
 	"github.com/CAPELLAX02/agora/backend/internal/iam"
 	"github.com/CAPELLAX02/agora/backend/internal/iam/password"
 	"github.com/CAPELLAX02/agora/backend/internal/people"
@@ -96,6 +105,12 @@ func main() {
 }
 
 func run() error {
+	synthetic := flag.Bool("synthetic", false, "demo kullanıcılarına ek olarak büyük sentetik veri seti üret")
+	students := flag.Int("students", 92000, "sentetik öğrenci sayısı")
+	academics := flag.Int("academics", 10000, "sentetik akademisyen sayısı")
+	seed := flag.Uint64("seed", 20261008, "rastgele üretecin tohumu: aynı tohum aynı veriyi üretir")
+	flag.Parse()
+
 	cfg, err := config.Load()
 	if err != nil {
 		return err
@@ -153,7 +168,60 @@ func run() error {
 		fmt.Printf("OLUŞTURULDU %-9s %s %s %v\n", u.username, u.firstName, u.lastName, roleCodes(u.roles))
 	}
 
+	if err := enrollDemoStudents(ctx, pool); err != nil {
+		return err
+	}
+
+	if *synthetic {
+		hash, err := hasher.Hash(ctx, plain)
+		if err != nil {
+			return err
+		}
+		if err := runSynthetic(ctx, pool, syntheticConfig{Students: *students, Academics: *academics, Seed: *seed}, hash); err != nil {
+			return fmt.Errorf("sentetik veri: %w", err)
+		}
+	}
+
 	fmt.Printf("\nTüm seed kullanıcılarının parolası: %s\n", plain)
+	return nil
+}
+
+// enrollDemoStudents, demo öğrencilerini Bilgisayar Mühendisliği programına kaydeder
+// ve P10001'i (bölüm danışmanı) danışmanları olarak atar. Kayıtlıysa atlar.
+func enrollDemoStudents(ctx context.Context, pool *pgxpool.Pool) error {
+	svc := enrollment.NewService(pool)
+
+	var programID, advisorStaffID string
+	if err := pool.QueryRow(ctx, `SELECT id FROM org.programs WHERE code = 'BIL-EN-NO'`).Scan(&programID); err != nil {
+		return fmt.Errorf("BIL-EN-NO programı bulunamadı (önce SQL seed'leri yükleyin): %w", err)
+	}
+	if err := pool.QueryRow(ctx, `SELECT id FROM people.staff WHERE staff_no = 'P10001'`).Scan(&advisorStaffID); err != nil {
+		return fmt.Errorf("P10001 bulunamadı: %w", err)
+	}
+
+	for _, no := range []string{"22290001", "22290002"} {
+		var studentID string
+		if err := pool.QueryRow(ctx, `SELECT id FROM people.students WHERE student_no = $1`, no).Scan(&studentID); err != nil {
+			return fmt.Errorf("%s bulunamadı: %w", no, err)
+		}
+		spID, err := svc.CreateStudentProgram(ctx, "", enrollment.NewStudentProgram{
+			StudentID: studentID, ProgramID: programID, Kind: enrollment.KindMajor,
+			AdmissionType: enrollment.AdmissionOSYS, AdmissionYear: 2022,
+			AdmittedOn: time.Date(2022, time.September, 19, 0, 0, 0, 0, time.UTC),
+			Status:     enrollment.StatusActive, ClassLevel: 4,
+		})
+		if errors.Is(err, enrollment.ErrConflict) {
+			fmt.Printf("ATLANDI    %-9s zaten BIL-EN-NO programında\n", no)
+			continue
+		}
+		if err != nil {
+			return fmt.Errorf("%s programa kaydedilemedi: %w", no, err)
+		}
+		if err := svc.AssignAdvisor(ctx, "", spID, advisorStaffID, "Demo danışmanı"); err != nil {
+			return fmt.Errorf("%s danışman atanamadı: %w", no, err)
+		}
+		fmt.Printf("KAYDEDİLDİ %-9s BIL-EN-NO, danışman P10001\n", no)
+	}
 	return nil
 }
 

@@ -256,8 +256,13 @@ type UserFilter struct {
 func (r *Repository) ListUsers(ctx context.Context, f UserFilter) (users []UserSummary, hasMore bool, err error) {
 	var w db.Where
 	if f.Query != "" {
-		w.Add(`(u.username ILIKE $1 OR u.email ILIKE $1 OR (pe.first_name || ' ' || pe.last_name) ILIKE $1)`,
-			"%"+f.Query+"%")
+		// Her dal kendi trigram index'ini kullanır (00014). Tek bir OR koşulu iki tabloya
+		// yayıldığı için planlayıcı onu index'le çözemez ve bütün tabloyu tarardı.
+		w.Add(`u.id IN (
+			SELECT id FROM iam.users WHERE username::text ILIKE $1 OR email::text ILIKE $1
+			UNION
+			SELECT u2.id FROM people.persons p2 JOIN iam.users u2 ON u2.person_id = p2.id
+			WHERE (p2.first_name || ' ' || p2.last_name) ILIKE $1)`, "%"+f.Query+"%")
 	}
 	if f.Status != "" {
 		w.Add("u.status = $1", string(f.Status))

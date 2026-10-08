@@ -14,7 +14,7 @@ export
 
 .DEFAULT_GOAL := help
 
-.PHONY: help up down ps logs psql redis api worker migrate-up migrate-down migrate-status migration seed \
+.PHONY: help up down ps logs psql redis api worker migrate-up migrate-down migrate-status migration seed seed-synthetic \
         test test-unit cover vet lint vuln fmt contract-lint check
 
 help: ## Komutları listeler
@@ -70,6 +70,9 @@ seed: ## Geliştirme seed verisini yükler: organizasyon (SQL) + kullanıcılar 
 		docker compose exec -T postgres psql -q -v ON_ERROR_STOP=1 -U agora -d agora < $$f || exit 1; \
 	done
 	go -C $(BACKEND) run ./cmd/seed
+
+seed-synthetic: seed ## Ek olarak ~92 bin öğrenci ve ~10 bin akademisyen üretir (yük testi ve demo için, ~10 sn)
+	go -C $(BACKEND) run ./cmd/seed -synthetic
 
 # --- Kalite ------------------------------------------------------------------
 
