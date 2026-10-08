@@ -88,7 +88,6 @@ func (h *Handler) Register(rt *authz.Router, limits Limits) {
 	rt.HandleFunc("DELETE /api/v1/me/sessions/{id}", authz.SelfService, h.endSession)
 	rt.HandleFunc("DELETE /api/v1/me/sessions", authz.SelfService, h.endOtherSessions)
 
-	rt.HandleFunc("GET /api/v1/users/{id}", authz.Permission("user:read"), h.getUser)
 }
 
 // --- İstek ve yanıt tipleri --------------------------------------------------
@@ -541,26 +540,6 @@ func (h *Handler) myPermissions(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	h.writeJSON(w, r, http.StatusOK, res)
-}
-
-// getUser, bir kullanıcının profilini döndürür. user:read yetkisi gerekir.
-func (h *Handler) getUser(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	if !httpx.ValidUUID(id) {
-		httpx.NotFound(w, r)
-		return
-	}
-
-	p, err := h.profiles.Profile(r.Context(), id, time.Now())
-	if errors.Is(err, ErrNotFound) {
-		httpx.NotFound(w, r)
-		return
-	}
-	if err != nil {
-		h.serverError(w, r, err)
-		return
-	}
-	h.writeJSON(w, r, http.StatusOK, toProfileResponse(p))
 }
 
 // --- Yardımcılar ---------------------------------------------------------------

@@ -61,6 +61,7 @@ type NewUser struct {
 	Email              string
 	PasswordHash       string
 	MustChangePassword bool
+	Status             UserStatus // boşsa ACTIVE
 }
 
 // Grant, kullanıcının sahip olduğu bir yetkinin hangi rolden ve hangi kapsamda geldiğidir.

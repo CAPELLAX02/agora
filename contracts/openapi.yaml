@@ -476,6 +476,168 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "503": { $ref: "#/components/responses/ServiceUnavailable" }
 
+  /api/v1/users:
+    get:
+      tags: [Kullanıcılar]
+      summary: Hesapları listeler
+      description: Kullanıcı adına göre sıralı, cursor ile sayfalanır.
+      operationId: listUsers
+      x-agora-permission: user:read
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          description: Kullanıcı adı, e-posta ya da ad soyadda geçen metin
+          schema: { type: string, maxLength: 100 }
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/UserStatus" }
+        - name: kind
+          in: query
+          schema: { type: string, enum: [STUDENT, STAFF] }
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Hesaplar
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/UserSummary" }
+                  next_cursor: { type: string }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Kullanıcılar]
+      summary: Hesap oluşturur
+      description: |
+        Kişi, öğrenci ya da personel kaydı ve hesap birlikte oluşturulur. Hesap
+        `PENDING` başlar ve kullanıcıya 72 saat geçerli bir aktivasyon e-postası
+        gönderilir: kullanıcı kendi parolasını belirleyince hesap etkinleşir. Yönetici
+        parola görmez ya da belirlemez. Numara kullanıcı adı olur.
+      operationId: createUser
+      x-agora-permission: user:manage
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateUserRequest" }
+      responses:
+        "201":
+          description: Hesap oluşturuldu
+          headers:
+            Location:
+              schema: { type: string, examples: ["/api/v1/users/01a11b7f-..."] }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Profile" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: "`ACCOUNT_EXISTS`: numara ya da e-posta başka bir hesapta kayıtlı"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/users/{id}/status:
+    put:
+      tags: [Kullanıcılar]
+      summary: Hesabın durumunu değiştirir
+      description: |
+        Askıya alınan (`SUSPENDED`) ya da kapatılan (`DISABLED`) hesabın bütün
+        oturumları hemen sonlanır. Kişi kendi hesabının durumunu değiştiremez.
+        Aktivasyonu tamamlanmamış (`PENDING`) bir hesap elle etkinleştirilemez.
+        Gerekçe denetim kaydına yazılır.
+      operationId: setUserStatus
+      x-agora-permission: user:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [status, reason]
+              properties:
+                status: { type: string, enum: [ACTIVE, SUSPENDED, DISABLED] }
+                reason: { type: string, minLength: 1, maxLength: 500 }
+      responses:
+        "204":
+          description: Durum değişti
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: "`FORBIDDEN` ya da `SELF_ACTION_FORBIDDEN`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`INVALID_STATUS_CHANGE`: PENDING bir hesap elle etkinleştirilemez"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/users/{id}/activation-email:
+    post:
+      tags: [Kullanıcılar]
+      summary: Aktivasyon e-postasını yeniden gönderir
+      description: Sadece PENDING hesaplarda. Önceki bağlantılar geçersiz olur.
+      operationId: resendActivationEmail
+      x-agora-permission: user:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "202":
+          description: E-posta kuyruğa alındı
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`ACCOUNT_NOT_PENDING`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/users/{id}/password-reset-email:
+    post:
+      tags: [Kullanıcılar]
+      summary: Kullanıcıya parola sıfırlama e-postası gönderir
+      description: Yardım masası için. Bağlantı kullanıcının e-postasına gider, yönetici görmez. Sadece ACTIVE hesaplarda.
+      operationId: sendPasswordResetEmail
+      x-agora-permission: user:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "202":
+          description: E-posta kuyruğa alındı
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`ACCOUNT_NOT_ACTIVE`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
   /api/v1/users/{id}:
     get:
       tags: [Kullanıcılar]
@@ -927,6 +1089,40 @@ components:
         roles:
           type: array
           items: { $ref: "#/components/schemas/RoleAssignment" }
+
+    UserStatus:
+      type: string
+      enum: [PENDING, ACTIVE, SUSPENDED, DISABLED]
+
+    UserSummary:
+      type: object
+      required: [id, username, email, first_name, last_name, status, kind, last_login_at, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        username: { type: string }
+        email: { type: string, format: email }
+        first_name: { type: string }
+        last_name: { type: string }
+        status: { $ref: "#/components/schemas/UserStatus" }
+        kind: { type: [string, "null"], enum: [STUDENT, STAFF, null] }
+        last_login_at: { type: [string, "null"], format: date-time }
+        created_at: { type: string, format: date-time }
+
+    CreateUserRequest:
+      type: object
+      additionalProperties: false
+      required: [kind, number, first_name, last_name, email]
+      properties:
+        kind: { type: string, enum: [STUDENT, STAFF] }
+        number:
+          type: string
+          description: Öğrenci numarası (8-11 hane) ya da personel numarası (3-20 harf/rakam). Kullanıcı adı olur.
+        first_name: { type: string, minLength: 1, maxLength: 100 }
+        last_name: { type: string, minLength: 1, maxLength: 100 }
+        email: { type: string, format: email, maxLength: 254 }
+        staff_type: { type: string, enum: [ACADEMIC, ADMINISTRATIVE], description: Personelde zorunlu }
+        academic_title: { type: string, examples: ["ASSIST_PROF"], description: Sadece akademik personelde }
+        department_id: { type: string, format: uuid, description: Personelin bölümü (isteğe bağlı) }
 
     Me:
       allOf:

@@ -100,6 +100,7 @@ func newHTTPEnvWithLoginLimit(t *testing.T, loginLimit int) *httpEnv {
 		Login:         limiter.ByIP(logger),
 		PasswordReset: ratelimit.New(rdb, "password_reset", 1000, time.Minute, time.Now).ByIP(logger),
 	})
+	iam.NewUsersHandler(auth, iam.NewRepository(pool), logger).Register(rt)
 
 	srv := httptest.NewServer(httpx.Chain(mux, httpx.RequestID, httpx.WithClientInfo, httpx.Recover(logger)))
 	t.Cleanup(srv.Close)
@@ -911,4 +912,118 @@ func TestHTTPSessions(t *testing.T) {
 	if res := e.do(t, nil, "GET", "/api/v1/me", bearer, nil); res.status != 200 {
 		t.Errorf("isteği yapan oturum açık kalmalı: %d", res.status)
 	}
+}
+
+func TestHTTPUserManagement(t *testing.T) {
+	e := newHTTPEnv(t)
+	ctx := context.Background()
+	repo := iam.NewRepository(e.pool)
+	adminID := e.addUser(t, "P90001")
+	auditorID := e.addUser(t, "P90003")
+	if err := repo.AssignRole(ctx, adminID, "SYSTEM_ADMIN", iam.ScopeUniversity, ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.AssignRole(ctx, auditorID, "AUDITOR", iam.ScopeUniversity, ""); err != nil {
+		t.Fatal(err)
+	}
+	admin, auditor := e.bearer(t, "P90001"), e.bearer(t, "P90003")
+
+	newUser := map[string]string{
+		"kind": "STUDENT", "number": "22290099", "first_name": "Elif", "last_name": "Şahin",
+		"email": "elif.sahin@agora.test",
+	}
+
+	if res := e.do(t, nil, "POST", "/api/v1/users", auditor, newUser); res.status != 403 {
+		t.Errorf("denetçi hesap oluşturamamalı: %d", res.status)
+	}
+
+	res := e.do(t, nil, "POST", "/api/v1/users", admin, newUser)
+	if res.status != http.StatusCreated {
+		t.Fatalf("oluşturma: %d %s", res.status, res.body)
+	}
+	var created struct {
+		ID     string `json:"id"`
+		Status string `json:"status"`
+	}
+	res.json(t, &created)
+	if created.Status != "PENDING" || res.header.Get("Location") != "/api/v1/users/"+created.ID {
+		t.Errorf("yanıt = %s, Location = %s", res.body, res.header.Get("Location"))
+	}
+	if res := e.do(t, nil, "POST", "/api/v1/users", admin, newUser); res.status != 409 || res.code(t) != "ACCOUNT_EXISTS" {
+		t.Errorf("tekrar oluşturma: %d %s", res.status, res.body)
+	}
+
+	t.Run("doğrulama", func(t *testing.T) {
+		bad := map[string]string{"kind": "STUDENT", "number": "12", "first_name": "", "last_name": "x", "email": "e-posta değil"}
+		res := e.do(t, nil, "POST", "/api/v1/users", admin, bad)
+		var p struct {
+			Errors []struct {
+				Field string `json:"field"`
+			} `json:"errors"`
+		}
+		res.json(t, &p)
+		fields := map[string]bool{}
+		for _, fe := range p.Errors {
+			fields[fe.Field] = true
+		}
+		if res.status != 400 || !fields["number"] || !fields["first_name"] || !fields["email"] {
+			t.Errorf("doğrulama = %d %s", res.status, res.body)
+		}
+	})
+
+	t.Run("listeleme", func(t *testing.T) {
+		res := e.do(t, nil, "GET", "/api/v1/users?status=PENDING", auditor, nil)
+		var list struct {
+			Items []struct {
+				Username string  `json:"username"`
+				Kind     *string `json:"kind"`
+			} `json:"items"`
+		}
+		res.json(t, &list)
+		if res.status != 200 || len(list.Items) != 1 || list.Items[0].Username != "22290099" || *list.Items[0].Kind != "STUDENT" {
+			t.Errorf("liste = %d %s", res.status, res.body)
+		}
+	})
+
+	t.Run("durum değiştirme", func(t *testing.T) {
+		studentID := e.addUser(t, "22290098")
+		student := e.bearer(t, "22290098")
+
+		res := e.do(t, nil, "PUT", "/api/v1/users/"+studentID+"/status", admin,
+			map[string]string{"status": "SUSPENDED", "reason": "kayıt donduruldu"})
+		if res.status != http.StatusNoContent {
+			t.Fatalf("askıya alma: %d %s", res.status, res.body)
+		}
+		if res := e.do(t, nil, "GET", "/api/v1/me", student, nil); res.status == 200 {
+			t.Error("askıya alınan kullanıcının token'ı çalışmaya devam ediyor")
+		}
+
+		res = e.do(t, nil, "PUT", "/api/v1/users/"+adminID+"/status", admin,
+			map[string]string{"status": "DISABLED", "reason": "deneme"})
+		if res.status != 403 || res.code(t) != "SELF_ACTION_FORBIDDEN" {
+			t.Errorf("kendi hesabı: %d %s", res.status, res.body)
+		}
+		res = e.do(t, nil, "PUT", "/api/v1/users/"+created.ID+"/status", admin,
+			map[string]string{"status": "ACTIVE", "reason": "deneme"})
+		if res.status != 409 || res.code(t) != "INVALID_STATUS_CHANGE" {
+			t.Errorf("PENDING'i etkinleştirme: %d %s", res.status, res.body)
+		}
+		res = e.do(t, nil, "PUT", "/api/v1/users/"+studentID+"/status", admin, map[string]string{"status": "SUSPENDED"})
+		if res.status != 400 {
+			t.Errorf("gerekçesiz: %d", res.status)
+		}
+	})
+
+	t.Run("e-posta işlemleri", func(t *testing.T) {
+		if res := e.do(t, nil, "POST", "/api/v1/users/"+created.ID+"/activation-email", admin, nil); res.status != http.StatusAccepted {
+			t.Errorf("aktivasyon e-postası: %d %s", res.status, res.body)
+		}
+		res := e.do(t, nil, "POST", "/api/v1/users/"+created.ID+"/password-reset-email", admin, nil)
+		if res.status != 409 || res.code(t) != "ACCOUNT_NOT_ACTIVE" {
+			t.Errorf("PENDING hesaba sıfırlama: %d %s", res.status, res.body)
+		}
+		if res := e.do(t, nil, "POST", "/api/v1/users/"+auditorID+"/password-reset-email", admin, nil); res.status != http.StatusAccepted {
+			t.Errorf("sıfırlama e-postası: %d %s", res.status, res.body)
+		}
+	})
 }

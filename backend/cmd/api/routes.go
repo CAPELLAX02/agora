@@ -25,6 +25,7 @@ func (app *application) routes() http.Handler {
 	secureCookie := !app.cfg.IsDevelopment()
 	iam.NewHandler(app.auth, iam.NewRepository(app.db), app.logger, secureCookie).
 		Register(rt, app.limits)
+	iam.NewUsersHandler(app.auth, iam.NewRepository(app.db), app.logger).Register(rt)
 
 	audit.NewHandler(audit.NewRepository(app.db), app.logger).Register(rt)
 

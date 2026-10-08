@@ -61,10 +61,10 @@ func (r *Repository) user(ctx context.Context, query string, arg any) (User, err
 func (r *Repository) CreateUser(ctx context.Context, u NewUser) (string, error) {
 	var id string
 	err := r.db.QueryRow(ctx,
-		`INSERT INTO iam.users (person_id, username, email, password_hash, must_change_password)
-		 VALUES ($1, $2, $3, $4, $5)
+		`INSERT INTO iam.users (person_id, username, email, password_hash, must_change_password, status)
+		 VALUES ($1, $2, $3, $4, $5, coalesce($6, 'ACTIVE'))
 		 RETURNING id`,
-		u.PersonID, u.Username, u.Email, u.PasswordHash, u.MustChangePassword,
+		u.PersonID, u.Username, u.Email, u.PasswordHash, u.MustChangePassword, nullable(string(u.Status)),
 	).Scan(&id)
 	if db.IsConflict(err) {
 		return "", ErrConflict
