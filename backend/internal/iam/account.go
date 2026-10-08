@@ -47,18 +47,7 @@ func (a *Auth) ChangePassword(ctx context.Context, in ChangePasswordInput) error
 	if err != nil {
 		return err
 	}
-	if user.LockedUntil != nil && now.Before(*user.LockedUntil) {
-		return &LockedError{Until: *user.LockedUntil}
-	}
-
-	if err := a.hasher.Verify(ctx, in.CurrentPassword, user.PasswordHash); err != nil {
-		if !errors.Is(err, password.ErrMismatch) {
-			return err
-		}
-		err := a.wrongPassword(ctx, user, user.Username, now, "password_change_wrong_current")
-		if errors.Is(err, ErrInvalidCredentials) {
-			return ErrInvalidCurrentPassword
-		}
+	if err := a.verifyCurrentPassword(ctx, user, in.CurrentPassword, now, "password_change_wrong_current"); err != nil {
 		return err
 	}
 

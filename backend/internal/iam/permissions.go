@@ -83,8 +83,10 @@ func NewPermissionResolver(pool *pgxpool.Pool, rdb redis.Cmdable, ttl time.Durat
 	return &PermissionResolver{pool: pool, rdb: rdb, ttl: ttl, logger: logger}
 }
 
+// permissionsKey, önbellek anahtarıdır. Baştaki v2, kayıt biçiminin sürümüdür:
+// biçim değişince (ör. requires_mfa eklendi) eski kayıtlar okunmaz.
 func permissionsKey(userID string, version int) string {
-	return fmt.Sprintf("agora:perms:%s:%d", userID, version)
+	return fmt.Sprintf("agora:perms:v2:%s:%d", userID, version)
 }
 
 // Permissions, kullanıcının yetkilerini döndürür. Hesap aktif değilse
@@ -178,7 +180,9 @@ func toAuthzGrants(rows []Grant) []authz.Grant {
 			continue
 		}
 		seen[k] = true
-		out = append(out, authz.Grant{Permission: g.Permission, ScopeType: string(g.ScopeType), ScopeID: g.ScopeID})
+		out = append(out, authz.Grant{
+			Permission: g.Permission, ScopeType: string(g.ScopeType), ScopeID: g.ScopeID, RequiresMFA: g.RequiresMFA,
+		})
 	}
 	return out
 }

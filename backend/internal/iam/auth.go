@@ -60,6 +60,10 @@ type AuthConfig struct {
 	ResetTokenTTL        time.Duration // parola sıfırlama bağlantısının ömrü (ör. 30 dk)
 	ActivationTokenTTL   time.Duration // hesap aktivasyon bağlantısının ömrü (ör. 72 saat)
 	ResetRequestInterval time.Duration // aynı hesaba iki sıfırlama e-postası arasındaki en kısa süre
+
+	MFAKey          []byte        // TOTP sırlarını ve kurtarma kodlarını koruyan 32 baytlık ana anahtar
+	MFAIssuer       string        // doğrulayıcı uygulamada görünen hizmet adı
+	MFAChallengeTTL time.Duration // paroladan sonra ikinci adım için verilen süre (ör. 5 dk)
 }
 
 // Hasher, parola hash'leme işlemleridir. *password.Hasher bunu sağlar.
@@ -87,6 +91,7 @@ type Metrics interface {
 	AccountLocked()
 	RefreshReuseDetected()
 	PasswordReset(stage string)
+	MFAEvent(event string)
 }
 
 type noopMetrics struct{}
@@ -96,6 +101,7 @@ func (noopMetrics) LoginFailed(string)    {}
 func (noopMetrics) AccountLocked()        {}
 func (noopMetrics) RefreshReuseDetected() {}
 func (noopMetrics) PasswordReset(string)  {}
+func (noopMetrics) MFAEvent(string)       {}
 
 // LoginInput, giriş isteğinin bilgileridir.
 type LoginInput struct {
@@ -127,6 +133,7 @@ type Auth struct {
 	cfg       AuthConfig
 	now       func() time.Time
 	dummyHash string
+	mfa       mfaKeys
 }
 
 // NewAuth, bir kimlik doğrulama servisi oluşturur. now, zamanı veren fonksiyondur:
@@ -148,6 +155,13 @@ func NewAuth(
 	if err != nil {
 		return nil, fmt.Errorf("iam: sahte hash üretilemedi: %w", err)
 	}
+	if len(cfg.MFAKey) != 32 {
+		return nil, fmt.Errorf("iam: MFA anahtarı 32 bayt olmalı, %d verildi", len(cfg.MFAKey))
+	}
+	mfa, err := newMFAKeys(cfg.MFAKey)
+	if err != nil {
+		return nil, err
+	}
 	return &Auth{
 		pool:      pool,
 		hasher:    hasher,
@@ -157,6 +171,7 @@ func NewAuth(
 		cfg:       cfg,
 		now:       now,
 		dummyHash: dummy,
+		mfa:       mfa,
 	}, nil
 }
 
@@ -213,6 +228,13 @@ func (a *Auth) Login(ctx context.Context, in LoginInput) (Tokens, error) {
 		}
 	}
 
+	// İki adımlı doğrulama açıksa oturum ikinci adımdan sonra açılır. Başarısız deneme
+	// sayacı burada sıfırlanmaz: parolayı bilen biri sayacı sıfırlayıp kodu sınırsız
+	// deneyemesin. Sayaç giriş tamamlanınca sıfırlanır.
+	if user.MFAEnabled {
+		return Tokens{}, a.startMFAChallenge(ctx, user, in.Client, now, newHash)
+	}
+
 	var tokens Tokens
 	err = db.InTx(ctx, a.pool, func(tx pgx.Tx) error {
 		r := NewRepository(tx)
@@ -255,38 +277,73 @@ func (a *Auth) wrongPassword(ctx context.Context, user User, username string, no
 	var lockedUntil *time.Time
 	err := db.InTx(ctx, a.pool, func(tx pgx.Tx) error {
 		var err error
-		lockedUntil, err = NewRepository(tx).RecordLoginFailure(ctx, user.ID, now,
-			a.cfg.MaxFailedAttempts, a.cfg.LockoutBase, a.cfg.LockoutMax)
-		if err != nil {
-			return err
-		}
-
-		if err := audit.RecordSecurity(ctx, tx, audit.SecurityEvent{
-			Type: audit.EventLoginFailed, UserID: user.ID, UsernameAttempted: username,
-			Details: map[string]any{"reason": reason},
-		}); err != nil {
-			return err
-		}
-
-		// Kilit bu denemeyle başladıysa (ya da uzadıysa) ayrıca kaydedilir.
-		if lockedUntil != nil && now.Before(*lockedUntil) {
-			return audit.RecordSecurity(ctx, tx, audit.SecurityEvent{
-				Type: audit.EventAccountLocked, UserID: user.ID,
-				Details: map[string]any{"locked_until": lockedUntil.UTC().Format(time.RFC3339)},
-			})
-		}
-		return nil
+		lockedUntil, err = a.recordFailure(ctx, tx, user, username, now, reason)
+		return err
 	})
 	if err != nil {
 		return err
 	}
+	return a.failed(reason, lockedUntil, now, ErrInvalidCredentials)
+}
 
+// recordFailure, yanlış parolayı ya da kodu verilen transaction içinde kaydeder:
+// başarısız deneme sayacını artırır, olayı yazar ve kilit başladıysa kilidin bitişini
+// döndürür.
+func (a *Auth) recordFailure(ctx context.Context, tx pgx.Tx, user User, username string, now time.Time, reason string) (*time.Time, error) {
+	lockedUntil, err := NewRepository(tx).RecordLoginFailure(ctx, user.ID, now,
+		a.cfg.MaxFailedAttempts, a.cfg.LockoutBase, a.cfg.LockoutMax)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := audit.RecordSecurity(ctx, tx, audit.SecurityEvent{
+		Type: audit.EventLoginFailed, UserID: user.ID, UsernameAttempted: username,
+		Details: map[string]any{"reason": reason},
+	}); err != nil {
+		return nil, err
+	}
+
+	// Kilit bu denemeyle başladıysa (ya da uzadıysa) ayrıca kaydedilir.
+	if lockedUntil != nil && now.Before(*lockedUntil) {
+		err := audit.RecordSecurity(ctx, tx, audit.SecurityEvent{
+			Type: audit.EventAccountLocked, UserID: user.ID,
+			Details: map[string]any{"locked_until": lockedUntil.UTC().Format(time.RFC3339)},
+		})
+		return lockedUntil, err
+	}
+	return lockedUntil, nil
+}
+
+// failed, commit edilmiş başarısız denemeyi sayar ve dönülecek hatayı belirler: kilit
+// başladıysa LockedError, değilse base.
+func (a *Auth) failed(reason string, lockedUntil *time.Time, now time.Time, base error) error {
 	a.metrics.LoginFailed(reason)
 	if lockedUntil != nil && now.Before(*lockedUntil) {
 		a.metrics.AccountLocked()
 		return &LockedError{Until: *lockedUntil}
 	}
-	return ErrInvalidCredentials
+	return base
+}
+
+// verifyCurrentPassword, oturum açmış kullanıcının hassas bir işlem (parola değiştirme,
+// MFA açma/kapatma) için girdiği parolayı doğrular. Yanlış parola girişteki başarısız
+// denemelerle aynı sayacı artırır: token'ı ele geçiren biri bu uçlarla parola tahmin
+// edemez.
+func (a *Auth) verifyCurrentPassword(ctx context.Context, user User, plain string, now time.Time, reason string) error {
+	if user.LockedUntil != nil && now.Before(*user.LockedUntil) {
+		return &LockedError{Until: *user.LockedUntil}
+	}
+	if err := a.hasher.Verify(ctx, plain, user.PasswordHash); err != nil {
+		if !errors.Is(err, password.ErrMismatch) {
+			return err
+		}
+		err := a.wrongPassword(ctx, user, user.Username, now, reason)
+		if errors.Is(err, ErrInvalidCredentials) {
+			return ErrInvalidCurrentPassword
+		}
+		return err
+	}
+	return nil
 }
 
 // loginFailed, parola denenmeden ya da parola doğru olduğu halde reddedilen bir

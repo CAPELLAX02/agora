@@ -120,6 +120,11 @@ func (rt *Router) authorize(policy Policy) httpx.Middleware {
 				return
 			}
 
+			// İki adımlı doğrulama yapılmamış oturumda MFA gerektiren yetkiler yok sayılır.
+			if !principal.MFA() {
+				perms = perms.WithoutMFA()
+			}
+
 			if perms.PasswordChangeRequired() && policy.kind != selfService {
 				problem(w, r, http.StatusForbidden, "PASSWORD_CHANGE_REQUIRED",
 					"Devam etmek için parolanızı değiştirmelisiniz.")
@@ -127,6 +132,11 @@ func (rt *Router) authorize(policy Policy) httpx.Middleware {
 			}
 
 			if policy.kind == permission && !perms.Has(policy.permission) {
+				if perms.WithheldForMFA(policy.permission) {
+					problem(w, r, http.StatusForbidden, "MFA_REQUIRED",
+						"Bu işlem için iki adımlı doğrulamayla giriş yapmalısınız.")
+					return
+				}
 				problem(w, r, http.StatusForbidden, "FORBIDDEN", "Bu işlem için yetkiniz yok.")
 				return
 			}

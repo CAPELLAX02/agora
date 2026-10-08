@@ -283,3 +283,76 @@ func TestScopesOf(t *testing.T) {
 		t.Error("NONE kapsamı ve olmayan yetki boş küme vermeli")
 	}
 }
+
+// TestRouterMFAStepUp, MFA gerektiren yetkilerin sadece iki adımlı doğrulamayla açılmış
+// oturumlarda kullanılabildiğini doğrular. Aynı kullanıcının diğer yetkileri etkilenmez.
+func TestRouterMFAStepUp(t *testing.T) {
+	resolver := &fakeResolver{grants: map[string][]Grant{
+		"admin": {
+			{Permission: "user:read", ScopeType: ScopeUniversity},
+			{Permission: "role:assign", ScopeType: ScopeUniversity, RequiresMFA: true},
+		},
+	}}
+	authenticate := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			p := authn.Principal{UserID: r.Header.Get("X-Test-User"), AMR: []string{"pwd"}}
+			if r.Header.Get("X-Test-MFA") == "1" {
+				p.AMR = append(p.AMR, authn.MethodOTP)
+			}
+			next.ServeHTTP(w, r.WithContext(authn.WithPrincipal(r.Context(), p)))
+		})
+	}
+	mux := http.NewServeMux()
+	rt := NewRouter(mux, authenticate, resolver, slog.New(slog.NewTextHandler(io.Discard, nil)))
+
+	var seen *Permissions
+	capture := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { seen, _ = PermissionsFrom(r.Context()) })
+	rt.Handle("GET /users", Permission("user:read"), capture)
+	rt.Handle("POST /roles", Permission("role:assign"), capture)
+	rt.Handle("GET /audit", Permission("audit:read"), capture)
+
+	do := func(method, path string, mfa bool) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(method, path, nil)
+		req.Header.Set("X-Test-User", "admin")
+		if mfa {
+			req.Header.Set("X-Test-MFA", "1")
+		}
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+		return rec
+	}
+
+	// MFA'sız oturum: MFA gerektirmeyen yetki çalışır ama context'teki küme kırpılmıştır.
+	if rec := do("GET", "/users", false); rec.Code != http.StatusOK {
+		t.Fatalf("MFA gerektirmeyen yetki: %d", rec.Code)
+	}
+	if seen.Has("role:assign") || !seen.MFARequired() {
+		t.Error("MFA'sız oturumun yetkilerinde role:assign olmamalı ve MFARequired true olmalı")
+	}
+	if rec := do("POST", "/roles", false); rec.Code != http.StatusForbidden || !strings.Contains(rec.Body.String(), `"code":"MFA_REQUIRED"`) {
+		t.Errorf("MFA'sız oturumda rol atama: %d %s", rec.Code, rec.Body.String())
+	}
+	// Hiç sahip olunmayan yetki MFA_REQUIRED değil FORBIDDEN döner: MFA bir şey açmayacak.
+	if rec := do("GET", "/audit", false); !strings.Contains(rec.Body.String(), `"code":"FORBIDDEN"`) {
+		t.Errorf("olmayan yetki: %d %s", rec.Code, rec.Body.String())
+	}
+
+	if rec := do("POST", "/roles", true); rec.Code != http.StatusOK {
+		t.Errorf("MFA'lı oturumda rol atama: %d %s", rec.Code, rec.Body.String())
+	}
+	if !seen.Has("role:assign") || seen.MFARequired() {
+		t.Error("MFA'lı oturum bütün yetkileri görmeli")
+	}
+}
+
+func TestWithoutMFAKeepsPasswordChange(t *testing.T) {
+	p := NewPermissions("u1", []Grant{{Permission: "score:enter", ScopeType: ScopeNone, RequiresMFA: true}})
+	p.RequirePasswordChange()
+	q := p.WithoutMFA()
+	if !q.PasswordChangeRequired() || q.Has("score:enter") || !q.WithheldForMFA("score:enter") || len(q.Grants()) != 0 {
+		t.Errorf("WithoutMFA kopyası yanlış: %+v", q)
+	}
+	if !p.Has("score:enter") {
+		t.Error("WithoutMFA orijinali değiştirmemeli")
+	}
+}

@@ -185,7 +185,7 @@ flowchart LR
 | ✅ | Program kaydı (`enrollment.student_programs`) ve danışman ataması | Yetkili kümeden listeleme, danışman rolü ilişkiye dayalı (bölümü kapsamaz), erişim yoksa 404, danışman geçmişi. Müfredat/dönem bağlantıları Faz 2'de |
 | ✅ | İş metrikleri (`agora_login_failures_total`, `agora_refresh_reuse_detected_total` …) | Girişler, başarısız girişler (sebebe göre), kilitlenmeler, token yeniden kullanımı, parola sıfırlama, hız sınırı; Grafana'da "Kimlik doğrulama ve güvenlik" ve "Worker" satırları |
 | ✅ | Seed üretici: ~92 bin öğrenci, ~10 bin personel, sentetik programlar, danışmanlar | `make seed-synthetic` (~6 sn, COPY + tek transaction, belirlenimci tohum); 68 programlık katalog; arama için trigram index'leri (75 ms → 0,7 ms). Gerçek BM müfredatı Faz 2'de müfredat modeliyle |
-| ⬜ | MFA (TOTP) ve kurtarma kodları | P1, Faz 1'in son maddesi |
+| ✅ | MFA (TOTP) ve kurtarma kodları | RFC 6238 (resmi test vektörleriyle), sır AES-256-GCM ile şifreli ve kullanıcıya bağlı, tekrar oynatma koruması, iki adımlı giriş (5 dk, 5 deneme, ortak kilit sayacı), 10 kurtarma kodu (HMAC), hassas yetkiler sadece MFA'lı oturumda (`403 MFA_REQUIRED`), yönetici sıfırlaması |
 
 **Web**
 
@@ -193,6 +193,7 @@ flowchart LR
 | --- | --- |
 | ⬜ | Giriş, oturum geri yükleme (sessiz refresh), çıkış |
 | ⬜ | Parola değiştirme (ilk girişte zorunlu), şifre sıfırlama |
+| ⬜ | İki adımlı doğrulama: girişin ikinci adımı, kurulum (QR), kurtarma kodları, MFA öneri bandı |
 | ⬜ | Oturumlarım, profil |
 | ⬜ | Rol bazlı menü, kontrol paneli iskeleti |
 | ⬜ | Yönetim: kullanıcılar, rol atama, denetim kayıtları |
@@ -201,7 +202,7 @@ flowchart LR
 
 | Durum | Madde |
 | --- | --- |
-| ⬜ | Playwright e2e: giriş, ilk girişte parola değiştirme, şifre sıfırlama, rol atamasının anında etkisi |
+| ⬜ | Playwright e2e: giriş, ilk girişte parola değiştirme, şifre sıfırlama, MFA kurulumu ve iki adımlı giriş, rol atamasının anında etkisi |
 | ⬜ | Sözleşme ve dokümanlar güncel, CI yeşil |
 
 ### Faz 2 ve sonrası

@@ -2,6 +2,7 @@
 package config
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -32,6 +33,15 @@ const (
 	devWebBaseURL = "http://localhost:5173"
 )
 
+// devMFAKey, sadece development ortamında, AGORA_MFA_ENCRYPTION_KEY verilmediğinde
+// kullanılan TOTP sırrı şifreleme anahtarıdır. Herkesin bildiği bir anahtardır: geliştirme
+// veritabanındaki sırlar korunmuş sayılmaz. Sabit olmasının sebebi, API yeniden
+// başlatılınca daha önce kurulmuş MFA'ların açılamaz hale gelmemesi.
+const devMFAKey = "YWdvcmEtZGV2LW1mYS1rZXktMzItYnl0ZXMtbG9uZyE="
+
+// mfaKeySize, TOTP sırrı şifreleme anahtarının uzunluğudur (AES-256).
+const mfaKeySize = 32
+
 // Config, API ve worker süreçlerinin çalışma zamanı yapılandırmasıdır. İki süreç
 // aynı ortam değişkenlerini okur: production'da aynı gizli değerlerle çalışırlar.
 type Config struct {
@@ -58,6 +68,7 @@ type Config struct {
 	SessionAbsoluteTimeout time.Duration // oturumun refresh'lerle bile aşamayacağı üst sınır
 	PasswordHashWorkers    int           // aynı anda en fazla kaç parola hash'lenir (her biri 64 MiB)
 	LoginRateLimit         int           // bir IP'den dakikada en fazla kaç giriş denemesi
+	MFAKey                 []byte        // gizli: TOTP sırlarını şifreleyen 32 baytlık anahtar
 
 	// E-posta ve worker
 	WebBaseURL        string // e-postalardaki bağlantıların kökü (web arayüzünün adresi)
@@ -133,6 +144,21 @@ func Load() (Config, error) {
 			cfg.WebBaseURL = devWebBaseURL
 		}
 	}
+	mfaKey := lookup("AGORA_MFA_ENCRYPTION_KEY", "")
+	if mfaKey == "" && cfg.Env == "development" {
+		mfaKey = devMFAKey
+	}
+	if mfaKey != "" {
+		key, err := base64.StdEncoding.DecodeString(mfaKey)
+		if err != nil || len(key) != mfaKeySize {
+			errs = append(errs, fmt.Errorf("AGORA_MFA_ENCRYPTION_KEY %d baytlık bir anahtarın base64 hali olmalı (openssl rand -base64 32)", mfaKeySize))
+		} else {
+			cfg.MFAKey = key
+		}
+	} else {
+		errs = append(errs, errors.New("AGORA_MFA_ENCRYPTION_KEY development dışında zorunlu"))
+	}
+
 	cfg.CORSOrigins = lookupList("AGORA_CORS_ALLOWED_ORIGINS")
 	if cfg.CORSOrigins == nil && cfg.Env == "development" {
 		cfg.CORSOrigins = devCORSOrigins
@@ -182,6 +208,7 @@ func (c Config) LogValue() slog.Value {
 		slog.String("session_absolute_timeout", c.SessionAbsoluteTimeout.String()),
 		slog.Int("password_hash_workers", c.PasswordHashWorkers),
 		slog.Int("login_rate_limit", c.LoginRateLimit),
+		slog.Bool("mfa_encryption_key_set", len(c.MFAKey) > 0),
 		slog.String("web_base_url", c.WebBaseURL),
 		slog.String("smtp_addr", c.SMTPAddr),
 		slog.String("smtp_from", c.SMTPFrom),

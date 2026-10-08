@@ -18,6 +18,7 @@ type Profile struct {
 	LastName           string
 	Status             UserStatus
 	MustChangePassword bool
+	MFAEnabled         bool
 	LastLoginAt        *time.Time
 	Roles              []RoleAssignment
 }
@@ -40,13 +41,13 @@ func (r *Repository) Profile(ctx context.Context, userID string, at time.Time) (
 		status string
 	)
 	err := r.db.QueryRow(ctx, `
-		SELECT u.id, u.username, u.email, u.status, u.must_change_password, u.last_login_at,
+		SELECT u.id, u.username, u.email, u.status, u.must_change_password, u.mfa_enabled, u.last_login_at,
 		       pe.first_name, pe.last_name
 		FROM iam.users u
 		JOIN people.persons pe ON pe.id = u.person_id
 		WHERE u.id = $1`,
 		userID,
-	).Scan(&p.UserID, &p.Username, &p.Email, &status, &p.MustChangePassword, &p.LastLoginAt,
+	).Scan(&p.UserID, &p.Username, &p.Email, &status, &p.MustChangePassword, &p.MFAEnabled, &p.LastLoginAt,
 		&p.FirstName, &p.LastName)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Profile{}, ErrNotFound

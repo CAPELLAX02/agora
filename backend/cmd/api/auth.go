@@ -32,6 +32,9 @@ const (
 	activationTokenTTL   = 72 * time.Hour
 	resetRequestInterval = 2 * time.Minute
 	passwordResetLimit   = 10 // bir IP'den dakikada en fazla kaç sıfırlama isteği
+
+	mfaIssuer       = "Agora"         // doğrulayıcı uygulamada hesabın yanında görünen ad
+	mfaChallengeTTL = 5 * time.Minute // paroladan sonra kodu girmek için verilen süre
 )
 
 // newAuth, imza anahtarını yükler, kimlik doğrulama servisini ve korumalı uç
@@ -73,6 +76,10 @@ func newAuth(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *re
 		ResetTokenTTL:        resetTokenTTL,
 		ActivationTokenTTL:   activationTokenTTL,
 		ResetRequestInterval: resetRequestInterval,
+
+		MFAKey:          cfg.MFAKey,
+		MFAIssuer:       mfaIssuer,
+		MFAChallengeTTL: mfaChallengeTTL,
 	}, time.Now)
 	if err != nil {
 		return nil, nil, err

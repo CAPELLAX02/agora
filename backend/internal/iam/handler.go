@@ -41,6 +41,13 @@ type AuthService interface {
 	Sessions(ctx context.Context, userID string) ([]SessionInfo, error)
 	EndSession(ctx context.Context, userID, sessionID string) error
 	EndOtherSessions(ctx context.Context, userID, currentSessionID string) (int, error)
+
+	VerifyMFA(ctx context.Context, in MFAVerifyInput) (Tokens, error)
+	MFAStatus(ctx context.Context, userID string) (MFAStatus, error)
+	StartMFASetup(ctx context.Context, userID string) (MFASetup, error)
+	EnableMFA(ctx context.Context, in EnableMFAInput) ([]string, error)
+	DisableMFA(ctx context.Context, in DisableMFAInput) error
+	RegenerateRecoveryCodes(ctx context.Context, userID, code string) ([]string, error)
 }
 
 // Limits, kimliği doğrulanmamış uçların hız sınırlarıdır.
@@ -88,6 +95,7 @@ func (h *Handler) Register(rt *authz.Router, limits Limits) {
 	rt.HandleFunc("DELETE /api/v1/me/sessions/{id}", authz.SelfService, h.endSession)
 	rt.HandleFunc("DELETE /api/v1/me/sessions", authz.SelfService, h.endOtherSessions)
 
+	h.registerMFA(rt, limits)
 }
 
 // --- İstek ve yanıt tipleri --------------------------------------------------
@@ -166,6 +174,7 @@ type profileResponse struct {
 	LastName           string         `json:"last_name"`
 	Status             string         `json:"status"`
 	MustChangePassword bool           `json:"must_change_password"`
+	MFAEnabled         bool           `json:"mfa_enabled"`
 	LastLoginAt        *time.Time     `json:"last_login_at"`
 	Roles              []roleResponse `json:"roles"`
 }
@@ -175,6 +184,9 @@ type profileResponse struct {
 type meResponse struct {
 	profileResponse
 	SessionID string `json:"session_id"`
+	// MFARequired, kullanıcının bazı yetkilerinin bu oturumda iki adımlı doğrulama
+	// olmadığı için kullanılamadığını söyler. Arayüz MFA kurulumunu önerir.
+	MFARequired bool `json:"mfa_required"`
 }
 
 type grantResponse struct {
@@ -192,6 +204,7 @@ func toProfileResponse(p Profile) profileResponse {
 		LastName:           p.LastName,
 		Status:             string(p.Status),
 		MustChangePassword: p.MustChangePassword,
+		MFAEnabled:         p.MFAEnabled,
 		LastLoginAt:        p.LastLoginAt,
 		Roles:              make([]roleResponse, 0, len(p.Roles)),
 	}
@@ -245,6 +258,11 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		IP:        httpx.ClientInfoFrom(r.Context()).IP,
 		UserAgent: httpx.ClientInfoFrom(r.Context()).UserAgent,
 	})
+	var mfa *MFARequiredError
+	if errors.As(err, &mfa) {
+		h.writeMFAChallenge(w, r, mfa)
+		return
+	}
 	if err != nil {
 		h.authError(w, r, client, err)
 		return
@@ -304,9 +322,11 @@ func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	perms, _ := authz.PermissionsFrom(r.Context())
 	h.writeJSON(w, r, http.StatusOK, meResponse{
 		profileResponse: toProfileResponse(p),
 		SessionID:       principal.SessionID,
+		MFARequired:     perms != nil && perms.MFARequired(),
 	})
 }
 
@@ -636,6 +656,13 @@ func (h *Handler) authError(w http.ResponseWriter, r *http.Request, client Clien
 
 	case errors.Is(err, ErrInvalidCredentials):
 		h.problem(w, r, http.StatusUnauthorized, "INVALID_CREDENTIALS", "Kullanıcı adı veya parola hatalı.")
+
+	case errors.Is(err, ErrInvalidMFAToken):
+		h.problem(w, r, http.StatusUnauthorized, "INVALID_MFA_TOKEN",
+			"Doğrulama süresi doldu ya da geçersiz. Lütfen tekrar giriş yapın.")
+
+	case errors.Is(err, ErrInvalidMFACode):
+		h.problem(w, r, http.StatusUnauthorized, "INVALID_MFA_CODE", "Doğrulama kodu hatalı.")
 
 	case errors.Is(err, ErrAccountDisabled):
 		if client == ClientWeb {

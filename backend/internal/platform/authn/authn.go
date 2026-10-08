@@ -6,6 +6,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -19,6 +20,15 @@ type Principal struct {
 	SessionID string
 	TokenID   string
 	AMR       []string
+}
+
+// MethodOTP, tek kullanımlık kodla (TOTP ya da kurtarma kodu) yapılan doğrulamanın
+// AMR değeridir (RFC 8176).
+const MethodOTP = "otp"
+
+// MFA, oturumun iki adımlı doğrulamayla açılıp açılmadığını söyler.
+func (p Principal) MFA() bool {
+	return slices.Contains(p.AMR, MethodOTP)
 }
 
 type ctxKey struct{}

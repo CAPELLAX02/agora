@@ -41,8 +41,9 @@
 | password_changed_at | timestamptz | |
 | must_change_password | bool | default false |
 | mfa_enabled | bool | default false |
-| mfa_secret_enc | bytea | AES-GCM şifreli TOTP sırrı |
+| mfa_secret_enc | bytea | AES-GCM şifreli TOTP sırrı (kullanıcı kimliğine bağlı). Kurulum başlayınca dolar |
 | mfa_last_used_step | bigint | TOTP tekrar kullanım koruması |
+| mfa_enabled_at | timestamptz | `mfa_enabled` ise dolu (CHECK) |
 | failed_login_count | int | default 0 |
 | locked_until | timestamptz | artan bekleme süresi |
 | last_login_at | timestamptz | |
@@ -79,7 +80,8 @@
 ### Diğer `iam` tabloları
 | Tablo | Sütunlar | Not |
 | --- | --- | --- |
-| `recovery_codes` | id, user_id, code_hash, used_at | MFA kurtarma |
+| `mfa_recovery_codes` | id, user_id, code_hash (HMAC-SHA256), created_at, used_at | MFA kurtarma, UQ(user_id, code_hash) |
+| `mfa_challenges` | id, user_id, token_hash UQ, client_type, attempts, expires_at, consumed_at | Parolası doğru, ikinci adımı bekleyen giriş (5 dk, 5 deneme) |
 | `password_reset_tokens` | id, user_id, token_hash UQ, expires_at, used_at, requested_ip | 30 dk, tek kullanımlık |
 | `roles` | id, code UQ, name_tr, name_en, scope_type CK(`UNIVERSITY, FACULTY, DEPARTMENT, PROGRAM, NONE`), is_system, description | |
 | `permissions` | id, code UQ (`score:enter`), resource, action, description, requires_mfa bool | |

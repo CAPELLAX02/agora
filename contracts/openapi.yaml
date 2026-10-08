@@ -24,6 +24,14 @@ info:
     uçlar `403 PASSWORD_CHANGE_REQUIRED` döner. İstemci kullanıcıyı parola değiştirme
     ekranına yönlendirmelidir.
 
+    **İki adımlı doğrulama (MFA):** hesabında MFA açık kullanıcının girişi iki adımlıdır:
+    `POST /api/v1/auth/login` parola doğruysa token yerine `mfa_required: true` ve kısa
+    ömürlü bir `mfa_token` döner, giriş `POST /api/v1/auth/mfa/verify` ile tamamlanır.
+    Hassas yetkiler (`x-agora-mfa: true` işaretli uçlar: hesap ve rol yönetimi, denetim
+    izi, not girme) sadece MFA ile açılmış oturumlarda kullanılabilir. MFA'sız oturum
+    bu uçlarda `403 MFA_REQUIRED` alır ve `GET /api/v1/me` yanıtında `mfa_required: true`
+    görünür.
+
     **İstemci türü:** `/api/v1/auth/*` uçları `X-Agora-Client` başlığını zorunlu tutar.
     - `web`: refresh token `agora_refresh` adlı HttpOnly çerezde taşınır, gövdede yer almaz.
     - `mobile`: refresh token yanıt gövdesinde verilir ve istek gövdesinde geri gönderilir.
@@ -102,6 +110,11 @@ paths:
 
         Ayrıca IP başına hız sınırı vardır (varsayılan dakikada 20 deneme, IPv6'da /64
         ağı başına). Sınır doğru ya da yanlış her denemeyi sayar.
+
+        Hesapta iki adımlı doğrulama açıksa oturum henüz açılmaz: yanıt `MFAChallenge`
+        olur (`mfa_required: true`), çerez yazılmaz. İstemci kullanıcıdan doğrulayıcı
+        uygulamadaki kodu ister ve `POST /api/v1/auth/mfa/verify` çağırır. Başarısız
+        deneme sayacı bu adımda sıfırlanmaz, giriş tamamlanınca sıfırlanır.
       operationId: login
       security: []
       parameters:
@@ -118,7 +131,20 @@ paths:
                 username: { type: string, minLength: 1, maxLength: 64, examples: ["22290001"] }
                 password: { type: string, minLength: 1, format: password }
       responses:
-        "200": { $ref: "#/components/responses/Tokens" }
+        "200":
+          description: Giriş tamamlandı (`Tokens`) ya da ikinci adım bekleniyor (`MFAChallenge`)
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+            Set-Cookie:
+              description: Sadece web istemcisinde ve sadece giriş tamamlandığında (bkz. `Tokens` yanıtı)
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/Tokens"
+                  - $ref: "#/components/schemas/MFAChallenge"
         "400": { $ref: "#/components/responses/BadRequest" }
         "401":
           description: "`INVALID_CREDENTIALS`: kullanıcı adı veya parola hatalı"
@@ -139,6 +165,62 @@ paths:
           headers:
             Retry-After:
               description: Kilidin bitmesine ya da yeni bir deneme hakkının açılmasına kalan saniye
+              schema: { type: integer, minimum: 0 }
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/auth/mfa/verify:
+    post:
+      tags: [Kimlik doğrulama]
+      summary: Girişin ikinci adımı
+      description: |
+        Girişte alınan `mfa_token` ile doğrulayıcı uygulamadaki 6 haneli kodu (`code`) ya
+        da bir kurtarma kodunu (`recovery_code`) gönderir. İkisinden tam olarak biri
+        verilmelidir. Başarılıysa oturum açılır, yanıt girişle aynıdır.
+
+        `mfa_token` 5 dakika geçerlidir ve en fazla 5 kod denemesi kabul eder. Yanlış kod
+        hesabın başarısız deneme sayacını artırır (yanlış parola gibi). Aynı kod ve aynı
+        kurtarma kodu ikinci kez kabul edilmez. Token, girişin başladığı istemci türüyle
+        (`X-Agora-Client`) kullanılmalıdır. Hız sınırı girişle ortaktır.
+      operationId: verifyMfa
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/ClientHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [mfa_token]
+              properties:
+                mfa_token: { type: string }
+                code: { type: string, pattern: "^[0-9 ]{6,7}$", examples: ["492039"] }
+                recovery_code: { type: string, maxLength: 32, examples: ["k7m2p-x9qaz"] }
+      responses:
+        "200": { $ref: "#/components/responses/Tokens" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401":
+          description: |
+            `INVALID_MFA_CODE` (kod hatalı, aynı token'la tekrar denenebilir) ya da
+            `INVALID_MFA_TOKEN` (token geçersiz, süresi dolmuş ya da deneme hakkı bitmiş:
+            kullanıcı parolasını yeniden girmeli)
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "403":
+          description: "`ACCOUNT_DISABLED`: hesap bu arada askıya alınmış"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+        "429":
+          description: "`ACCOUNT_LOCKED` ya da `RATE_LIMITED` (bkz. giriş)"
+          headers:
+            Retry-After:
               schema: { type: integer, minimum: 0 }
           content:
             application/problem+json:
@@ -323,6 +405,203 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "503": { $ref: "#/components/responses/ServiceUnavailable" }
+
+  /api/v1/me/mfa:
+    get:
+      tags: [Hesap]
+      summary: İki adımlı doğrulama durumu
+      operationId: getMyMfa
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Durum
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MFAStatus" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/v1/me/mfa/setup:
+    post:
+      tags: [Hesap]
+      summary: İki adımlı doğrulama kurulumunu başlatır
+      description: |
+        Yeni bir TOTP sırrı üretir. İstemci `otpauth_uri`'yi QR kod olarak gösterir,
+        okutulamazsa `secret` elle girilir. Kurulum `POST /api/v1/me/mfa/enable` ile
+        tamamlanana kadar MFA kapalıdır. Tamamlanmamış kurulum yeniden başlatılabilir,
+        eski sır geçersiz olur.
+      operationId: startMfaSetup
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Sır üretildi
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MFASetup" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: "`MFA_ALREADY_ENABLED`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/me/mfa/enable:
+    post:
+      tags: [Hesap]
+      summary: İki adımlı doğrulamayı açar
+      description: |
+        Mevcut parola ve doğrulayıcı uygulamadaki kod istenir. Yanlış parola başarısız
+        deneme sayacını artırır. Başarılıysa 10 kurtarma kodu döner: kodlar sadece bu
+        yanıtta görünür.
+
+        Kullanıcının diğer bütün oturumları kapatılır. İsteği yapan oturum MFA'lı sayılır:
+        istemci `POST /api/v1/auth/refresh` ile yeni access token almalıdır.
+      operationId: enableMfa
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [current_password, code]
+              properties:
+                current_password: { type: string, format: password }
+                code: { type: string, examples: ["492039"] }
+      responses:
+        "200":
+          description: MFA açıldı
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RecoveryCodes" }
+        "400":
+          description: "`VALIDATION_FAILED`, `INVALID_CURRENT_PASSWORD` ya da `INVALID_MFA_CODE`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: "`MFA_ALREADY_ENABLED` ya da `MFA_SETUP_REQUIRED` (önce kurulum başlatılmalı)"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "429":
+          description: "`ACCOUNT_LOCKED`"
+          headers:
+            Retry-After:
+              schema: { type: integer, minimum: 0 }
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/me/mfa/disable:
+    post:
+      tags: [Hesap]
+      summary: İki adımlı doğrulamayı kapatır
+      description: |
+        Mevcut parola ile doğrulayıcı uygulamadaki kod ya da bir kurtarma kodu istenir.
+        Yanlış parola ve yanlış kod başarısız deneme sayacını artırır. Kullanıcının diğer
+        oturumları kapatılır, isteği yapan oturum artık MFA'lı sayılmaz.
+      operationId: disableMfa
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [current_password]
+              properties:
+                current_password: { type: string, format: password }
+                code: { type: string }
+                recovery_code: { type: string, maxLength: 32 }
+      responses:
+        "204":
+          description: MFA kapandı
+        "400":
+          description: "`VALIDATION_FAILED`, `INVALID_CURRENT_PASSWORD` ya da `INVALID_MFA_CODE`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: "`MFA_NOT_ENABLED`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "429":
+          description: "`ACCOUNT_LOCKED`"
+          headers:
+            Retry-After:
+              schema: { type: integer, minimum: 0 }
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/me/mfa/recovery-codes:
+    post:
+      tags: [Hesap]
+      summary: Kurtarma kodlarını yeniler
+      description: |
+        Doğrulayıcı uygulamadaki kod istenir (kurtarma kodu kabul edilmez). Eski kodların
+        hepsi geçersiz olur, yeni 10 kod sadece bu yanıtta görünür.
+      operationId: regenerateRecoveryCodes
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [code]
+              properties:
+                code: { type: string }
+      responses:
+        "200":
+          description: Yeni kodlar
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RecoveryCodes" }
+        "400":
+          description: "`VALIDATION_FAILED` ya da `INVALID_MFA_CODE`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: "`MFA_NOT_ENABLED`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "429":
+          description: "`ACCOUNT_LOCKED`"
+          headers:
+            Retry-After:
+              schema: { type: integer, minimum: 0 }
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
 
   /api/v1/me/password:
     post:
@@ -526,6 +805,7 @@ paths:
         parola görmez ya da belirlemez. Numara kullanıcı adı olur.
       operationId: createUser
       x-agora-permission: user:manage
+      x-agora-mfa: true
       security:
         - bearerAuth: []
       requestBody:
@@ -562,6 +842,7 @@ paths:
         Gerekçe denetim kaydına yazılır.
       operationId: setUserStatus
       x-agora-permission: user:manage
+      x-agora-mfa: true
       security:
         - bearerAuth: []
       parameters:
@@ -601,6 +882,7 @@ paths:
       description: Sadece PENDING hesaplarda. Önceki bağlantılar geçersiz olur.
       operationId: resendActivationEmail
       x-agora-permission: user:manage
+      x-agora-mfa: true
       security:
         - bearerAuth: []
       parameters:
@@ -624,6 +906,7 @@ paths:
       description: Yardım masası için. Bağlantı kullanıcının e-postasına gider, yönetici görmez. Sadece ACTIVE hesaplarda.
       operationId: sendPasswordResetEmail
       x-agora-permission: user:manage
+      x-agora-mfa: true
       security:
         - bearerAuth: []
       parameters:
@@ -636,6 +919,49 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "409":
           description: "`ACCOUNT_NOT_ACTIVE`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/users/{id}/mfa/reset:
+    post:
+      tags: [Kullanıcılar]
+      summary: Kullanıcının iki adımlı doğrulamasını sıfırlar
+      description: |
+        Telefonunu ve kurtarma kodlarını kaybeden kullanıcı için. Kimlik yüz yüze
+        doğrulanmalıdır: bu işlem hesabı devralmanın en kısa yoludur, gerekçe zorunludur
+        ve denetim izine yazılır. Kullanıcının bütün oturumları kapatılır. Yönetici kendi
+        MFA'sını bu uçla kapatamaz.
+      operationId: resetUserMfa
+      x-agora-permission: user:manage
+      x-agora-mfa: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 1, maxLength: 500 }
+      responses:
+        "204":
+          description: MFA kapatıldı
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: "Bkz. genel 403 kodları ve `SELF_ACTION_FORBIDDEN`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`MFA_NOT_ENABLED`"
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Problem" }
@@ -697,6 +1023,7 @@ paths:
         Gerekçe zorunludur ve denetim kaydına yazılır.
       operationId: assignRole
       x-agora-permission: role:assign
+      x-agora-mfa: true
       security:
         - bearerAuth: []
       parameters:
@@ -745,6 +1072,7 @@ paths:
         sistem yöneticisinin rolü sonlandırılamaz.
       operationId: endRoleAssignment
       x-agora-permission: role:assign
+      x-agora-mfa: true
       security:
         - bearerAuth: []
       parameters:
@@ -808,6 +1136,7 @@ paths:
       description: En yeniden eskiye sıralı, cursor ile sayfalanır.
       operationId: listAuditLog
       x-agora-permission: audit:read
+      x-agora-mfa: true
       security:
         - bearerAuth: []
       parameters:
@@ -852,6 +1181,7 @@ paths:
       description: En yeniden eskiye sıralı, cursor ile sayfalanır.
       operationId: listSecurityEvents
       x-agora-permission: audit:read
+      x-agora-mfa: true
       security:
         - bearerAuth: []
       parameters:
@@ -1613,7 +1943,8 @@ components:
     Forbidden:
       description: |
         `FORBIDDEN` (gerekli yetki yok), `ACCOUNT_DISABLED` (hesap askıya alınmış veya
-        kapatılmış) ya da `PASSWORD_CHANGE_REQUIRED` (önce parola değiştirilmeli)
+        kapatılmış), `PASSWORD_CHANGE_REQUIRED` (önce parola değiştirilmeli) ya da
+        `MFA_REQUIRED` (yetki var ama bu oturum iki adımlı doğrulamayla açılmamış)
       content:
         application/problem+json:
           schema: { $ref: "#/components/schemas/Problem" }
@@ -1729,9 +2060,53 @@ components:
           type: boolean
           description: true ise istemci kullanıcıyı parola değiştirme ekranına yönlendirmeli
 
+    MFAChallenge:
+      type: object
+      required: [mfa_required, mfa_token, expires_in]
+      properties:
+        mfa_required: { type: boolean, const: true }
+        mfa_token:
+          type: string
+          description: "`POST /api/v1/auth/mfa/verify` ile gönderilir"
+        expires_in:
+          type: integer
+          description: Kalan süre (saniye)
+          examples: [300]
+
+    MFAStatus:
+      type: object
+      required: [enabled, enabled_at, recovery_codes_remaining]
+      properties:
+        enabled: { type: boolean }
+        enabled_at: { type: [string, "null"], format: date-time }
+        recovery_codes_remaining: { type: integer, minimum: 0, maximum: 10 }
+
+    MFASetup:
+      type: object
+      required: [secret, otpauth_uri]
+      properties:
+        secret:
+          type: string
+          description: Base32 (dolgusuz). QR okutulamazsa elle girilir
+          examples: ["JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP"]
+        otpauth_uri:
+          type: string
+          description: QR kod olarak gösterilir (SHA1, 6 hane, 30 sn)
+          examples: ["otpauth://totp/Agora:22290001?algorithm=SHA1&digits=6&issuer=Agora&period=30&secret=JBSW..."]
+
+    RecoveryCodes:
+      type: object
+      required: [recovery_codes]
+      properties:
+        recovery_codes:
+          type: array
+          minItems: 10
+          maxItems: 10
+          items: { type: string, examples: ["k7m2p-x9qaz"] }
+
     Profile:
       type: object
-      required: [id, username, email, first_name, last_name, status, must_change_password, last_login_at, roles]
+      required: [id, username, email, first_name, last_name, status, must_change_password, mfa_enabled, last_login_at, roles]
       properties:
         id: { type: string, format: uuid }
         username: { type: string }
@@ -1740,6 +2115,7 @@ components:
         last_name: { type: string }
         status: { type: string, enum: [PENDING, ACTIVE, SUSPENDED, DISABLED] }
         must_change_password: { type: boolean }
+        mfa_enabled: { type: boolean }
         last_login_at: { type: [string, "null"], format: date-time }
         roles:
           type: array
@@ -1813,9 +2189,14 @@ components:
       allOf:
         - $ref: "#/components/schemas/Profile"
         - type: object
-          required: [session_id]
+          required: [session_id, mfa_required]
           properties:
             session_id: { type: string, format: uuid }
+            mfa_required:
+              type: boolean
+              description: |
+                Kullanıcının bazı yetkileri bu oturumda iki adımlı doğrulama olmadığı için
+                kullanılamıyor. İstemci MFA kurulumunu (ya da MFA ile yeniden girişi) önermeli.
 
     Grant:
       type: object

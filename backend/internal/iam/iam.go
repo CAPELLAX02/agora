@@ -52,6 +52,11 @@ type User struct {
 	PermVersion        int
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
+
+	MFAEnabled      bool
+	MFASecretEnc    []byte // şifreli TOTP sırrı: kurulum başladıysa dolu
+	MFALastUsedStep uint64 // kabul edilmiş son TOTP adımı
+	MFAEnabledAt    *time.Time
 }
 
 // NewUser, oluşturulacak hesabın bilgileridir. PasswordHash önceden hash'lenmiş olmalıdır.
@@ -76,4 +81,8 @@ type Grant struct {
 	// söyler: böyle yetkiler rolün kapsamındaki her kaydı değil, sadece ilişkili
 	// kayıtları kapsar.
 	RelationshipScoped bool
+
+	// RequiresMFA, yetkinin sadece iki adımlı doğrulamayla açılmış oturumlarda
+	// kullanılabildiğini söyler.
+	RequiresMFA bool
 }

@@ -23,7 +23,8 @@ func NewRepository(q db.Querier) *Repository {
 
 const userSelect = `
 	SELECT id, person_id, username, email, status, password_hash, must_change_password,
-	       failed_login_count, locked_until, last_login_at, perm_version, created_at, updated_at
+	       failed_login_count, locked_until, last_login_at, perm_version, created_at, updated_at,
+	       mfa_enabled, mfa_secret_enc, mfa_last_used_step, mfa_enabled_at
 	FROM iam.users`
 
 // UserByUsername, kullanıcı adına göre hesabı döndürür. Karşılaştırma büyük/küçük
@@ -39,12 +40,14 @@ func (r *Repository) UserByID(ctx context.Context, id string) (User, error) {
 
 func (r *Repository) user(ctx context.Context, query string, arg any) (User, error) {
 	var (
-		u      User
-		status string
+		u        User
+		status   string
+		lastStep int64
 	)
 	err := r.db.QueryRow(ctx, query, arg).Scan(
 		&u.ID, &u.PersonID, &u.Username, &u.Email, &status, &u.PasswordHash, &u.MustChangePassword,
 		&u.FailedLoginCount, &u.LockedUntil, &u.LastLoginAt, &u.PermVersion, &u.CreatedAt, &u.UpdatedAt,
+		&u.MFAEnabled, &u.MFASecretEnc, &lastStep, &u.MFAEnabledAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return User{}, ErrNotFound
@@ -53,6 +56,7 @@ func (r *Repository) user(ctx context.Context, query string, arg any) (User, err
 		return User{}, fmt.Errorf("iam: kullanıcı okunamadı: %w", err)
 	}
 	u.Status = UserStatus(status)
+	u.MFALastUsedStep = uint64(lastStep)
 	return u, nil
 }
 
@@ -112,7 +116,7 @@ func (r *Repository) AssignRole(ctx context.Context, userID, roleCode string, sc
 // Grants, kullanıcının verilen anda geçerli olan tüm yetkilerini döndürür.
 func (r *Repository) Grants(ctx context.Context, userID string, at time.Time) ([]Grant, error) {
 	rows, err := r.db.Query(ctx, `
-		SELECT p.code, r.code, ra.scope_type, ra.scope_id, r.relationship_scoped
+		SELECT p.code, r.code, ra.scope_type, ra.scope_id, r.relationship_scoped, p.requires_mfa
 		FROM iam.role_assignments ra
 		JOIN iam.roles r            ON r.id = ra.role_id
 		JOIN iam.role_permissions rp ON rp.role_id = r.id
@@ -135,7 +139,7 @@ func (r *Repository) Grants(ctx context.Context, userID string, at time.Time) ([
 			scope   string
 			scopeID *string
 		)
-		if err := rows.Scan(&g.Permission, &g.Role, &scope, &scopeID, &g.RelationshipScoped); err != nil {
+		if err := rows.Scan(&g.Permission, &g.Role, &scope, &scopeID, &g.RelationshipScoped, &g.RequiresMFA); err != nil {
 			return nil, fmt.Errorf("iam: yetki okunamadı: %w", err)
 		}
 		g.ScopeType = ScopeType(scope)

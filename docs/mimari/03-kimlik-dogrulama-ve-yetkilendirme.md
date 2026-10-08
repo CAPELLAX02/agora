@@ -103,6 +103,17 @@ sequenceDiagram
 - 10 adet tek kullanımlık **kurtarma kodu** (hash'li saklanır).
 - Akış: parola doğru + MFA gerekli → kısa ömürlü `mfa_challenge` token (5 dk) → `POST /auth/mfa/verify`.
 
+**Uygulama notları:**
+
+- **Zorunluluk adım yükseltmeyle (step-up) uygulanır.** `iam.permissions.requires_mfa` işaretli yetkiler (hesap ve rol yönetimi, denetim izi, not girme, not kesinleştirme, takvim ve not ölçeği yönetimi, kayıt geçersiz kılma) sadece AMR'sinde `otp` olan oturumlarda etkindir. Router, MFA'sız oturumun yetki kümesinden bu yetkileri çıkarır (`Permissions.WithoutMFA`): route kontrolü, kapsam kontrolleri ve `/me/permissions` aynı kümeyi görür. Yetkiye sahip ama MFA'sız oturum `403 MFA_REQUIRED` alır, `/me` yanıtında `mfa_required: true` görünür. Böylece personel MFA kurmadan da giriş yapabilir ama hassas işlemleri yapamaz. Öğrencinin hassas yetkisi olmadığı için MFA isteğe bağlıdır.
+- **Sır saklama:** sır AES-256-GCM ile şifrelenir, kullanıcı kimliği ek doğrulanan veri (AAD) olarak bağlanır: şifreli sır başka bir kullanıcının satırına kopyalanırsa açılmaz. Şifreleme ve kurtarma kodu anahtarları tek ana anahtardan (`AGORA_MFA_ENCRYPTION_KEY`) HKDF ile ayrı ayrı türetilir. Şifreli verinin ilk baytı anahtar sürümüdür, rotasyon veri taşımadan yapılabilir.
+- **Kurtarma kodları** 10 karakter (50 bit, karışan harfler yok), HMAC-SHA256 ile saklanır: sadece veritabanı sızan biri kodları çevrimdışı deneyemez. Yenileme için doğrulayıcı uygulamadaki kod istenir.
+- **Deneme sınırları:** yanlış kod, yanlış parola gibi hesabın başarısız deneme sayacını artırır (5'te kilit). Parola doğru girildiğinde sayaç sıfırlanmaz, giriş tamamlanınca sıfırlanır: parolayı bilen biri sayacı sıfırlayıp kodu sınırsız deneyemez. Bir giriş denemesi en fazla 5 kod kabul eder. `POST /auth/mfa/verify` girişle aynı IP hız sınırını paylaşır.
+- **Tekrar oynatma:** kabul edilen son TOTP adımı saklanır, o adım ve öncesi reddedilir. Kullanıcı satırı `FOR UPDATE` ile kilitlendiği için eşzamanlı iki istek aynı kodu kabul ettiremez.
+- **Açma/kapatma:** açarken parola ve ilk kod, kapatırken parola ve kod (ya da kurtarma kodu) istenir: çalınmış bir oturumla saldırgan kendi telefonunu ekleyip hesabın sahibini dışarıda bırakamaz. İki durumda da diğer oturumlar kapanır (`MFA_CHANGE`). Açan oturum parola ve kodla yeniden doğrulandığı için MFA'lı sayılır (bir sonraki token yenilemesinde AMR'ye `otp` eklenir).
+- **Yönetici sıfırlaması** (`POST /users/{id}/mfa/reset`): telefonunu ve kodlarını kaybeden kullanıcı için, gerekçe zorunlu, bütün oturumlar kapanır, denetim izine ve kullanıcının güvenlik olaylarına yazılır. Yönetici kendi MFA'sını bu yolla kapatamaz.
+- Parola sıfırlama MFA'yı kapatmaz: e-postayı ele geçiren biri ikinci adımı yine geçemez.
+
 ### 3.6 Şifre sıfırlama
 
 - `POST /auth/password/forgot` her zaman aynı yanıtı döner (hesap var ya da yok, numaralandırmayı önlemek için).

@@ -28,6 +28,7 @@ const (
 	RevokeReuseDetected  RevokeReason = "REUSE_DETECTED"
 	RevokePasswordChange RevokeReason = "PASSWORD_CHANGE"
 	RevokePasswordReset  RevokeReason = "PASSWORD_RESET"
+	RevokeMFAChange      RevokeReason = "MFA_CHANGE"
 	RevokeAdmin          RevokeReason = "ADMIN"
 )
 

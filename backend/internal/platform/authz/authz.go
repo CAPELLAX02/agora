@@ -26,6 +26,10 @@ type Grant struct {
 	Permission string `json:"permission"`
 	ScopeType  string `json:"scope_type"`
 	ScopeID    string `json:"scope_id,omitempty"` // UNIVERSITY ve NONE kapsamlarında boş
+
+	// RequiresMFA, yetkinin sadece iki adımlı doğrulamayla açılmış oturumlarda
+	// kullanılabildiğini söyler (not girme, rol atama gibi hassas işlemler).
+	RequiresMFA bool `json:"requires_mfa,omitempty"`
 }
 
 // Target, üzerinde işlem yapılan kaynağın organizasyondaki yeridir. Çağıran taraf
@@ -42,6 +46,7 @@ type Permissions struct {
 	userID                 string
 	grants                 map[string][]Grant // yetki kodu → kapsamlar
 	passwordChangeRequired bool
+	withheldForMFA         map[string]bool // oturumda MFA olmadığı için kullanılamayan yetkiler
 }
 
 // NewPermissions, grant listesinden bir yetki kümesi oluşturur.
@@ -67,6 +72,42 @@ func (p *Permissions) RequirePasswordChange() {
 // PasswordChangeRequired, kullanıcının parolasını değiştirmesi gerekip gerekmediğini söyler.
 func (p *Permissions) PasswordChangeRequired() bool {
 	return p.passwordChangeRequired
+}
+
+// WithoutMFA, MFA gerektiren yetkileri çıkarılmış bir kopya döndürür. İki adımlı
+// doğrulama yapılmamış oturumun etkin yetkileri budur: route kontrolü, kapsam
+// kontrolleri ve /me/permissions aynı kümeyi görür, hiçbiri MFA'yı ayrıca sormaz.
+func (p *Permissions) WithoutMFA() *Permissions {
+	out := &Permissions{
+		userID:                 p.userID,
+		grants:                 make(map[string][]Grant, len(p.grants)),
+		passwordChangeRequired: p.passwordChangeRequired,
+	}
+	for code, gs := range p.grants {
+		for _, g := range gs {
+			if g.RequiresMFA {
+				if out.withheldForMFA == nil {
+					out.withheldForMFA = make(map[string]bool)
+				}
+				out.withheldForMFA[code] = true
+				continue
+			}
+			out.grants[code] = append(out.grants[code], g)
+		}
+	}
+	return out
+}
+
+// WithheldForMFA, yetkinin kullanıcıda olduğunu ama bu oturumda iki adımlı doğrulama
+// yapılmadığı için kullanılamadığını söyler.
+func (p *Permissions) WithheldForMFA(permission string) bool {
+	return p.withheldForMFA[permission] && !p.Has(permission)
+}
+
+// MFARequired, kullanıcının bazı yetkilerinin bu oturumda iki adımlı doğrulama
+// olmadığı için kullanılamadığını söyler. Arayüz buna bakarak MFA kurulumu önerir.
+func (p *Permissions) MFARequired() bool {
+	return len(p.withheldForMFA) > 0
 }
 
 // Has, yetkinin herhangi bir kapsamda verilip verilmediğini söyler. Route

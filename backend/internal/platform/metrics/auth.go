@@ -14,6 +14,7 @@ type Auth struct {
 	reuse         prometheus.Counter
 	resets        *prometheus.CounterVec
 	rateLimited   *prometheus.CounterVec
+	mfa           *prometheus.CounterVec
 }
 
 // NewAuth, kimlik doğrulama metriklerini oluşturur ve registry'ye kaydeder.
@@ -43,8 +44,12 @@ func NewAuth(reg prometheus.Registerer) *Auth {
 			Namespace: namespace, Name: "rate_limited_total",
 			Help: "Hız sınırına takılan istekler, sınırlayıcıya göre.",
 		}, []string{"limiter"}),
+		mfa: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Namespace: namespace, Name: "mfa_events_total",
+			Help: "İki adımlı doğrulama olayları (enabled, disabled, reset, recovery_code_used, recovery_codes_renewed).",
+		}, []string{"event"}),
 	}
-	reg.MustRegister(m.logins, m.loginFailures, m.lockouts, m.reuse, m.resets, m.rateLimited)
+	reg.MustRegister(m.logins, m.loginFailures, m.lockouts, m.reuse, m.resets, m.rateLimited, m.mfa)
 	return m
 }
 
@@ -65,3 +70,7 @@ func (m *Auth) PasswordReset(stage string) { m.resets.WithLabelValues(stage).Inc
 
 // RateLimited, hız sınırına takılan bir isteği sayar.
 func (m *Auth) RateLimited(limiter string) { m.rateLimited.WithLabelValues(limiter).Inc() }
+
+// MFAEvent, bir iki adımlı doğrulama olayını sayar. Kurtarma kodu kullanımındaki ani
+// artış, telefonu ele geçirilmiş ya da kodları sızmış hesapların işareti olabilir.
+func (m *Auth) MFAEvent(event string) { m.mfa.WithLabelValues(event).Inc() }

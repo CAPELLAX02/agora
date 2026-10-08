@@ -29,6 +29,8 @@ const (
 	EventOtherSessionsRevoked   = "OTHER_SESSIONS_REVOKED"
 	EventMFAEnabled             = "MFA_ENABLED"
 	EventMFADisabled            = "MFA_DISABLED"
+	EventMFAChallengeStarted    = "MFA_CHALLENGE_STARTED" // parola doğru, ikinci adım bekleniyor
+	EventRecoveryCodesRenewed   = "MFA_RECOVERY_CODES_RENEWED"
 )
 
 // SecurityEvent, kimlik doğrulamayla ilgili bir olaydır.

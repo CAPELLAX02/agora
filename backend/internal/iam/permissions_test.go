@@ -86,7 +86,7 @@ func (e *resolverEnv) permissions(t *testing.T, userID string) *authz.Permission
 
 func (e *resolverEnv) cacheTTL(t *testing.T, userID string) time.Duration {
 	t.Helper()
-	keys := e.rdb.Keys(context.Background(), "agora:perms:"+userID+":*").Val()
+	keys := e.rdb.Keys(context.Background(), "agora:perms:v2:"+userID+":*").Val()
 	if len(keys) != 1 {
 		t.Fatalf("önbellekte %d kayıt var, 1 bekleniyordu: %v", len(keys), keys)
 	}
@@ -232,7 +232,7 @@ func TestPermissionResolverCorruptCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	key := fmt.Sprintf("agora:perms:%s:%d", userID, state.PermVersion)
+	key := fmt.Sprintf("agora:perms:v2:%s:%d", userID, state.PermVersion)
 	e.rdb.Set(ctx, key, "bozuk{", time.Hour)
 
 	if !e.permissions(t, userID).Has("user:read") {

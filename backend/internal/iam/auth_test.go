@@ -88,6 +88,10 @@ var testAuthConfig = iam.AuthConfig{
 	ResetTokenTTL:        30 * time.Minute,
 	ActivationTokenTTL:   72 * time.Hour,
 	ResetRequestInterval: 2 * time.Minute,
+
+	MFAKey:          []byte("test-mfa-key-0123456789abcdefghi"),
+	MFAIssuer:       "Agora",
+	MFAChallengeTTL: 5 * time.Minute,
 }
 
 type authEnv struct {
@@ -645,6 +649,7 @@ func (m *countingMetrics) LoginFailed(reason string)    { m.inc("fail:" + reason
 func (m *countingMetrics) AccountLocked()               { m.inc("locked") }
 func (m *countingMetrics) RefreshReuseDetected()        { m.inc("reuse") }
 func (m *countingMetrics) PasswordReset(stage string)   { m.inc("reset:" + stage) }
+func (m *countingMetrics) MFAEvent(event string)        { m.inc("mfa:" + event) }
 
 func TestAuthMetrics(t *testing.T) {
 	e := newAuthEnv(t)

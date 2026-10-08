@@ -926,7 +926,7 @@ func TestHTTPUserManagement(t *testing.T) {
 	if err := repo.AssignRole(ctx, auditorID, "AUDITOR", iam.ScopeUniversity, ""); err != nil {
 		t.Fatal(err)
 	}
-	admin, auditor := e.bearer(t, "P90001"), e.bearer(t, "P90003")
+	admin, auditor := e.mfaBearer(t, "P90001"), e.bearer(t, "P90003")
 
 	newUser := map[string]string{
 		"kind": "STUDENT", "number": "22290099", "first_name": "Elif", "last_name": "Şahin",
@@ -1038,7 +1038,7 @@ func TestHTTPRoleManagement(t *testing.T) {
 		t.Fatal(err)
 	}
 	teacherID := e.addUser(t, "P10070")
-	admin, teacher := e.bearer(t, "P90001"), e.bearer(t, "P10070")
+	admin, teacher := e.mfaBearer(t, "P90001"), e.bearer(t, "P10070")
 
 	hasPermission := func(perm string) bool {
 		res := e.do(t, nil, "GET", "/api/v1/me/permissions", teacher, nil)
@@ -1078,9 +1078,13 @@ func TestHTTPRoleManagement(t *testing.T) {
 	if assigned.State != "ACTIVE" || assigned.ScopeName != "Bilgisayar Mühendisliği" {
 		t.Errorf("atama yanıtı = %s", res.body)
 	}
-	// Aynı access token: yeni yetki bir sonraki istekte görünür.
-	if !hasPermission("score:enter") {
+	// Aynı access token: yeni yetki bir sonraki istekte görünür. MFA gerektiren
+	// yetkiler (not girme) MFA'sız oturumda görünmez, diğerleri görünür.
+	if !hasPermission("attendance:take") {
 		t.Error("atanan rolün yetkisi hemen görünmeli")
+	}
+	if hasPermission("score:enter") {
+		t.Error("MFA gerektiren yetki MFA'sız oturumda görünmemeli")
 	}
 
 	for name, body := range map[string]map[string]string{
@@ -1107,7 +1111,7 @@ func TestHTTPRoleManagement(t *testing.T) {
 	if res.status != http.StatusNoContent {
 		t.Fatalf("sonlandırma: %d %s", res.status, res.body)
 	}
-	if hasPermission("score:enter") {
+	if hasPermission("attendance:take") {
 		t.Error("sonlandırılan rolün yetkisi hemen kalkmalı")
 	}
 
@@ -1117,7 +1121,7 @@ func TestHTTPRoleManagement(t *testing.T) {
 	if err := repo.AssignRole(ctx, otherAdmin, "SYSTEM_ADMIN", iam.ScopeUniversity, ""); err != nil {
 		t.Fatal(err)
 	}
-	other := e.bearer(t, "P90002")
+	other := e.mfaBearer(t, "P90002")
 	var list struct {
 		Items []struct {
 			ID   string `json:"id"`

@@ -1089,13 +1089,74 @@
       }
     },
     {
+      "id": 26,
+      "type": "timeseries",
+      "title": "İki adımlı doğrulama (1 sa)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 51,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "A",
+          "expr": "sum by (event) (increase(agora_mfa_events_total[1h]))",
+          "legendFormat": "{{event}}"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "refId": "B",
+          "expr": "sum by (reason) (increase(agora_login_failures_total{reason=~\"wrong_otp|wrong_recovery_code|mfa_unavailable\"}[1h]))",
+          "legendFormat": "başarısız: {{reason}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "MFA açma/kapatma, yönetici sıfırlaması ve kurtarma kodu kullanımı; ikinci adımda yanlış kod. Kurtarma kodu kullanımındaki ani artış telefonu ele geçirilmiş ya da kodları sızmış hesapların işareti olabilir."
+    },
+    {
       "id": 23,
       "type": "row",
       "title": "Worker · e-posta outbox'ı",
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 51,
+        "y": 59,
         "w": 24,
         "h": 1
       },
@@ -1111,7 +1172,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 52,
+        "y": 60,
         "w": 12,
         "h": 7
       },
@@ -1162,7 +1223,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 52,
+        "y": 60,
         "w": 12,
         "h": 7
       },

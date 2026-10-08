@@ -22,7 +22,7 @@ func clearAgoraEnv(t *testing.T) {
 		"AGORA_SESSION_ABSOLUTE_TIMEOUT", "AGORA_PASSWORD_HASH_WORKERS",
 		"AGORA_REDIS_URL", "AGORA_LOGIN_RATE_LIMIT", "AGORA_CORS_ALLOWED_ORIGINS",
 		"AGORA_WEB_BASE_URL", "AGORA_SMTP_ADDR", "AGORA_SMTP_FROM", "AGORA_SMTP_USERNAME",
-		"AGORA_SMTP_PASSWORD", "AGORA_WORKER_METRICS_ADDR",
+		"AGORA_SMTP_PASSWORD", "AGORA_WORKER_METRICS_ADDR", "AGORA_MFA_ENCRYPTION_KEY",
 	} {
 		t.Setenv(key, "")
 	}
@@ -53,6 +53,7 @@ func defaultsWith(modify func(c *Config)) Config {
 		SessionAbsoluteTimeout: 30 * 24 * time.Hour,
 		PasswordHashWorkers:    4,
 		LoginRateLimit:         20,
+		MFAKey:                 []byte("agora-dev-mfa-key-32-bytes-long!"),
 
 		WebBaseURL:        devWebBaseURL,
 		SMTPAddr:          devSMTPAddr,
@@ -100,6 +101,7 @@ func TestLoad(t *testing.T) {
 				"AGORA_SMTP_USERNAME":            "agora",
 				"AGORA_SMTP_PASSWORD":            "smtp-gizli",
 				"AGORA_WORKER_METRICS_ADDR":      ":9100",
+				"AGORA_MFA_ENCRYPTION_KEY":       "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=",
 			},
 			want: defaultsWith(func(c *Config) {
 				c.Env = "production"
@@ -123,12 +125,23 @@ func TestLoad(t *testing.T) {
 				c.SMTPUsername = "agora"
 				c.SMTPPassword = "smtp-gizli"
 				c.WorkerMetricsAddr = ":9100"
+				c.MFAKey = []byte("0123456789abcdef0123456789abcdef")
 			}),
 		},
 		{
 			name:    "development dışında JWT anahtarı zorunlu",
 			env:     map[string]string{"AGORA_ENV": "test", "AGORA_DATABASE_URL": "postgres://u:p@db/agora"},
-			wantErr: []string{"AGORA_JWT_PRIVATE_KEY_FILE development dışında zorunlu"},
+			wantErr: []string{"AGORA_JWT_PRIVATE_KEY_FILE development dışında zorunlu", "AGORA_MFA_ENCRYPTION_KEY development dışında zorunlu"},
+		},
+		{
+			name:    "MFA anahtarı 32 bayt olmalı",
+			env:     map[string]string{"AGORA_MFA_ENCRYPTION_KEY": "a2lzYS1hbmFodGFy"},
+			wantErr: []string{"AGORA_MFA_ENCRYPTION_KEY 32 baytlık bir anahtarın base64 hali olmalı"},
+		},
+		{
+			name:    "MFA anahtarı base64 olmalı",
+			env:     map[string]string{"AGORA_MFA_ENCRYPTION_KEY": "base64 değil!"},
+			wantErr: []string{"AGORA_MFA_ENCRYPTION_KEY 32 baytlık"},
 		},
 		{
 			name:    "access token ömrü sınır dışında",

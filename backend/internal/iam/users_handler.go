@@ -25,6 +25,7 @@ type AccountService interface {
 	SendPasswordReset(ctx context.Context, actorID, userID string) error
 	AssignRole(ctx context.Context, actorID, userID string, in AssignInput) (string, error)
 	EndAssignment(ctx context.Context, actorID, userID, assignmentID, reason string) error
+	ResetMFA(ctx context.Context, actorID, userID, reason string) error
 }
 
 // UserStore, hesap okuma işlemleridir. *Repository bunu sağlar.
@@ -55,6 +56,7 @@ func (h *UsersHandler) Register(rt *authz.Router) {
 	rt.HandleFunc("PUT /api/v1/users/{id}/status", authz.Permission("user:manage"), h.setStatus)
 	rt.HandleFunc("POST /api/v1/users/{id}/activation-email", authz.Permission("user:manage"), h.resendActivation)
 	rt.HandleFunc("POST /api/v1/users/{id}/password-reset-email", authz.Permission("user:manage"), h.sendPasswordReset)
+	rt.HandleFunc("POST /api/v1/users/{id}/mfa/reset", authz.Permission("user:manage"), h.resetMFA)
 
 	// Rol kataloğu gizli değildir: arayüz rol adlarını göstermek için okur.
 	rt.HandleFunc("GET /api/v1/roles", authz.Authenticated, h.listRoles)
@@ -124,6 +126,10 @@ type assignRoleRequest struct {
 }
 
 type endAssignmentRequest struct {
+	Reason string `json:"reason"`
+}
+
+type resetMFARequest struct {
 	Reason string `json:"reason"`
 }
 
@@ -343,6 +349,29 @@ func (h *UsersHandler) setStatus(w http.ResponseWriter, r *http.Request) {
 	h.writeActionResult(w, r, err, http.StatusNoContent)
 }
 
+// resetMFA, telefonunu ve kurtarma kodlarını kaybeden kullanıcının iki adımlı
+// doğrulamasını kapatır. Kimlik doğrulaması yönetici tarafından kampüste (yüz yüze)
+// yapılmalıdır: bu uç hesabı devralmanın en kısa yoludur, gerekçe zorunludur.
+func (h *UsersHandler) resetMFA(w http.ResponseWriter, r *http.Request) {
+	actor, _ := authn.PrincipalFrom(r.Context())
+	id := r.PathValue("id")
+	if !httpx.ValidUUID(id) {
+		httpx.NotFound(w, r)
+		return
+	}
+	var req resetMFARequest
+	if err := httpx.ReadJSON(w, r, &req); err != nil {
+		httpx.InvalidBody(w, r, err)
+		return
+	}
+	req.Reason = strings.TrimSpace(req.Reason)
+	if req.Reason == "" || utf8.RuneCountInString(req.Reason) > 500 {
+		httpx.ValidationFailed(w, r, []httpx.FieldError{{Field: "reason", Message: "Gerekçe zorunlu, en fazla 500 karakter."}})
+		return
+	}
+	h.writeActionResult(w, r, h.accounts.ResetMFA(r.Context(), actor.UserID, id, req.Reason), http.StatusNoContent)
+}
+
 func (h *UsersHandler) resendActivation(w http.ResponseWriter, r *http.Request) {
 	h.userAction(w, r, h.accounts.ResendActivation)
 }
@@ -377,6 +406,8 @@ func (h *UsersHandler) writeActionResult(w http.ResponseWriter, r *http.Request,
 		h.problem(w, r, http.StatusConflict, "ACCOUNT_NOT_PENDING", "Hesap aktivasyon beklemiyor.")
 	case errors.Is(err, ErrAccountNotActive):
 		h.problem(w, r, http.StatusConflict, "ACCOUNT_NOT_ACTIVE", "Hesap aktif değil.")
+	case errors.Is(err, ErrMFANotEnabled):
+		h.problem(w, r, http.StatusConflict, "MFA_NOT_ENABLED", "Kullanıcının iki adımlı doğrulaması açık değil.")
 	default:
 		h.serverError(w, r, err)
 	}
