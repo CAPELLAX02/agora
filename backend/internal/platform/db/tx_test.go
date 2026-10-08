@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -85,4 +86,18 @@ func exists(t *testing.T, pool *pgxpool.Pool, code string) bool {
 		t.Fatal(err)
 	}
 	return ok
+}
+
+// TestTimestamptzIsUTC, veritabanından okunan zamanların sürecin saat diliminden
+// bağımsız olarak UTC geldiğini doğrular.
+func TestTimestamptzIsUTC(t *testing.T) {
+	pool := dbtest.New(t)
+
+	var now time.Time
+	if err := pool.QueryRow(context.Background(), `SELECT now()`).Scan(&now); err != nil {
+		t.Fatal(err)
+	}
+	if now.Location() != time.UTC {
+		t.Errorf("zaman %s saat diliminde okundu, UTC olmalı", now.Location())
+	}
 }

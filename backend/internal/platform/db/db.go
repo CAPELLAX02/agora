@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -30,6 +32,18 @@ func Open(ctx context.Context, opts Options) (*pgxpool.Pool, error) {
 	cfg.MinConns = opts.MinConns
 	cfg.MaxConnLifetime = opts.MaxConnLifetime
 	cfg.MaxConnIdleTime = opts.MaxConnIdleTime
+
+	// timestamptz değerleri UTC olarak okunsun. pgx varsayılan olarak sürecin yerel
+	// saat dilimini kullanır: aynı an, geliştiricinin bilgisayarında "+03:00",
+	// sunucuda "Z" ile yazılırdı. API'nin çıktısı çalıştığı makineye bağlı olmamalı.
+	cfg.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+		conn.TypeMap().RegisterType(&pgtype.Type{
+			Name:  "timestamptz",
+			OID:   pgtype.TimestamptzOID,
+			Codec: &pgtype.TimestamptzCodec{ScanLocation: time.UTC},
+		})
+		return nil
+	}
 
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {

@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -12,6 +13,7 @@ import (
 	tclog "github.com/testcontainers/testcontainers-go/log"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 
+	"github.com/CAPELLAX02/agora/backend/internal/platform/db"
 	"github.com/CAPELLAX02/agora/backend/migrations"
 )
 
@@ -50,7 +52,8 @@ func New(t *testing.T) *pgxpool.Pool {
 
 	migrate(t, ctx, dsn)
 
-	pool, err := pgxpool.New(ctx, dsn)
+	// Uygulamayla aynı havuz ayarları (ör. UTC zaman okuma) kullanılsın diye db.Open.
+	pool, err := db.Open(ctx, db.Options{URL: dsn, MaxConns: 10, MaxConnLifetime: time.Hour, MaxConnIdleTime: time.Minute})
 	if err != nil {
 		t.Fatalf("dbtest: bağlantı havuzu oluşturulamadı: %v", err)
 	}
