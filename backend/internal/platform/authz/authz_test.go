@@ -264,3 +264,22 @@ func (mustChangeResolver) Permissions(ctx context.Context, userID string) (*Perm
 	p.RequirePasswordChange()
 	return p, nil
 }
+
+func TestScopesOf(t *testing.T) {
+	p := NewPermissions("u1", []Grant{
+		{Permission: "person:read", ScopeType: ScopeFaculty, ScopeID: "muh"},
+		{Permission: "person:read", ScopeType: ScopeDepartment, ScopeID: "bil"},
+		{Permission: "person:read", ScopeType: ScopeNone},
+		{Permission: "course:read", ScopeType: ScopeUniversity},
+	})
+	s := p.ScopesOf("person:read")
+	if s.University || !reflect.DeepEqual(s.FacultyIDs, []string{"muh"}) || !reflect.DeepEqual(s.DepartmentIDs, []string{"bil"}) {
+		t.Errorf("person:read = %+v", s)
+	}
+	if !p.ScopesOf("course:read").University {
+		t.Error("üniversite kapsamı")
+	}
+	if !p.ScopesOf("yok:yok").Empty() || !NewPermissions("u", []Grant{{Permission: "x:y", ScopeType: ScopeNone}}).ScopesOf("x:y").Empty() {
+		t.Error("NONE kapsamı ve olmayan yetki boş küme vermeli")
+	}
+}

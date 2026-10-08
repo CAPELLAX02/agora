@@ -161,11 +161,18 @@ func (pr *PermissionResolver) grants(ctx context.Context, repo *Repository, user
 
 // toAuthzGrants, rol bazlı satırları tekilleştirir: iki rol aynı yetkiyi aynı
 // kapsamda veriyorsa (ör. öğretim elemanı ve bölüm başkanı) tek kayıt kalır.
+//
+// İlişkiye dayalı rollerin (danışman) yetkileri kapsamsız (NONE) yapılır: route
+// guard'ı için yetki vardır ("öğrenci görebilir"), ama hiçbir birimi kapsamaz.
+// Hangi kayıtlara erişileceğine politika fonksiyonları ilişkiyle karar verir.
 func toAuthzGrants(rows []Grant) []authz.Grant {
 	type key struct{ perm, scopeType, scopeID string }
 	seen := make(map[key]bool, len(rows))
 	out := make([]authz.Grant, 0, len(rows))
 	for _, g := range rows {
+		if g.RelationshipScoped {
+			g.ScopeType, g.ScopeID = ScopeNone, ""
+		}
 		k := key{g.Permission, string(g.ScopeType), g.ScopeID}
 		if seen[k] {
 			continue

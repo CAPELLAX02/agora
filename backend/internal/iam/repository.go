@@ -112,7 +112,7 @@ func (r *Repository) AssignRole(ctx context.Context, userID, roleCode string, sc
 // Grants, kullanıcının verilen anda geçerli olan tüm yetkilerini döndürür.
 func (r *Repository) Grants(ctx context.Context, userID string, at time.Time) ([]Grant, error) {
 	rows, err := r.db.Query(ctx, `
-		SELECT p.code, r.code, ra.scope_type, ra.scope_id
+		SELECT p.code, r.code, ra.scope_type, ra.scope_id, r.relationship_scoped
 		FROM iam.role_assignments ra
 		JOIN iam.roles r            ON r.id = ra.role_id
 		JOIN iam.role_permissions rp ON rp.role_id = r.id
@@ -135,7 +135,7 @@ func (r *Repository) Grants(ctx context.Context, userID string, at time.Time) ([
 			scope   string
 			scopeID *string
 		)
-		if err := rows.Scan(&g.Permission, &g.Role, &scope, &scopeID); err != nil {
+		if err := rows.Scan(&g.Permission, &g.Role, &scope, &scopeID, &g.RelationshipScoped); err != nil {
 			return nil, fmt.Errorf("iam: yetki okunamadı: %w", err)
 		}
 		g.ScopeType = ScopeType(scope)

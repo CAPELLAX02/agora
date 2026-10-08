@@ -103,6 +103,40 @@ func (p *Permissions) Allows(permission string, t Target) bool {
 	return false
 }
 
+// ScopeSet, bir yetkinin verildiği kapsamların özetidir. Liste sorgularını yetkili
+// küme üzerinden çalıştırmak için kullanılır: "önce getir, sonra kontrol et" yerine
+// sorgu sadece kapsanan birimlerin kayıtlarını getirir.
+type ScopeSet struct {
+	University    bool
+	FacultyIDs    []string
+	DepartmentIDs []string
+	ProgramIDs    []string
+}
+
+// Empty, hiçbir birimin kapsanmadığını söyler.
+func (s ScopeSet) Empty() bool {
+	return !s.University && len(s.FacultyIDs) == 0 && len(s.DepartmentIDs) == 0 && len(s.ProgramIDs) == 0
+}
+
+// ScopesOf, yetkinin verildiği kapsamları döndürür. NONE kapsamlı yetkiler hiçbir
+// birimi kapsamadığı için dahil edilmez.
+func (p *Permissions) ScopesOf(permission string) ScopeSet {
+	var s ScopeSet
+	for _, g := range p.grants[permission] {
+		switch g.ScopeType {
+		case ScopeUniversity:
+			s.University = true
+		case ScopeFaculty:
+			s.FacultyIDs = append(s.FacultyIDs, g.ScopeID)
+		case ScopeDepartment:
+			s.DepartmentIDs = append(s.DepartmentIDs, g.ScopeID)
+		case ScopeProgram:
+			s.ProgramIDs = append(s.ProgramIDs, g.ScopeID)
+		}
+	}
+	return s
+}
+
 // Grants, bütün yetkileri yetki koduna ve kapsama göre sıralı döndürür.
 func (p *Permissions) Grants() []Grant {
 	out := []Grant{}

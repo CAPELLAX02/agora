@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/CAPELLAX02/agora/backend/internal/audit"
+	"github.com/CAPELLAX02/agora/backend/internal/enrollment"
 	"github.com/CAPELLAX02/agora/backend/internal/iam"
 	"github.com/CAPELLAX02/agora/backend/internal/org"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authz"
@@ -29,6 +30,7 @@ func (app *application) routes() http.Handler {
 	iam.NewUsersHandler(app.auth, iam.NewRepository(app.db), app.logger).Register(rt)
 
 	audit.NewHandler(audit.NewRepository(app.db), app.logger).Register(rt)
+	enrollment.NewHandler(enrollment.NewRepository(app.db), enrollment.NewService(app.db), app.logger).Register(rt)
 
 	return httpx.Chain(
 		httpx.WithProblemFallback(mux),

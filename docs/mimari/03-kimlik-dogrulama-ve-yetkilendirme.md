@@ -278,6 +278,8 @@ HTTP isteği
   - `Authenticated` ve `Permission` route'larında her istekte kullanıcının durumu ve `perm_version`'ı birincil anahtarla okunur, yetkiler `agora:perms:{userID}:{permVersion}` anahtarından gelir. Askıya alınan hesap ve rol değişikliği anında etkilidir.
   - Süreli atamalar zamanla değiştiği halde `perm_version`'ı artırmaz. Bu yüzden önbellek kaydının ömrü, bir sonraki atama başlangıcı ya da bitişiyle sınırlanır (en çok 1 saat).
   - Yetki önbelleği bir güvenlik kontrolü değil, hızlandırıcıdır: Redis'e ulaşılamazsa yetkiler veritabanından çözülür.
+  - **İlişkiye dayalı roller** (`iam.roles.relationship_scoped`, şimdilik ADVISOR): bu rollerin yetkileri route guard'ı için sayılır ama hiçbir birimi kapsamaz (kapsam NONE). Danışman bölümdeki bütün öğrencileri değil, sadece danışmanı olduğu öğrencileri görür; erişime politika fonksiyonu (`CanReadStudent`) ilişkiyle karar verir.
+  - Liste uçları yetkili kümeden getirir (`Permissions.ScopesOf`): sorgu sadece kapsanan birimlerin kayıtlarını okur. Tekil kayıtta erişim yoksa 404 döner.
 
 ### 4.7 Özel durumlar
 

@@ -43,6 +43,8 @@ tags:
     description: Kullanıcı hesaplarının yönetimi
   - name: Organizasyon
     description: Kampüs, akademik birim, bölüm ve program kataloğu (herkese açık)
+  - name: Öğrenciler
+    description: Program kayıtları ve danışmanlık
   - name: Denetim
     description: Denetim izi ve güvenlik olayları (sistem yöneticisi ve denetçi)
 
@@ -1112,6 +1114,259 @@ paths:
         "412": { $ref: "#/components/responses/VersionMismatch" }
         "428": { $ref: "#/components/responses/PreconditionRequired" }
 
+  /api/v1/students:
+    get:
+      tags: [Öğrenciler]
+      summary: Program kayıtlarını listeler
+      description: |
+        Sadece kullanıcının `person:read` yetkisinin kapsadığı birimlerin kayıtları döner
+        (yetkili kümeden getirme). Danışman rolü bölümü kapsamaz: danışmanlar
+        öğrencilerini `/api/v1/me/advisees` ile görür. Öğrenci numarasına göre sıralı.
+      operationId: listStudents
+      x-agora-permission: person:read
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: faculty_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: department_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: program_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/EnrollmentStatus" }
+        - name: class_level
+          in: query
+          schema: { type: integer, minimum: 0, maximum: 7, description: "0: hazırlık" }
+        - name: q
+          in: query
+          description: Öğrenci numarası ya da ad soyad
+          schema: { type: string, maxLength: 100 }
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Program kayıtları
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/StudentProgram" }
+                  next_cursor: { type: string }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/v1/students/{id}:
+    get:
+      tags: [Öğrenciler]
+      summary: Bir öğrenciyi program kayıtlarıyla döndürür
+      description: |
+        Öğrencinin kendisi, öğrencinin programlarından birini kapsayan `person:read`
+        yetkisi olanlar ve öğrencinin şu anki danışmanı görebilir. Erişim yoksa 404 döner:
+        öğrencinin var olup olmadığı sızdırılmaz.
+      operationId: getStudent
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Öğrenci
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Student" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/students/{id}/programs:
+    post:
+      tags: [Öğrenciler]
+      summary: Öğrenciyi bir programa kaydeder
+      description: Yetkinin programın birimini kapsaması gerekir.
+      operationId: createStudentProgram
+      x-agora-permission: student_program:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [program_id, admission_type, admission_year, admitted_on]
+              properties:
+                program_id: { type: string, format: uuid }
+                kind: { type: string, enum: [MAJOR, DOUBLE_MAJOR, MINOR], default: MAJOR }
+                admission_type: { $ref: "#/components/schemas/AdmissionType" }
+                admission_year: { type: integer, minimum: 1946 }
+                admitted_on: { type: string, format: date }
+                status: { type: string, enum: [ACTIVE, PREP], default: ACTIVE }
+                class_level: { type: integer, minimum: 0, maximum: 7, description: "Hazırlıkta 0, diğerlerinde 1-7 (varsayılan 1)" }
+      responses:
+        "201":
+          description: Kayıt oluşturuldu
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StudentProgram" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`ALREADY_ENROLLED`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/student-programs/{id}/advisor:
+    put:
+      tags: [Öğrenciler]
+      summary: Danışman atar
+      description: |
+        Danışman, programın bölümünde aktif danışman rolü olan, hesabı aktif ve görevde
+        olan bir öğretim elemanı olmalıdır. Önceki danışmanlık bu anda sona erer ve
+        geçmişte kalır. Mezun olmuş ya da ayrılmış kayda danışman atanmaz.
+      operationId: assignAdvisor
+      x-agora-permission: advisor:assign
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [staff_id, reason]
+              properties:
+                staff_id: { type: string, format: uuid }
+                reason: { type: string, minLength: 1, maxLength: 500 }
+      responses:
+        "200":
+          description: Güncel program kaydı
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StudentProgram" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`ENROLLMENT_NOT_ONGOING`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/student-programs/{id}/advisors:
+    get:
+      tags: [Öğrenciler]
+      summary: Danışman geçmişi
+      description: Öğrenciyi görebilen herkes görebilir (bkz. öğrenci okuma kuralı).
+      operationId: listAdvisorHistory
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: En yeniden eskiye danışmanlıklar
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/AdvisorHistoryItem" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/departments/{id}/advisors:
+    get:
+      tags: [Öğrenciler]
+      summary: Bölümde atanabilecek danışmanlar
+      description: Mevcut danışmanlık sayılarıyla birlikte (yük dengesi için).
+      operationId: listEligibleAdvisors
+      x-agora-permission: advisor:assign
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Danışmanlar (soyada göre sıralı)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/EligibleAdvisor" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/me/programs:
+    get:
+      tags: [Hesap]
+      summary: Program kayıtlarım
+      description: Öğrenci olmayan kullanıcılar için boş liste.
+      operationId: listMyPrograms
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Program kayıtları
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/StudentProgram" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/me/advisees:
+    get:
+      tags: [Hesap]
+      summary: Danışmanı olduğum öğrenciler
+      operationId: listMyAdvisees
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Aktif danışmanlıklar (öğrenci numarasına göre)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/StudentProgram" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /api/v1/faculties:
     get:
       tags: [Organizasyon]
@@ -1734,6 +1989,104 @@ components:
         features: { type: array, items: { $ref: "#/components/schemas/ClassroomFeature" } }
         is_active: { type: boolean }
         version: { type: integer }
+
+    EnrollmentStatus:
+      type: string
+      enum: [PREP, ACTIVE, FROZEN, SUSPENDED, GRADUATED, WITHDRAWN, DISMISSED]
+    AdmissionType:
+      type: string
+      enum: [OSYS, DGS, YOS, TRANSFER_INTERNAL, TRANSFER_EXTERNAL, SPECIAL_TALENT, EXCHANGE]
+
+    Advisor:
+      type: object
+      required: [staff_id, staff_no, title, first_name, last_name, since]
+      properties:
+        staff_id: { type: string, format: uuid }
+        staff_no: { type: string }
+        title: { type: [string, "null"], examples: ["Prof. Dr."] }
+        first_name: { type: string }
+        last_name: { type: string }
+        since: { type: string, format: date-time }
+
+    AdvisorHistoryItem:
+      allOf:
+        - $ref: "#/components/schemas/Advisor"
+        - type: object
+          required: [until, assigned_by, reason]
+          properties:
+            until: { type: [string, "null"], format: date-time, description: Aktif danışmanlıkta null }
+            assigned_by: { type: [string, "null"], format: uuid }
+            reason: { type: [string, "null"] }
+
+    EligibleAdvisor:
+      type: object
+      required: [staff_id, staff_no, title, first_name, last_name, active_count]
+      properties:
+        staff_id: { type: string, format: uuid }
+        staff_no: { type: string }
+        title: { type: [string, "null"] }
+        first_name: { type: string }
+        last_name: { type: string }
+        active_count: { type: integer, description: Şu anki danışmanlık sayısı }
+
+    StudentProgram:
+      type: object
+      required: [id, student, program, kind, admission_type, admission_year, admitted_on, status, class_level, current_semester, gpa, earned_ects, advisor]
+      properties:
+        id: { type: string, format: uuid }
+        student:
+          type: object
+          required: [id, student_no, first_name, last_name]
+          properties:
+            id: { type: string, format: uuid }
+            student_no: { type: string }
+            first_name: { type: string }
+            last_name: { type: string }
+        program:
+          type: object
+          required: [id, code, name_tr, department, faculty]
+          properties:
+            id: { type: string, format: uuid }
+            code: { type: string }
+            name_tr: { type: string }
+            department:
+              type: object
+              required: [id, name_tr]
+              properties:
+                id: { type: string, format: uuid }
+                name_tr: { type: string }
+            faculty:
+              type: object
+              required: [id, name_tr]
+              properties:
+                id: { type: string, format: uuid }
+                name_tr: { type: string }
+        kind: { type: string, enum: [MAJOR, DOUBLE_MAJOR, MINOR] }
+        admission_type: { $ref: "#/components/schemas/AdmissionType" }
+        admission_year: { type: integer }
+        admitted_on: { type: string, format: date }
+        status: { $ref: "#/components/schemas/EnrollmentStatus" }
+        class_level: { type: integer, description: "0: hazırlık" }
+        current_semester: { type: integer }
+        gpa: { type: [number, "null"] }
+        earned_ects: { type: number }
+        advisor:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/Advisor"
+
+    Student:
+      type: object
+      required: [id, student_no, first_name, last_name, email, programs]
+      properties:
+        id: { type: string, format: uuid }
+        student_no: { type: string }
+        first_name: { type: string }
+        last_name: { type: string }
+        email: { type: [string, "null"], format: email }
+        programs:
+          type: array
+          items: { $ref: "#/components/schemas/StudentProgram" }
 
     UnitType:
       type: string

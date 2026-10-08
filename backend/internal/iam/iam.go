@@ -71,4 +71,9 @@ type Grant struct {
 	Role       string
 	ScopeType  ScopeType
 	ScopeID    string // UNIVERSITY ve NONE kapsamlarında boş
+
+	// RelationshipScoped, yetkinin ilişkiye dayalı bir rolden (ör. danışman) geldiğini
+	// söyler: böyle yetkiler rolün kapsamındaki her kaydı değil, sadece ilişkili
+	// kayıtları kapsar.
+	RelationshipScoped bool
 }
