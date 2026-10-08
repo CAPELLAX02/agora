@@ -1,0 +1,65 @@
+# Web CI: her push ve pull request'te biçim, lint, tip kontrolü, testler ve build.
+# Sözleşme değişince de çalışır: üretilmiş API istemcisi sözleşmeyle uyumlu kalmalı.
+name: web
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "web/**"
+      - "contracts/**"
+      - ".github/workflows/web.yml"
+  pull_request:
+    paths:
+      - "web/**"
+      - "contracts/**"
+      - ".github/workflows/web.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: web
+
+jobs:
+  check:
+    name: biçim, lint, tip, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # pnpm, package.json'daki "packageManager" sürümüyle corepack üzerinden gelir.
+      # setup-node'un pnpm önbelleği için pnpm'in ondan önce hazır olması gerekir.
+      - name: corepack
+        run: corepack enable
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: Bağımlılıklar
+        run: pnpm install --frozen-lockfile
+
+      - name: Biçim (Prettier)
+        run: pnpm format:check
+
+      - name: Lint (ESLint)
+        run: pnpm lint
+
+      - name: Tip kontrolü
+        run: pnpm typecheck
+
+      - name: Testler
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
