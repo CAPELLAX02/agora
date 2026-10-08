@@ -43,13 +43,13 @@
 ┌─────────────┐   POST /auth/login (kullanıcı adı + parola [+ MFA])
 │   İstemci   │ ───────────────────────────────────────────────▶  API
 │ (web/mobil) │ ◀───────────────────────────────────────────────
-└─────────────┘   access_token (JWT, 15 dk) + refresh_token (opak, 30 gün, döner)
+└─────────────┘   access_token (JWT, 15 dk) + refresh_token (opak, tek kullanımlık, döner)
 ```
 
 | Token | Biçim | Ömür | Saklama (web) | Saklama (mobil) |
 | --- | --- | --- | --- | --- |
 | **Access token** | JWT, **EdDSA (Ed25519)** imzalı | 15 dk | **Sadece bellekte** (Redux state). localStorage **yok** | Bellekte |
-| **Refresh token** | 256-bit rastgele, opak. DB'de **SHA-256 hash'i** saklanır | 30 gün kayan, en çok 90 gün mutlak | `HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth` çerez | `expo-secure-store` (Keychain/Keystore) |
+| **Refresh token** | 256-bit rastgele, opak. DB'de **SHA-256 hash'i** saklanır | 2 saat boşta kalma (her refresh'te yeniden başlar), oturum başına en çok 30 gün mutlak | `HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth` çerez | `expo-secure-store` (Keychain/Keystore) |
 
 **Access token claim'leri** (küçük tutulur, yetkiler token'a gömülmez):
 
@@ -85,12 +85,13 @@ sequenceDiagram
   A-->>C: 401 + kullanıcıya bildirim
 ```
 
-- Eşzamanlı sekmelerden gelen meşru yarışları tolere etmek için kısa bir **tolerans penceresi** (ör. 10 sn) içinde aynı R1 ile gelen ikinci istek aynı R2'yi alır.
+- Eşzamanlı sekmelerden gelen meşru yarışları tolere etmek için kısa bir **tolerans penceresi** (10 sn) var: bu süre içinde aynı R1 ile gelen ikinci istek reddedilir ama oturum **sonlandırılmaz**, istemci elindeki yeni token'la devam eder. R2'yi tekrar vermek mümkün değil, çünkü sunucu token'ların sadece hash'ini saklar.
+- Aynı token'la eşzamanlı gelen istekler `SELECT ... FOR UPDATE` ile sıraya girer: sadece biri rotasyonu tamamlar.
 
 ### 3.4 Oturumlar
 
 - `iam.sessions`: her giriş bir oturum. Cihaz bilgisi (user-agent'tan ayrıştırılmış), IP, oluşturulma ve son görülme zamanı, iptal zamanı tutulur.
-- **Boşta kalma zaman aşımı**: 120 dk istek yoksa refresh reddedilir (OBS ile uyumlu). **Mutlak ömür**: 90 gün.
+- **Boşta kalma zaman aşımı**: 120 dk refresh yapılmazsa oturum düşer (OBS ile uyumlu). **Mutlak ömür**: 30 gün, refresh'lerle uzamaz. Mobil istemci için daha uzun boşta kalma süresi mobil fazında değerlendirilecek. Değerler `AGORA_SESSION_IDLE_TIMEOUT` ve `AGORA_SESSION_ABSOLUTE_TIMEOUT` ile ayarlanır.
 - Kullanıcı "Aktif oturumlarım" ekranından tek tek ya da toplu oturum kapatabilir.
 - Access token doğrulamasında `sid` iptal edilmiş mi diye bakılır: Redis'te `revoked_sid:{sid}` kaydı access token ömrü (15 dk) boyunca tutulur. Böylece iptal anında etkili olur, ama her istekte DB'ye gidilmez.
 

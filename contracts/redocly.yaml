@@ -1,0 +1,7 @@
+# Redocly CLI ayarları: make contract-lint
+extends:
+  - recommended
+rules:
+  info-license: off           # açık kaynak lisansı yok
+  no-server-example.com: off  # yerel geliştirme sunucusu bilinçli olarak localhost
+  operation-4xx-response: off # sağlık uçlarının 4xx yanıtı olmaz: ya 200 ya 503

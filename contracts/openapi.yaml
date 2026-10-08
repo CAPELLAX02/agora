@@ -1,0 +1,613 @@
+openapi: 3.1.0
+info:
+  title: Agora API
+  version: 0.1.0
+  summary: Ankara Üniversitesi öğrenci bilgi sistemi ve öğrenme ortamı API'si
+  description: |
+    Agora API'nin sözleşmesidir (contract-first): uç noktalar önce burada tasarlanır,
+    backend bu sözleşmeye göre yazılır, web istemcisi de buradan üretilir.
+
+    **Hata yanıtları** RFC 9457 `application/problem+json` biçimindedir. İstemciler
+    `code` alanına göre karar verir. `detail` kullanıcıya gösterilebilir ama
+    değişebilir.
+
+    **Kimlik doğrulama:** korumalı uç noktalar `Authorization: Bearer <access_token>`
+    ister. Access token 15 dakika geçerlidir. Süresi dolunca `POST /api/v1/auth/refresh`
+    ile yenisi alınır.
+
+    **İstemci türü:** `/api/v1/auth/*` uçları `X-Agora-Client` başlığını zorunlu tutar.
+    - `web`: refresh token `agora_refresh` adlı HttpOnly çerezde taşınır, gövdede yer almaz.
+    - `mobile`: refresh token yanıt gövdesinde verilir ve istek gövdesinde geri gönderilir.
+servers:
+  - url: http://localhost:8080
+    description: Yerel geliştirme
+security:
+  - bearerAuth: []
+tags:
+  - name: Sağlık
+    description: Yük dengeleyici ve orkestratör için canlılık ve hazır olma kontrolleri
+  - name: Kimlik doğrulama
+    description: Giriş, token yenileme ve çıkış
+  - name: Hesap
+    description: Oturum açmış kullanıcının kendi bilgileri
+  - name: Organizasyon
+    description: Kampüs, akademik birim, bölüm ve program kataloğu (herkese açık)
+
+paths:
+  /healthz:
+    get:
+      tags: [Sağlık]
+      summary: Canlılık kontrolü
+      description: Süreç ayakta mı? Bağımlılıklara bakmaz.
+      operationId: healthz
+      security: []
+      responses:
+        "200":
+          description: Süreç çalışıyor
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, version, uptime]
+                properties:
+                  status: { type: string, const: ok }
+                  version: { type: string, examples: ["0.1.0"] }
+                  uptime: { type: string, examples: ["1h2m3s"] }
+
+  /readyz:
+    get:
+      tags: [Sağlık]
+      summary: Hazır olma kontrolü
+      description: Bu instance trafik almaya hazır mı? Bağımlılıklardan biri yanıt vermezse 503 döner.
+      operationId: readyz
+      security: []
+      responses:
+        "200":
+          description: Hazır
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Readiness" }
+        "503":
+          description: Bir bağımlılık yanıt vermiyor
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Readiness" }
+
+  /api/v1/auth/login:
+    post:
+      tags: [Kimlik doğrulama]
+      summary: Giriş
+      description: |
+        Kullanıcı adı (öğrenci veya personel numarası, büyük/küçük harf duyarsız) ve
+        parolayla yeni bir oturum açar.
+
+        Var olmayan kullanıcı ile yanlış parola aynı yanıtı alır. 5 başarısız denemeden
+        sonra hesap 1 dakika kilitlenir ve her yeni başarısız denemede süre ikiye katlanır
+        (en fazla 1 saat).
+      operationId: login
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/ClientHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [username, password]
+              properties:
+                username: { type: string, minLength: 1, maxLength: 64, examples: ["22290001"] }
+                password: { type: string, minLength: 1, format: password }
+      responses:
+        "200": { $ref: "#/components/responses/Tokens" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401":
+          description: "`INVALID_CREDENTIALS`: kullanıcı adı veya parola hatalı"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "403":
+          description: "`ACCOUNT_DISABLED`: parola doğru ama hesap aktif değil"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+        "429":
+          description: "`ACCOUNT_LOCKED`: çok sayıda başarısız deneme, hesap geçici olarak kilitli"
+          headers:
+            Retry-After:
+              description: Kilidin bitmesine kalan saniye
+              schema: { type: integer, minimum: 0 }
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/auth/refresh:
+    post:
+      tags: [Kimlik doğrulama]
+      summary: Token yenileme
+      description: |
+        Refresh token'ı tek kullanımlık olarak tüketir ve yerine yenisini verir (rotasyon).
+        Web istemcisi gövde göndermez, token çerezden okunur. Mobil istemci token'ı
+        gövdede gönderir.
+
+        Daha önce kullanılmış bir token tekrar gelirse token'ın çalındığı varsayılır ve
+        oturum tamamen sonlandırılır. Aynı token'la 10 saniye içinde gelen ikinci istek
+        (eşzamanlı sekmeler) ise oturumu sonlandırmadan reddedilir.
+
+        Hata durumunda web istemcisinin çerezi silinir. İstemci bu uçtan gelen 401'de
+        tekrar refresh denememeli, giriş ekranına yönlenmelidir.
+      operationId: refresh
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/ClientHeader"
+      requestBody:
+        description: Sadece mobil istemci gönderir.
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RefreshTokenBody" }
+      responses:
+        "200": { $ref: "#/components/responses/Tokens" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401":
+          description: "`INVALID_REFRESH_TOKEN`: token yok, geçersiz, süresi dolmuş ya da oturum sonlandırılmış"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "403":
+          description: "`ACCOUNT_DISABLED`: hesap devre dışı bırakılmış, oturum sonlandırıldı"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+
+  /api/v1/auth/logout:
+    post:
+      tags: [Kimlik doğrulama]
+      summary: Çıkış
+      description: |
+        Refresh token'ın bağlı olduğu oturumu sonlandırır. Token bilinmiyor ya da zaten
+        geçersizse de 204 döner. Web istemcisinin çerezi silinir.
+      operationId: logout
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/ClientHeader"
+      requestBody:
+        description: Sadece mobil istemci gönderir.
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RefreshTokenBody" }
+      responses:
+        "204":
+          description: Oturum sonlandırıldı
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+
+  /api/v1/me:
+    get:
+      tags: [Hesap]
+      summary: Oturum açmış kullanıcının profili
+      description: Kullanıcı bilgileri ve şu anda geçerli rol atamaları.
+      operationId: getMe
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Profil
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Me" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/faculties:
+    get:
+      tags: [Organizasyon]
+      summary: Akademik birimleri listeler
+      description: Fakülte, meslek yüksekokulu, yüksekokul, enstitü ve konservatuvarlar. Türkçe ada göre sıralıdır.
+      operationId: listFaculties
+      security: []
+      parameters:
+        - name: type
+          in: query
+          schema: { $ref: "#/components/schemas/UnitType" }
+        - $ref: "#/components/parameters/Query"
+        - $ref: "#/components/parameters/IncludeInactive"
+      responses:
+        "200":
+          description: Birimler
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Faculty" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /api/v1/faculties/{id}:
+    get:
+      tags: [Organizasyon]
+      summary: Bir akademik birimi döndürür
+      operationId: getFaculty
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Birim
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Faculty" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/faculties/{id}/departments:
+    get:
+      tags: [Organizasyon]
+      summary: Birimin bölümlerini listeler
+      description: Birim yoksa 404, varsa ama bölümü yoksa boş liste döner.
+      operationId: listFacultyDepartments
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/IncludeInactive"
+      responses:
+        "200":
+          description: Bölümler
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Department" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/departments/{id}:
+    get:
+      tags: [Organizasyon]
+      summary: Bir bölümü döndürür
+      operationId: getDepartment
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Bölüm
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Department" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/programs:
+    get:
+      tags: [Organizasyon]
+      summary: Programları listeler (sayfalı)
+      description: |
+        Türkçe ada göre sıralıdır ve cursor ile sayfalanır. `next_cursor` doluysa bir
+        sonraki sayfa için aynı filtrelerle `cursor` parametresinde geri gönderilir.
+      operationId: listPrograms
+      security: []
+      parameters:
+        - name: faculty_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: department_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: degree_level
+          in: query
+          schema: { $ref: "#/components/schemas/DegreeLevel" }
+        - name: language
+          in: query
+          schema: { $ref: "#/components/schemas/Language" }
+        - name: education_type
+          in: query
+          schema: { $ref: "#/components/schemas/EducationType" }
+        - $ref: "#/components/parameters/Query"
+        - $ref: "#/components/parameters/IncludeInactive"
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: cursor
+          in: query
+          description: Önceki yanıtın `next_cursor` değeri (opak, base64url)
+          schema: { type: string }
+      responses:
+        "200":
+          description: Programlar
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Program" }
+                  next_cursor:
+                    type: string
+                    description: Sonraki sayfa varsa dolu
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /api/v1/programs/{id}:
+    get:
+      tags: [Organizasyon]
+      summary: Bir programı döndürür
+      operationId: getProgram
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Program
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Program" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT (EdDSA)
+
+  parameters:
+    ClientHeader:
+      name: X-Agora-Client
+      in: header
+      required: true
+      description: Refresh token'ın çerezde (web) mi gövdede (mobile) mi taşınacağını belirler.
+      schema:
+        type: string
+        enum: [web, mobile]
+    ID:
+      name: id
+      in: path
+      required: true
+      description: Geçerli bir UUID değilse 404 döner.
+      schema: { type: string, format: uuid }
+    Query:
+      name: q
+      in: query
+      description: Kodda veya adda geçen metin (büyük/küçük harf ve Türkçe karakter duyarsız)
+      schema: { type: string, maxLength: 100 }
+    IncludeInactive:
+      name: include_inactive
+      in: query
+      description: Pasif kayıtlar da dönsün mü?
+      schema: { type: boolean, default: false }
+
+  responses:
+    Tokens:
+      description: Giriş veya yenileme başarılı
+      headers:
+        Cache-Control:
+          schema: { type: string, const: no-store }
+        Set-Cookie:
+          description: |
+            Sadece web istemcisinde:
+            `agora_refresh=<token>; Path=/api/v1/auth; Max-Age=<saniye>; HttpOnly; Secure; SameSite=Strict`
+          schema: { type: string }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Tokens" }
+    BadRequest:
+      description: |
+        `INVALID_CLIENT` (X-Agora-Client eksik ya da geçersiz), `INVALID_BODY`
+        (JSON bozuk, bilinmeyen alan, yanlış tür) ya da `VALIDATION_FAILED` (alan hataları
+        `errors` dizisinde)
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    Unauthorized:
+      description: |
+        `AUTHENTICATION_REQUIRED` (Bearer token yok) ya da `INVALID_TOKEN` (geçersiz
+        veya süresi dolmuş). İstemci bir kez refresh deneyip isteği tekrarlamalıdır.
+      headers:
+        WWW-Authenticate:
+          schema: { type: string, examples: ['Bearer realm="agora", error="invalid_token"'] }
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    NotFound:
+      description: "`NOT_FOUND`"
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    PayloadTooLarge:
+      description: "`BODY_TOO_LARGE`: gövde 1 MiB'ı aşıyor"
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    UnsupportedMediaType:
+      description: "`UNSUPPORTED_MEDIA_TYPE`: gövde application/json değil"
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+
+  schemas:
+    Problem:
+      type: object
+      description: RFC 9457 Problem Details
+      required: [type, title, status]
+      properties:
+        type: { type: string, examples: ["about:blank"] }
+        title: { type: string, examples: ["Unauthorized"] }
+        status: { type: integer, examples: [401] }
+        detail: { type: string }
+        instance: { type: string, examples: ["/api/v1/auth/login"] }
+        code: { type: string, examples: ["INVALID_CREDENTIALS"] }
+        request_id: { type: string }
+        errors:
+          type: array
+          items:
+            type: object
+            required: [field, message]
+            properties:
+              field: { type: string }
+              message: { type: string }
+
+    Readiness:
+      type: object
+      required: [status, checks]
+      properties:
+        status: { type: string, enum: [ready, not_ready] }
+        checks:
+          type: object
+          additionalProperties: { type: string, enum: [ok, unavailable] }
+
+    RefreshTokenBody:
+      type: object
+      additionalProperties: false
+      properties:
+        refresh_token: { type: string }
+
+    Tokens:
+      type: object
+      required: [access_token, token_type, expires_in, session_id, must_change_password]
+      properties:
+        access_token: { type: string }
+        token_type: { type: string, const: Bearer }
+        expires_in:
+          type: integer
+          description: Access token'ın kalan ömrü (saniye)
+          examples: [900]
+        refresh_token:
+          type: string
+          description: Sadece mobil istemcide
+        refresh_expires_in:
+          type: integer
+          description: Sadece mobil istemcide. Refresh token'ın kalan ömrü (saniye)
+        session_id: { type: string, format: uuid }
+        must_change_password:
+          type: boolean
+          description: true ise istemci kullanıcıyı parola değiştirme ekranına yönlendirmeli
+
+    Me:
+      type: object
+      required: [id, username, email, first_name, last_name, must_change_password, last_login_at, session_id, roles]
+      properties:
+        id: { type: string, format: uuid }
+        username: { type: string }
+        email: { type: string, format: email }
+        first_name: { type: string }
+        last_name: { type: string }
+        must_change_password: { type: boolean }
+        last_login_at: { type: [string, "null"], format: date-time }
+        session_id: { type: string, format: uuid }
+        roles:
+          type: array
+          items: { $ref: "#/components/schemas/RoleAssignment" }
+
+    RoleAssignment:
+      type: object
+      required: [role, role_name, scope_type, scope_id, scope_name, valid_until]
+      properties:
+        role: { type: string, examples: ["DEPARTMENT_HEAD"] }
+        role_name: { type: string, examples: ["Bölüm Başkanı"] }
+        scope_type: { type: string, enum: [UNIVERSITY, FACULTY, DEPARTMENT, PROGRAM, NONE] }
+        scope_id:
+          type: [string, "null"]
+          format: uuid
+          description: UNIVERSITY ve NONE kapsamlarında null
+        scope_name:
+          type: [string, "null"]
+          examples: ["Bilgisayar Mühendisliği"]
+        valid_until: { type: [string, "null"], format: date-time }
+
+    UnitType:
+      type: string
+      enum: [FACULTY, VOCATIONAL_SCHOOL, SCHOOL, INSTITUTE, CONSERVATORY]
+    DegreeLevel:
+      type: string
+      enum: [ASSOCIATE, BACHELOR, MASTER, PHD]
+    Language:
+      type: string
+      enum: [TR, EN, MIXED]
+    EducationType:
+      type: string
+      enum: [DAYTIME, EVENING, DISTANCE]
+
+    Ref:
+      type: object
+      required: [id, code, name_tr]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name_tr: { type: string }
+
+    Faculty:
+      type: object
+      required: [id, code, name_tr, name_en, unit_type, campus, is_active]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, examples: ["MUH"] }
+        name_tr: { type: string, examples: ["Mühendislik Fakültesi"] }
+        name_en: { type: string, examples: ["Faculty of Engineering"] }
+        unit_type: { $ref: "#/components/schemas/UnitType" }
+        campus:
+          oneOf:
+            - type: "null"
+            - type: object
+              required: [id, code, name]
+              properties:
+                id: { type: string, format: uuid }
+                code: { type: string }
+                name: { type: string }
+        is_active: { type: boolean }
+
+    Department:
+      type: object
+      required: [id, code, name_tr, name_en, faculty, is_active]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, examples: ["BIL"] }
+        name_tr: { type: string }
+        name_en: { type: string }
+        faculty: { $ref: "#/components/schemas/Ref" }
+        is_active: { type: boolean }
+
+    Program:
+      type: object
+      required:
+        - id
+        - code
+        - yoksis_code
+        - name_tr
+        - name_en
+        - degree_level
+        - language
+        - education_type
+        - duration_semesters
+        - max_duration_years
+        - total_ects_required
+        - has_prep_class
+        - department
+        - faculty
+        - is_active
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        yoksis_code: { type: [string, "null"] }
+        name_tr: { type: string }
+        name_en: { type: string }
+        degree_level: { $ref: "#/components/schemas/DegreeLevel" }
+        language: { $ref: "#/components/schemas/Language" }
+        education_type: { $ref: "#/components/schemas/EducationType" }
+        duration_semesters: { type: integer, examples: [8] }
+        max_duration_years: { type: integer, examples: [7] }
+        total_ects_required: { type: number, examples: [240] }
+        has_prep_class: { type: boolean }
+        department: { $ref: "#/components/schemas/Ref" }
+        faculty: { $ref: "#/components/schemas/Ref" }
+        is_active: { type: boolean }

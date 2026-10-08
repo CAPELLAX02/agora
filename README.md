@@ -11,3 +11,4 @@ Ankara Üniversitesi'nin Öğrenci Bilgi Sistemi (OBS) ve e-Kampüs sistemlerini
 | [`backend/`](backend/) | Go ile yazılan REST API (PostgreSQL, Redis)                   |
 | [`web/`](web/)         | Vite + React + TypeScript + shadcn/ui + Tailwind CSS + Redux Toolkit |
 | [`mobile/`](mobile/)   | React Native + Expo (file-based routing) + TypeScript + NativeWind |
+| [`contracts/`](contracts/openapi.yaml) | OpenAPI 3.1 sözleşmesi: API önce burada tasarlanır (`make contract-lint`) |

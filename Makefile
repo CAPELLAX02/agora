@@ -7,6 +7,7 @@ BACKEND := backend
 GOOSE       := github.com/pressly/goose/v3/cmd/goose@v3.28.0
 STATICCHECK := honnef.co/go/tools/cmd/staticcheck@v0.8.1
 GOVULNCHECK := golang.org/x/vuln/cmd/govulncheck@v1.8.0
+REDOCLY     := @redocly/cli@2.53.3
 
 -include .env
 export
@@ -14,7 +15,7 @@ export
 .DEFAULT_GOAL := help
 
 .PHONY: help up down ps logs psql api migrate-up migrate-down migrate-status migration seed \
-        test test-unit cover vet lint vuln fmt check
+        test test-unit cover vet lint vuln fmt contract-lint check
 
 help: ## Komutları listeler
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -87,6 +88,9 @@ vuln: ## Bağımlılıklardaki bilinen güvenlik açıklarını tarar (govulnche
 
 fmt: ## Tüm Go dosyalarını biçimlendirir
 	gofmt -w $(BACKEND)
+
+contract-lint: ## OpenAPI sözleşmesini doğrular (Node.js gerektirir)
+	npx --yes $(REDOCLY) lint contracts/openapi.yaml --config contracts/redocly.yaml
 
 check: ## CI ile aynı kontroller: biçim, go.mod, vet, staticcheck, güvenlik, test
 	@test -z "$$(gofmt -l $(BACKEND))" || (echo "biçimlendirilmesi gereken dosyalar:"; gofmt -l $(BACKEND); exit 1)
