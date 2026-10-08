@@ -31,5 +31,10 @@ func (app *application) routes() http.Handler {
 		httpx.AccessLog(app.logger),
 		httpx.Observe(app.metrics),
 		httpx.Recover(app.logger),
+		// Güvenlik başlıkları hata yanıtlarına da eklensin diye zincirin başında.
+		// HSTS sadece HTTPS arkasında anlamlı: yerel geliştirmede gönderilmez.
+		httpx.SecurityHeaders(!app.cfg.IsDevelopment()),
+		// Preflight (OPTIONS) istekleri route tablosuna hiç ulaşmadan yanıtlanır.
+		httpx.CORS(app.cfg.CORSOrigins),
 	)
 }

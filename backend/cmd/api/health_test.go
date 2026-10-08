@@ -98,6 +98,9 @@ func TestRoutes(t *testing.T) {
 			if resp.Header.Get("X-Request-Id") == "" {
 				t.Error("yanıtta X-Request-Id başlığı yok")
 			}
+			if resp.Header.Get("X-Content-Type-Options") != "nosniff" {
+				t.Error("yanıtta güvenlik başlıkları yok")
+			}
 		})
 	}
 }

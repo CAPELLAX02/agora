@@ -8,7 +8,10 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
+
+	"github.com/CAPELLAX02/agora/backend/internal/platform/httpx"
 )
 
 // devDatabaseURL, sadece development ortamında, AGORA_DATABASE_URL verilmediğinde kullanılır.
@@ -17,6 +20,9 @@ const devDatabaseURL = "postgres://agora:agora_dev_password@localhost:5432/agora
 
 // devRedisURL, sadece development ortamında, AGORA_REDIS_URL verilmediğinde kullanılır.
 const devRedisURL = "redis://localhost:6379/0"
+
+// devCORSOrigins, development ortamında web geliştirme sunucusunun (Vite) adresidir.
+var devCORSOrigins = []string{"http://localhost:5173"}
 
 // Config, API sürecinin çalışma zamanı yapılandırmasıdır.
 type Config struct {
@@ -33,7 +39,8 @@ type Config struct {
 	DBMinConns        int
 	DBMaxConnLifetime time.Duration
 	DBMaxConnIdleTime time.Duration
-	RedisURL          string // gizli: parola içerebilir, log'a asla düz yazılmaz
+	RedisURL          string   // gizli: parola içerebilir, log'a asla düz yazılmaz
+	CORSOrigins       []string // tarayıcıdan istek göndermesine izin verilen origin'ler
 
 	// Kimlik doğrulama
 	JWTPrivateKeyFile      string        // Ed25519 özel anahtarı (PEM). Development'ta boşsa geçici anahtar üretilir
@@ -94,6 +101,10 @@ func Load() (Config, error) {
 	if cfg.RedisURL == "" && cfg.Env == "development" {
 		cfg.RedisURL = devRedisURL
 	}
+	cfg.CORSOrigins = lookupList("AGORA_CORS_ALLOWED_ORIGINS")
+	if cfg.CORSOrigins == nil && cfg.Env == "development" {
+		cfg.CORSOrigins = devCORSOrigins
+	}
 
 	errs = append(errs, cfg.validate()...)
 
@@ -132,6 +143,7 @@ func (c Config) LogValue() slog.Value {
 		slog.String("db_max_conn_lifetime", c.DBMaxConnLifetime.String()),
 		slog.String("db_max_conn_idle_time", c.DBMaxConnIdleTime.String()),
 		slog.String("redis_url", redactURL(c.RedisURL)),
+		slog.String("cors_origins", strings.Join(c.CORSOrigins, ",")),
 		slog.String("jwt_private_key_file", c.JWTPrivateKeyFile),
 		slog.String("access_token_ttl", c.AccessTokenTTL.String()),
 		slog.String("session_idle_timeout", c.SessionIdleTimeout.String()),
@@ -177,6 +189,12 @@ func (c Config) validate() []error {
 		errs = append(errs, errors.New("AGORA_REDIS_URL zorunlu"))
 	}
 
+	for _, o := range c.CORSOrigins {
+		if !httpx.ValidOrigin(o) {
+			errs = append(errs, fmt.Errorf("AGORA_CORS_ALLOWED_ORIGINS geçersiz origin %q: scheme://host[:port] biçiminde olmalı", o))
+		}
+	}
+
 	if c.JWTPrivateKeyFile == "" && !c.IsDevelopment() {
 		errs = append(errs, errors.New("AGORA_JWT_PRIVATE_KEY_FILE development dışında zorunlu"))
 	}
@@ -211,6 +229,21 @@ func lookup(key, def string) string {
 		return v
 	}
 	return def
+}
+
+// lookupList, virgülle ayrılmış bir listeyi okur. Değişken yoksa ya da boşsa nil döner.
+func lookupList(key string) []string {
+	v, ok := os.LookupEnv(key)
+	if !ok || strings.TrimSpace(v) == "" {
+		return nil
+	}
+	var out []string
+	for item := range strings.SplitSeq(v, ",") {
+		if item = strings.TrimSpace(item); item != "" {
+			out = append(out, item)
+		}
+	}
+	return out
 }
 
 func lookupDuration(key string, def time.Duration) (time.Duration, error) {

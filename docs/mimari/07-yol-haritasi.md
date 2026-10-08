@@ -173,7 +173,7 @@ flowchart LR
 | ✅ | Giriş, refresh rotasyonu ve yeniden kullanım tespiti, çıkış | Ders 14–15 |
 | ✅ | Hesap kilitleme, giriş hız sınırı, anında oturum iptali | Ders 14, 16 |
 | ✅ | Rol/yetki çözümleme, politikalı router (varsayılan ret), sürümlü yetki önbelleği | Ders 17 |
-| ⬜ | Güvenlik başlıkları ve CORS | |
+| ✅ | Güvenlik başlıkları ve CORS | Sıkı CSP, nosniff, HSTS (HTTPS ortamlarında), origin listesiyle CORS |
 | ⬜ | Denetim izi (`audit.audit_log`) ve güvenlik olayları (`audit.security_events`), aylık partition | |
 | ⬜ | Parola değiştirme, `must_change_password` zorunluluğu | |
 | ⬜ | E-posta outbox'ı ve `cmd/worker` (SMTP, üstel geri çekilme) | |

@@ -3,6 +3,7 @@ package config
 import (
 	"bytes"
 	"log/slog"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -19,7 +20,7 @@ func clearAgoraEnv(t *testing.T) {
 		"AGORA_DB_MAX_CONN_LIFETIME", "AGORA_DB_MAX_CONN_IDLE_TIME",
 		"AGORA_JWT_PRIVATE_KEY_FILE", "AGORA_ACCESS_TOKEN_TTL", "AGORA_SESSION_IDLE_TIMEOUT",
 		"AGORA_SESSION_ABSOLUTE_TIMEOUT", "AGORA_PASSWORD_HASH_WORKERS",
-		"AGORA_REDIS_URL", "AGORA_LOGIN_RATE_LIMIT",
+		"AGORA_REDIS_URL", "AGORA_LOGIN_RATE_LIMIT", "AGORA_CORS_ALLOWED_ORIGINS",
 	} {
 		t.Setenv(key, "")
 	}
@@ -43,6 +44,7 @@ func defaultsWith(modify func(c *Config)) Config {
 		DBMaxConnLifetime: time.Hour,
 		DBMaxConnIdleTime: 30 * time.Minute,
 		RedisURL:          devRedisURL,
+		CORSOrigins:       devCORSOrigins,
 
 		AccessTokenTTL:         15 * time.Minute,
 		SessionIdleTimeout:     2 * time.Hour,
@@ -84,6 +86,7 @@ func TestLoad(t *testing.T) {
 				"AGORA_PASSWORD_HASH_WORKERS":    "8",
 				"AGORA_REDIS_URL":                "redis://:sifre@cache:6379/1",
 				"AGORA_LOGIN_RATE_LIMIT":         "60",
+				"AGORA_CORS_ALLOWED_ORIGINS":     " https://agora.example.edu.tr , https://yonetim.agora.example.edu.tr:8443,",
 			},
 			want: defaultsWith(func(c *Config) {
 				c.Env = "production"
@@ -100,6 +103,7 @@ func TestLoad(t *testing.T) {
 				c.PasswordHashWorkers = 8
 				c.RedisURL = "redis://:sifre@cache:6379/1"
 				c.LoginRateLimit = 60
+				c.CORSOrigins = []string{"https://agora.example.edu.tr", "https://yonetim.agora.example.edu.tr:8443"}
 			}),
 		},
 		{
@@ -121,6 +125,11 @@ func TestLoad(t *testing.T) {
 			name:    "mutlak süre boşta kalma süresinden kısa olamaz",
 			env:     map[string]string{"AGORA_SESSION_ABSOLUTE_TIMEOUT": "1h"},
 			wantErr: []string{"AGORA_SESSION_ABSOLUTE_TIMEOUT (1h0m0s) boşta kalma süresinden (2h0m0s) kısa olamaz"},
+		},
+		{
+			name:    "geçersiz CORS origin'leri",
+			env:     map[string]string{"AGORA_CORS_ALLOWED_ORIGINS": "*,https://agora.test/,agora.test"},
+			wantErr: []string{`geçersiz origin "*"`, `geçersiz origin "https://agora.test/"`, `geçersiz origin "agora.test"`},
 		},
 		{
 			name:    "giriş hız sınırı en az 1",
@@ -197,7 +206,7 @@ func TestLoad(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Load() beklenmeyen hata: %v", err)
 			}
-			if got != tt.want {
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Load() =\n  %+v\nwant\n  %+v", got, tt.want)
 			}
 		})
