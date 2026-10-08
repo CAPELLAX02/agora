@@ -16,6 +16,7 @@ type LogEntry struct {
 	ID          int64
 	OccurredAt  time.Time
 	ActorUserID string
+	ActorName   string // işlemi yapanın kullanıcı adı (hesap silinmişse boş)
 	Action      string
 	EntityType  string
 	EntityID    string
@@ -32,6 +33,7 @@ type StoredSecurityEvent struct {
 	OccurredAt        time.Time
 	Type              string
 	UserID            string
+	Username          string // user_id'nin güncel kullanıcı adı
 	UsernameAttempted string
 	IP                string
 	UserAgent         string
@@ -96,7 +98,9 @@ func (r *Repository) ListLog(ctx context.Context, f LogFilter) (entries []LogEnt
 	limit := w.Arg(f.Limit + 1)
 
 	rows, err := r.db.Query(ctx, `
-		SELECT id, occurred_at, coalesce(actor_user_id::text, ''), action, entity_type,
+		SELECT id, occurred_at, coalesce(actor_user_id::text, ''),
+		       coalesce((SELECT u.username::text FROM iam.users u WHERE u.id = audit_log.actor_user_id), ''),
+		       action, entity_type,
 		       coalesce(entity_id, ''), before, after, coalesce(host(ip), ''),
 		       coalesce(user_agent, ''), coalesce(request_id, '')
 		FROM audit.audit_log
@@ -109,7 +113,7 @@ func (r *Repository) ListLog(ctx context.Context, f LogFilter) (entries []LogEnt
 
 	entries, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (LogEntry, error) {
 		var e LogEntry
-		err := row.Scan(&e.ID, &e.OccurredAt, &e.ActorUserID, &e.Action, &e.EntityType,
+		err := row.Scan(&e.ID, &e.OccurredAt, &e.ActorUserID, &e.ActorName, &e.Action, &e.EntityType,
 			&e.EntityID, &e.Before, &e.After, &e.IP, &e.UserAgent, &e.RequestID)
 		return e, err
 	})
@@ -133,6 +137,7 @@ func (r *Repository) ListSecurityEvents(ctx context.Context, f SecurityEventFilt
 
 	rows, err := r.db.Query(ctx, `
 		SELECT id, occurred_at, event_type, coalesce(user_id::text, ''),
+		       coalesce((SELECT u.username::text FROM iam.users u WHERE u.id = security_events.user_id), ''),
 		       coalesce(username_attempted, ''), coalesce(host(ip), ''),
 		       coalesce(user_agent, ''), coalesce(request_id, ''), details
 		FROM audit.security_events
@@ -145,7 +150,7 @@ func (r *Repository) ListSecurityEvents(ctx context.Context, f SecurityEventFilt
 
 	events, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (StoredSecurityEvent, error) {
 		var e StoredSecurityEvent
-		err := row.Scan(&e.ID, &e.OccurredAt, &e.Type, &e.UserID, &e.UsernameAttempted,
+		err := row.Scan(&e.ID, &e.OccurredAt, &e.Type, &e.UserID, &e.Username, &e.UsernameAttempted,
 			&e.IP, &e.UserAgent, &e.RequestID, &e.Details)
 		return e, err
 	})

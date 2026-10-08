@@ -38,6 +38,7 @@ type logEntryResponse struct {
 	ID          int64           `json:"id"`
 	OccurredAt  time.Time       `json:"occurred_at"`
 	ActorUserID *string         `json:"actor_user_id"`
+	ActorName   *string         `json:"actor_username"`
 	Action      string          `json:"action"`
 	EntityType  string          `json:"entity_type"`
 	EntityID    *string         `json:"entity_id"`
@@ -54,6 +55,7 @@ type securityEventResponse struct {
 	OccurredAt        time.Time       `json:"occurred_at"`
 	Type              string          `json:"type"`
 	UserID            *string         `json:"user_id"`
+	Username          *string         `json:"username"`
 	UsernameAttempted *string         `json:"username_attempted"`
 	IP                *string         `json:"ip"`
 	UserAgent         *string         `json:"user_agent"`
@@ -67,6 +69,7 @@ func tosecurityEventResponse(e StoredSecurityEvent) securityEventResponse {
 		OccurredAt:        e.OccurredAt,
 		Type:              e.Type,
 		UserID:            optional(e.UserID),
+		Username:          optional(e.Username),
 		UsernameAttempted: optional(e.UsernameAttempted),
 		IP:                optional(e.IP),
 		UserAgent:         optional(e.UserAgent),
@@ -103,6 +106,7 @@ func (h *Handler) listLog(w http.ResponseWriter, r *http.Request) {
 			ID:          e.ID,
 			OccurredAt:  e.OccurredAt,
 			ActorUserID: optional(e.ActorUserID),
+			ActorName:   optional(e.ActorName),
 			Action:      e.Action,
 			EntityType:  e.EntityType,
 			EntityID:    optional(e.EntityID),

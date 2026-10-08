@@ -108,6 +108,25 @@ func TestRecordAndListLog(t *testing.T) {
 		}
 	})
 
+	t.Run("işlemi yapanın kullanıcı adı", func(t *testing.T) {
+		if _, err := pool.Exec(ctx, `
+			WITH p AS (INSERT INTO people.persons (first_name, last_name) VALUES ('Sistem', 'Yöneticisi') RETURNING id)
+			INSERT INTO iam.users (id, person_id, username, email, password_hash)
+			SELECT $1, id, 'P90001', 'yonetici@agora.test', 'x' FROM p`, actor); err != nil {
+			t.Fatal(err)
+		}
+		got, _, _ := repo.ListLog(ctx, audit.LogFilter{Limit: 10})
+		for _, e := range got {
+			want := "P90001"
+			if e.ActorUserID == "" {
+				want = "" // sistem işlemi
+			}
+			if e.ActorName != want {
+				t.Errorf("%s: kullanıcı adı = %q, want %q", e.Action, e.ActorName, want)
+			}
+		}
+	})
+
 	t.Run("en yeniden eskiye ve before/after", func(t *testing.T) {
 		got, _, _ := repo.ListLog(ctx, audit.LogFilter{ActorUserID: actor, Limit: 10})
 		if got[0].Action != "user.suspend" || got[3].Action != "user.create" {

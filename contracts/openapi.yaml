@@ -2263,12 +2263,13 @@ components:
 
     SecurityEvent:
       type: object
-      required: [id, occurred_at, type, user_id, username_attempted, ip, user_agent, request_id, details]
+      required: [id, occurred_at, type, user_id, username, username_attempted, ip, user_agent, request_id, details]
       properties:
         id: { type: integer, format: int64 }
         occurred_at: { type: string, format: date-time }
         type: { $ref: "#/components/schemas/SecurityEventType" }
         user_id: { type: [string, "null"], format: uuid }
+        username: { type: [string, "null"], description: "`user_id` hesabının kullanıcı adı" }
         username_attempted: { type: [string, "null"] }
         ip: { type: [string, "null"] }
         user_agent: { type: [string, "null"] }
@@ -2289,11 +2290,12 @@ components:
 
     AuditLogEntry:
       type: object
-      required: [id, occurred_at, actor_user_id, action, entity_type, entity_id, before, after, ip, user_agent, request_id]
+      required: [id, occurred_at, actor_user_id, actor_username, action, entity_type, entity_id, before, after, ip, user_agent, request_id]
       properties:
         id: { type: integer, format: int64 }
         occurred_at: { type: string, format: date-time }
         actor_user_id: { type: [string, "null"], format: uuid, description: Sistem işlemlerinde null }
+        actor_username: { type: [string, "null"], description: İşlemi yapanın kullanıcı adı }
         action: { type: string, examples: ["role.assign"] }
         entity_type: { type: string, examples: ["user"] }
         entity_id: { type: [string, "null"] }
