@@ -5,6 +5,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"errors"
+	"reflect"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/CAPELLAX02/agora/backend/internal/audit"
 	"github.com/CAPELLAX02/agora/backend/internal/iam"
 	"github.com/CAPELLAX02/agora/backend/internal/iam/password"
 	"github.com/CAPELLAX02/agora/backend/internal/people"
@@ -544,5 +546,79 @@ func TestLockedErrorMessage(t *testing.T) {
 	err := &iam.LockedError{Until: time.Date(2026, 10, 8, 9, 1, 0, 0, time.UTC)}
 	if !strings.Contains(err.Error(), "2026-10-08T09:01:00Z") {
 		t.Errorf("hata mesajı kilit bitişini içermiyor: %s", err)
+	}
+}
+
+// eventCounts, kullanıcının güvenlik olaylarını türe göre sayar. userID boşsa
+// kullanıcısı bilinmeyen olaylar sayılır.
+func (e *authEnv) eventCounts(t *testing.T, userID string) map[string]int {
+	t.Helper()
+	q := `SELECT event_type, count(*) FROM audit.security_events WHERE user_id = $1 GROUP BY 1`
+	args := []any{userID}
+	if userID == "" {
+		q, args = `SELECT event_type, count(*) FROM audit.security_events WHERE user_id IS NULL GROUP BY 1`, nil
+	}
+	rows, err := e.pool.Query(context.Background(), q, args...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	counts := map[string]int{}
+	for rows.Next() {
+		var typ string
+		var n int
+		if err := rows.Scan(&typ, &n); err != nil {
+			t.Fatal(err)
+		}
+		counts[typ] = n
+	}
+	return counts
+}
+
+func TestSecurityEvents(t *testing.T) {
+	e := newAuthEnv(t)
+	ctx := context.Background()
+	userID := e.addUser(t, "22290012", pw, e.hasher)
+
+	if _, err := e.login("yok-boyle-biri", pw); !errors.Is(err, iam.ErrInvalidCredentials) {
+		t.Fatal(err)
+	}
+	if got := e.eventCounts(t, ""); got[audit.EventLoginFailed] != 1 {
+		t.Errorf("bilinmeyen kullanıcı olayları = %v", got)
+	}
+
+	for range 5 {
+		_, _ = e.login("22290012", "yanlış parola 123")
+	}
+	_, _ = e.login("22290012", pw) // kilitliyken
+	got := e.eventCounts(t, userID)
+	if got[audit.EventLoginFailed] != 6 || got[audit.EventAccountLocked] != 1 {
+		t.Errorf("başarısız giriş olayları = %v, 6 başarısız ve 1 kilit bekleniyordu", got)
+	}
+
+	e.clock.Advance(2 * time.Minute)
+	first, err := e.login("22290012", pw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.auth.Refresh(ctx, first.RefreshToken); err != nil {
+		t.Fatal(err)
+	}
+	e.clock.Advance(time.Minute)
+	_, _ = e.auth.Refresh(ctx, first.RefreshToken) // yeniden kullanım
+
+	second, _ := e.login("22290012", pw)
+	_ = e.auth.Logout(ctx, second.RefreshToken)
+	_ = e.auth.Logout(ctx, second.RefreshToken) // ikinci çıkış olay yazmamalı
+
+	got = e.eventCounts(t, userID)
+	want := map[string]int{
+		audit.EventLoginFailed:        6,
+		audit.EventAccountLocked:      1,
+		audit.EventLoginSucceeded:     2,
+		audit.EventRefreshTokenReused: 1,
+		audit.EventLogout:             1,
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("olaylar =\n  %v\nwant\n  %v", got, want)
 	}
 }

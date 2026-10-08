@@ -95,7 +95,7 @@ func newHTTPEnvWithLoginLimit(t *testing.T, loginLimit int) *httpEnv {
 
 	mux := http.NewServeMux()
 	rt := authz.NewRouter(mux, authn.New(verifier, revocations, logger, time.Now).Require,
-		iam.NewPermissionResolver(pool, rdb, time.Hour, time.Now, logger), logger)
+		iam.NewPermissionResolver(pool, rdb, time.Hour, logger), logger)
 	iam.NewHandler(auth, iam.NewRepository(pool), logger, false).Register(rt, limiter.ByIP(logger))
 
 	srv := httptest.NewServer(httpx.Chain(mux, httpx.RequestID, httpx.Recover(logger)))

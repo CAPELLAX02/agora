@@ -59,7 +59,7 @@ func TestRepository(t *testing.T) {
 			t.Errorf("perm_version = %d, want 3 (iki atama sonrası)", u.PermVersion)
 		}
 
-		grants, err := repo.Grants(ctx, userID, time.Now())
+		grants, err := repo.Grants(ctx, userID, dbNow(t, pool))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -112,7 +112,7 @@ func TestRepository(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		grants, err := repo.Grants(ctx, otherID, time.Now())
+		grants, err := repo.Grants(ctx, otherID, dbNow(t, pool))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -121,7 +121,7 @@ func TestRepository(t *testing.T) {
 		}
 
 		// Bir yıldan biraz daha önce bölüm başkanıydı.
-		past, _ := repo.Grants(ctx, otherID, time.Now().AddDate(-1, 0, -1))
+		past, _ := repo.Grants(ctx, otherID, dbNow(t, pool).AddDate(-1, 0, -1))
 		if !slices.ContainsFunc(past, func(g iam.Grant) bool { return g.Permission == "offering:manage" }) {
 			t.Error("geçmiş tarihte bölüm başkanlığı yetkisi görünmeliydi")
 		}
@@ -199,4 +199,16 @@ func createUser(t *testing.T, pool *pgxpool.Pool, username, email string) string
 		t.Fatal(err)
 	}
 	return id
+}
+
+// dbNow, veritabanının saatini döndürür. Atamaların valid_from varsayılanı bu saatle
+// yazıldığı için "şu an geçerli mi" sorusu da aynı saatle sorulmalı: Docker'daki
+// veritabanının saati test sürecininkinden birkaç milisaniye ileride olabilir.
+func dbNow(t *testing.T, pool *pgxpool.Pool) time.Time {
+	t.Helper()
+	var now time.Time
+	if err := pool.QueryRow(context.Background(), `SELECT now()`).Scan(&now); err != nil {
+		t.Fatal(err)
+	}
+	return now
 }

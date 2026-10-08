@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/CAPELLAX02/agora/backend/internal/audit"
 	"github.com/CAPELLAX02/agora/backend/internal/iam/password"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/db"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/jwt"
@@ -140,9 +141,13 @@ func (a *Auth) Login(ctx context.Context, in LoginInput) (Tokens, error) {
 	now := a.now()
 	repo := NewRepository(a.pool)
 
-	user, err := repo.UserByUsername(ctx, strings.TrimSpace(in.Username))
+	username := strings.TrimSpace(in.Username)
+	user, err := repo.UserByUsername(ctx, username)
 	if errors.Is(err, ErrNotFound) {
 		_ = a.hasher.Verify(ctx, in.Password, a.dummyHash) // zamanlamayı eşitlemek için
+		if err := a.loginFailed(ctx, "", username, "unknown_user"); err != nil {
+			return Tokens{}, err
+		}
 		return Tokens{}, ErrInvalidCredentials
 	}
 	if err != nil {
@@ -150,6 +155,9 @@ func (a *Auth) Login(ctx context.Context, in LoginInput) (Tokens, error) {
 	}
 
 	if user.LockedUntil != nil && now.Before(*user.LockedUntil) {
+		if err := a.loginFailed(ctx, user.ID, username, "account_locked"); err != nil {
+			return Tokens{}, err
+		}
 		return Tokens{}, &LockedError{Until: *user.LockedUntil}
 	}
 
@@ -157,20 +165,15 @@ func (a *Auth) Login(ctx context.Context, in LoginInput) (Tokens, error) {
 		if !errors.Is(err, password.ErrMismatch) {
 			return Tokens{}, err
 		}
-		lockedUntil, err := repo.RecordLoginFailure(ctx, user.ID, now,
-			a.cfg.MaxFailedAttempts, a.cfg.LockoutBase, a.cfg.LockoutMax)
-		if err != nil {
-			return Tokens{}, err
-		}
-		if lockedUntil != nil && now.Before(*lockedUntil) {
-			return Tokens{}, &LockedError{Until: *lockedUntil}
-		}
-		return Tokens{}, ErrInvalidCredentials
+		return Tokens{}, a.wrongPassword(ctx, user, username, now)
 	}
 
 	// Hesap durumu parola doğrulandıktan SONRA kontrol edilir: yanlış parolayla
 	// gelen biri, hesabın askıda olup olmadığını öğrenemez.
 	if user.Status != StatusActive {
+		if err := a.loginFailed(ctx, user.ID, username, "account_inactive"); err != nil {
+			return Tokens{}, err
+		}
 		return Tokens{}, ErrAccountDisabled
 	}
 
@@ -200,12 +203,67 @@ func (a *Auth) Login(ctx context.Context, in LoginInput) (Tokens, error) {
 		}
 
 		tokens, _, err = a.issue(ctx, r, user, sessionID, "", now, absolute, amr)
-		return err
+		if err != nil {
+			return err
+		}
+
+		return audit.RecordSecurity(ctx, tx, audit.SecurityEvent{
+			Type:    audit.EventLoginSucceeded,
+			UserID:  user.ID,
+			Details: map[string]any{"session_id": sessionID, "client": string(in.Client)},
+		})
 	})
 	if err != nil {
 		return Tokens{}, err
 	}
 	return tokens, nil
+}
+
+// wrongPassword, başarısız denemeyi sayar, olayı yazar ve dönülecek hatayı belirler.
+// Sayaç ve olay tek transaction'da yazılır.
+func (a *Auth) wrongPassword(ctx context.Context, user User, username string, now time.Time) error {
+	var lockedUntil *time.Time
+	err := db.InTx(ctx, a.pool, func(tx pgx.Tx) error {
+		var err error
+		lockedUntil, err = NewRepository(tx).RecordLoginFailure(ctx, user.ID, now,
+			a.cfg.MaxFailedAttempts, a.cfg.LockoutBase, a.cfg.LockoutMax)
+		if err != nil {
+			return err
+		}
+
+		if err := audit.RecordSecurity(ctx, tx, audit.SecurityEvent{
+			Type: audit.EventLoginFailed, UserID: user.ID, UsernameAttempted: username,
+			Details: map[string]any{"reason": "wrong_password"},
+		}); err != nil {
+			return err
+		}
+
+		// Kilit bu denemeyle başladıysa (ya da uzadıysa) ayrıca kaydedilir.
+		if lockedUntil != nil && now.Before(*lockedUntil) {
+			return audit.RecordSecurity(ctx, tx, audit.SecurityEvent{
+				Type: audit.EventAccountLocked, UserID: user.ID,
+				Details: map[string]any{"locked_until": lockedUntil.UTC().Format(time.RFC3339)},
+			})
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	if lockedUntil != nil && now.Before(*lockedUntil) {
+		return &LockedError{Until: *lockedUntil}
+	}
+	return ErrInvalidCredentials
+}
+
+// loginFailed, parola denenmeden ya da parola doğru olduğu halde reddedilen bir
+// girişi kaydeder.
+func (a *Auth) loginFailed(ctx context.Context, userID, username, reason string) error {
+	return audit.RecordSecurity(ctx, a.pool, audit.SecurityEvent{
+		Type: audit.EventLoginFailed, UserID: userID, UsernameAttempted: username,
+		Details: map[string]any{"reason": reason},
+	})
 }
 
 // Refresh, refresh token'ı tek kullanımlık olarak tüketir ve yerine yenisini verir
@@ -248,7 +306,13 @@ func (a *Auth) Refresh(ctx context.Context, rawToken string) (Tokens, error) {
 			// ediyoruz. Hata DÖNDÜRMÜYORUZ, çünkü hata dönersek InTx geri alır ve iptal
 			// de geri alınmış olur. Commit'ten sonra hatayı kendimiz döndüreceğiz.
 			revoked, result = rec.SessionID, ErrRefreshTokenReused
-			return r.RevokeSession(ctx, rec.SessionID, now, RevokeReuseDetected)
+			if err := r.RevokeSession(ctx, rec.SessionID, now, RevokeReuseDetected); err != nil {
+				return err
+			}
+			return audit.RecordSecurity(ctx, tx, audit.SecurityEvent{
+				Type: audit.EventRefreshTokenReused, UserID: rec.UserID,
+				Details: map[string]any{"session_id": rec.SessionID},
+			})
 		}
 
 		if !now.Before(rec.ExpiresAt) {
@@ -261,7 +325,13 @@ func (a *Auth) Refresh(ctx context.Context, rawToken string) (Tokens, error) {
 		}
 		if user.Status != StatusActive {
 			revoked, result = rec.SessionID, ErrAccountDisabled
-			return r.RevokeSession(ctx, rec.SessionID, now, RevokeAdmin)
+			if err := r.RevokeSession(ctx, rec.SessionID, now, RevokeAdmin); err != nil {
+				return err
+			}
+			return audit.RecordSecurity(ctx, tx, audit.SecurityEvent{
+				Type: audit.EventSessionRevoked, UserID: rec.UserID,
+				Details: map[string]any{"session_id": rec.SessionID, "reason": "account_inactive"},
+			})
 		}
 
 		var newTokenID string
@@ -308,7 +378,16 @@ func (a *Auth) Logout(ctx context.Context, rawToken string) error {
 			return err
 		}
 		sessionID = rec.SessionID
-		return r.RevokeSession(ctx, rec.SessionID, now, RevokeLogout)
+		if rec.SessionRevokedAt != nil {
+			return nil // oturum zaten sonlanmış: tekrar kaydedilecek bir şey yok
+		}
+		if err := r.RevokeSession(ctx, rec.SessionID, now, RevokeLogout); err != nil {
+			return err
+		}
+		return audit.RecordSecurity(ctx, tx, audit.SecurityEvent{
+			Type: audit.EventLogout, UserID: rec.UserID,
+			Details: map[string]any{"session_id": rec.SessionID},
+		})
 	})
 	if err != nil || sessionID == "" {
 		return err

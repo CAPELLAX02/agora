@@ -15,23 +15,35 @@ import (
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authz"
 )
 
+// AccessState, kullanıcının erişimle ilgili güncel durumudur.
+type AccessState struct {
+	Status      UserStatus
+	PermVersion int
+	// Now, veritabanının saatidir. Rol atamalarının valid_from varsayılanı da
+	// veritabanı saatiyle yazılır: atamanın "başlamış mı" sorusu aynı saatle
+	// cevaplanmazsa, uygulama ve veritabanı saatleri arasındaki milisaniyelik bir
+	// fark yeni atanan rolü görünmez kılar.
+	Now time.Time
+}
+
 // AccessState, kullanıcının hesap durumunu ve yetki sürümünü döndürür. Her korumalı
 // istekte çalışır, bu yüzden sadece birincil anahtarla okunan iki sütundur.
-func (r *Repository) AccessState(ctx context.Context, userID string) (UserStatus, int, error) {
+func (r *Repository) AccessState(ctx context.Context, userID string) (AccessState, error) {
 	var (
-		status  string
-		version int
+		s      AccessState
+		status string
 	)
 	err := r.db.QueryRow(ctx,
-		`SELECT status, perm_version FROM iam.users WHERE id = $1`, userID,
-	).Scan(&status, &version)
+		`SELECT status, perm_version, now() FROM iam.users WHERE id = $1`, userID,
+	).Scan(&status, &s.PermVersion, &s.Now)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return "", 0, ErrNotFound
+		return AccessState{}, ErrNotFound
 	}
 	if err != nil {
-		return "", 0, fmt.Errorf("iam: erişim durumu okunamadı: %w", err)
+		return AccessState{}, fmt.Errorf("iam: erişim durumu okunamadı: %w", err)
 	}
-	return UserStatus(status), version, nil
+	s.Status = UserStatus(status)
+	return s, nil
 }
 
 // NextGrantChange, kullanıcının yetkilerinin at'ten sonra zamanla değişeceği ilk anı
@@ -62,13 +74,12 @@ type PermissionResolver struct {
 	pool   *pgxpool.Pool
 	rdb    redis.Cmdable
 	ttl    time.Duration
-	now    func() time.Time
 	logger *slog.Logger
 }
 
 // NewPermissionResolver, bir PermissionResolver oluşturur. ttl, önbellek kaydının en uzun ömrüdür.
-func NewPermissionResolver(pool *pgxpool.Pool, rdb redis.Cmdable, ttl time.Duration, now func() time.Time, logger *slog.Logger) *PermissionResolver {
-	return &PermissionResolver{pool: pool, rdb: rdb, ttl: ttl, now: now, logger: logger}
+func NewPermissionResolver(pool *pgxpool.Pool, rdb redis.Cmdable, ttl time.Duration, logger *slog.Logger) *PermissionResolver {
+	return &PermissionResolver{pool: pool, rdb: rdb, ttl: ttl, logger: logger}
 }
 
 func permissionsKey(userID string, version int) string {
@@ -83,18 +94,18 @@ func permissionsKey(userID string, version int) string {
 func (pr *PermissionResolver) Permissions(ctx context.Context, userID string) (*authz.Permissions, error) {
 	repo := NewRepository(pr.pool)
 
-	status, version, err := repo.AccessState(ctx, userID)
+	state, err := repo.AccessState(ctx, userID)
 	if errors.Is(err, ErrNotFound) {
 		return nil, authz.ErrAccountInactive
 	}
 	if err != nil {
 		return nil, err
 	}
-	if status != StatusActive {
+	if state.Status != StatusActive {
 		return nil, authz.ErrAccountInactive
 	}
 
-	key := permissionsKey(userID, version)
+	key := permissionsKey(userID, state.PermVersion)
 
 	data, err := pr.rdb.Get(ctx, key).Bytes()
 	switch {
@@ -108,7 +119,7 @@ func (pr *PermissionResolver) Permissions(ctx context.Context, userID string) (*
 		pr.logger.Warn("yetki önbelleği okunamadı, veritabanından çözülüyor", "err", err)
 	}
 
-	now := pr.now()
+	now := state.Now
 	rows, err := repo.Grants(ctx, userID, now)
 	if err != nil {
 		return nil, err

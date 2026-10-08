@@ -24,8 +24,7 @@ const (
 	RefreshCookieName = "agora_refresh"
 	refreshCookiePath = "/api/v1/auth"
 
-	maxUsernameLength  = 64
-	maxUserAgentLength = 512
+	maxUsernameLength = 64
 )
 
 // AuthService, handler'ın ihtiyaç duyduğu kimlik doğrulama işlemleridir. *Auth bunu sağlar.
@@ -185,8 +184,8 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		Username:  req.Username,
 		Password:  req.Password,
 		Client:    client,
-		IP:        httpx.ClientIP(r),
-		UserAgent: truncate(r.UserAgent(), maxUserAgentLength),
+		IP:        httpx.ClientInfoFrom(r.Context()).IP,
+		UserAgent: httpx.ClientInfoFrom(r.Context()).UserAgent,
 	})
 	if err != nil {
 		h.authError(w, r, client, err)
@@ -437,15 +436,6 @@ func secondsUntil(t time.Time) int {
 		return 0
 	}
 	return int((d + time.Second - 1) / time.Second)
-}
-
-// truncate, s'yi en fazla n bayta kısaltır. Ortadan bölünen çok baytlı bir UTF-8
-// karakteri atılır, böylece veritabanına geçersiz UTF-8 gitmez.
-func truncate(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	return strings.ToValidUTF8(s[:n], "")
 }
 
 func optional(s string) *string {

@@ -38,6 +38,8 @@ tags:
     description: Kullanıcı hesaplarının yönetimi
   - name: Organizasyon
     description: Kampüs, akademik birim, bölüm ve program kataloğu (herkese açık)
+  - name: Denetim
+    description: Denetim izi ve güvenlik olayları (sistem yöneticisi ve denetçi)
 
 paths:
   /healthz:
@@ -263,6 +265,80 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "503": { $ref: "#/components/responses/ServiceUnavailable" }
 
+  /api/v1/audit/log:
+    get:
+      tags: [Denetim]
+      summary: Denetim kayıtlarını listeler
+      description: En yeniden eskiye sıralı, cursor ile sayfalanır.
+      operationId: listAuditLog
+      x-agora-permission: audit:read
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: actor_user_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: action
+          in: query
+          description: kaynak.eylem, ör. role.assign
+          schema: { type: string }
+        - name: entity_type
+          in: query
+          schema: { type: string }
+        - name: entity_id
+          in: query
+          schema: { type: string }
+        - $ref: "#/components/parameters/From"
+        - $ref: "#/components/parameters/To"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Denetim kayıtları
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/AuditLogEntry" }
+                  next_cursor: { type: string }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/v1/audit/security-events:
+    get:
+      tags: [Denetim]
+      summary: Güvenlik olaylarını listeler
+      description: En yeniden eskiye sıralı, cursor ile sayfalanır.
+      operationId: listSecurityEvents
+      x-agora-permission: audit:read
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: type
+          in: query
+          schema: { $ref: "#/components/schemas/SecurityEventType" }
+        - $ref: "#/components/parameters/From"
+        - $ref: "#/components/parameters/To"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Güvenlik olayları
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SecurityEventPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /api/v1/faculties:
     get:
       tags: [Organizasyon]
@@ -441,6 +517,25 @@ components:
       in: query
       description: Kodda veya adda geçen metin (büyük/küçük harf ve Türkçe karakter duyarsız)
       schema: { type: string, maxLength: 100 }
+    From:
+      name: from
+      in: query
+      description: Bu andan itibaren (dahil), RFC 3339
+      schema: { type: string, format: date-time }
+    To:
+      name: to
+      in: query
+      description: Bu ana kadar (hariç), RFC 3339
+      schema: { type: string, format: date-time }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    Cursor:
+      name: cursor
+      in: query
+      description: Önceki yanıtın `next_cursor` değeri (opak)
+      schema: { type: string }
     IncludeInactive:
       name: include_inactive
       in: query
@@ -619,6 +714,64 @@ components:
           type: [string, "null"]
           examples: ["Bilgisayar Mühendisliği"]
         valid_until: { type: [string, "null"], format: date-time }
+
+    SecurityEventType:
+      type: string
+      enum:
+        - LOGIN_SUCCEEDED
+        - LOGIN_FAILED
+        - ACCOUNT_LOCKED
+        - LOGOUT
+        - REFRESH_TOKEN_REUSED
+        - PASSWORD_CHANGED
+        - PASSWORD_RESET_REQUESTED
+        - PASSWORD_RESET_COMPLETED
+        - SESSION_REVOKED
+        - OTHER_SESSIONS_REVOKED
+        - MFA_ENABLED
+        - MFA_DISABLED
+
+    SecurityEvent:
+      type: object
+      required: [id, occurred_at, type, user_id, username_attempted, ip, user_agent, request_id, details]
+      properties:
+        id: { type: integer, format: int64 }
+        occurred_at: { type: string, format: date-time }
+        type: { $ref: "#/components/schemas/SecurityEventType" }
+        user_id: { type: [string, "null"], format: uuid }
+        username_attempted: { type: [string, "null"] }
+        ip: { type: [string, "null"] }
+        user_agent: { type: [string, "null"] }
+        request_id: { type: [string, "null"] }
+        details:
+          type: object
+          description: Olay türüne göre ayrıntılar (ör. reason, session_id, locked_until)
+          additionalProperties: true
+
+    SecurityEventPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/SecurityEvent" }
+        next_cursor: { type: string }
+
+    AuditLogEntry:
+      type: object
+      required: [id, occurred_at, actor_user_id, action, entity_type, entity_id, before, after, ip, user_agent, request_id]
+      properties:
+        id: { type: integer, format: int64 }
+        occurred_at: { type: string, format: date-time }
+        actor_user_id: { type: [string, "null"], format: uuid, description: Sistem işlemlerinde null }
+        action: { type: string, examples: ["role.assign"] }
+        entity_type: { type: string, examples: ["user"] }
+        entity_id: { type: [string, "null"] }
+        before: { description: Değişiklikten önceki hal (oluşturmada null) }
+        after: { description: Değişiklikten sonraki hal (silmede null) }
+        ip: { type: [string, "null"] }
+        user_agent: { type: [string, "null"] }
+        request_id: { type: [string, "null"] }
 
     UnitType:
       type: string

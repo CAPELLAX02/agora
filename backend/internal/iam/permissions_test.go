@@ -36,7 +36,7 @@ func newResolverEnv(t *testing.T) *resolverEnv {
 	return &resolverEnv{
 		pool:     pool,
 		rdb:      rdb,
-		resolver: iam.NewPermissionResolver(pool, rdb, time.Hour, time.Now, logger),
+		resolver: iam.NewPermissionResolver(pool, rdb, time.Hour, logger),
 		logs:     logs,
 	}
 }
@@ -228,11 +228,11 @@ func TestPermissionResolverCorruptCache(t *testing.T) {
 	userID := e.addUser(t, "P90001")
 	e.assign(t, userID, "SYSTEM_ADMIN", iam.ScopeUniversity, "", "-1 hour", "")
 
-	_, version, err := iam.NewRepository(e.pool).AccessState(ctx, userID)
+	state, err := iam.NewRepository(e.pool).AccessState(ctx, userID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	key := fmt.Sprintf("agora:perms:%s:%d", userID, version)
+	key := fmt.Sprintf("agora:perms:%s:%d", userID, state.PermVersion)
 	e.rdb.Set(ctx, key, "bozuk{", time.Hour)
 
 	if !e.permissions(t, userID).Has("user:read") {

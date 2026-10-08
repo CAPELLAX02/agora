@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 
+	"github.com/CAPELLAX02/agora/backend/internal/audit"
 	"github.com/CAPELLAX02/agora/backend/internal/iam"
 	"github.com/CAPELLAX02/agora/backend/internal/org"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authz"
@@ -25,9 +26,12 @@ func (app *application) routes() http.Handler {
 	iam.NewHandler(app.auth, iam.NewRepository(app.db), app.logger, secureCookie).
 		Register(rt, app.loginRateLimit)
 
+	audit.NewHandler(audit.NewRepository(app.db), app.logger).Register(rt)
+
 	return httpx.Chain(
 		httpx.WithProblemFallback(mux),
 		httpx.RequestID,
+		httpx.WithClientInfo,
 		httpx.AccessLog(app.logger),
 		httpx.Observe(app.metrics),
 		httpx.Recover(app.logger),

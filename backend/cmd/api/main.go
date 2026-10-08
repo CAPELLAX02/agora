@@ -13,6 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/CAPELLAX02/agora/backend/internal/audit"
 	"github.com/CAPELLAX02/agora/backend/internal/iam"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authn"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authz"
@@ -73,6 +74,12 @@ func run() error {
 	defer pool.Close()
 	logger.Info("veritabanı bağlantı havuzu hazır", "max_conns", cfg.DBMaxConns)
 
+	// Denetim tablolarının önümüzdeki aylar için partition'ları hazır olsun. Worker
+	// bunu günlük olarak da yapar. Fonksiyon tekrar çalıştırılabilir.
+	if err := audit.EnsurePartitions(ctx, pool, 3); err != nil {
+		return err
+	}
+
 	rdb, err := redisx.Open(ctx, cfg.RedisURL)
 	if err != nil {
 		return err
@@ -86,7 +93,7 @@ func run() error {
 	}
 	loginLimiter := ratelimit.New(rdb, "login", cfg.LoginRateLimit, time.Minute, time.Now)
 
-	permissions := iam.NewPermissionResolver(pool, rdb, time.Hour, time.Now, logger)
+	permissions := iam.NewPermissionResolver(pool, rdb, time.Hour, logger)
 
 	reg := metrics.NewRegistry()
 	reg.MustRegister(metrics.NewPoolCollector(pool))
