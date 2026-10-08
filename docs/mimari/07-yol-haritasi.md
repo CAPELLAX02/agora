@@ -155,7 +155,7 @@ flowchart LR
 | ✅ | `/metrics`, Prometheus, Grafana (panolar kod olarak) | Ders 11–12 |
 | ✅ | Backend CI (gofmt, vet, staticcheck, govulncheck, race testleri) | |
 | ✅ | Redis | Ders 16 |
-| ⬜ | Mailpit (geliştirme SMTP) | Faz 1 şifre sıfırlamayla birlikte |
+| ✅ | Mailpit (geliştirme SMTP) | `http://localhost:8025` |
 | ⏭️ | MinIO | Faz 5'te dosya yüklemeyle birlikte eklenecek: kullanılmayan servis compose'da durmasın |
 | ⬜ | Web: Vite + React + TS + Tailwind + shadcn, ESLint/Prettier/Vitest | Faz 1 backend'i bitince |
 | ⬜ | Web: tasarım sistemi, açık/koyu tema, uygulama kabuğu, i18n | |
@@ -176,7 +176,7 @@ flowchart LR
 | ✅ | Güvenlik başlıkları ve CORS | Sıkı CSP, nosniff, HSTS (HTTPS ortamlarında), origin listesiyle CORS |
 | ✅ | Denetim izi (`audit.audit_log`) ve güvenlik olayları (`audit.security_events`), aylık partition | Giriş, çıkış, kilit ve yeniden kullanım olayları; `GET /audit/log`, `GET /audit/security-events`. Saklama süresine göre arşivleme worker'la, `INSERT`-only DB rolü Faz 9'da |
 | ✅ | Parola değiştirme, `must_change_password` zorunluluğu | `POST /me/password`, `SelfService` politikası, diğer oturumlar kapanır, yanlış mevcut parola kilit sayacını artırır |
-| ⬜ | E-posta outbox'ı ve `cmd/worker` (SMTP, üstel geri çekilme) | |
+| ✅ | E-posta outbox'ı ve `cmd/worker` (SMTP, üstel geri çekilme) | `SKIP LOCKED` + kira ile çoklu worker, gönderimden sonra gizli veri silinir, `agora_outbox_*` metrikleri, günlük bakım işi |
 | ⬜ | Şifre sıfırlama (30 dk, tek kullanımlık token, bütün oturumlar iptal) | |
 | ⬜ | Oturumlarım: listeleme, tek oturumu kapatma, diğer oturumları kapatma | |
 | ⬜ | Kullanıcı yönetimi: listeleme, oluşturma (aktivasyon e-postasıyla), askıya alma | |

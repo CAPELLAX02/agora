@@ -14,7 +14,7 @@ export
 
 .DEFAULT_GOAL := help
 
-.PHONY: help up down ps logs psql redis api migrate-up migrate-down migrate-status migration seed \
+.PHONY: help up down ps logs psql redis api worker migrate-up migrate-down migrate-status migration seed \
         test test-unit cover vet lint vuln fmt contract-lint check
 
 help: ## Komutları listeler
@@ -45,6 +45,9 @@ redis: ## Redis'e redis-cli ile bağlanır
 
 api: ## API'yi çalıştırır
 	go -C $(BACKEND) run ./cmd/api
+
+worker: ## Worker'ı çalıştırır (e-posta outbox'ı, bakım işleri). E-postalar: http://localhost:8025
+	go -C $(BACKEND) run ./cmd/worker
 
 # --- Veritabanı migration'ları -----------------------------------------------
 

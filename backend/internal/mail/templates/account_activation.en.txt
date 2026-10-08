@@ -1,0 +1,13 @@
+{{define "subject"}}Your Agora account has been created{{end}}
+{{define "text"}}Hello {{.name}},
+
+An Agora account has been created for you. Your username: {{.username}}
+
+Open the link below to activate your account and choose a password:
+
+{{.link}}
+
+The link is valid for {{.expires_hours}} hours and can be used only once. If it expires, request a new one with "Forgot password" on the sign-in page.
+
+Agora
+{{end}}

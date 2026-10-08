@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/mail"
 	"net/url"
 	"os"
 	"strconv"
@@ -24,7 +25,15 @@ const devRedisURL = "redis://localhost:6379/0"
 // devCORSOrigins, development ortamında web geliştirme sunucusunun (Vite) adresidir.
 var devCORSOrigins = []string{"http://localhost:5173"}
 
-// Config, API sürecinin çalışma zamanı yapılandırmasıdır.
+// Development ortamında e-postalar compose.yaml'daki Mailpit'e gider ve e-postalardaki
+// bağlantılar Vite geliştirme sunucusunu gösterir.
+const (
+	devSMTPAddr   = "localhost:1025"
+	devWebBaseURL = "http://localhost:5173"
+)
+
+// Config, API ve worker süreçlerinin çalışma zamanı yapılandırmasıdır. İki süreç
+// aynı ortam değişkenlerini okur: production'da aynı gizli değerlerle çalışırlar.
 type Config struct {
 	Env               string // development, test, production
 	HTTPAddr          string
@@ -49,6 +58,14 @@ type Config struct {
 	SessionAbsoluteTimeout time.Duration // oturumun refresh'lerle bile aşamayacağı üst sınır
 	PasswordHashWorkers    int           // aynı anda en fazla kaç parola hash'lenir (her biri 64 MiB)
 	LoginRateLimit         int           // bir IP'den dakikada en fazla kaç giriş denemesi
+
+	// E-posta ve worker
+	WebBaseURL        string // e-postalardaki bağlantıların kökü (web arayüzünün adresi)
+	SMTPAddr          string // host:port
+	SMTPFrom          string // "Ad <adres>" biçiminde gönderen
+	SMTPUsername      string
+	SMTPPassword      string // gizli
+	WorkerMetricsAddr string // worker'ın /metrics adresi
 }
 
 // Load, ortam değişkenlerini okur, varsayılanları uygular ve sonucu doğrular.
@@ -93,6 +110,13 @@ func Load() (Config, error) {
 		SessionAbsoluteTimeout: duration("AGORA_SESSION_ABSOLUTE_TIMEOUT", 30*24*time.Hour),
 		PasswordHashWorkers:    integer("AGORA_PASSWORD_HASH_WORKERS", 4),
 		LoginRateLimit:         integer("AGORA_LOGIN_RATE_LIMIT", 20),
+
+		WebBaseURL:        lookup("AGORA_WEB_BASE_URL", ""),
+		SMTPAddr:          lookup("AGORA_SMTP_ADDR", ""),
+		SMTPFrom:          lookup("AGORA_SMTP_FROM", "Agora <no-reply@agora.test>"),
+		SMTPUsername:      lookup("AGORA_SMTP_USERNAME", ""),
+		SMTPPassword:      lookup("AGORA_SMTP_PASSWORD", ""),
+		WorkerMetricsAddr: lookup("AGORA_WORKER_METRICS_ADDR", ":9092"),
 	}
 
 	if cfg.DatabaseURL == "" && cfg.Env == "development" {
@@ -100,6 +124,14 @@ func Load() (Config, error) {
 	}
 	if cfg.RedisURL == "" && cfg.Env == "development" {
 		cfg.RedisURL = devRedisURL
+	}
+	if cfg.Env == "development" {
+		if cfg.SMTPAddr == "" {
+			cfg.SMTPAddr = devSMTPAddr
+		}
+		if cfg.WebBaseURL == "" {
+			cfg.WebBaseURL = devWebBaseURL
+		}
 	}
 	cfg.CORSOrigins = lookupList("AGORA_CORS_ALLOWED_ORIGINS")
 	if cfg.CORSOrigins == nil && cfg.Env == "development" {
@@ -150,6 +182,12 @@ func (c Config) LogValue() slog.Value {
 		slog.String("session_absolute_timeout", c.SessionAbsoluteTimeout.String()),
 		slog.Int("password_hash_workers", c.PasswordHashWorkers),
 		slog.Int("login_rate_limit", c.LoginRateLimit),
+		slog.String("web_base_url", c.WebBaseURL),
+		slog.String("smtp_addr", c.SMTPAddr),
+		slog.String("smtp_from", c.SMTPFrom),
+		slog.String("smtp_username", c.SMTPUsername),
+		slog.Bool("smtp_password_set", c.SMTPPassword != ""),
+		slog.String("worker_metrics_addr", c.WorkerMetricsAddr),
 	)
 }
 
@@ -215,6 +253,24 @@ func (c Config) validate() []error {
 
 	if c.PasswordHashWorkers < 1 {
 		errs = append(errs, fmt.Errorf("AGORA_PASSWORD_HASH_WORKERS en az 1 olmalı: %d", c.PasswordHashWorkers))
+	}
+
+	if c.WebBaseURL == "" {
+		errs = append(errs, errors.New("AGORA_WEB_BASE_URL zorunlu"))
+	} else if !httpx.ValidOrigin(c.WebBaseURL) {
+		errs = append(errs, fmt.Errorf("AGORA_WEB_BASE_URL geçersiz %q: scheme://host[:port] biçiminde olmalı", c.WebBaseURL))
+	}
+	if c.SMTPAddr == "" {
+		errs = append(errs, errors.New("AGORA_SMTP_ADDR zorunlu"))
+	}
+	if _, err := mail.ParseAddress(c.SMTPFrom); err != nil {
+		errs = append(errs, fmt.Errorf("AGORA_SMTP_FROM geçersiz %q: %w", c.SMTPFrom, err))
+	}
+	if (c.SMTPUsername == "") != (c.SMTPPassword == "") {
+		errs = append(errs, errors.New("AGORA_SMTP_USERNAME ve AGORA_SMTP_PASSWORD birlikte verilmeli"))
+	}
+	if c.WorkerMetricsAddr == c.HTTPAddr || c.WorkerMetricsAddr == c.MetricsAddr {
+		errs = append(errs, fmt.Errorf("AGORA_WORKER_METRICS_ADDR diğer adreslerle aynı olamaz: %q", c.WorkerMetricsAddr))
 	}
 
 	if c.LoginRateLimit < 1 {

@@ -1,0 +1,13 @@
+{{define "subject"}}Agora hesabınız oluşturuldu{{end}}
+{{define "text"}}Merhaba {{.name}},
+
+Sizin için bir Agora hesabı oluşturuldu. Kullanıcı adınız: {{.username}}
+
+Hesabınızı etkinleştirmek ve parolanızı belirlemek için aşağıdaki bağlantıyı açın:
+
+{{.link}}
+
+Bağlantı {{.expires_hours}} saat geçerlidir ve yalnızca bir kez kullanılabilir. Süresi dolarsa giriş ekranındaki "Parolamı unuttum" bağlantısıyla yenisini isteyebilirsiniz.
+
+Agora
+{{end}}

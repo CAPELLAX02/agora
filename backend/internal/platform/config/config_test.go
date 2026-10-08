@@ -21,6 +21,8 @@ func clearAgoraEnv(t *testing.T) {
 		"AGORA_JWT_PRIVATE_KEY_FILE", "AGORA_ACCESS_TOKEN_TTL", "AGORA_SESSION_IDLE_TIMEOUT",
 		"AGORA_SESSION_ABSOLUTE_TIMEOUT", "AGORA_PASSWORD_HASH_WORKERS",
 		"AGORA_REDIS_URL", "AGORA_LOGIN_RATE_LIMIT", "AGORA_CORS_ALLOWED_ORIGINS",
+		"AGORA_WEB_BASE_URL", "AGORA_SMTP_ADDR", "AGORA_SMTP_FROM", "AGORA_SMTP_USERNAME",
+		"AGORA_SMTP_PASSWORD", "AGORA_WORKER_METRICS_ADDR",
 	} {
 		t.Setenv(key, "")
 	}
@@ -51,6 +53,11 @@ func defaultsWith(modify func(c *Config)) Config {
 		SessionAbsoluteTimeout: 30 * 24 * time.Hour,
 		PasswordHashWorkers:    4,
 		LoginRateLimit:         20,
+
+		WebBaseURL:        devWebBaseURL,
+		SMTPAddr:          devSMTPAddr,
+		SMTPFrom:          "Agora <no-reply@agora.test>",
+		WorkerMetricsAddr: ":9092",
 	}
 	if modify != nil {
 		modify(&c)
@@ -87,6 +94,12 @@ func TestLoad(t *testing.T) {
 				"AGORA_REDIS_URL":                "redis://:sifre@cache:6379/1",
 				"AGORA_LOGIN_RATE_LIMIT":         "60",
 				"AGORA_CORS_ALLOWED_ORIGINS":     " https://agora.example.edu.tr , https://yonetim.agora.example.edu.tr:8443,",
+				"AGORA_WEB_BASE_URL":             "https://agora.example.edu.tr",
+				"AGORA_SMTP_ADDR":                "smtp.example.edu.tr:587",
+				"AGORA_SMTP_FROM":                "Agora <agora@example.edu.tr>",
+				"AGORA_SMTP_USERNAME":            "agora",
+				"AGORA_SMTP_PASSWORD":            "smtp-gizli",
+				"AGORA_WORKER_METRICS_ADDR":      ":9100",
 			},
 			want: defaultsWith(func(c *Config) {
 				c.Env = "production"
@@ -104,6 +117,12 @@ func TestLoad(t *testing.T) {
 				c.RedisURL = "redis://:sifre@cache:6379/1"
 				c.LoginRateLimit = 60
 				c.CORSOrigins = []string{"https://agora.example.edu.tr", "https://yonetim.agora.example.edu.tr:8443"}
+				c.WebBaseURL = "https://agora.example.edu.tr"
+				c.SMTPAddr = "smtp.example.edu.tr:587"
+				c.SMTPFrom = "Agora <agora@example.edu.tr>"
+				c.SMTPUsername = "agora"
+				c.SMTPPassword = "smtp-gizli"
+				c.WorkerMetricsAddr = ":9100"
 			}),
 		},
 		{
@@ -130,6 +149,29 @@ func TestLoad(t *testing.T) {
 			name:    "geçersiz CORS origin'leri",
 			env:     map[string]string{"AGORA_CORS_ALLOWED_ORIGINS": "*,https://agora.test/,agora.test"},
 			wantErr: []string{`geçersiz origin "*"`, `geçersiz origin "https://agora.test/"`, `geçersiz origin "agora.test"`},
+		},
+		{
+			name:    "production'da e-posta ayarları zorunlu",
+			env:     map[string]string{"AGORA_ENV": "production"},
+			wantErr: []string{"AGORA_WEB_BASE_URL zorunlu", "AGORA_SMTP_ADDR zorunlu"},
+		},
+		{
+			name: "geçersiz e-posta ayarları",
+			env: map[string]string{
+				"AGORA_WEB_BASE_URL":  "agora.test/giris",
+				"AGORA_SMTP_FROM":     "adres değil",
+				"AGORA_SMTP_USERNAME": "sadece-kullanici",
+			},
+			wantErr: []string{
+				`AGORA_WEB_BASE_URL geçersiz "agora.test/giris"`,
+				`AGORA_SMTP_FROM geçersiz "adres değil"`,
+				"AGORA_SMTP_USERNAME ve AGORA_SMTP_PASSWORD birlikte verilmeli",
+			},
+		},
+		{
+			name:    "worker metrik adresi çakışmamalı",
+			env:     map[string]string{"AGORA_WORKER_METRICS_ADDR": ":9091"},
+			wantErr: []string{"AGORA_WORKER_METRICS_ADDR diğer adreslerle aynı olamaz"},
 		},
 		{
 			name:    "giriş hız sınırı en az 1",
@@ -217,13 +259,15 @@ func TestConfigLogValueRedactsSecrets(t *testing.T) {
 	cfg := defaultsWith(func(c *Config) {
 		c.DatabaseURL = "postgres://agora:s3cr3t-parola@db:5432/agora"
 		c.RedisURL = "redis://:r3d1s-parola@cache:6379/0"
+		c.SMTPPassword = "smtp-c0k-gizli"
 	})
 
 	var buf bytes.Buffer
 	slog.New(slog.NewTextHandler(&buf, nil)).Info("yapılandırma", "config", cfg)
 	out := buf.String()
 
-	if strings.Contains(out, "s3cr3t-parola") || strings.Contains(out, "r3d1s-parola") {
+	if strings.Contains(out, "s3cr3t-parola") || strings.Contains(out, "r3d1s-parola") ||
+		strings.Contains(out, "smtp-c0k-gizli") {
 		t.Errorf("parola log'a sızdı:\n%s", out)
 	}
 	if !strings.Contains(out, "config.database_url=postgres://agora:xxxxx@db:5432/agora") {

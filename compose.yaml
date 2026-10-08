@@ -41,6 +41,24 @@ services:
       timeout: 3s
       retries: 10
 
+  # Geliştirme SMTP sunucusu: gönderilen e-postalar dışarı çıkmaz, http://localhost:8025
+  # adresindeki arayüzde görüntülenir (şifre sıfırlama bağlantıları vb.).
+  mailpit:
+    image: axllent/mailpit:v1.31.2
+    restart: unless-stopped
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # web arayüzü ve API
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   prometheus:
     image: prom/prometheus:v3.15.0
     restart: unless-stopped
