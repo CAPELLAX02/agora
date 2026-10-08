@@ -11,8 +11,8 @@ export
 
 .DEFAULT_GOAL := help
 
-.PHONY: help up down ps logs psql api migrate-up migrate-down migrate-status migration \
-        test cover vet fmt check
+.PHONY: help up down ps logs psql api migrate-up migrate-down migrate-status migration seed \
+        test test-unit cover vet fmt check
 
 help: ## Komutları listeler
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -55,10 +55,19 @@ migration: ## Yeni migration dosyası oluşturur: make migration name=create_iam
 	@test -n "$(name)" || (echo "kullanım: make migration name=<ad>"; exit 1)
 	go -C $(BACKEND) run $(GOOSE) -dir migrations -s create $(name) sql
 
+seed: ## Geliştirme seed verisini yükler (tekrar çalıştırılabilir)
+	@for f in infra/seed/dev/*.sql; do \
+		echo "seed: $$f"; \
+		docker compose exec -T postgres psql -q -v ON_ERROR_STOP=1 -U agora -d agora < $$f || exit 1; \
+	done
+
 # --- Kalite ------------------------------------------------------------------
 
-test: ## Tüm testleri race dedektörüyle çalıştırır
+test: ## Tüm testleri (Docker gerektiren entegrasyon testleri dahil) race dedektörüyle çalıştırır
 	go -C $(BACKEND) test -race ./...
+
+test-unit: ## Sadece birim testlerini çalıştırır (Docker gerekmez)
+	go -C $(BACKEND) test -race -short ./...
 
 cover: ## Test kapsama raporunu tarayıcıda açar
 	go -C $(BACKEND) test -coverprofile=coverage.out ./...
