@@ -174,7 +174,7 @@ flowchart LR
 | ✅ | Hesap kilitleme, giriş hız sınırı, anında oturum iptali | Ders 14, 16 |
 | ✅ | Rol/yetki çözümleme, politikalı router (varsayılan ret), sürümlü yetki önbelleği | Ders 17 |
 | ✅ | Güvenlik başlıkları ve CORS | Sıkı CSP, nosniff, HSTS (HTTPS ortamlarında), origin listesiyle CORS |
-| ⬜ | Denetim izi (`audit.audit_log`) ve güvenlik olayları (`audit.security_events`), aylık partition | |
+| ✅ | Denetim izi (`audit.audit_log`) ve güvenlik olayları (`audit.security_events`), aylık partition | Giriş, çıkış, kilit ve yeniden kullanım olayları; `GET /audit/log`, `GET /audit/security-events`. Saklama süresine göre arşivleme worker'la, `INSERT`-only DB rolü Faz 9'da |
 | ⬜ | Parola değiştirme, `must_change_password` zorunluluğu | |
 | ⬜ | E-posta outbox'ı ve `cmd/worker` (SMTP, üstel geri çekilme) | |
 | ⬜ | Şifre sıfırlama (30 dk, tek kullanımlık token, bütün oturumlar iptal) | |

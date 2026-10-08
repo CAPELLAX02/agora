@@ -298,6 +298,14 @@ HTTP isteği
 
 Kayıt içeriği: `aktör, (impersonator), eylem, varlık türü, varlık id, önce/sonra (JSONB, PII maskeli), ip, user-agent, request_id, zaman`. Tablo **aylık bölümlenir (partition)** ve uygulama rolüne sadece `INSERT` izni verilir (değiştirilemezlik).
 
+**Uygulama notları:**
+- `audit.audit_log` ve `audit.security_events` aylık partition'lıdır. `audit.ensure_partitions(n)` bu ay ve sonraki *n* ay için partition açar: API açılışta, worker günlük çağırır. Varsayılan partition, normal işleyişte boş kalır.
+- Olaylar, değişikliği yapan transaction'ın içinde yazılır: iş verisi ile denetim kaydı birlikte commit edilir ya da birlikte geri alınır.
+- İstemci IP'si, User-Agent ve `request_id` HTTP katmanında context'e konur (`httpx.WithClientInfo`), servisler bunları `http.Request`'e bağımlı olmadan kaydeder.
+- Rol-yetki matrisi bir migration ile değişirse, o role sahip kullanıcıların `perm_version`'ı aynı migration'da artırılır (bkz. `00008`). Aksi halde önbellekteki eski yetkiler kaydın süresi dolana kadar kullanılır.
+- Rol atamalarının geçerlilik zamanı veritabanı saatiyle yazılır ve yetki çözümü de "şimdi"yi veritabanından alır. İki farklı saat kullanmak, yeni atanan rolü milisaniyeler boyunca görünmez kılıyordu.
+- Henüz yapılmayanlar: saklama süresine göre eski partition'ların arşivlenmesi (worker) ve uygulama rolüne sadece `INSERT` izni (ayrı veritabanı rolleri, Faz 9).
+
 ---
 
 ## 6. KVKK ve Kişisel Veri
