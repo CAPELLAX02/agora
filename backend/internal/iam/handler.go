@@ -394,7 +394,7 @@ func (h *Handler) verifyResetToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	h.writeJSON(w, r, http.StatusOK, resetTokenResponse{Purpose: info.Purpose, ExpiresAt: info.ExpiresAt})
+	h.writeJSON(w, r, http.StatusOK, resetTokenResponse(info))
 }
 
 // resetPassword, bağlantıyla yeni parolayı belirler (ya da hesabı etkinleştirir).
