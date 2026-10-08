@@ -15,6 +15,10 @@ info:
     ister. Access token 15 dakika geçerlidir. Süresi dolunca `POST /api/v1/auth/refresh`
     ile yenisi alınır.
 
+    **Yetkilendirme:** yetkiler token'a gömülmez, her korumalı istekte sunucuda güncel
+    olarak çözülür. Rol değişikliği ya da hesabın askıya alınması anında etkilidir.
+    Belirli bir yetki gerektiren uçlarda yetki `x-agora-permission` alanında yazar.
+
     **İstemci türü:** `/api/v1/auth/*` uçları `X-Agora-Client` başlığını zorunlu tutar.
     - `web`: refresh token `agora_refresh` adlı HttpOnly çerezde taşınır, gövdede yer almaz.
     - `mobile`: refresh token yanıt gövdesinde verilir ve istek gövdesinde geri gönderilir.
@@ -30,6 +34,8 @@ tags:
     description: Giriş, token yenileme ve çıkış
   - name: Hesap
     description: Oturum açmış kullanıcının kendi bilgileri
+  - name: Kullanıcılar
+    description: Kullanıcı hesaplarının yönetimi
   - name: Organizasyon
     description: Kampüs, akademik birim, bölüm ve program kataloğu (herkese açık)
 
@@ -207,6 +213,54 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Me" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+
+  /api/v1/me/permissions:
+    get:
+      tags: [Hesap]
+      summary: Oturum açmış kullanıcının yetkileri
+      description: |
+        Şu anda geçerli yetkiler ve kapsamları. Web arayüzü menüleri ve butonları buna
+        göre gösterir. Asıl kontrol her zaman sunucudadır.
+      operationId: getMyPermissions
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Yetkiler (yetki koduna ve kapsama göre sıralı)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Grant" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+
+  /api/v1/users/{id}:
+    get:
+      tags: [Kullanıcılar]
+      summary: Bir kullanıcının profilini döndürür
+      operationId: getUser
+      x-agora-permission: user:read
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Profil
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Profile" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
         "503": { $ref: "#/components/responses/ServiceUnavailable" }
 
   /api/v1/faculties:
@@ -427,6 +481,13 @@ components:
       content:
         application/problem+json:
           schema: { $ref: "#/components/schemas/Problem" }
+    Forbidden:
+      description: |
+        `FORBIDDEN` (gerekli yetki yok) ya da `ACCOUNT_DISABLED` (hesap askıya alınmış
+        veya kapatılmış)
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
     ServiceUnavailable:
       description: |
         `SERVICE_UNAVAILABLE`: oturum iptal listesine (Redis) geçici olarak ulaşılamıyor.
@@ -508,21 +569,40 @@ components:
           type: boolean
           description: true ise istemci kullanıcıyı parola değiştirme ekranına yönlendirmeli
 
-    Me:
+    Profile:
       type: object
-      required: [id, username, email, first_name, last_name, must_change_password, last_login_at, session_id, roles]
+      required: [id, username, email, first_name, last_name, status, must_change_password, last_login_at, roles]
       properties:
         id: { type: string, format: uuid }
         username: { type: string }
         email: { type: string, format: email }
         first_name: { type: string }
         last_name: { type: string }
+        status: { type: string, enum: [PENDING, ACTIVE, SUSPENDED, DISABLED] }
         must_change_password: { type: boolean }
         last_login_at: { type: [string, "null"], format: date-time }
-        session_id: { type: string, format: uuid }
         roles:
           type: array
           items: { $ref: "#/components/schemas/RoleAssignment" }
+
+    Me:
+      allOf:
+        - $ref: "#/components/schemas/Profile"
+        - type: object
+          required: [session_id]
+          properties:
+            session_id: { type: string, format: uuid }
+
+    Grant:
+      type: object
+      required: [permission, scope_type, scope_id]
+      properties:
+        permission: { type: string, examples: ["quota:manage"] }
+        scope_type: { type: string, enum: [UNIVERSITY, FACULTY, DEPARTMENT, PROGRAM, NONE] }
+        scope_id:
+          type: [string, "null"]
+          format: uuid
+          description: UNIVERSITY ve NONE kapsamlarında null
 
     RoleAssignment:
       type: object

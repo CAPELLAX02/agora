@@ -274,6 +274,10 @@ HTTP isteği
 - **Yetki çözümleme**: `user → aktif rol atamaları → rol yetkileri + kapsamlar` tek sorguyla hesaplanır ve Redis'e yazılır. Rol atamasında değişiklik olunca kullanıcının `perm_version` değeri artırılır ve önbellek doğal olarak geçersizleşir.
 - **IDOR koruması**: Kaynağı ID ile getiren her sorgu, aktörün o kaynağa erişim hakkını da sorgulamalıdır. "Önce getir, sonra kontrol et" değil, mümkün olduğunda **"yetkili kümeden getir"**.
 - **Varsayılan ret (deny by default)**: Guard tanımlanmamış bir route derleme ya da test aşamasında hata verir (route kayıt tablosunda yetki alanı zorunlu).
+  - Uygulama: bütün route'lar `authz.Router` üzerinden `Public`, `Authenticated` ya da `Permission("x:y")` politikasıyla kaydedilir. Politikasız kayıt uygulama açılırken panic'e yol açar.
+  - `Authenticated` ve `Permission` route'larında her istekte kullanıcının durumu ve `perm_version`'ı birincil anahtarla okunur, yetkiler `agora:perms:{userID}:{permVersion}` anahtarından gelir. Askıya alınan hesap ve rol değişikliği anında etkilidir.
+  - Süreli atamalar zamanla değiştiği halde `perm_version`'ı artırmaz. Bu yüzden önbellek kaydının ömrü, bir sonraki atama başlangıcı ya da bitişiyle sınırlanır (en çok 1 saat).
+  - Yetki önbelleği bir güvenlik kontrolü değil, hızlandırıcıdır: Redis'e ulaşılamazsa yetkiler veritabanından çözülür.
 
 ### 4.7 Özel durumlar
 
