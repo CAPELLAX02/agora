@@ -60,6 +60,7 @@ func InTx(ctx context.Context, pool *pgxpool.Pool, fn func(tx pgx.Tx) error) (er
 const (
 	codeUniqueViolation    = "23505"
 	codeExclusionViolation = "23P01"
+	codeCheckViolation     = "23514"
 )
 
 // IsConflict, hatanın bir benzersizlik (UNIQUE) ya da dışlama (EXCLUDE) kısıtı
@@ -71,4 +72,11 @@ func IsConflict(err error) bool {
 		return false
 	}
 	return pgErr.Code == codeUniqueViolation || pgErr.Code == codeExclusionViolation
+}
+
+// IsCheckViolation, hatanın bir CHECK kısıtı ihlali olup olmadığını söyler
+// (ör. bitiş zamanı başlangıçtan önce).
+func IsCheckViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == codeCheckViolation
 }

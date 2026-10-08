@@ -1027,3 +1027,131 @@ func TestHTTPUserManagement(t *testing.T) {
 		}
 	})
 }
+
+func TestHTTPRoleManagement(t *testing.T) {
+	e := newHTTPEnv(t)
+	ctx := context.Background()
+	repo := iam.NewRepository(e.pool)
+	deptID, _ := seedOrg(t, e.pool)
+	adminID := e.addUser(t, "P90001")
+	if err := repo.AssignRole(ctx, adminID, "SYSTEM_ADMIN", iam.ScopeUniversity, ""); err != nil {
+		t.Fatal(err)
+	}
+	teacherID := e.addUser(t, "P10070")
+	admin, teacher := e.bearer(t, "P90001"), e.bearer(t, "P10070")
+
+	hasPermission := func(perm string) bool {
+		res := e.do(t, nil, "GET", "/api/v1/me/permissions", teacher, nil)
+		var body struct {
+			Items []struct {
+				Permission string `json:"permission"`
+			} `json:"items"`
+		}
+		res.json(t, &body)
+		for _, g := range body.Items {
+			if g.Permission == perm {
+				return true
+			}
+		}
+		return false
+	}
+
+	if res := e.do(t, nil, "GET", "/api/v1/roles", teacher, nil); res.status != 200 {
+		t.Errorf("rol kataloğu her kullanıcıya açık olmalı: %d", res.status)
+	}
+	if res := e.do(t, nil, "POST", "/api/v1/users/"+teacherID+"/roles", teacher,
+		map[string]string{"role": "SYSTEM_ADMIN", "reason": "x"}); res.status != 403 {
+		t.Errorf("yetkisiz rol atama: %d", res.status)
+	}
+
+	res := e.do(t, nil, "POST", "/api/v1/users/"+teacherID+"/roles", admin,
+		map[string]string{"role": "INSTRUCTOR", "scope_id": deptID, "reason": "2026 güz ataması"})
+	if res.status != http.StatusCreated {
+		t.Fatalf("atama: %d %s", res.status, res.body)
+	}
+	var assigned struct {
+		ID        string `json:"id"`
+		State     string `json:"state"`
+		ScopeName string `json:"scope_name"`
+	}
+	res.json(t, &assigned)
+	if assigned.State != "ACTIVE" || assigned.ScopeName != "Bilgisayar Mühendisliği" {
+		t.Errorf("atama yanıtı = %s", res.body)
+	}
+	// Aynı access token: yeni yetki bir sonraki istekte görünür.
+	if !hasPermission("score:enter") {
+		t.Error("atanan rolün yetkisi hemen görünmeli")
+	}
+
+	for name, body := range map[string]map[string]string{
+		"tekrar atama":    {"role": "INSTRUCTOR", "scope_id": deptID, "reason": "x"},
+		"kapsamsız bölüm": {"role": "INSTRUCTOR", "reason": "x"},
+		"gerekçesiz":      {"role": "ADVISOR", "scope_id": deptID},
+	} {
+		if res := e.do(t, nil, "POST", "/api/v1/users/"+teacherID+"/roles", admin, body); res.status != 400 && res.status != 409 {
+			t.Errorf("%s: %d %s", name, res.status, res.body)
+		}
+	}
+	if res := e.do(t, nil, "POST", "/api/v1/users/"+adminID+"/roles", admin,
+		map[string]string{"role": "AUDITOR", "reason": "x"}); res.status != 403 || res.code(t) != "SELF_ACTION_FORBIDDEN" {
+		t.Errorf("kendine rol atama: %d %s", res.status, res.body)
+	}
+
+	res = e.do(t, nil, "GET", "/api/v1/users/"+teacherID+"/roles", admin, nil)
+	if res.status != 200 || !strings.Contains(string(res.body), assigned.ID) {
+		t.Errorf("atama listesi: %d %s", res.status, res.body)
+	}
+
+	res = e.do(t, nil, "POST", "/api/v1/users/"+teacherID+"/roles/"+assigned.ID+"/end", admin,
+		map[string]string{"reason": "görev değişikliği"})
+	if res.status != http.StatusNoContent {
+		t.Fatalf("sonlandırma: %d %s", res.status, res.body)
+	}
+	if hasPermission("score:enter") {
+		t.Error("sonlandırılan rolün yetkisi hemen kalkmalı")
+	}
+
+	// Bir yönetici diğerinin rolünü kaldırır. Rolü kaldırılan kişi, elindeki access
+	// token'la artık rol sonlandıramaz: yetkiler token'da değil, her istekte çözülür.
+	otherAdmin := e.addUser(t, "P90002")
+	if err := repo.AssignRole(ctx, otherAdmin, "SYSTEM_ADMIN", iam.ScopeUniversity, ""); err != nil {
+		t.Fatal(err)
+	}
+	other := e.bearer(t, "P90002")
+	var list struct {
+		Items []struct {
+			ID   string `json:"id"`
+			Role string `json:"role"`
+		} `json:"items"`
+	}
+	e.do(t, nil, "GET", "/api/v1/users/"+adminID+"/roles", other, nil).json(t, &list)
+	res = e.do(t, nil, "POST", "/api/v1/users/"+otherAdmin+"/roles/"+mustFindRole(t, e, admin, otherAdmin, "SYSTEM_ADMIN")+"/end", admin,
+		map[string]string{"reason": "devir"})
+	if res.status != http.StatusNoContent {
+		t.Fatalf("ikinci yöneticinin rolü: %d %s", res.status, res.body)
+	}
+	res = e.do(t, nil, "POST", "/api/v1/users/"+adminID+"/roles/"+list.Items[0].ID+"/end", other,
+		map[string]string{"reason": "deneme"})
+	if res.status != http.StatusForbidden {
+		t.Errorf("rolü kaldırılmış biri rol sonlandırmaya çalıştı: %d %s", res.status, res.body)
+	}
+}
+
+// mustFindRole, kullanıcının verilen roldeki atamasının kimliğini döndürür.
+func mustFindRole(t *testing.T, e *httpEnv, viewer map[string]string, userID, role string) string {
+	t.Helper()
+	var list struct {
+		Items []struct {
+			ID   string `json:"id"`
+			Role string `json:"role"`
+		} `json:"items"`
+	}
+	e.do(t, nil, "GET", "/api/v1/users/"+userID+"/roles", viewer, nil).json(t, &list)
+	for _, a := range list.Items {
+		if a.Role == role {
+			return a.ID
+		}
+	}
+	t.Fatalf("%s rolü bulunamadı", role)
+	return ""
+}

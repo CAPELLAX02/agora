@@ -638,6 +638,146 @@ paths:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Problem" }
 
+  /api/v1/roles:
+    get:
+      tags: [Kullanıcılar]
+      summary: Rol kataloğu
+      description: Bütün roller, kapsam türleri ve verdikleri yetkiler. Giriş yapmış her kullanıcıya açıktır.
+      operationId: listRoles
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Roller (koda göre sıralı)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/RoleDefinition" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/users/{id}/roles:
+    get:
+      tags: [Kullanıcılar]
+      summary: Kullanıcının rol atamaları
+      description: Geçmiş, şimdiki ve ileri tarihli bütün atamalar, en yeniden eskiye.
+      operationId: listUserRoles
+      x-agora-permission: user:read
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Atamalar
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Assignment" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Kullanıcılar]
+      summary: Rol atar
+      description: |
+        Kapsam kimliği rolün kapsam türüne uymalıdır (üniversite geneli ve kapsamsız
+        rollerde boş). Kişi kendine rol atayamaz. Aynı rol aynı kapsamda çakışan bir
+        dönemde atanamaz. Değişiklik kullanıcının bir sonraki isteğinde etkilidir.
+        Gerekçe zorunludur ve denetim kaydına yazılır.
+      operationId: assignRole
+      x-agora-permission: role:assign
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [role, reason]
+              properties:
+                role: { type: string, examples: ["DEPARTMENT_HEAD"] }
+                scope_id: { type: string, format: uuid }
+                valid_from: { type: string, format: date-time, description: Boşsa hemen }
+                valid_until: { type: string, format: date-time, description: Boşsa süresiz }
+                reason: { type: string, minLength: 1, maxLength: 500 }
+      responses:
+        "201":
+          description: Atama oluşturuldu
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Assignment" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: "`FORBIDDEN` ya da `SELF_ACTION_FORBIDDEN`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`ROLE_ALREADY_ASSIGNED`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/users/{id}/roles/{assignment}/end:
+    post:
+      tags: [Kullanıcılar]
+      summary: Rol atamasını sonlandırır
+      description: |
+        Başlamış atamanın bitişi "şimdi" yapılır (geçmiş korunur). Henüz başlamamış
+        atama iptal edilir. Zaten bitmiş atama için bir şey yapılmaz (204). Son aktif
+        sistem yöneticisinin rolü sonlandırılamaz.
+      operationId: endRoleAssignment
+      x-agora-permission: role:assign
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - name: assignment
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 1, maxLength: 500 }
+      responses:
+        "204":
+          description: Atama sonlandırıldı
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: "`FORBIDDEN` ya da `SELF_ACTION_FORBIDDEN`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`LAST_SYSTEM_ADMIN`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
   /api/v1/users/{id}:
     get:
       tags: [Kullanıcılar]
@@ -1089,6 +1229,36 @@ components:
         roles:
           type: array
           items: { $ref: "#/components/schemas/RoleAssignment" }
+
+    RoleDefinition:
+      type: object
+      required: [code, name_tr, name_en, scope_type, description, permissions]
+      properties:
+        code: { type: string, examples: ["DEPARTMENT_HEAD"] }
+        name_tr: { type: string }
+        name_en: { type: string }
+        scope_type: { type: string, enum: [UNIVERSITY, FACULTY, DEPARTMENT, PROGRAM, NONE] }
+        description: { type: [string, "null"] }
+        permissions:
+          type: array
+          items: { type: string }
+
+    Assignment:
+      type: object
+      required: [id, role, role_name, scope_type, scope_id, scope_name, valid_from, valid_until, state, assigned_by, reason, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        role: { type: string }
+        role_name: { type: string }
+        scope_type: { type: string, enum: [UNIVERSITY, FACULTY, DEPARTMENT, PROGRAM, NONE] }
+        scope_id: { type: [string, "null"], format: uuid }
+        scope_name: { type: [string, "null"] }
+        valid_from: { type: string, format: date-time }
+        valid_until: { type: [string, "null"], format: date-time }
+        state: { type: string, enum: [ACTIVE, UPCOMING, ENDED] }
+        assigned_by: { type: [string, "null"], format: uuid, description: "Seed ve sistem atamalarında null" }
+        reason: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
 
     UserStatus:
       type: string

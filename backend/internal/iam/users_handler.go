@@ -23,12 +23,16 @@ type AccountService interface {
 	SetStatus(ctx context.Context, actorID, userID string, status UserStatus, reason string) error
 	ResendActivation(ctx context.Context, actorID, userID string) error
 	SendPasswordReset(ctx context.Context, actorID, userID string) error
+	AssignRole(ctx context.Context, actorID, userID string, in AssignInput) (string, error)
+	EndAssignment(ctx context.Context, actorID, userID, assignmentID, reason string) error
 }
 
 // UserStore, hesap okuma işlemleridir. *Repository bunu sağlar.
 type UserStore interface {
 	ListUsers(ctx context.Context, f UserFilter) ([]UserSummary, bool, error)
 	Profile(ctx context.Context, userID string, at time.Time) (Profile, error)
+	Roles(ctx context.Context) ([]RoleDef, error)
+	UserAssignments(ctx context.Context, userID string) ([]Assignment, error)
 }
 
 // UsersHandler, yöneticinin hesap yönetimi uçlarını sunar.
@@ -51,6 +55,12 @@ func (h *UsersHandler) Register(rt *authz.Router) {
 	rt.HandleFunc("PUT /api/v1/users/{id}/status", authz.Permission("user:manage"), h.setStatus)
 	rt.HandleFunc("POST /api/v1/users/{id}/activation-email", authz.Permission("user:manage"), h.resendActivation)
 	rt.HandleFunc("POST /api/v1/users/{id}/password-reset-email", authz.Permission("user:manage"), h.sendPasswordReset)
+
+	// Rol kataloğu gizli değildir: arayüz rol adlarını göstermek için okur.
+	rt.HandleFunc("GET /api/v1/roles", authz.Authenticated, h.listRoles)
+	rt.HandleFunc("GET /api/v1/users/{id}/roles", authz.Permission("user:read"), h.listAssignments)
+	rt.HandleFunc("POST /api/v1/users/{id}/roles", authz.Permission("role:assign"), h.assignRole)
+	rt.HandleFunc("POST /api/v1/users/{id}/roles/{assignment}/end", authz.Permission("role:assign"), h.endAssignment)
 }
 
 type userSummaryResponse struct {
@@ -78,6 +88,42 @@ type createUserRequest struct {
 
 type setStatusRequest struct {
 	Status string `json:"status"`
+	Reason string `json:"reason"`
+}
+
+type roleDefResponse struct {
+	Code        string   `json:"code"`
+	NameTR      string   `json:"name_tr"`
+	NameEN      string   `json:"name_en"`
+	ScopeType   string   `json:"scope_type"`
+	Description *string  `json:"description"`
+	Permissions []string `json:"permissions"`
+}
+
+type assignmentResponse struct {
+	ID         string     `json:"id"`
+	Role       string     `json:"role"`
+	RoleName   string     `json:"role_name"`
+	ScopeType  string     `json:"scope_type"`
+	ScopeID    *string    `json:"scope_id"`
+	ScopeName  *string    `json:"scope_name"`
+	ValidFrom  time.Time  `json:"valid_from"`
+	ValidUntil *time.Time `json:"valid_until"`
+	State      string     `json:"state"`
+	AssignedBy *string    `json:"assigned_by"`
+	Reason     *string    `json:"reason"`
+	CreatedAt  time.Time  `json:"created_at"`
+}
+
+type assignRoleRequest struct {
+	Role       string     `json:"role"`
+	ScopeID    string     `json:"scope_id"`
+	ValidFrom  *time.Time `json:"valid_from"`
+	ValidUntil *time.Time `json:"valid_until"`
+	Reason     string     `json:"reason"`
+}
+
+type endAssignmentRequest struct {
 	Reason string `json:"reason"`
 }
 
@@ -333,6 +379,148 @@ func (h *UsersHandler) writeActionResult(w http.ResponseWriter, r *http.Request,
 		h.problem(w, r, http.StatusConflict, "ACCOUNT_NOT_ACTIVE", "Hesap aktif değil.")
 	default:
 		h.serverError(w, r, err)
+	}
+}
+
+func (h *UsersHandler) listRoles(w http.ResponseWriter, r *http.Request) {
+	roles, err := h.users.Roles(r.Context())
+	if err != nil {
+		h.serverError(w, r, err)
+		return
+	}
+	res := httpx.ListResponse[roleDefResponse]{Items: make([]roleDefResponse, 0, len(roles))}
+	for _, d := range roles {
+		res.Items = append(res.Items, roleDefResponse{
+			Code: d.Code, NameTR: d.NameTR, NameEN: d.NameEN, ScopeType: string(d.ScopeType),
+			Description: optional(d.Description), Permissions: d.Permissions,
+		})
+	}
+	h.writeJSON(w, r, http.StatusOK, res)
+}
+
+func (h *UsersHandler) listAssignments(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if !httpx.ValidUUID(id) {
+		httpx.NotFound(w, r)
+		return
+	}
+	list, err := h.users.UserAssignments(r.Context(), id)
+	if err != nil {
+		h.serverError(w, r, err)
+		return
+	}
+	res := httpx.ListResponse[assignmentResponse]{Items: make([]assignmentResponse, 0, len(list))}
+	for _, a := range list {
+		res.Items = append(res.Items, toAssignmentResponse(a))
+	}
+	h.writeJSON(w, r, http.StatusOK, res)
+}
+
+func toAssignmentResponse(a Assignment) assignmentResponse {
+	return assignmentResponse{
+		ID: a.ID, Role: a.Role, RoleName: a.RoleName, ScopeType: string(a.ScopeType),
+		ScopeID: optional(a.ScopeID), ScopeName: optional(a.ScopeName),
+		ValidFrom: a.ValidFrom, ValidUntil: a.ValidUntil, State: a.State,
+		AssignedBy: optional(a.AssignedBy), Reason: optional(a.Reason), CreatedAt: a.CreatedAt,
+	}
+}
+
+func (h *UsersHandler) assignRole(w http.ResponseWriter, r *http.Request) {
+	actor, _ := authn.PrincipalFrom(r.Context())
+	userID := r.PathValue("id")
+	if !httpx.ValidUUID(userID) {
+		httpx.NotFound(w, r)
+		return
+	}
+
+	var req assignRoleRequest
+	if err := httpx.ReadJSON(w, r, &req); err != nil {
+		httpx.InvalidBody(w, r, err)
+		return
+	}
+	req.Reason = strings.TrimSpace(req.Reason)
+	var errs []httpx.FieldError
+	if req.Role == "" {
+		errs = append(errs, httpx.FieldError{Field: "role", Message: "Rol zorunlu."})
+	}
+	if req.ScopeID != "" && !httpx.ValidUUID(req.ScopeID) {
+		errs = append(errs, httpx.FieldError{Field: "scope_id", Message: "Geçerli bir UUID olmalı."})
+	}
+	if req.Reason == "" || utf8.RuneCountInString(req.Reason) > 500 {
+		errs = append(errs, httpx.FieldError{Field: "reason", Message: "Gerekçe zorunlu, en fazla 500 karakter."})
+	}
+	if len(errs) > 0 {
+		httpx.ValidationFailed(w, r, errs)
+		return
+	}
+
+	id, err := h.accounts.AssignRole(r.Context(), actor.UserID, userID, AssignInput(req))
+	switch {
+	case errors.Is(err, ErrUnknownRole):
+		httpx.ValidationFailed(w, r, []httpx.FieldError{{Field: "role", Message: "Rol bulunamadı."}})
+		return
+	case errors.Is(err, ErrInvalidScope):
+		httpx.ValidationFailed(w, r, []httpx.FieldError{{Field: "scope_id",
+			Message: "Bu rolün kapsam türüne uygun bir birim seçilmeli (üniversite geneli rollerde boş bırakılır)."}})
+		return
+	case errors.Is(err, ErrUnknownScope):
+		httpx.ValidationFailed(w, r, []httpx.FieldError{{Field: "scope_id", Message: "Birim bulunamadı."}})
+		return
+	case errors.Is(err, ErrInvalidPeriod):
+		httpx.ValidationFailed(w, r, []httpx.FieldError{{Field: "valid_until", Message: "Bitiş başlangıçtan sonra olmalı."}})
+		return
+	case errors.Is(err, ErrConflict):
+		h.problem(w, r, http.StatusConflict, "ROLE_ALREADY_ASSIGNED",
+			"Bu rol bu kapsamda çakışan bir dönemde zaten atanmış.")
+		return
+	case err != nil:
+		h.writeActionResult(w, r, err, 0)
+		return
+	}
+
+	list, err := h.users.UserAssignments(r.Context(), userID)
+	if err != nil {
+		h.serverError(w, r, err)
+		return
+	}
+	for _, a := range list {
+		if a.ID == id {
+			w.Header().Set("Location", "/api/v1/users/"+userID+"/roles")
+			h.writeJSON(w, r, http.StatusCreated, toAssignmentResponse(a))
+			return
+		}
+	}
+	h.serverError(w, r, errors.New("iam: oluşturulan atama okunamadı"))
+}
+
+func (h *UsersHandler) endAssignment(w http.ResponseWriter, r *http.Request) {
+	actor, _ := authn.PrincipalFrom(r.Context())
+	userID, assignmentID := r.PathValue("id"), r.PathValue("assignment")
+	if !httpx.ValidUUID(userID) || !httpx.ValidUUID(assignmentID) {
+		httpx.NotFound(w, r)
+		return
+	}
+
+	var req endAssignmentRequest
+	if err := httpx.ReadJSON(w, r, &req); err != nil {
+		httpx.InvalidBody(w, r, err)
+		return
+	}
+	req.Reason = strings.TrimSpace(req.Reason)
+	if req.Reason == "" || utf8.RuneCountInString(req.Reason) > 500 {
+		httpx.ValidationFailed(w, r, []httpx.FieldError{{Field: "reason", Message: "Gerekçe zorunlu, en fazla 500 karakter."}})
+		return
+	}
+
+	err := h.accounts.EndAssignment(r.Context(), actor.UserID, userID, assignmentID, req.Reason)
+	switch {
+	case errors.Is(err, ErrRoleAssignmentNotFound):
+		httpx.NotFound(w, r)
+	case errors.Is(err, ErrLastSystemAdmin):
+		h.problem(w, r, http.StatusConflict, "LAST_SYSTEM_ADMIN",
+			"Son aktif sistem yöneticisinin rolü sonlandırılamaz. Önce başka bir yönetici atayın.")
+	default:
+		h.writeActionResult(w, r, err, http.StatusNoContent)
 	}
 }
 
