@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/CAPELLAX02/agora/backend/internal/platform/authz"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/httpx"
 )
 
@@ -100,7 +101,9 @@ func testStore() *fakeStore {
 func serve(t *testing.T, store Store, target string) *httptest.ResponseRecorder {
 	t.Helper()
 	mux := http.NewServeMux()
-	NewHandler(store, slog.New(slog.NewTextHandler(io.Discard, nil))).Register(mux)
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	// Org route'larının hepsi herkese açık: kimlik doğrulama ve yetki çözümü gerekmez.
+	NewHandler(store, logger).Register(authz.NewRouter(mux, nil, nil, logger))
 
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, target, nil))

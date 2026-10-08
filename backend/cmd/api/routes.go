@@ -5,21 +5,25 @@ import (
 
 	"github.com/CAPELLAX02/agora/backend/internal/iam"
 	"github.com/CAPELLAX02/agora/backend/internal/org"
+	"github.com/CAPELLAX02/agora/backend/internal/platform/authz"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/httpx"
 )
 
 func (app *application) routes() http.Handler {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /healthz", app.healthz)
-	mux.HandleFunc("GET /readyz", app.readyz)
+	// Bütün route'lar router üzerinden, erişim politikasıyla kaydedilir.
+	rt := authz.NewRouter(mux, app.authenticator.Require, app.permissions, app.logger)
 
-	org.NewHandler(org.NewRepository(app.db), app.logger).Register(mux)
+	rt.HandleFunc("GET /healthz", authz.Public, app.healthz)
+	rt.HandleFunc("GET /readyz", authz.Public, app.readyz)
+
+	org.NewHandler(org.NewRepository(app.db), app.logger).Register(rt)
 
 	// Refresh çerezi yerel geliştirmede (http://localhost) Secure olamaz.
 	secureCookie := !app.cfg.IsDevelopment()
 	iam.NewHandler(app.auth, iam.NewRepository(app.db), app.logger, secureCookie).
-		Register(mux, app.authenticator.Require, app.loginRateLimit)
+		Register(rt, app.loginRateLimit)
 
 	return httpx.Chain(
 		httpx.WithProblemFallback(mux),

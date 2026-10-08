@@ -15,6 +15,7 @@ import (
 
 	"github.com/CAPELLAX02/agora/backend/internal/iam"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authn"
+	"github.com/CAPELLAX02/agora/backend/internal/platform/authz"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/config"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/db"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/httpx"
@@ -37,6 +38,7 @@ type application struct {
 	auth           *iam.Auth
 	authenticator  *authn.Authenticator
 	loginRateLimit httpx.Middleware
+	permissions    authz.Resolver
 }
 
 func main() {
@@ -84,6 +86,8 @@ func run() error {
 	}
 	loginLimiter := ratelimit.New(rdb, "login", cfg.LoginRateLimit, time.Minute, time.Now)
 
+	permissions := iam.NewPermissionResolver(pool, rdb, time.Hour, time.Now, logger)
+
 	reg := metrics.NewRegistry()
 	reg.MustRegister(metrics.NewPoolCollector(pool))
 
@@ -100,6 +104,7 @@ func run() error {
 		startedAt:      time.Now(),
 		auth:           auth,
 		authenticator:  authenticator,
+		permissions:    permissions,
 		loginRateLimit: loginLimiter.ByIP(logger),
 	}
 

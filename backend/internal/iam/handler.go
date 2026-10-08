@@ -11,6 +11,7 @@ import (
 	"unicode"
 
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authn"
+	"github.com/CAPELLAX02/agora/backend/internal/platform/authz"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/httpx"
 )
 
@@ -53,15 +54,19 @@ func NewHandler(auth AuthService, profiles ProfileStore, logger *slog.Logger, se
 	return &Handler{auth: auth, profiles: profiles, logger: logger, secureCookie: secureCookie}
 }
 
-// Register, route'ları mux'a kaydeder. requireAuth korumalı uç noktaları saran kimlik
-// doğrulama middleware'i, limitLogin giriş denemelerini sınırlayan middleware'dir.
-func (h *Handler) Register(mux *http.ServeMux, requireAuth, limitLogin httpx.Middleware) {
+// Register, route'ları erişim politikalarıyla kaydeder. limitLogin, giriş
+// denemelerini sınırlayan middleware'dir.
+func (h *Handler) Register(rt *authz.Router, limitLogin httpx.Middleware) {
 	// Hız sınırı handler'dan önce çalışır: reddedilen istek gövde okuma ve argon2id
 	// (64 MiB, ~50 ms) maliyetine hiç girmez.
-	mux.Handle("POST /api/v1/auth/login", limitLogin(http.HandlerFunc(h.login)))
-	mux.HandleFunc("POST /api/v1/auth/refresh", h.refresh)
-	mux.HandleFunc("POST /api/v1/auth/logout", h.logout)
-	mux.Handle("GET /api/v1/me", requireAuth(http.HandlerFunc(h.me)))
+	rt.HandleFunc("POST /api/v1/auth/login", authz.Public, h.login, limitLogin)
+	rt.HandleFunc("POST /api/v1/auth/refresh", authz.Public, h.refresh)
+	rt.HandleFunc("POST /api/v1/auth/logout", authz.Public, h.logout)
+
+	rt.HandleFunc("GET /api/v1/me", authz.Authenticated, h.me)
+	rt.HandleFunc("GET /api/v1/me/permissions", authz.Authenticated, h.myPermissions)
+
+	rt.HandleFunc("GET /api/v1/users/{id}", authz.Permission("user:read"), h.getUser)
 }
 
 // --- İstek ve yanıt tipleri --------------------------------------------------
@@ -96,16 +101,54 @@ type roleResponse struct {
 	ValidUntil *time.Time `json:"valid_until"`
 }
 
-type meResponse struct {
+type profileResponse struct {
 	ID                 string         `json:"id"`
 	Username           string         `json:"username"`
 	Email              string         `json:"email"`
 	FirstName          string         `json:"first_name"`
 	LastName           string         `json:"last_name"`
+	Status             string         `json:"status"`
 	MustChangePassword bool           `json:"must_change_password"`
 	LastLoginAt        *time.Time     `json:"last_login_at"`
-	SessionID          string         `json:"session_id"`
 	Roles              []roleResponse `json:"roles"`
+}
+
+// meResponse, profili oturum bilgisiyle genişletir. Gömülü (embedded) struct'ın
+// alanları JSON'da düz olarak, aynı seviyede yazılır.
+type meResponse struct {
+	profileResponse
+	SessionID string `json:"session_id"`
+}
+
+type grantResponse struct {
+	Permission string  `json:"permission"`
+	ScopeType  string  `json:"scope_type"`
+	ScopeID    *string `json:"scope_id"`
+}
+
+func toProfileResponse(p Profile) profileResponse {
+	res := profileResponse{
+		ID:                 p.UserID,
+		Username:           p.Username,
+		Email:              p.Email,
+		FirstName:          p.FirstName,
+		LastName:           p.LastName,
+		Status:             string(p.Status),
+		MustChangePassword: p.MustChangePassword,
+		LastLoginAt:        p.LastLoginAt,
+		Roles:              make([]roleResponse, 0, len(p.Roles)),
+	}
+	for _, ra := range p.Roles {
+		res.Roles = append(res.Roles, roleResponse{
+			Role:       ra.Role,
+			RoleName:   ra.RoleName,
+			ScopeType:  string(ra.ScopeType),
+			ScopeID:    optional(ra.ScopeID),
+			ScopeName:  optional(ra.ScopeName),
+			ValidUntil: ra.ValidUntil,
+		})
+	}
+	return res
 }
 
 // --- Handler'lar ---------------------------------------------------------------
@@ -204,28 +247,51 @@ func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res := meResponse{
-		ID:                 p.UserID,
-		Username:           p.Username,
-		Email:              p.Email,
-		FirstName:          p.FirstName,
-		LastName:           p.LastName,
-		MustChangePassword: p.MustChangePassword,
-		LastLoginAt:        p.LastLoginAt,
-		SessionID:          principal.SessionID,
-		Roles:              make([]roleResponse, 0, len(p.Roles)),
+	h.writeJSON(w, r, http.StatusOK, meResponse{
+		profileResponse: toProfileResponse(p),
+		SessionID:       principal.SessionID,
+	})
+}
+
+// myPermissions, kullanıcının yetkilerini döndürür. Web arayüzü menüleri ve
+// butonları buna göre gösterir. Asıl kontrol her zaman sunucudadır.
+func (h *Handler) myPermissions(w http.ResponseWriter, r *http.Request) {
+	perms, ok := authz.PermissionsFrom(r.Context())
+	if !ok {
+		h.serverError(w, r, errors.New("iam: /me/permissions yetki çözümü olmadan çağrıldı"))
+		return
 	}
-	for _, ra := range p.Roles {
-		res.Roles = append(res.Roles, roleResponse{
-			Role:       ra.Role,
-			RoleName:   ra.RoleName,
-			ScopeType:  string(ra.ScopeType),
-			ScopeID:    optional(ra.ScopeID),
-			ScopeName:  optional(ra.ScopeName),
-			ValidUntil: ra.ValidUntil,
+
+	grants := perms.Grants()
+	res := httpx.ListResponse[grantResponse]{Items: make([]grantResponse, 0, len(grants))}
+	for _, g := range grants {
+		res.Items = append(res.Items, grantResponse{
+			Permission: g.Permission,
+			ScopeType:  g.ScopeType,
+			ScopeID:    optional(g.ScopeID),
 		})
 	}
 	h.writeJSON(w, r, http.StatusOK, res)
+}
+
+// getUser, bir kullanıcının profilini döndürür. user:read yetkisi gerekir.
+func (h *Handler) getUser(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if !httpx.ValidUUID(id) {
+		httpx.NotFound(w, r)
+		return
+	}
+
+	p, err := h.profiles.Profile(r.Context(), id, time.Now())
+	if errors.Is(err, ErrNotFound) {
+		httpx.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		h.serverError(w, r, err)
+		return
+	}
+	h.writeJSON(w, r, http.StatusOK, toProfileResponse(p))
 }
 
 // --- Yardımcılar ---------------------------------------------------------------

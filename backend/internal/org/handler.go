@@ -10,6 +10,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/CAPELLAX02/agora/backend/internal/platform/authz"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/httpx"
 )
 
@@ -35,14 +36,14 @@ func NewHandler(store Store, logger *slog.Logger) *Handler {
 	return &Handler{store: store, logger: logger}
 }
 
-// Register, modülün route'larını mux'a kaydeder.
-func (h *Handler) Register(mux *http.ServeMux) {
-	mux.HandleFunc("GET /api/v1/faculties", h.listFaculties)
-	mux.HandleFunc("GET /api/v1/faculties/{id}", h.getFaculty)
-	mux.HandleFunc("GET /api/v1/faculties/{id}/departments", h.listFacultyDepartments)
-	mux.HandleFunc("GET /api/v1/departments/{id}", h.getDepartment)
-	mux.HandleFunc("GET /api/v1/programs", h.listPrograms)
-	mux.HandleFunc("GET /api/v1/programs/{id}", h.getProgram)
+// Register, modülün route'larını kaydeder. Organizasyon kataloğu herkese açıktır.
+func (h *Handler) Register(rt *authz.Router) {
+	rt.HandleFunc("GET /api/v1/faculties", authz.Public, h.listFaculties)
+	rt.HandleFunc("GET /api/v1/faculties/{id}", authz.Public, h.getFaculty)
+	rt.HandleFunc("GET /api/v1/faculties/{id}/departments", authz.Public, h.listFacultyDepartments)
+	rt.HandleFunc("GET /api/v1/departments/{id}", authz.Public, h.getDepartment)
+	rt.HandleFunc("GET /api/v1/programs", authz.Public, h.listPrograms)
+	rt.HandleFunc("GET /api/v1/programs/{id}", authz.Public, h.getProgram)
 }
 
 // --- Yanıt tipleri -----------------------------------------------------------

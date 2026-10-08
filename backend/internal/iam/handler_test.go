@@ -22,6 +22,7 @@ import (
 	"github.com/CAPELLAX02/agora/backend/internal/iam"
 	"github.com/CAPELLAX02/agora/backend/internal/iam/password"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authn"
+	"github.com/CAPELLAX02/agora/backend/internal/platform/authz"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/dbtest"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/httpx"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/jwt"
@@ -93,8 +94,9 @@ func newHTTPEnvWithLoginLimit(t *testing.T, loginLimit int) *httpEnv {
 	limiter := ratelimit.New(rdb, "login", loginLimit, time.Minute, time.Now)
 
 	mux := http.NewServeMux()
-	iam.NewHandler(auth, iam.NewRepository(pool), logger, false).
-		Register(mux, authn.New(verifier, revocations, logger, time.Now).Require, limiter.ByIP(logger))
+	rt := authz.NewRouter(mux, authn.New(verifier, revocations, logger, time.Now).Require,
+		iam.NewPermissionResolver(pool, rdb, time.Hour, time.Now, logger), logger)
+	iam.NewHandler(auth, iam.NewRepository(pool), logger, false).Register(rt, limiter.ByIP(logger))
 
 	srv := httptest.NewServer(httpx.Chain(mux, httpx.RequestID, httpx.Recover(logger)))
 	t.Cleanup(srv.Close)
@@ -610,4 +612,106 @@ func TestHTTPMeRequiresToken(t *testing.T) {
 			}
 		})
 	}
+}
+
+func (e *httpEnv) bearer(t *testing.T, username string) map[string]string {
+	t.Helper()
+	res := e.do(t, nil, "POST", "/api/v1/auth/login", mobile, credentials(username))
+	if res.status != http.StatusOK {
+		t.Fatalf("%s girişi: durum = %d\n%s", username, res.status, res.body)
+	}
+	var tok tokenBody
+	res.json(t, &tok)
+	return map[string]string{"Authorization": "Bearer " + tok.AccessToken}
+}
+
+func TestHTTPPermissions(t *testing.T) {
+	e := newHTTPEnv(t)
+	ctx := context.Background()
+	repo := iam.NewRepository(e.pool)
+
+	adminID := e.addUser(t, "P90001")
+	if err := repo.AssignRole(ctx, adminID, "SYSTEM_ADMIN", iam.ScopeUniversity, ""); err != nil {
+		t.Fatal(err)
+	}
+	headID := e.addUser(t, "P10002")
+	deptID, _ := seedOrg(t, e.pool)
+	if err := repo.AssignRole(ctx, headID, "DEPARTMENT_HEAD", iam.ScopeDepartment, deptID); err != nil {
+		t.Fatal(err)
+	}
+	studentID := e.addUser(t, "22290001")
+	if err := repo.AssignRole(ctx, studentID, "STUDENT", iam.ScopeNone, ""); err != nil {
+		t.Fatal(err)
+	}
+
+	admin, head, student := e.bearer(t, "P90001"), e.bearer(t, "P10002"), e.bearer(t, "22290001")
+
+	t.Run("kendi yetkileri", func(t *testing.T) {
+		res := e.do(t, nil, "GET", "/api/v1/me/permissions", head, nil)
+		if res.status != http.StatusOK {
+			t.Fatalf("durum = %d\n%s", res.status, res.body)
+		}
+		var body struct {
+			Items []struct {
+				Permission string  `json:"permission"`
+				ScopeType  string  `json:"scope_type"`
+				ScopeID    *string `json:"scope_id"`
+			} `json:"items"`
+		}
+		res.json(t, &body)
+
+		var found bool
+		for _, g := range body.Items {
+			if g.Permission == "quota:manage" {
+				found = g.ScopeType == "DEPARTMENT" && g.ScopeID != nil && *g.ScopeID == deptID
+			}
+			if g.Permission == "role:assign" {
+				t.Error("bölüm başkanında rol atama yetkisi olmamalı")
+			}
+		}
+		if !found {
+			t.Errorf("quota:manage bölüm kapsamıyla dönmedi: %s", res.body)
+		}
+	})
+
+	t.Run("user:read gerektiren uç", func(t *testing.T) {
+		if res := e.do(t, nil, "GET", "/api/v1/users/"+headID, admin, nil); res.status != http.StatusOK {
+			t.Errorf("yönetici: durum = %d\n%s", res.status, res.body)
+		}
+		for name, h := range map[string]map[string]string{"öğrenci": student, "bölüm başkanı": head} {
+			res := e.do(t, nil, "GET", "/api/v1/users/"+adminID, h, nil)
+			if res.status != http.StatusForbidden || res.code(t) != "FORBIDDEN" {
+				t.Errorf("%s: durum = %d\n%s", name, res.status, res.body)
+			}
+		}
+		if res := e.do(t, nil, "GET", "/api/v1/users/"+headID, nil, nil); res.status != http.StatusUnauthorized {
+			t.Errorf("token yok: durum = %d", res.status)
+		}
+		if res := e.do(t, nil, "GET", "/api/v1/users/01a11b7f-0000-7000-8000-000000000000", admin, nil); res.status != http.StatusNotFound {
+			t.Errorf("olmayan kullanıcı: durum = %d", res.status)
+		}
+		if res := e.do(t, nil, "GET", "/api/v1/users/bozuk-id", admin, nil); res.status != http.StatusNotFound {
+			t.Errorf("geçersiz kimlik: durum = %d", res.status)
+		}
+	})
+
+	t.Run("rol ataması anında etkili", func(t *testing.T) {
+		if err := repo.AssignRole(ctx, studentID, "AUDITOR", iam.ScopeUniversity, ""); err != nil {
+			t.Fatal(err)
+		}
+		// Aynı access token: yetkiler token'da değil, her istekte sunucuda çözülüyor.
+		if res := e.do(t, nil, "GET", "/api/v1/users/"+adminID, student, nil); res.status != http.StatusOK {
+			t.Errorf("rol atandıktan sonra: durum = %d\n%s", res.status, res.body)
+		}
+	})
+
+	t.Run("askıya alınan hesap anında durur", func(t *testing.T) {
+		if _, err := e.pool.Exec(ctx, `UPDATE iam.users SET status = 'SUSPENDED' WHERE id = $1`, headID); err != nil {
+			t.Fatal(err)
+		}
+		res := e.do(t, nil, "GET", "/api/v1/me", head, nil)
+		if res.status != http.StatusForbidden || res.code(t) != "ACCOUNT_DISABLED" {
+			t.Errorf("askıdaki hesapla /me: durum = %d\n%s", res.status, res.body)
+		}
+	})
 }
