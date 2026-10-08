@@ -83,6 +83,11 @@ var testAuthConfig = iam.AuthConfig{
 	MaxFailedAttempts: 5,
 	LockoutBase:       time.Minute,
 	LockoutMax:        time.Hour,
+
+	WebBaseURL:           "http://web.agora.test",
+	ResetTokenTTL:        30 * time.Minute,
+	ActivationTokenTTL:   72 * time.Hour,
+	ResetRequestInterval: 2 * time.Minute,
 }
 
 type authEnv struct {

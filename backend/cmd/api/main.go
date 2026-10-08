@@ -19,7 +19,6 @@ import (
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authz"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/config"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/db"
-	"github.com/CAPELLAX02/agora/backend/internal/platform/httpx"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/logging"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/metrics"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/ratelimit"
@@ -29,17 +28,17 @@ import (
 const version = "0.1.0"
 
 type application struct {
-	cfg            config.Config
-	logger         *slog.Logger
-	db             *pgxpool.Pool
-	metrics        *metrics.HTTP
-	checks         map[string]pinger
-	version        string
-	startedAt      time.Time
-	auth           *iam.Auth
-	authenticator  *authn.Authenticator
-	loginRateLimit httpx.Middleware
-	permissions    authz.Resolver
+	cfg           config.Config
+	logger        *slog.Logger
+	db            *pgxpool.Pool
+	metrics       *metrics.HTTP
+	checks        map[string]pinger
+	version       string
+	startedAt     time.Time
+	auth          *iam.Auth
+	authenticator *authn.Authenticator
+	limits        iam.Limits
+	permissions   authz.Resolver
 }
 
 func main() {
@@ -92,6 +91,7 @@ func run() error {
 		return err
 	}
 	loginLimiter := ratelimit.New(rdb, "login", cfg.LoginRateLimit, time.Minute, time.Now)
+	resetLimiter := ratelimit.New(rdb, "password_reset", passwordResetLimit, time.Minute, time.Now)
 
 	permissions := iam.NewPermissionResolver(pool, rdb, time.Hour, logger)
 
@@ -107,12 +107,15 @@ func run() error {
 			"postgres": pool,
 			"redis":    pingerFunc(func(ctx context.Context) error { return rdb.Ping(ctx).Err() }),
 		},
-		version:        version,
-		startedAt:      time.Now(),
-		auth:           auth,
-		authenticator:  authenticator,
-		permissions:    permissions,
-		loginRateLimit: loginLimiter.ByIP(logger),
+		version:       version,
+		startedAt:     time.Now(),
+		auth:          auth,
+		authenticator: authenticator,
+		permissions:   permissions,
+		limits: iam.Limits{
+			Login:         loginLimiter.ByIP(logger),
+			PasswordReset: resetLimiter.ByIP(logger),
+		},
 	}
 
 	servers := []*http.Server{

@@ -34,6 +34,15 @@ type AuthService interface {
 	Refresh(ctx context.Context, rawToken string) (Tokens, error)
 	Logout(ctx context.Context, rawToken string) error
 	ChangePassword(ctx context.Context, in ChangePasswordInput) error
+	RequestPasswordReset(ctx context.Context, identifier string) error
+	VerifyResetToken(ctx context.Context, rawToken string) (ResetTokenInfo, error)
+	ResetPassword(ctx context.Context, rawToken, newPassword string) error
+}
+
+// Limits, kimliği doğrulanmamış uçların hız sınırlarıdır.
+type Limits struct {
+	Login         httpx.Middleware // giriş denemeleri
+	PasswordReset httpx.Middleware // sıfırlama isteği ve bağlantı kullanımı
 }
 
 // ProfileStore, profil okuma işlemidir. *Repository bunu sağlar.
@@ -55,14 +64,17 @@ func NewHandler(auth AuthService, profiles ProfileStore, logger *slog.Logger, se
 	return &Handler{auth: auth, profiles: profiles, logger: logger, secureCookie: secureCookie}
 }
 
-// Register, route'ları erişim politikalarıyla kaydeder. limitLogin, giriş
-// denemelerini sınırlayan middleware'dir.
-func (h *Handler) Register(rt *authz.Router, limitLogin httpx.Middleware) {
+// Register, route'ları erişim politikalarıyla kaydeder.
+func (h *Handler) Register(rt *authz.Router, limits Limits) {
 	// Hız sınırı handler'dan önce çalışır: reddedilen istek gövde okuma ve argon2id
 	// (64 MiB, ~50 ms) maliyetine hiç girmez.
-	rt.HandleFunc("POST /api/v1/auth/login", authz.Public, h.login, limitLogin)
+	rt.HandleFunc("POST /api/v1/auth/login", authz.Public, h.login, limits.Login)
 	rt.HandleFunc("POST /api/v1/auth/refresh", authz.Public, h.refresh)
 	rt.HandleFunc("POST /api/v1/auth/logout", authz.Public, h.logout)
+
+	rt.HandleFunc("POST /api/v1/auth/password/forgot", authz.Public, h.forgotPassword, limits.PasswordReset)
+	rt.HandleFunc("POST /api/v1/auth/password/reset/verify", authz.Public, h.verifyResetToken, limits.PasswordReset)
+	rt.HandleFunc("POST /api/v1/auth/password/reset", authz.Public, h.resetPassword, limits.PasswordReset)
 
 	// Kendi hesabıyla ilgili uçlar: parolasını değiştirmesi gereken kullanıcı da erişir.
 	rt.HandleFunc("GET /api/v1/me", authz.SelfService, h.me)
@@ -83,6 +95,24 @@ type loginRequest struct {
 // token'ı gövdede değil çerezde gönderir.
 type refreshRequest struct {
 	RefreshToken string `json:"refresh_token"`
+}
+
+type forgotPasswordRequest struct {
+	Identifier string `json:"identifier"` // öğrenci/personel numarası ya da e-posta
+}
+
+type resetPasswordRequest struct {
+	Token       string `json:"token"`
+	NewPassword string `json:"new_password"`
+}
+
+type verifyResetTokenRequest struct {
+	Token string `json:"token"`
+}
+
+type resetTokenResponse struct {
+	Purpose   string    `json:"purpose"`
+	ExpiresAt time.Time `json:"expires_at"`
 }
 
 type changePasswordRequest struct {
@@ -308,6 +338,74 @@ func (h *Handler) changePassword(w http.ResponseWriter, r *http.Request) {
 		})
 	default:
 		h.authError(w, r, ClientMobile, err) // kilit (429) ve beklenmeyen hatalar; çereze dokunulmaz
+	}
+}
+
+// forgotPassword, sıfırlama bağlantısı ister. Hesap var olsun ya da olmasın aynı
+// yanıtı (202) döner: yanıttan bir hesabın kayıtlı olup olmadığı anlaşılamaz.
+func (h *Handler) forgotPassword(w http.ResponseWriter, r *http.Request) {
+	var req forgotPasswordRequest
+	if err := httpx.ReadJSON(w, r, &req); err != nil {
+		httpx.InvalidBody(w, r, err)
+		return
+	}
+	id := strings.TrimSpace(req.Identifier)
+	if id == "" || len(id) > 254 || strings.ContainsFunc(id, unicode.IsControl) {
+		httpx.ValidationFailed(w, r, []httpx.FieldError{{Field: "identifier", Message: "Kullanıcı adı ya da e-posta zorunlu."}})
+		return
+	}
+
+	if err := h.auth.RequestPasswordReset(r.Context(), id); err != nil {
+		h.serverError(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusAccepted)
+}
+
+func (h *Handler) verifyResetToken(w http.ResponseWriter, r *http.Request) {
+	var req verifyResetTokenRequest
+	if err := httpx.ReadJSON(w, r, &req); err != nil {
+		httpx.InvalidBody(w, r, err)
+		return
+	}
+	info, err := h.auth.VerifyResetToken(r.Context(), req.Token)
+	if err != nil {
+		h.resetError(w, r, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	h.writeJSON(w, r, http.StatusOK, resetTokenResponse{Purpose: info.Purpose, ExpiresAt: info.ExpiresAt})
+}
+
+// resetPassword, bağlantıyla yeni parolayı belirler (ya da hesabı etkinleştirir).
+func (h *Handler) resetPassword(w http.ResponseWriter, r *http.Request) {
+	var req resetPasswordRequest
+	if err := httpx.ReadJSON(w, r, &req); err != nil {
+		httpx.InvalidBody(w, r, err)
+		return
+	}
+	if req.NewPassword == "" {
+		httpx.ValidationFailed(w, r, []httpx.FieldError{{Field: "new_password", Message: "Yeni parola zorunlu."}})
+		return
+	}
+
+	if err := h.auth.ResetPassword(r.Context(), req.Token, req.NewPassword); err != nil {
+		h.resetError(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) resetError(w http.ResponseWriter, r *http.Request, err error) {
+	var policyErr *PolicyError
+	switch {
+	case errors.As(err, &policyErr):
+		httpx.ValidationFailed(w, r, policyFieldErrors("new_password", policyErr))
+	case errors.Is(err, ErrInvalidResetToken):
+		h.problem(w, r, http.StatusBadRequest, "INVALID_RESET_TOKEN",
+			"Bağlantı geçersiz, kullanılmış ya da süresi dolmuş. Lütfen yeni bir bağlantı isteyin.")
+	default:
+		h.serverError(w, r, err)
 	}
 }
 

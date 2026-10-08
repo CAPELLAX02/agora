@@ -33,6 +33,7 @@ const (
 	outboxInterval      = 2 * time.Second
 	maintenanceInterval = 24 * time.Hour
 	sentEmailRetention  = 30 * 24 * time.Hour
+	resetTokenRetention = 7 * 24 * time.Hour
 )
 
 func main() {
@@ -176,5 +177,17 @@ func maintain(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger) {
 		logger.Error("eski e-posta kayıtları silinemedi", "err", err)
 	} else if n := tag.RowsAffected(); n > 0 {
 		logger.Info("eski e-posta kayıtları silindi", "count", n)
+	}
+
+	// Kullanılmış ya da süresi dolmuş bağlantılar bir hafta sonra silinir. Olayın
+	// kendisi güvenlik olaylarında kalır.
+	tag, err = pool.Exec(ctx, `
+		DELETE FROM iam.password_reset_tokens
+		WHERE created_at < now() - make_interval(secs => $1)`,
+		resetTokenRetention.Seconds())
+	if err != nil {
+		logger.Error("eski sıfırlama bağlantıları silinemedi", "err", err)
+	} else if n := tag.RowsAffected(); n > 0 {
+		logger.Info("eski sıfırlama bağlantıları silindi", "count", n)
 	}
 }

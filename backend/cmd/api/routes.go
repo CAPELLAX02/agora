@@ -24,7 +24,7 @@ func (app *application) routes() http.Handler {
 	// Refresh çerezi yerel geliştirmede (http://localhost) Secure olamaz.
 	secureCookie := !app.cfg.IsDevelopment()
 	iam.NewHandler(app.auth, iam.NewRepository(app.db), app.logger, secureCookie).
-		Register(rt, app.loginRateLimit)
+		Register(rt, app.limits)
 
 	audit.NewHandler(audit.NewRepository(app.db), app.logger).Register(rt)
 

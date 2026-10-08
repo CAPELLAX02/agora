@@ -205,6 +205,105 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "415": { $ref: "#/components/responses/UnsupportedMediaType" }
 
+  /api/v1/auth/password/forgot:
+    post:
+      tags: [Kimlik doğrulama]
+      summary: Parola sıfırlama bağlantısı iste
+      description: |
+        Öğrenci/personel numarası ya da e-postayla hesap bulunur ve kayıtlı e-postaya
+        30 dakika geçerli, tek kullanımlık bir bağlantı gönderilir. Hesap olsun ya da
+        olmasın yanıt **her zaman** 202'dir: yanıttan bir hesabın kayıtlı olup olmadığı
+        anlaşılamaz. Aynı hesaba 2 dakika içinde ikinci bir e-posta gönderilmez. Yeni
+        bir istek, önceki bağlantıları geçersiz kılar.
+
+        Bağlantı biçimi: `{web}/sifre-sifirla#token=...`. Token URL'nin parça (#)
+        kısmındadır, tarayıcı onu sunucuya göndermez. Web arayüzü token'ı okuyup
+        adres çubuğundan silmelidir.
+      operationId: forgotPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [identifier]
+              properties:
+                identifier:
+                  type: string
+                  maxLength: 254
+                  description: Öğrenci/personel numarası ya da e-posta
+      responses:
+        "202":
+          description: İstek alındı (hesap varsa e-posta gönderilir)
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /api/v1/auth/password/reset/verify:
+    post:
+      tags: [Kimlik doğrulama]
+      summary: Sıfırlama ya da aktivasyon bağlantısını doğrula
+      description: Form gösterilmeden önce bağlantının hâlâ geçerli olup olmadığını söyler. Bağlantıyı tüketmez.
+      operationId: verifyResetToken
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ResetTokenBody" }
+      responses:
+        "200":
+          description: Bağlantı geçerli
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [purpose, expires_at]
+                properties:
+                  purpose:
+                    type: string
+                    enum: [RESET, ACTIVATION]
+                    description: ACTIVATION ise arayüz "hesabınızı etkinleştirin" metnini gösterir
+                  expires_at: { type: string, format: date-time }
+        "400":
+          description: "`INVALID_RESET_TOKEN`: bağlantı geçersiz, kullanılmış ya da süresi dolmuş"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /api/v1/auth/password/reset:
+    post:
+      tags: [Kimlik doğrulama]
+      summary: Bağlantıyla yeni parola belirle
+      description: |
+        Bağlantı tek kullanımlıktır. Başarılı olursa kullanıcının **bütün** oturumları
+        kapatılır, hesap kilidi kalkar ve hesap PENDING ise etkinleşir (aktivasyon).
+        Parola politikaya uymazsa bağlantı tüketilmez, kullanıcı tekrar deneyebilir.
+      operationId: resetPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [token, new_password]
+              properties:
+                token: { type: string }
+                new_password: { type: string, format: password, minLength: 10, maxLength: 128 }
+      responses:
+        "204":
+          description: Parola belirlendi
+        "400":
+          description: "`VALIDATION_FAILED` (politika ihlali, bkz. parola değiştirme) ya da `INVALID_RESET_TOKEN`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
   /api/v1/me:
     get:
       tags: [Hesap]
@@ -632,6 +731,14 @@ components:
       content:
         application/problem+json:
           schema: { $ref: "#/components/schemas/Problem" }
+    RateLimited:
+      description: "`RATE_LIMITED`: bu IP'den çok sayıda istek"
+      headers:
+        Retry-After:
+          schema: { type: integer, minimum: 0 }
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
     ServiceUnavailable:
       description: |
         `SERVICE_UNAVAILABLE`: oturum iptal listesine (Redis) geçici olarak ulaşılamıyor.
@@ -686,6 +793,13 @@ components:
         checks:
           type: object
           additionalProperties: { type: string, enum: [ok, unavailable] }
+
+    ResetTokenBody:
+      type: object
+      additionalProperties: false
+      required: [token]
+      properties:
+        token: { type: string }
 
     RefreshTokenBody:
       type: object

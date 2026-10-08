@@ -15,6 +15,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
+	"github.com/CAPELLAX02/agora/backend/internal/iam"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authn"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/jwt"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/metrics"
@@ -56,10 +57,10 @@ func TestRoutes(t *testing.T) {
 		logger:  logger,
 		metrics: metrics.NewHTTP(prometheus.NewRegistry()),
 		// Test edilen yollar token doğrulamasına ve iptal listesine hiç ulaşmaz.
-		authenticator:  authn.New(jwt.NewVerifier("agora", "agora-api", nil, 0), nil, logger, time.Now),
-		loginRateLimit: passThrough,
-		version:        "test",
-		startedAt:      time.Now(),
+		authenticator: authn.New(jwt.NewVerifier("agora", "agora-api", nil, 0), nil, logger, time.Now),
+		limits:        iam.Limits{Login: passThrough, PasswordReset: passThrough},
+		version:       "test",
+		startedAt:     time.Now(),
 	}
 
 	srv := httptest.NewServer(app.routes())

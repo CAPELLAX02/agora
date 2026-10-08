@@ -27,6 +27,11 @@ const (
 	maxFailedLogins  = 5
 	lockoutBase      = time.Minute
 	lockoutMax       = time.Hour
+
+	resetTokenTTL        = 30 * time.Minute
+	activationTokenTTL   = 72 * time.Hour
+	resetRequestInterval = 2 * time.Minute
+	passwordResetLimit   = 10 // bir IP'den dakikada en fazla kaç sıfırlama isteği
 )
 
 // newAuth, imza anahtarını yükler, kimlik doğrulama servisini ve korumalı uç
@@ -63,6 +68,11 @@ func newAuth(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *re
 		MaxFailedAttempts: maxFailedLogins,
 		LockoutBase:       lockoutBase,
 		LockoutMax:        lockoutMax,
+
+		WebBaseURL:           cfg.WebBaseURL,
+		ResetTokenTTL:        resetTokenTTL,
+		ActivationTokenTTL:   activationTokenTTL,
+		ResetRequestInterval: resetRequestInterval,
 	}, time.Now)
 	if err != nil {
 		return nil, nil, err

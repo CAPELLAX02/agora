@@ -55,6 +55,11 @@ type AuthConfig struct {
 	MaxFailedAttempts int           // bu kadar başarısız denemeden sonra hesap kilitlenir
 	LockoutBase       time.Duration // ilk kilit süresi
 	LockoutMax        time.Duration // en uzun kilit süresi
+
+	WebBaseURL           string        // e-postalardaki bağlantıların kökü
+	ResetTokenTTL        time.Duration // parola sıfırlama bağlantısının ömrü (ör. 30 dk)
+	ActivationTokenTTL   time.Duration // hesap aktivasyon bağlantısının ömrü (ör. 72 saat)
+	ResetRequestInterval time.Duration // aynı hesaba iki sıfırlama e-postası arasındaki en kısa süre
 }
 
 // Hasher, parola hash'leme işlemleridir. *password.Hasher bunu sağlar.

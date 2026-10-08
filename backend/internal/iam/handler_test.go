@@ -96,7 +96,10 @@ func newHTTPEnvWithLoginLimit(t *testing.T, loginLimit int) *httpEnv {
 	mux := http.NewServeMux()
 	rt := authz.NewRouter(mux, authn.New(verifier, revocations, logger, time.Now).Require,
 		iam.NewPermissionResolver(pool, rdb, time.Hour, logger), logger)
-	iam.NewHandler(auth, iam.NewRepository(pool), logger, false).Register(rt, limiter.ByIP(logger))
+	iam.NewHandler(auth, iam.NewRepository(pool), logger, false).Register(rt, iam.Limits{
+		Login:         limiter.ByIP(logger),
+		PasswordReset: ratelimit.New(rdb, "password_reset", 1000, time.Minute, time.Now).ByIP(logger),
+	})
 
 	srv := httptest.NewServer(httpx.Chain(mux, httpx.RequestID, httpx.Recover(logger)))
 	t.Cleanup(srv.Close)
@@ -780,5 +783,57 @@ func TestHTTPMustChangePassword(t *testing.T) {
 	// Aynı access token ile artık yetkili uçlar açık: zorunluluk her istekte güncel okunur.
 	if res := e.do(t, nil, "GET", "/api/v1/users/"+userID, bearer, nil); res.status != http.StatusOK {
 		t.Errorf("parola değiştikten sonra: %d\n%s", res.status, res.body)
+	}
+}
+
+func TestHTTPPasswordReset(t *testing.T) {
+	e := newHTTPEnv(t)
+	e.addUser(t, "22290040")
+
+	// Var olan ve olmayan hesap için yanıt birebir aynı olmalı: durum ve gövde.
+	known := e.do(t, nil, "POST", "/api/v1/auth/password/forgot", nil, map[string]string{"identifier": "22290040"})
+	unknown := e.do(t, nil, "POST", "/api/v1/auth/password/forgot", nil, map[string]string{"identifier": "yok@agora.test"})
+	if known.status != http.StatusAccepted || unknown.status != http.StatusAccepted ||
+		string(known.body) != string(unknown.body) {
+		t.Fatalf("yanıtlar farklı: %d %q / %d %q", known.status, known.body, unknown.status, unknown.body)
+	}
+	if res := e.do(t, nil, "POST", "/api/v1/auth/password/forgot", nil, map[string]string{"identifier": " "}); res.status != 400 {
+		t.Errorf("boş kimlik: %d", res.status)
+	}
+
+	var link string
+	if err := e.pool.QueryRow(context.Background(),
+		`SELECT payload->>'link' FROM communication.email_outbox ORDER BY created_at DESC LIMIT 1`).Scan(&link); err != nil {
+		t.Fatal(err)
+	}
+	_, token, _ := strings.Cut(link, "#token=")
+
+	res := e.do(t, nil, "POST", "/api/v1/auth/password/reset/verify", nil, map[string]string{"token": token})
+	var info struct {
+		Purpose   string    `json:"purpose"`
+		ExpiresAt time.Time `json:"expires_at"`
+	}
+	res.json(t, &info)
+	if res.status != 200 || info.Purpose != "RESET" || info.ExpiresAt.IsZero() {
+		t.Errorf("doğrulama = %d %s", res.status, res.body)
+	}
+
+	res = e.do(t, nil, "POST", "/api/v1/auth/password/reset", nil, map[string]string{"token": token, "new_password": "kisa"})
+	if res.status != 400 || res.code(t) != "VALIDATION_FAILED" {
+		t.Errorf("politika ihlali: %d %s", res.status, res.body)
+	}
+
+	res = e.do(t, nil, "POST", "/api/v1/auth/password/reset", nil, map[string]string{"token": token, "new_password": newPW})
+	if res.status != http.StatusNoContent {
+		t.Fatalf("sıfırlama: %d %s", res.status, res.body)
+	}
+	if res := e.do(t, nil, "POST", "/api/v1/auth/login", mobile,
+		map[string]string{"username": "22290040", "password": newPW}); res.status != 200 {
+		t.Errorf("yeni parolayla giriş: %d", res.status)
+	}
+
+	res = e.do(t, nil, "POST", "/api/v1/auth/password/reset", nil, map[string]string{"token": token, "new_password": newPW + "x"})
+	if res.status != 400 || res.code(t) != "INVALID_RESET_TOKEN" {
+		t.Errorf("kullanılmış bağlantı: %d %s", res.status, res.body)
 	}
 }
