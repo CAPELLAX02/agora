@@ -14,6 +14,15 @@ type pinger interface {
 	Ping(ctx context.Context) error
 }
 
+// pingerFunc, sıradan bir fonksiyonu pinger'a dönüştürür. http.HandlerFunc ile aynı
+// desen: Ping metodu farklı imzalı bağımlılıklar (ör. Redis) bununla uyarlanır.
+type pingerFunc func(ctx context.Context) error
+
+// Ping, f'yi çağırır.
+func (f pingerFunc) Ping(ctx context.Context) error {
+	return f(ctx)
+}
+
 type healthResponse struct {
 	Status  string `json:"status"`
 	Version string `json:"version"`

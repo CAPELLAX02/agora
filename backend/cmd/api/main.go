@@ -17,22 +17,26 @@ import (
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authn"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/config"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/db"
+	"github.com/CAPELLAX02/agora/backend/internal/platform/httpx"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/logging"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/metrics"
+	"github.com/CAPELLAX02/agora/backend/internal/platform/ratelimit"
+	"github.com/CAPELLAX02/agora/backend/internal/platform/redisx"
 )
 
 const version = "0.1.0"
 
 type application struct {
-	cfg           config.Config
-	logger        *slog.Logger
-	db            *pgxpool.Pool
-	metrics       *metrics.HTTP
-	checks        map[string]pinger
-	version       string
-	startedAt     time.Time
-	auth          *iam.Auth
-	authenticator *authn.Authenticator
+	cfg            config.Config
+	logger         *slog.Logger
+	db             *pgxpool.Pool
+	metrics        *metrics.HTTP
+	checks         map[string]pinger
+	version        string
+	startedAt      time.Time
+	auth           *iam.Auth
+	authenticator  *authn.Authenticator
+	loginRateLimit httpx.Middleware
 }
 
 func main() {
@@ -67,24 +71,36 @@ func run() error {
 	defer pool.Close()
 	logger.Info("veritabanı bağlantı havuzu hazır", "max_conns", cfg.DBMaxConns)
 
-	auth, authenticator, err := newAuth(ctx, cfg, pool, logger)
+	rdb, err := redisx.Open(ctx, cfg.RedisURL)
 	if err != nil {
 		return err
 	}
+	defer rdb.Close()
+	logger.Info("Redis bağlantısı hazır")
+
+	auth, authenticator, err := newAuth(ctx, cfg, pool, rdb, logger)
+	if err != nil {
+		return err
+	}
+	loginLimiter := ratelimit.New(rdb, "login", cfg.LoginRateLimit, time.Minute, time.Now)
 
 	reg := metrics.NewRegistry()
 	reg.MustRegister(metrics.NewPoolCollector(pool))
 
 	app := &application{
-		cfg:           cfg,
-		logger:        logger,
-		db:            pool,
-		metrics:       metrics.NewHTTP(reg),
-		checks:        map[string]pinger{"postgres": pool},
-		version:       version,
-		startedAt:     time.Now(),
-		auth:          auth,
-		authenticator: authenticator,
+		cfg:     cfg,
+		logger:  logger,
+		db:      pool,
+		metrics: metrics.NewHTTP(reg),
+		checks: map[string]pinger{
+			"postgres": pool,
+			"redis":    pingerFunc(func(ctx context.Context) error { return rdb.Ping(ctx).Err() }),
+		},
+		version:        version,
+		startedAt:      time.Now(),
+		auth:           auth,
+		authenticator:  authenticator,
+		loginRateLimit: loginLimiter.ByIP(logger),
 	}
 
 	servers := []*http.Server{

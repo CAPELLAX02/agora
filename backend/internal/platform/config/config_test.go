@@ -19,6 +19,7 @@ func clearAgoraEnv(t *testing.T) {
 		"AGORA_DB_MAX_CONN_LIFETIME", "AGORA_DB_MAX_CONN_IDLE_TIME",
 		"AGORA_JWT_PRIVATE_KEY_FILE", "AGORA_ACCESS_TOKEN_TTL", "AGORA_SESSION_IDLE_TIMEOUT",
 		"AGORA_SESSION_ABSOLUTE_TIMEOUT", "AGORA_PASSWORD_HASH_WORKERS",
+		"AGORA_REDIS_URL", "AGORA_LOGIN_RATE_LIMIT",
 	} {
 		t.Setenv(key, "")
 	}
@@ -41,11 +42,13 @@ func defaultsWith(modify func(c *Config)) Config {
 		DBMinConns:        2,
 		DBMaxConnLifetime: time.Hour,
 		DBMaxConnIdleTime: 30 * time.Minute,
+		RedisURL:          devRedisURL,
 
 		AccessTokenTTL:         15 * time.Minute,
 		SessionIdleTimeout:     2 * time.Hour,
 		SessionAbsoluteTimeout: 30 * 24 * time.Hour,
 		PasswordHashWorkers:    4,
+		LoginRateLimit:         20,
 	}
 	if modify != nil {
 		modify(&c)
@@ -79,6 +82,8 @@ func TestLoad(t *testing.T) {
 				"AGORA_SESSION_IDLE_TIMEOUT":     "1h",
 				"AGORA_SESSION_ABSOLUTE_TIMEOUT": "168h",
 				"AGORA_PASSWORD_HASH_WORKERS":    "8",
+				"AGORA_REDIS_URL":                "redis://:sifre@cache:6379/1",
+				"AGORA_LOGIN_RATE_LIMIT":         "60",
 			},
 			want: defaultsWith(func(c *Config) {
 				c.Env = "production"
@@ -93,6 +98,8 @@ func TestLoad(t *testing.T) {
 				c.SessionIdleTimeout = time.Hour
 				c.SessionAbsoluteTimeout = 7 * 24 * time.Hour
 				c.PasswordHashWorkers = 8
+				c.RedisURL = "redis://:sifre@cache:6379/1"
+				c.LoginRateLimit = 60
 			}),
 		},
 		{
@@ -116,6 +123,11 @@ func TestLoad(t *testing.T) {
 			wantErr: []string{"AGORA_SESSION_ABSOLUTE_TIMEOUT (1h0m0s) boşta kalma süresinden (2h0m0s) kısa olamaz"},
 		},
 		{
+			name:    "giriş hız sınırı en az 1",
+			env:     map[string]string{"AGORA_LOGIN_RATE_LIMIT": "0"},
+			wantErr: []string{"AGORA_LOGIN_RATE_LIMIT en az 1 olmalı"},
+		},
+		{
 			name:    "en az bir hash işçisi",
 			env:     map[string]string{"AGORA_PASSWORD_HASH_WORKERS": "0"},
 			wantErr: []string{"AGORA_PASSWORD_HASH_WORKERS en az 1 olmalı"},
@@ -123,7 +135,7 @@ func TestLoad(t *testing.T) {
 		{
 			name:    "production'da veritabanı adresi zorunlu",
 			env:     map[string]string{"AGORA_ENV": "production", "AGORA_JWT_PRIVATE_KEY_FILE": "/run/secrets/jwt.pem"},
-			wantErr: []string{"AGORA_DATABASE_URL zorunlu"},
+			wantErr: []string{"AGORA_DATABASE_URL zorunlu", "AGORA_REDIS_URL zorunlu"},
 		},
 		{
 			name:    "API ve metrik adresi aynı olamaz",
@@ -195,13 +207,14 @@ func TestLoad(t *testing.T) {
 func TestConfigLogValueRedactsSecrets(t *testing.T) {
 	cfg := defaultsWith(func(c *Config) {
 		c.DatabaseURL = "postgres://agora:s3cr3t-parola@db:5432/agora"
+		c.RedisURL = "redis://:r3d1s-parola@cache:6379/0"
 	})
 
 	var buf bytes.Buffer
 	slog.New(slog.NewTextHandler(&buf, nil)).Info("yapılandırma", "config", cfg)
 	out := buf.String()
 
-	if strings.Contains(out, "s3cr3t-parola") {
+	if strings.Contains(out, "s3cr3t-parola") || strings.Contains(out, "r3d1s-parola") {
 		t.Errorf("parola log'a sızdı:\n%s", out)
 	}
 	if !strings.Contains(out, "config.database_url=postgres://agora:xxxxx@db:5432/agora") {

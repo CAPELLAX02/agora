@@ -68,6 +68,12 @@ type TokenSigner interface {
 	Sign(c jwt.Claims) (string, error)
 }
 
+// Revoker, iptal edilen oturumları access token'lar için de geçersiz kılan bileşendir.
+// *RevocationList bunu sağlar.
+type Revoker interface {
+	Revoke(ctx context.Context, sessionID string) error
+}
+
 // LoginInput, giriş isteğinin bilgileridir.
 type LoginInput struct {
 	Username  string
@@ -93,6 +99,7 @@ type Auth struct {
 	pool      *pgxpool.Pool
 	hasher    Hasher
 	signer    TokenSigner
+	revoker   Revoker
 	cfg       AuthConfig
 	now       func() time.Time
 	dummyHash string
@@ -100,7 +107,15 @@ type Auth struct {
 
 // NewAuth, bir kimlik doğrulama servisi oluşturur. now, zamanı veren fonksiyondur:
 // production'da time.Now, testlerde kontrol edilen sahte bir saat.
-func NewAuth(ctx context.Context, pool *pgxpool.Pool, hasher Hasher, signer TokenSigner, cfg AuthConfig, now func() time.Time) (*Auth, error) {
+func NewAuth(
+	ctx context.Context,
+	pool *pgxpool.Pool,
+	hasher Hasher,
+	signer TokenSigner,
+	revoker Revoker,
+	cfg AuthConfig,
+	now func() time.Time,
+) (*Auth, error) {
 	// Var olmayan kullanıcı adlarında da gerçek bir parola doğrulaması yapılsın diye
 	// bir kez sahte bir hash üretiyoruz. Aksi halde "kullanıcı yok" yanıtı, argon2id'yi
 	// atladığı için ~50 ms daha hızlı döner ve geçerli kullanıcı adları zamanlamadan
@@ -109,7 +124,15 @@ func NewAuth(ctx context.Context, pool *pgxpool.Pool, hasher Hasher, signer Toke
 	if err != nil {
 		return nil, fmt.Errorf("iam: sahte hash üretilemedi: %w", err)
 	}
-	return &Auth{pool: pool, hasher: hasher, signer: signer, cfg: cfg, now: now, dummyHash: dummy}, nil
+	return &Auth{
+		pool:      pool,
+		hasher:    hasher,
+		signer:    signer,
+		revoker:   revoker,
+		cfg:       cfg,
+		now:       now,
+		dummyHash: dummy,
+	}, nil
 }
 
 // Login, kullanıcı adı ve parolayı doğrular, yeni bir oturum açar ve token'ları döndürür.
@@ -195,9 +218,9 @@ func (a *Auth) Refresh(ctx context.Context, rawToken string) (Tokens, error) {
 	now := a.now()
 
 	var (
-		tokens        Tokens
-		reuseDetected bool
-		userDisabled  bool
+		tokens  Tokens
+		revoked string // transaction içinde iptal edilen oturum
+		result  error  // commit'ten sonra döndürülecek hata
 	)
 	err := db.InTx(ctx, a.pool, func(tx pgx.Tx) error {
 		r := NewRepository(tx)
@@ -224,7 +247,7 @@ func (a *Auth) Refresh(ctx context.Context, rawToken string) (Tokens, error) {
 			// Tolerans dışında yeniden kullanım: token çalınmış olabilir. Oturumu iptal
 			// ediyoruz. Hata DÖNDÜRMÜYORUZ, çünkü hata dönersek InTx geri alır ve iptal
 			// de geri alınmış olur. Commit'ten sonra hatayı kendimiz döndüreceğiz.
-			reuseDetected = true
+			revoked, result = rec.SessionID, ErrRefreshTokenReused
 			return r.RevokeSession(ctx, rec.SessionID, now, RevokeReuseDetected)
 		}
 
@@ -237,7 +260,7 @@ func (a *Auth) Refresh(ctx context.Context, rawToken string) (Tokens, error) {
 			return err
 		}
 		if user.Status != StatusActive {
-			userDisabled = true
+			revoked, result = rec.SessionID, ErrAccountDisabled
 			return r.RevokeSession(ctx, rec.SessionID, now, RevokeAdmin)
 		}
 
@@ -252,13 +275,16 @@ func (a *Auth) Refresh(ctx context.Context, rawToken string) (Tokens, error) {
 		return r.TouchSession(ctx, rec.SessionID, now)
 	})
 
-	switch {
-	case err != nil:
+	if err != nil {
 		return Tokens{}, err
-	case reuseDetected:
-		return Tokens{}, ErrRefreshTokenReused
-	case userDisabled:
-		return Tokens{}, ErrAccountDisabled
+	}
+	if revoked != "" {
+		// Oturum veritabanında iptal edildi. Elde kalan access token'lar da süreleri
+		// dolmadan reddedilsin diye oturumu iptal listesine ekliyoruz.
+		if err := a.revoker.Revoke(ctx, revoked); err != nil {
+			return Tokens{}, err
+		}
+		return Tokens{}, result
 	}
 	return tokens, nil
 }
@@ -271,7 +297,8 @@ func (a *Auth) Logout(ctx context.Context, rawToken string) error {
 	}
 	now := a.now()
 
-	return db.InTx(ctx, a.pool, func(tx pgx.Tx) error {
+	var sessionID string
+	err := db.InTx(ctx, a.pool, func(tx pgx.Tx) error {
 		r := NewRepository(tx)
 		rec, err := r.RefreshTokenForUpdate(ctx, hashRefreshToken(rawToken))
 		if errors.Is(err, ErrNotFound) {
@@ -280,8 +307,13 @@ func (a *Auth) Logout(ctx context.Context, rawToken string) error {
 		if err != nil {
 			return err
 		}
+		sessionID = rec.SessionID
 		return r.RevokeSession(ctx, rec.SessionID, now, RevokeLogout)
 	})
+	if err != nil || sessionID == "" {
+		return err
+	}
+	return a.revoker.Revoke(ctx, sessionID)
 }
 
 // issue, yeni bir refresh token üretip saklar ve imzalı bir access token oluşturur.

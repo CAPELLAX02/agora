@@ -53,10 +53,12 @@ func NewHandler(auth AuthService, profiles ProfileStore, logger *slog.Logger, se
 	return &Handler{auth: auth, profiles: profiles, logger: logger, secureCookie: secureCookie}
 }
 
-// Register, route'ları mux'a kaydeder. requireAuth, korumalı uç noktaları saran
-// kimlik doğrulama middleware'idir.
-func (h *Handler) Register(mux *http.ServeMux, requireAuth httpx.Middleware) {
-	mux.HandleFunc("POST /api/v1/auth/login", h.login)
+// Register, route'ları mux'a kaydeder. requireAuth korumalı uç noktaları saran kimlik
+// doğrulama middleware'i, limitLogin giriş denemelerini sınırlayan middleware'dir.
+func (h *Handler) Register(mux *http.ServeMux, requireAuth, limitLogin httpx.Middleware) {
+	// Hız sınırı handler'dan önce çalışır: reddedilen istek gövde okuma ve argon2id
+	// (64 MiB, ~50 ms) maliyetine hiç girmez.
+	mux.Handle("POST /api/v1/auth/login", limitLogin(http.HandlerFunc(h.login)))
 	mux.HandleFunc("POST /api/v1/auth/refresh", h.refresh)
 	mux.HandleFunc("POST /api/v1/auth/logout", h.logout)
 	mux.Handle("GET /api/v1/me", requireAuth(http.HandlerFunc(h.me)))

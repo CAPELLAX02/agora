@@ -4,6 +4,7 @@ package authn
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -38,15 +39,22 @@ type TokenVerifier interface {
 	Verify(token string, now time.Time) (jwt.Claims, error)
 }
 
+// RevocationChecker, oturumun iptal edilip edilmediğini söyler. *iam.RevocationList bunu sağlar.
+type RevocationChecker interface {
+	IsRevoked(ctx context.Context, sessionID string) (bool, error)
+}
+
 // Authenticator, istekteki Bearer token'ı doğrular.
 type Authenticator struct {
-	verifier TokenVerifier
-	now      func() time.Time
+	verifier    TokenVerifier
+	revocations RevocationChecker
+	logger      *slog.Logger
+	now         func() time.Time
 }
 
 // New, bir Authenticator oluşturur.
-func New(verifier TokenVerifier, now func() time.Time) *Authenticator {
-	return &Authenticator{verifier: verifier, now: now}
+func New(verifier TokenVerifier, revocations RevocationChecker, logger *slog.Logger, now func() time.Time) *Authenticator {
+	return &Authenticator{verifier: verifier, revocations: revocations, logger: logger, now: now}
 }
 
 // Require, geçerli bir access token taşımayan istekleri 401 ile reddeder. Geçerliyse
@@ -62,6 +70,26 @@ func (a *Authenticator) Require(next http.Handler) http.Handler {
 		claims, err := a.verifier.Verify(token, a.now())
 		if err != nil {
 			unauthorized(w, r, "invalid_token", "INVALID_TOKEN", "Access token geçersiz ya da süresi dolmuş.")
+			return
+		}
+
+		revoked, err := a.revocations.IsRevoked(r.Context(), claims.SessionID)
+		if err != nil {
+			// İptal listesine bakamıyorsak isteği reddediyoruz (fail closed): Redis
+			// kesintisi boyunca iptal edilmiş oturumların çalışmaya devam etmesindense
+			// isteğin başarısız olması daha güvenli. 503, istemciye "token'ın sorunlu
+			// değil, biraz sonra tekrar dene" der.
+			a.logger.Error("oturum iptal listesi okunamadı",
+				"err", err, "request_id", httpx.RequestIDFrom(r.Context()))
+			_ = httpx.WriteProblem(w, r, httpx.Problem{
+				Status: http.StatusServiceUnavailable,
+				Code:   "SERVICE_UNAVAILABLE",
+				Detail: "Hizmet geçici olarak kullanılamıyor. Lütfen biraz sonra tekrar deneyin.",
+			})
+			return
+		}
+		if revoked {
+			unauthorized(w, r, "invalid_token", "SESSION_REVOKED", "Oturum sonlandırılmış. Lütfen tekrar giriş yapın.")
 			return
 		}
 

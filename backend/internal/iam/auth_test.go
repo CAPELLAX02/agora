@@ -39,6 +39,36 @@ func (c *fakeClock) Advance(d time.Duration) {
 	c.t = c.t.Add(d)
 }
 
+// fakeRevoker, iptal listesine eklenen oturumları bellekte tutar. err doluysa
+// Redis kesintisini taklit eder.
+type fakeRevoker struct {
+	mu      sync.Mutex
+	revoked map[string]bool
+	err     error
+}
+
+func (f *fakeRevoker) Revoke(ctx context.Context, sessionID string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.err != nil {
+		return f.err
+	}
+	f.revoked[sessionID] = true
+	return nil
+}
+
+func (f *fakeRevoker) has(sessionID string) bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.revoked[sessionID]
+}
+
+func (f *fakeRevoker) fail(err error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.err = err
+}
+
 var cheapParams = password.Params{Memory: 64, Iterations: 1, Parallelism: 1, SaltLength: 16, KeyLength: 32}
 
 var testAuthConfig = iam.AuthConfig{
@@ -59,6 +89,7 @@ type authEnv struct {
 	clock    *fakeClock
 	hasher   *password.Hasher
 	verifier *jwt.Verifier
+	revoker  *fakeRevoker
 }
 
 func newAuthEnv(t *testing.T) *authEnv {
@@ -77,11 +108,13 @@ func newAuthEnv(t *testing.T) *authEnv {
 	clock := &fakeClock{t: time.Date(2026, 10, 8, 9, 0, 0, 0, time.UTC)}
 	hasher := password.NewHasher(cheapParams, 4)
 
-	auth, err := iam.NewAuth(ctx, pool, hasher, signer, testAuthConfig, clock.Now)
+	revoker := &fakeRevoker{revoked: map[string]bool{}}
+
+	auth, err := iam.NewAuth(ctx, pool, hasher, signer, revoker, testAuthConfig, clock.Now)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &authEnv{pool: pool, auth: auth, clock: clock, hasher: hasher, verifier: verifier}
+	return &authEnv{pool: pool, auth: auth, clock: clock, hasher: hasher, verifier: verifier, revoker: revoker}
 }
 
 // addUser, verilen parolayla (verilen hasher'la hash'lenmiş) bir kullanıcı oluşturur.
@@ -315,6 +348,9 @@ func TestRefreshReuseDetection(t *testing.T) {
 		if reason := e.sessionRevokeReason(t, first.SessionID); reason != "" {
 			t.Errorf("oturum iptal edildi (%s), edilmemeliydi", reason)
 		}
+		if e.revoker.has(first.SessionID) {
+			t.Error("tolerans içindeki tekrar oturumu iptal listesine eklememeli")
+		}
 	})
 
 	t.Run("tolerans dışında eski token oturumu tamamen iptal eder", func(t *testing.T) {
@@ -324,6 +360,10 @@ func TestRefreshReuseDetection(t *testing.T) {
 		}
 		if reason := e.sessionRevokeReason(t, first.SessionID); reason != "REUSE_DETECTED" {
 			t.Errorf("oturum sonlandırma sebebi = %q, want REUSE_DETECTED", reason)
+		}
+		// Saldırganın elindeki access token'lar da hemen geçersiz olmalı.
+		if !e.revoker.has(first.SessionID) {
+			t.Error("oturum iptal listesine eklenmedi")
 		}
 		// Meşru kullanıcının elindeki en yeni token da artık geçersiz: saldırgan ve
 		// kurban ayırt edilemediği için ikisi de yeniden giriş yapmak zorunda.
@@ -384,6 +424,9 @@ func TestLogout(t *testing.T) {
 	if reason := e.sessionRevokeReason(t, tok.SessionID); reason != "LOGOUT" {
 		t.Errorf("sebep = %q", reason)
 	}
+	if !e.revoker.has(tok.SessionID) {
+		t.Error("çıkışta oturum iptal listesine eklenmedi: access token 15 dk daha çalışırdı")
+	}
 	if _, err := e.auth.Refresh(ctx, tok.RefreshToken); !errors.Is(err, iam.ErrInvalidRefreshToken) {
 		t.Errorf("çıkış sonrası refresh: err = %v", err)
 	}
@@ -399,6 +442,55 @@ func TestLogout(t *testing.T) {
 // TestConcurrentRefresh, aynı refresh token'la eşzamanlı gelen isteklerden sadece
 // birinin başarılı olduğunu doğrular. FOR UPDATE kilidi olmasaydı birden fazla
 // istek aynı token'ı "kullanılmamış" görüp her biri yeni bir token alabilirdi.
+func TestRefreshDisabledUser(t *testing.T) {
+	e := newAuthEnv(t)
+	userID := e.addUser(t, "22290010", pw, e.hasher)
+	tok, _ := e.login("22290010", pw)
+
+	// Oturum açıkken hesap askıya alınır.
+	if _, err := e.pool.Exec(context.Background(), `UPDATE iam.users SET status = 'SUSPENDED' WHERE id = $1`, userID); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := e.auth.Refresh(context.Background(), tok.RefreshToken); !errors.Is(err, iam.ErrAccountDisabled) {
+		t.Fatalf("err = %v, want ErrAccountDisabled", err)
+	}
+	if reason := e.sessionRevokeReason(t, tok.SessionID); reason != "ADMIN" {
+		t.Errorf("sebep = %q, want ADMIN", reason)
+	}
+	if !e.revoker.has(tok.SessionID) {
+		t.Error("askıya alınan hesabın oturumu iptal listesine eklenmedi")
+	}
+}
+
+// TestLogoutWhenRevocationListUnavailable, iptal listesine yazılamadığında çıkışın
+// hata döndürdüğünü ve tekrar denemenin durumu düzelttiğini doğrular. Oturum
+// veritabanında zaten iptal edildiği için ikinci deneme sadece listeye yazar.
+func TestLogoutWhenRevocationListUnavailable(t *testing.T) {
+	e := newAuthEnv(t)
+	e.addUser(t, "22290011", pw, e.hasher)
+	ctx := context.Background()
+	tok, _ := e.login("22290011", pw)
+
+	redisDown := errors.New("redis: bağlantı reddedildi")
+	e.revoker.fail(redisDown)
+
+	if err := e.auth.Logout(ctx, tok.RefreshToken); !errors.Is(err, redisDown) {
+		t.Fatalf("err = %v, Redis hatası bekleniyordu", err)
+	}
+	if reason := e.sessionRevokeReason(t, tok.SessionID); reason != "LOGOUT" {
+		t.Errorf("veritabanındaki iptal geri alınmamalı, sebep = %q", reason)
+	}
+
+	e.revoker.fail(nil)
+	if err := e.auth.Logout(ctx, tok.RefreshToken); err != nil {
+		t.Fatalf("tekrar deneme: %v", err)
+	}
+	if !e.revoker.has(tok.SessionID) {
+		t.Error("tekrar denemede oturum iptal listesine eklenmeliydi")
+	}
+}
+
 func TestConcurrentRefresh(t *testing.T) {
 	e := newAuthEnv(t)
 	e.addUser(t, "22290009", pw, e.hasher)

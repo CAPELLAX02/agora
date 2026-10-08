@@ -1,6 +1,11 @@
 package authn
 
 import (
+	"bytes"
+	"context"
+	"errors"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -23,10 +28,22 @@ func (f *fakeVerifier) Verify(token string, now time.Time) (jwt.Claims, error) {
 	return jwt.Claims{Subject: "u1", SessionID: "s1", ID: "j1", AMR: []string{"pwd"}}, nil
 }
 
+// fakeRevocations, sadece verilen oturumları iptal edilmiş sayar. err doluysa
+// iptal listesine ulaşılamıyormuş gibi davranır.
+type fakeRevocations struct {
+	revoked map[string]bool
+	err     error
+}
+
+func (f fakeRevocations) IsRevoked(ctx context.Context, sessionID string) (bool, error) {
+	return f.revoked[sessionID], f.err
+}
+
 func TestRequire(t *testing.T) {
 	now := time.Date(2026, 10, 8, 12, 0, 0, 0, time.UTC)
 	verifier := &fakeVerifier{}
-	a := New(verifier, func() time.Time { return now })
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	a := New(verifier, fakeRevocations{}, logger, func() time.Time { return now })
 
 	var got Principal
 	var reached bool
@@ -79,6 +96,49 @@ func TestRequire(t *testing.T) {
 				t.Errorf("doğrulama zamanı = %v, verilen saat kullanılmalı", verifier.gotNow)
 			}
 		})
+	}
+}
+
+func TestRequireRevokedSession(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	a := New(&fakeVerifier{}, fakeRevocations{revoked: map[string]bool{"s1": true}}, logger, time.Now)
+
+	h := a.Require(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Error("iptal edilen oturumun isteği handler'a ulaşmamalı")
+	}))
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/me", nil)
+	req.Header.Set("Authorization", "Bearer iyi") // imza geçerli, oturum s1 iptal
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized || !bytes.Contains(rec.Body.Bytes(), []byte(`"code":"SESSION_REVOKED"`)) {
+		t.Errorf("yanıt = %d %s", rec.Code, rec.Body.String())
+	}
+	if c := rec.Header().Get("WWW-Authenticate"); c != `Bearer realm="agora", error="invalid_token"` {
+		t.Errorf("WWW-Authenticate = %q", c)
+	}
+}
+
+// TestRequireFailsClosed, iptal listesine ulaşılamadığında isteğin geçirilmediğini
+// doğrular. Token geçerli olabilir, bu yüzden 401 değil 503 döner.
+func TestRequireFailsClosed(t *testing.T) {
+	var logs bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&logs, nil))
+	a := New(&fakeVerifier{}, fakeRevocations{err: errors.New("redis: bağlantı reddedildi")}, logger, time.Now)
+
+	h := a.Require(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Error("iptal listesi okunamadan istek geçirilmemeli")
+	}))
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/me", nil)
+	req.Header.Set("Authorization", "Bearer iyi")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusServiceUnavailable || !bytes.Contains(rec.Body.Bytes(), []byte(`"code":"SERVICE_UNAVAILABLE"`)) {
+		t.Errorf("yanıt = %d %s", rec.Code, rec.Body.String())
+	}
+	if !bytes.Contains(logs.Bytes(), []byte("oturum iptal listesi okunamadı")) {
+		t.Errorf("hata log'a yazılmadı:\n%s", logs.String())
 	}
 }
 

@@ -15,6 +15,9 @@ import (
 // Kökteki compose.yaml ile birebir uyumludur.
 const devDatabaseURL = "postgres://agora:agora_dev_password@localhost:5432/agora?sslmode=disable"
 
+// devRedisURL, sadece development ortamında, AGORA_REDIS_URL verilmediğinde kullanılır.
+const devRedisURL = "redis://localhost:6379/0"
+
 // Config, API sürecinin çalışma zamanı yapılandırmasıdır.
 type Config struct {
 	Env               string // development, test, production
@@ -30,6 +33,7 @@ type Config struct {
 	DBMinConns        int
 	DBMaxConnLifetime time.Duration
 	DBMaxConnIdleTime time.Duration
+	RedisURL          string // gizli: parola içerebilir, log'a asla düz yazılmaz
 
 	// Kimlik doğrulama
 	JWTPrivateKeyFile      string        // Ed25519 özel anahtarı (PEM). Development'ta boşsa geçici anahtar üretilir
@@ -37,6 +41,7 @@ type Config struct {
 	SessionIdleTimeout     time.Duration // bu süre refresh yapılmazsa oturum düşer
 	SessionAbsoluteTimeout time.Duration // oturumun refresh'lerle bile aşamayacağı üst sınır
 	PasswordHashWorkers    int           // aynı anda en fazla kaç parola hash'lenir (her biri 64 MiB)
+	LoginRateLimit         int           // bir IP'den dakikada en fazla kaç giriş denemesi
 }
 
 // Load, ortam değişkenlerini okur, varsayılanları uygular ve sonucu doğrular.
@@ -74,15 +79,20 @@ func Load() (Config, error) {
 		DBMinConns:             integer("AGORA_DB_MIN_CONNS", 2),
 		DBMaxConnLifetime:      duration("AGORA_DB_MAX_CONN_LIFETIME", time.Hour),
 		DBMaxConnIdleTime:      duration("AGORA_DB_MAX_CONN_IDLE_TIME", 30*time.Minute),
+		RedisURL:               lookup("AGORA_REDIS_URL", ""),
 		JWTPrivateKeyFile:      lookup("AGORA_JWT_PRIVATE_KEY_FILE", ""),
 		AccessTokenTTL:         duration("AGORA_ACCESS_TOKEN_TTL", 15*time.Minute),
 		SessionIdleTimeout:     duration("AGORA_SESSION_IDLE_TIMEOUT", 2*time.Hour),
 		SessionAbsoluteTimeout: duration("AGORA_SESSION_ABSOLUTE_TIMEOUT", 30*24*time.Hour),
 		PasswordHashWorkers:    integer("AGORA_PASSWORD_HASH_WORKERS", 4),
+		LoginRateLimit:         integer("AGORA_LOGIN_RATE_LIMIT", 20),
 	}
 
 	if cfg.DatabaseURL == "" && cfg.Env == "development" {
 		cfg.DatabaseURL = devDatabaseURL
+	}
+	if cfg.RedisURL == "" && cfg.Env == "development" {
+		cfg.RedisURL = devRedisURL
 	}
 
 	errs = append(errs, cfg.validate()...)
@@ -121,11 +131,13 @@ func (c Config) LogValue() slog.Value {
 		slog.Int("db_min_conns", c.DBMinConns),
 		slog.String("db_max_conn_lifetime", c.DBMaxConnLifetime.String()),
 		slog.String("db_max_conn_idle_time", c.DBMaxConnIdleTime.String()),
+		slog.String("redis_url", redactURL(c.RedisURL)),
 		slog.String("jwt_private_key_file", c.JWTPrivateKeyFile),
 		slog.String("access_token_ttl", c.AccessTokenTTL.String()),
 		slog.String("session_idle_timeout", c.SessionIdleTimeout.String()),
 		slog.String("session_absolute_timeout", c.SessionAbsoluteTimeout.String()),
 		slog.Int("password_hash_workers", c.PasswordHashWorkers),
+		slog.Int("login_rate_limit", c.LoginRateLimit),
 	)
 }
 
@@ -161,6 +173,10 @@ func (c Config) validate() []error {
 			c.DBMaxConns, c.DBMinConns))
 	}
 
+	if c.RedisURL == "" {
+		errs = append(errs, errors.New("AGORA_REDIS_URL zorunlu"))
+	}
+
 	if c.JWTPrivateKeyFile == "" && !c.IsDevelopment() {
 		errs = append(errs, errors.New("AGORA_JWT_PRIVATE_KEY_FILE development dışında zorunlu"))
 	}
@@ -181,6 +197,10 @@ func (c Config) validate() []error {
 
 	if c.PasswordHashWorkers < 1 {
 		errs = append(errs, fmt.Errorf("AGORA_PASSWORD_HASH_WORKERS en az 1 olmalı: %d", c.PasswordHashWorkers))
+	}
+
+	if c.LoginRateLimit < 1 {
+		errs = append(errs, fmt.Errorf("AGORA_LOGIN_RATE_LIMIT en az 1 olmalı: %d", c.LoginRateLimit))
 	}
 
 	return errs

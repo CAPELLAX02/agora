@@ -15,10 +15,11 @@ import (
 func TestAdminRoutes(t *testing.T) {
 	reg := metrics.NewRegistry()
 	app := &application{
-		logger:    slog.New(slog.NewTextHandler(io.Discard, nil)),
-		metrics:   metrics.NewHTTP(reg),
-		version:   "test",
-		startedAt: time.Now(),
+		logger:         slog.New(slog.NewTextHandler(io.Discard, nil)),
+		metrics:        metrics.NewHTTP(reg),
+		loginRateLimit: passThrough,
+		version:        "test",
+		startedAt:      time.Now(),
 	}
 
 	// API'ye bir istek at, metriğin admin tarafında görünmesini bekle.

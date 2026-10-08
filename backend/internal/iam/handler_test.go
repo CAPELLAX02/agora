@@ -25,6 +25,8 @@ import (
 	"github.com/CAPELLAX02/agora/backend/internal/platform/dbtest"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/httpx"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/jwt"
+	"github.com/CAPELLAX02/agora/backend/internal/platform/ratelimit"
+	"github.com/CAPELLAX02/agora/backend/internal/platform/redistest"
 )
 
 // httpEnv, gerçek veritabanı, gerçek servis ve gerçek route'larla çalışan bir test
@@ -58,7 +60,13 @@ func (b *lockedBuffer) String() string {
 
 func newHTTPEnv(t *testing.T) *httpEnv {
 	t.Helper()
+	return newHTTPEnvWithLoginLimit(t, 1000) // pratikte sınırsız: hız sınırı ayrı testte
+}
+
+func newHTTPEnvWithLoginLimit(t *testing.T, loginLimit int) *httpEnv {
+	t.Helper()
 	pool := dbtest.New(t)
+	rdb := redistest.New(t)
 
 	_, key, _ := ed25519.GenerateKey(rand.Reader)
 	signer, err := jwt.NewSigner("test", key)
@@ -74,16 +82,19 @@ func newHTTPEnv(t *testing.T) *httpEnv {
 	cfg.ReuseGracePeriod = 0
 
 	hasher := password.NewHasher(cheapParams, 4)
-	auth, err := iam.NewAuth(context.Background(), pool, hasher, signer, cfg, time.Now)
+	revocations := iam.NewRevocationList(rdb, cfg.AccessTokenTTL)
+	auth, err := iam.NewAuth(context.Background(), pool, hasher, signer, revocations, cfg, time.Now)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	logs := &lockedBuffer{}
 	logger := slog.New(slog.NewTextHandler(logs, nil))
+	limiter := ratelimit.New(rdb, "login", loginLimit, time.Minute, time.Now)
+
 	mux := http.NewServeMux()
 	iam.NewHandler(auth, iam.NewRepository(pool), logger, false).
-		Register(mux, authn.New(verifier, time.Now).Require)
+		Register(mux, authn.New(verifier, revocations, logger, time.Now).Require, limiter.ByIP(logger))
 
 	srv := httptest.NewServer(httpx.Chain(mux, httpx.RequestID, httpx.Recover(logger)))
 	t.Cleanup(srv.Close)
@@ -452,6 +463,58 @@ func TestHTTPRefreshReuse(t *testing.T) {
 	// Oturum iptal edildiği için meşru kullanıcının yeni çerezi de artık geçersiz.
 	if res := e.do(t, browser, "POST", "/api/v1/auth/refresh", web, nil); res.status != 401 {
 		t.Errorf("iptal edilen oturumda refresh: durum = %d", res.status)
+	}
+}
+
+// TestHTTPLogoutRevokesAccessToken, çıkıştan sonra elde kalan access token'ın
+// süresi dolmadan reddedildiğini doğrular.
+func TestHTTPLogoutRevokesAccessToken(t *testing.T) {
+	e := newHTTPEnv(t)
+	e.addUser(t, "22290001")
+
+	res := e.do(t, nil, "POST", "/api/v1/auth/login", mobile, credentials("22290001"))
+	var tok tokenBody
+	res.json(t, &tok)
+	bearer := map[string]string{"Authorization": "Bearer " + tok.AccessToken}
+
+	if res := e.do(t, nil, "GET", "/api/v1/me", bearer, nil); res.status != http.StatusOK {
+		t.Fatalf("çıkıştan önce /me: durum = %d", res.status)
+	}
+
+	if res := e.do(t, nil, "POST", "/api/v1/auth/logout", mobile,
+		map[string]string{"refresh_token": tok.RefreshToken}); res.status != http.StatusNoContent {
+		t.Fatalf("çıkış: durum = %d", res.status)
+	}
+
+	// Token'ın imzası ve süresi hâlâ geçerli, ama oturum iptal edildi.
+	res = e.do(t, nil, "GET", "/api/v1/me", bearer, nil)
+	if res.status != http.StatusUnauthorized || res.code(t) != "SESSION_REVOKED" {
+		t.Errorf("çıkıştan sonra /me: durum = %d\n%s", res.status, res.body)
+	}
+}
+
+func TestHTTPLoginRateLimit(t *testing.T) {
+	e := newHTTPEnvWithLoginLimit(t, 3)
+	e.addUser(t, "22290001")
+
+	// Sınır IP başına: doğru ya da yanlış, her deneme bir hak tüketir.
+	for i := 1; i <= 3; i++ {
+		if res := e.do(t, nil, "POST", "/api/v1/auth/login", web, credentials("22290001")); res.status != http.StatusOK {
+			t.Fatalf("%d. giriş: durum = %d", i, res.status)
+		}
+	}
+
+	res := e.do(t, nil, "POST", "/api/v1/auth/login", web, credentials("22290001"))
+	if res.status != http.StatusTooManyRequests || res.code(t) != "RATE_LIMITED" {
+		t.Fatalf("4. giriş: durum = %d\n%s", res.status, res.body)
+	}
+	if res.header.Get("Retry-After") == "" {
+		t.Error("Retry-After yok")
+	}
+
+	// Hız sınırı sadece girişte: diğer auth uçları etkilenmez.
+	if res := e.do(t, nil, "POST", "/api/v1/auth/refresh", web, nil); res.status != http.StatusUnauthorized {
+		t.Errorf("refresh hız sınırına takılmamalı: durum = %d", res.status)
 	}
 }
 

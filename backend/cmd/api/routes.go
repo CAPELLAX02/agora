@@ -18,7 +18,8 @@ func (app *application) routes() http.Handler {
 
 	// Refresh çerezi yerel geliştirmede (http://localhost) Secure olamaz.
 	secureCookie := !app.cfg.IsDevelopment()
-	iam.NewHandler(app.auth, iam.NewRepository(app.db), app.logger, secureCookie).Register(mux, app.authenticator.Require)
+	iam.NewHandler(app.auth, iam.NewRepository(app.db), app.logger, secureCookie).
+		Register(mux, app.authenticator.Require, app.loginRateLimit)
 
 	return httpx.Chain(
 		httpx.WithProblemFallback(mux),

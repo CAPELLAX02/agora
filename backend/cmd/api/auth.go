@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/CAPELLAX02/agora/backend/internal/iam"
 	"github.com/CAPELLAX02/agora/backend/internal/iam/password"
@@ -30,7 +31,8 @@ const (
 
 // newAuth, imza anahtarını yükler, kimlik doğrulama servisini ve korumalı uç
 // noktalar için kullanılacak Authenticator'ı kurar.
-func newAuth(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, logger *slog.Logger) (*iam.Auth, *authn.Authenticator, error) {
+func newAuth(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.Client,
+	logger *slog.Logger) (*iam.Auth, *authn.Authenticator, error) {
 	key, err := loadSigningKey(cfg, logger)
 	if err != nil {
 		return nil, nil, err
@@ -46,7 +48,12 @@ func newAuth(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, logger 
 
 	hasher := password.NewHasher(password.DefaultParams, cfg.PasswordHashWorkers)
 
-	auth, err := iam.NewAuth(ctx, pool, hasher, signer, iam.AuthConfig{
+	// İptal kaydı, oturumun son access token'ının süresi dolana kadar yaşamalı.
+	// Doğrulayıcı süresi dolmuş token'ları tokenLeeway kadar daha kabul ettiği için
+	// o süre de ekleniyor.
+	revocations := iam.NewRevocationList(rdb, cfg.AccessTokenTTL+tokenLeeway)
+
+	auth, err := iam.NewAuth(ctx, pool, hasher, signer, revocations, iam.AuthConfig{
 		Issuer:            tokenIssuer,
 		Audience:          tokenAudience,
 		AccessTokenTTL:    cfg.AccessTokenTTL,
@@ -62,7 +69,7 @@ func newAuth(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, logger 
 	}
 
 	logger.Info("kimlik doğrulama hazır", "kid", kid, "access_token_ttl", cfg.AccessTokenTTL.String())
-	return auth, authn.New(verifier, time.Now), nil
+	return auth, authn.New(verifier, revocations, logger, time.Now), nil
 }
 
 // loadSigningKey, JWT imza anahtarını dosyadan okur. Dosya verilmemişse (config bunu

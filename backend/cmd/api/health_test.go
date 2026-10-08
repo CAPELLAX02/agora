@@ -51,12 +51,15 @@ func TestHealthz(t *testing.T) {
 // TestRoutes, uygulamanın gerçek route tablosunu ve middleware zincirini birlikte doğrular.
 // Veritabanına inmeyen yollar test edilir: istek handler'a ulaşmadan reddedilenler.
 func TestRoutes(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	app := &application{
-		logger:        slog.New(slog.NewTextHandler(io.Discard, nil)),
-		metrics:       metrics.NewHTTP(prometheus.NewRegistry()),
-		authenticator: authn.New(jwt.NewVerifier("agora", "agora-api", nil, 0), time.Now),
-		version:       "test",
-		startedAt:     time.Now(),
+		logger:  logger,
+		metrics: metrics.NewHTTP(prometheus.NewRegistry()),
+		// Test edilen yollar token doğrulamasına ve iptal listesine hiç ulaşmaz.
+		authenticator:  authn.New(jwt.NewVerifier("agora", "agora-api", nil, 0), nil, logger, time.Now),
+		loginRateLimit: passThrough,
+		version:        "test",
+		startedAt:      time.Now(),
 	}
 
 	srv := httptest.NewServer(app.routes())
@@ -99,6 +102,10 @@ func TestRoutes(t *testing.T) {
 	}
 }
 
+// passThrough, isteği olduğu gibi geçiren middleware'dir. Testlerde Redis'e bağlı
+// middleware'lerin yerine kullanılır.
+func passThrough(next http.Handler) http.Handler { return next }
+
 // fakePinger, testlerde gerçek bir veritabanı yerine kullanılan sahte bağımlılıktır.
 type fakePinger struct {
 	err error
@@ -131,6 +138,18 @@ func TestReadyz(t *testing.T) {
 			want: readinessResponse{
 				Status: "not_ready",
 				Checks: map[string]string{"postgres": "unavailable", "redis": "ok"},
+			},
+		},
+		{
+			name: "pingerFunc ile uyarlanmış bağımlılık",
+			checks: map[string]pinger{
+				"postgres": fakePinger{},
+				"redis":    pingerFunc(func(ctx context.Context) error { return errors.New("bağlantı yok") }),
+			},
+			wantStatus: http.StatusServiceUnavailable,
+			want: readinessResponse{
+				Status: "not_ready",
+				Checks: map[string]string{"postgres": "ok", "redis": "unavailable"},
 			},
 		},
 	}
