@@ -2,11 +2,13 @@ package audit
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"net/url"
 	"time"
 
+	"github.com/CAPELLAX02/agora/backend/internal/platform/authn"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authz"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/httpx"
 )
@@ -27,6 +29,9 @@ func NewHandler(repo *Repository, logger *slog.Logger) *Handler {
 func (h *Handler) Register(rt *authz.Router) {
 	rt.HandleFunc("GET /api/v1/audit/log", authz.Permission("audit:read"), h.listLog)
 	rt.HandleFunc("GET /api/v1/audit/security-events", authz.Permission("audit:read"), h.listSecurityEvents)
+
+	// Kullanıcının kendi hesabındaki olaylar: giriş geçmişi, başarısız denemeler.
+	rt.HandleFunc("GET /api/v1/me/security-events", authz.SelfService, h.listMySecurityEvents)
 }
 
 type logEntryResponse struct {
@@ -43,9 +48,8 @@ type logEntryResponse struct {
 	RequestID   *string         `json:"request_id"`
 }
 
-// SecurityEventResponse, bir güvenlik olayının API biçimidir. Kullanıcının kendi
-// olaylarını gösteren uç (iam) da aynı biçimi kullanır.
-type SecurityEventResponse struct {
+// securityEventResponse, bir güvenlik olayının API biçimidir.
+type securityEventResponse struct {
 	ID                int64           `json:"id"`
 	OccurredAt        time.Time       `json:"occurred_at"`
 	Type              string          `json:"type"`
@@ -57,8 +61,8 @@ type SecurityEventResponse struct {
 	Details           json.RawMessage `json:"details"`
 }
 
-func toSecurityEventResponse(e StoredSecurityEvent) SecurityEventResponse {
-	return SecurityEventResponse{
+func tosecurityEventResponse(e StoredSecurityEvent) securityEventResponse {
+	return securityEventResponse{
 		ID:                e.ID,
 		OccurredAt:        e.OccurredAt,
 		Type:              e.Type,
@@ -139,7 +143,7 @@ func (h *Handler) listSecurityEvents(w http.ResponseWriter, r *http.Request) {
 		h.serverError(w, r, err)
 		return
 	}
-	res, err := SecurityEventPage(events, hasMore)
+	res, err := securityEventPage(events, hasMore)
 	if err != nil {
 		h.serverError(w, r, err)
 		return
@@ -147,11 +151,39 @@ func (h *Handler) listSecurityEvents(w http.ResponseWriter, r *http.Request) {
 	h.writeJSON(w, r, res)
 }
 
-// SecurityEventPage, bir güvenlik olayı sayfasını liste yanıtına çevirir.
-func SecurityEventPage(events []StoredSecurityEvent, hasMore bool) (httpx.ListResponse[SecurityEventResponse], error) {
-	res := httpx.ListResponse[SecurityEventResponse]{Items: make([]SecurityEventResponse, 0, len(events))}
+func (h *Handler) listMySecurityEvents(w http.ResponseWriter, r *http.Request) {
+	principal, ok := authn.PrincipalFrom(r.Context())
+	if !ok {
+		h.serverError(w, r, errors.New("audit: /me/security-events kimlik doğrulama olmadan çağrıldı"))
+		return
+	}
+
+	var errs []httpx.FieldError
+	f := parseSecurityEventParams(r.URL.Query(), &errs)
+	if len(errs) > 0 {
+		httpx.ValidationFailed(w, r, errs)
+		return
+	}
+	f.UserID = principal.UserID // başka bir kullanıcının olayları istenemez
+
+	events, hasMore, err := h.repo.ListSecurityEvents(r.Context(), f)
+	if err != nil {
+		h.serverError(w, r, err)
+		return
+	}
+	res, err := securityEventPage(events, hasMore)
+	if err != nil {
+		h.serverError(w, r, err)
+		return
+	}
+	h.writeJSON(w, r, res)
+}
+
+// securityEventPage, bir güvenlik olayı sayfasını liste yanıtına çevirir.
+func securityEventPage(events []StoredSecurityEvent, hasMore bool) (httpx.ListResponse[securityEventResponse], error) {
+	res := httpx.ListResponse[securityEventResponse]{Items: make([]securityEventResponse, 0, len(events))}
 	for _, e := range events {
-		res.Items = append(res.Items, toSecurityEventResponse(e))
+		res.Items = append(res.Items, tosecurityEventResponse(e))
 	}
 	if hasMore {
 		last := events[len(events)-1]
@@ -164,8 +196,8 @@ func SecurityEventPage(events []StoredSecurityEvent, hasMore bool) (httpx.ListRe
 	return res, nil
 }
 
-// ParseSecurityEventParams, güvenlik olayı listelerinin ortak sorgu parametrelerini okur.
-func ParseSecurityEventParams(q url.Values, errs *[]httpx.FieldError) SecurityEventFilter {
+// parseSecurityEventParams, güvenlik olayı listelerinin ortak sorgu parametrelerini okur.
+func parseSecurityEventParams(q url.Values, errs *[]httpx.FieldError) SecurityEventFilter {
 	f := SecurityEventFilter{Type: q.Get("type")}
 	f.From, f.To, f.After, f.Limit = commonParams(q, errs)
 	return f

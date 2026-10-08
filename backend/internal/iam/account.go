@@ -121,3 +121,54 @@ func (a *Auth) revokeAll(ctx context.Context, sessionIDs []string) error {
 	}
 	return errors.Join(errs...)
 }
+
+// Sessions, kullanıcının aktif oturumlarını döndürür.
+func (a *Auth) Sessions(ctx context.Context, userID string) ([]SessionInfo, error) {
+	return NewRepository(a.pool).ActiveSessions(ctx, userID, a.now())
+}
+
+// EndSession, kullanıcının kendi oturumlarından birini sonlandırır (ör. kaybolan
+// telefondaki oturum). Oturum kullanıcıya ait değilse ErrNotFound döner.
+func (a *Auth) EndSession(ctx context.Context, userID, sessionID string) error {
+	now := a.now()
+	var revoked bool
+	err := db.InTx(ctx, a.pool, func(tx pgx.Tx) error {
+		var err error
+		revoked, err = NewRepository(tx).RevokeUserSession(ctx, userID, sessionID, now, RevokeLogout)
+		if err != nil || !revoked {
+			return err
+		}
+		return audit.RecordSecurity(ctx, tx, audit.SecurityEvent{
+			Type: audit.EventSessionRevoked, UserID: userID,
+			Details: map[string]any{"session_id": sessionID, "by": "user"},
+		})
+	})
+	if err != nil {
+		return err
+	}
+	// Zaten sonlanmış olsa da iptal listesine yazmak zararsız ve olası bir eski
+	// Redis hatasını onarır.
+	return a.revoker.Revoke(ctx, sessionID)
+}
+
+// EndOtherSessions, isteği yapan oturum dışındaki bütün oturumları sonlandırır ve
+// kaç oturumun kapatıldığını döndürür.
+func (a *Auth) EndOtherSessions(ctx context.Context, userID, currentSessionID string) (int, error) {
+	now := a.now()
+	var revoked []string
+	err := db.InTx(ctx, a.pool, func(tx pgx.Tx) error {
+		var err error
+		revoked, err = NewRepository(tx).RevokeOtherSessions(ctx, userID, currentSessionID, now, RevokeLogoutAll)
+		if err != nil || len(revoked) == 0 {
+			return err
+		}
+		return audit.RecordSecurity(ctx, tx, audit.SecurityEvent{
+			Type: audit.EventOtherSessionsRevoked, UserID: userID,
+			Details: map[string]any{"count": len(revoked)},
+		})
+	})
+	if err != nil {
+		return 0, err
+	}
+	return len(revoked), a.revokeAll(ctx, revoked)
+}

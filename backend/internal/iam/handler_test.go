@@ -101,7 +101,7 @@ func newHTTPEnvWithLoginLimit(t *testing.T, loginLimit int) *httpEnv {
 		PasswordReset: ratelimit.New(rdb, "password_reset", 1000, time.Minute, time.Now).ByIP(logger),
 	})
 
-	srv := httptest.NewServer(httpx.Chain(mux, httpx.RequestID, httpx.Recover(logger)))
+	srv := httptest.NewServer(httpx.Chain(mux, httpx.RequestID, httpx.WithClientInfo, httpx.Recover(logger)))
 	t.Cleanup(srv.Close)
 
 	return &httpEnv{pool: pool, srv: srv, hasher: hasher, logs: logs}
@@ -835,5 +835,80 @@ func TestHTTPPasswordReset(t *testing.T) {
 	res = e.do(t, nil, "POST", "/api/v1/auth/password/reset", nil, map[string]string{"token": token, "new_password": newPW + "x"})
 	if res.status != 400 || res.code(t) != "INVALID_RESET_TOKEN" {
 		t.Errorf("kullanılmış bağlantı: %d %s", res.status, res.body)
+	}
+}
+
+func TestHTTPSessions(t *testing.T) {
+	e := newHTTPEnv(t)
+	e.addUser(t, "22290060")
+	e.addUser(t, "22290061")
+
+	login := func(username, ua string) tokenBody {
+		res := e.do(t, nil, "POST", "/api/v1/auth/login",
+			map[string]string{iam.ClientHeader: "mobile", "User-Agent": ua}, credentials(username))
+		var tok tokenBody
+		res.json(t, &tok)
+		return tok
+	}
+	laptop := login("22290060", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/140.0.0.0 Safari/537.36")
+	phone := login("22290060", "Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) Version/26.0 Mobile/15E148 Safari/604.1")
+	stranger := login("22290061", "curl/8")
+	bearer := map[string]string{"Authorization": "Bearer " + laptop.AccessToken}
+
+	res := e.do(t, nil, "GET", "/api/v1/me/sessions", bearer, nil)
+	var list struct {
+		Items []struct {
+			ID      string  `json:"id"`
+			Browser *string `json:"browser"`
+			OS      *string `json:"os"`
+			Device  string  `json:"device"`
+			IP      *string `json:"ip"`
+			Current bool    `json:"current"`
+		} `json:"items"`
+	}
+	res.json(t, &list)
+	if res.status != 200 || len(list.Items) != 2 {
+		t.Fatalf("oturumlar = %d %s", res.status, res.body)
+	}
+	for _, s := range list.Items {
+		switch s.ID {
+		case laptop.SessionID:
+			if !s.Current || s.Browser == nil || *s.Browser != "Chrome 140" || *s.OS != "Windows" || s.IP == nil {
+				t.Errorf("dizüstü oturumu = %+v", s)
+			}
+		case phone.SessionID:
+			if s.Current || s.Device != "MOBILE" || *s.OS != "iOS" {
+				t.Errorf("telefon oturumu = %+v", s)
+			}
+		default:
+			t.Errorf("başka kullanıcının oturumu listelendi: %s", s.ID)
+		}
+	}
+
+	if res := e.do(t, nil, "DELETE", "/api/v1/me/sessions/"+stranger.SessionID, bearer, nil); res.status != 404 {
+		t.Errorf("başkasının oturumu: %d", res.status)
+	}
+	if res := e.do(t, nil, "DELETE", "/api/v1/me/sessions/"+phone.SessionID, bearer, nil); res.status != http.StatusNoContent {
+		t.Fatalf("telefonu kapatma: %d %s", res.status, res.body)
+	}
+	// Kapatılan oturumun access token'ı da hemen geçersiz.
+	if res := e.do(t, nil, "GET", "/api/v1/me", map[string]string{"Authorization": "Bearer " + phone.AccessToken}, nil); res.status != 401 {
+		t.Errorf("kapatılan oturumla /me: %d", res.status)
+	}
+
+	other := login("22290060", "ikinci cihaz")
+	res = e.do(t, nil, "DELETE", "/api/v1/me/sessions", bearer, nil)
+	var ended struct {
+		Revoked int `json:"revoked"`
+	}
+	res.json(t, &ended)
+	if res.status != 200 || ended.Revoked != 1 {
+		t.Errorf("diğer oturumları kapatma = %d %s", res.status, res.body)
+	}
+	if res := e.do(t, nil, "GET", "/api/v1/me", map[string]string{"Authorization": "Bearer " + other.AccessToken}, nil); res.status != 401 {
+		t.Errorf("kapatılan diğer oturum: %d", res.status)
+	}
+	if res := e.do(t, nil, "GET", "/api/v1/me", bearer, nil); res.status != 200 {
+		t.Errorf("isteği yapan oturum açık kalmalı: %d", res.status)
 	}
 }

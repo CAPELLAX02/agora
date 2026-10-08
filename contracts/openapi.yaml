@@ -366,6 +366,90 @@ paths:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Problem" }
 
+  /api/v1/me/sessions:
+    get:
+      tags: [Hesap]
+      summary: Oturumlarım
+      description: |
+        Kullanıcının kullanılabilir oturumları, son görülmeye göre sıralı. Boşta kalma
+        süresi dolmuş oturumlar listelenmez. Tarayıcı ve işletim sistemi User-Agent'tan
+        kaba olarak çıkarılır (kullanıcının "bu benim mi?" sorusu için).
+      operationId: listMySessions
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Oturumlar
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Session" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    delete:
+      tags: [Hesap]
+      summary: Diğer bütün oturumları kapat
+      description: İsteği yapan oturum açık kalır. Kapatılan oturumların access token'ları da hemen geçersiz olur.
+      operationId: endOtherSessions
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Kapatılan oturum sayısı
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [revoked]
+                properties:
+                  revoked: { type: integer, minimum: 0 }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/me/sessions/{id}:
+    delete:
+      tags: [Hesap]
+      summary: Bir oturumu kapat
+      description: Oturum kullanıcıya ait değilse 404 döner. Zaten kapalıysa 204.
+      operationId: endSession
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "204":
+          description: Oturum kapatıldı
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/me/security-events:
+    get:
+      tags: [Hesap]
+      summary: Hesabımdaki güvenlik olayları
+      description: Giriş geçmişi, başarısız denemeler, parola değişiklikleri. En yeniden eskiye.
+      operationId: listMySecurityEvents
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          schema: { $ref: "#/components/schemas/SecurityEventType" }
+        - $ref: "#/components/parameters/From"
+        - $ref: "#/components/parameters/To"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Olaylar
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SecurityEventPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
   /api/v1/me/permissions:
     get:
       tags: [Hesap]
@@ -878,6 +962,24 @@ components:
           type: [string, "null"]
           examples: ["Bilgisayar Mühendisliği"]
         valid_until: { type: [string, "null"], format: date-time }
+
+    Session:
+      type: object
+      required: [id, client, browser, os, device, ip, created_at, last_seen_at, expires_at, current]
+      properties:
+        id: { type: string, format: uuid }
+        client: { type: string, enum: [WEB, MOBILE] }
+        browser: { type: [string, "null"], examples: ["Chrome 140"] }
+        os: { type: [string, "null"], examples: ["macOS"] }
+        device: { type: string, enum: [DESKTOP, MOBILE, TABLET, UNKNOWN] }
+        ip: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+        last_seen_at: { type: string, format: date-time }
+        expires_at:
+          type: string
+          format: date-time
+          description: Boşta kalma ya da mutlak süreden hangisi önce dolarsa
+        current: { type: boolean, description: İsteği yapan oturum mu }
 
     SecurityEventType:
       type: string

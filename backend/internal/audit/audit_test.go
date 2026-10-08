@@ -288,3 +288,39 @@ func TestHandler(t *testing.T) {
 		t.Errorf("denetim kayıtları: durum = %d", rec.Code)
 	}
 }
+
+func TestMySecurityEvents(t *testing.T) {
+	pool := dbtest.New(t)
+	ctx := requestContext(t)
+	alice := "01a11b7f-0000-7000-8000-00000000000a"
+	bob := "01a11b7f-0000-7000-8000-00000000000b"
+	for _, u := range []string{alice, alice, bob} {
+		if err := audit.RecordSecurity(ctx, pool, audit.SecurityEvent{Type: audit.EventLoginSucceeded, UserID: u}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	srv := testServer(t, pool)
+
+	// user_id parametresi yok sayılır: kişi sadece kendi olaylarını görür.
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/me/security-events?user_id="+bob, nil)
+	req.Header.Set("X-Test-User", alice)
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+
+	var page struct {
+		Items []struct {
+			UserID string `json:"user_id"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &page); err != nil {
+		t.Fatalf("%d %s", rec.Code, rec.Body.String())
+	}
+	if rec.Code != 200 || len(page.Items) != 2 {
+		t.Fatalf("olaylar = %d %s", rec.Code, rec.Body.String())
+	}
+	for _, e := range page.Items {
+		if e.UserID != alice {
+			t.Errorf("başka kullanıcının olayı döndü: %s", e.UserID)
+		}
+	}
+}

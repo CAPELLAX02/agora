@@ -243,3 +243,71 @@ func (r *Repository) UpdatePassword(ctx context.Context, userID, hash string, at
 	}
 	return nil
 }
+
+// SessionInfo, kullanıcıya "oturumlarım" listesinde gösterilen oturumdur.
+type SessionInfo struct {
+	ID         string
+	ClientType ClientType
+	IP         string
+	UserAgent  string
+	CreatedAt  time.Time
+	LastSeenAt time.Time
+	ExpiresAt  time.Time // boşta kalma ya da mutlak süreden hangisi önce dolarsa
+}
+
+// ActiveSessions, kullanıcının at anında kullanılabilir oturumlarını son görülmeye
+// göre sıralı döndürür. Boşta kalma süresi dolmuş oturumlar (kullanılabilir refresh
+// token'ı kalmamış olanlar) iptal edilmemiş olsalar da listelenmez.
+//
+// at, oturumları yazan servisin saatidir: oturum zamanları da o saatle yazılır.
+func (r *Repository) ActiveSessions(ctx context.Context, userID string, at time.Time) ([]SessionInfo, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT s.id, s.client_type, coalesce(host(s.ip), ''), coalesce(s.user_agent, ''),
+		       s.created_at, s.last_seen_at, least(rt.expires_at, s.absolute_expires_at)
+		FROM iam.sessions s
+		JOIN LATERAL (
+			SELECT max(expires_at) AS expires_at FROM iam.refresh_tokens
+			WHERE session_id = s.id AND used_at IS NULL
+		) rt ON true
+		WHERE s.user_id = $1
+		  AND s.revoked_at IS NULL
+		  AND s.absolute_expires_at > $2
+		  AND rt.expires_at > $2
+		ORDER BY s.last_seen_at DESC, s.created_at DESC`, userID, at)
+	if err != nil {
+		return nil, fmt.Errorf("iam: oturumlar listelenemedi: %w", err)
+	}
+	sessions, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (SessionInfo, error) {
+		var (
+			s      SessionInfo
+			client string
+		)
+		err := row.Scan(&s.ID, &client, &s.IP, &s.UserAgent, &s.CreatedAt, &s.LastSeenAt, &s.ExpiresAt)
+		s.ClientType = ClientType(client)
+		return s, err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("iam: oturumlar okunamadı: %w", err)
+	}
+	return sessions, nil
+}
+
+// RevokeUserSession, kullanıcının kendi oturumunu sonlandırır. Oturum bu kullanıcıya
+// ait değilse ErrNotFound döner: başkasının oturum kimliğini bilen biri onu
+// kapatamaz, hatta var olup olmadığını öğrenemez. Zaten sonlanmışsa revoked false döner.
+func (r *Repository) RevokeUserSession(ctx context.Context, userID, sessionID string, at time.Time, reason RevokeReason) (revoked bool, err error) {
+	var alreadyRevoked bool
+	err = r.db.QueryRow(ctx,
+		`SELECT revoked_at IS NOT NULL FROM iam.sessions WHERE id = $1 AND user_id = $2 FOR UPDATE`,
+		sessionID, userID).Scan(&alreadyRevoked)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, ErrNotFound
+	}
+	if err != nil {
+		return false, fmt.Errorf("iam: oturum okunamadı: %w", err)
+	}
+	if alreadyRevoked {
+		return false, nil
+	}
+	return true, r.RevokeSession(ctx, sessionID, at, reason)
+}

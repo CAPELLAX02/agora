@@ -14,6 +14,7 @@ import (
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authn"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authz"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/httpx"
+	"github.com/CAPELLAX02/agora/backend/internal/platform/useragent"
 )
 
 const (
@@ -37,6 +38,9 @@ type AuthService interface {
 	RequestPasswordReset(ctx context.Context, identifier string) error
 	VerifyResetToken(ctx context.Context, rawToken string) (ResetTokenInfo, error)
 	ResetPassword(ctx context.Context, rawToken, newPassword string) error
+	Sessions(ctx context.Context, userID string) ([]SessionInfo, error)
+	EndSession(ctx context.Context, userID, sessionID string) error
+	EndOtherSessions(ctx context.Context, userID, currentSessionID string) (int, error)
 }
 
 // Limits, kimliği doğrulanmamış uçların hız sınırlarıdır.
@@ -80,6 +84,9 @@ func (h *Handler) Register(rt *authz.Router, limits Limits) {
 	rt.HandleFunc("GET /api/v1/me", authz.SelfService, h.me)
 	rt.HandleFunc("GET /api/v1/me/permissions", authz.SelfService, h.myPermissions)
 	rt.HandleFunc("POST /api/v1/me/password", authz.SelfService, h.changePassword)
+	rt.HandleFunc("GET /api/v1/me/sessions", authz.SelfService, h.listSessions)
+	rt.HandleFunc("DELETE /api/v1/me/sessions/{id}", authz.SelfService, h.endSession)
+	rt.HandleFunc("DELETE /api/v1/me/sessions", authz.SelfService, h.endOtherSessions)
 
 	rt.HandleFunc("GET /api/v1/users/{id}", authz.Permission("user:read"), h.getUser)
 }
@@ -113,6 +120,19 @@ type verifyResetTokenRequest struct {
 type resetTokenResponse struct {
 	Purpose   string    `json:"purpose"`
 	ExpiresAt time.Time `json:"expires_at"`
+}
+
+type sessionResponse struct {
+	ID         string    `json:"id"`
+	Client     string    `json:"client"`
+	Browser    *string   `json:"browser"`
+	OS         *string   `json:"os"`
+	Device     string    `json:"device"`
+	IP         *string   `json:"ip"`
+	CreatedAt  time.Time `json:"created_at"`
+	LastSeenAt time.Time `json:"last_seen_at"`
+	ExpiresAt  time.Time `json:"expires_at"`
+	Current    bool      `json:"current"` // isteği yapan oturum
 }
 
 type changePasswordRequest struct {
@@ -407,6 +427,80 @@ func (h *Handler) resetError(w http.ResponseWriter, r *http.Request, err error) 
 	default:
 		h.serverError(w, r, err)
 	}
+}
+
+func (h *Handler) listSessions(w http.ResponseWriter, r *http.Request) {
+	principal, ok := authn.PrincipalFrom(r.Context())
+	if !ok {
+		h.serverError(w, r, errors.New("iam: /me/sessions kimlik doğrulama olmadan çağrıldı"))
+		return
+	}
+
+	sessions, err := h.auth.Sessions(r.Context(), principal.UserID)
+	if err != nil {
+		h.serverError(w, r, err)
+		return
+	}
+
+	res := httpx.ListResponse[sessionResponse]{Items: make([]sessionResponse, 0, len(sessions))}
+	for _, s := range sessions {
+		ua := useragent.Parse(s.UserAgent)
+		res.Items = append(res.Items, sessionResponse{
+			ID:         s.ID,
+			Client:     string(s.ClientType),
+			Browser:    optional(ua.Browser),
+			OS:         optional(ua.OS),
+			Device:     ua.Device,
+			IP:         optional(s.IP),
+			CreatedAt:  s.CreatedAt,
+			LastSeenAt: s.LastSeenAt,
+			ExpiresAt:  s.ExpiresAt,
+			Current:    s.ID == principal.SessionID,
+		})
+	}
+	h.writeJSON(w, r, http.StatusOK, res)
+}
+
+func (h *Handler) endSession(w http.ResponseWriter, r *http.Request) {
+	principal, ok := authn.PrincipalFrom(r.Context())
+	if !ok {
+		h.serverError(w, r, errors.New("iam: oturum kapatma kimlik doğrulama olmadan çağrıldı"))
+		return
+	}
+	id := r.PathValue("id")
+	if !httpx.ValidUUID(id) {
+		httpx.NotFound(w, r)
+		return
+	}
+
+	err := h.auth.EndSession(r.Context(), principal.UserID, id)
+	switch {
+	case errors.Is(err, ErrNotFound):
+		httpx.NotFound(w, r)
+	case err != nil:
+		h.serverError(w, r, err)
+	default:
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+type endSessionsResponse struct {
+	Revoked int `json:"revoked"`
+}
+
+func (h *Handler) endOtherSessions(w http.ResponseWriter, r *http.Request) {
+	principal, ok := authn.PrincipalFrom(r.Context())
+	if !ok {
+		h.serverError(w, r, errors.New("iam: oturum kapatma kimlik doğrulama olmadan çağrıldı"))
+		return
+	}
+
+	n, err := h.auth.EndOtherSessions(r.Context(), principal.UserID, principal.SessionID)
+	if err != nil {
+		h.serverError(w, r, err)
+		return
+	}
+	h.writeJSON(w, r, http.StatusOK, endSessionsResponse{Revoked: n})
 }
 
 // violationMessages, parola politikası ihlallerinin kullanıcıya gösterilen karşılıklarıdır.
