@@ -8,10 +8,14 @@ import (
 )
 
 // ListResponse, liste döndüren tüm uç noktaların ortak yanıt zarfıdır.
-// Çıplak bir JSON dizisi yerine nesne döndürmek, ileride sayfalama gibi
-// alanları geriye dönük uyumluluğu bozmadan eklemeyi sağlar.
+// Çıplak bir JSON dizisi yerine nesne döndürmek, sayfalama gibi alanları
+// geriye dönük uyumluluğu bozmadan eklemeyi sağlar.
+//
+// NextCursor sadece sayfalanan listelerde ve sonraki sayfa varsa doludur.
+// İstemci bir sonraki sayfa için onu ?cursor= parametresiyle geri gönderir.
 type ListResponse[T any] struct {
-	Items []T `json:"items"`
+	Items      []T    `json:"items"`
+	NextCursor string `json:"next_cursor,omitempty"`
 }
 
 // WriteJSON, v değerini JSON'a çevirir ve verilen durum koduyla yanıta yazar.
