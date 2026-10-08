@@ -57,11 +57,12 @@ migration: ## Yeni migration dosyası oluşturur: make migration name=create_iam
 	@test -n "$(name)" || (echo "kullanım: make migration name=<ad>"; exit 1)
 	go -C $(BACKEND) run $(GOOSE) -dir migrations -s create $(name) sql
 
-seed: ## Geliştirme seed verisini yükler (tekrar çalıştırılabilir)
+seed: ## Geliştirme seed verisini yükler: organizasyon (SQL) + kullanıcılar (Go). Tekrar çalıştırılabilir
 	@for f in infra/seed/dev/*.sql; do \
 		echo "seed: $$f"; \
 		docker compose exec -T postgres psql -q -v ON_ERROR_STOP=1 -U agora -d agora < $$f || exit 1; \
 	done
+	go -C $(BACKEND) run ./cmd/seed
 
 # --- Kalite ------------------------------------------------------------------
 

@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/testcontainers/testcontainers-go"
+	tclog "github.com/testcontainers/testcontainers-go/log"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 
 	"github.com/CAPELLAX02/agora/backend/migrations"
@@ -34,6 +35,8 @@ func New(t *testing.T) *pgxpool.Pool {
 		postgres.WithUsername("agora"),
 		postgres.WithPassword("agora_test_password"),
 		postgres.BasicWaitStrategies(),
+		// Konteyner log'ları t.Log'a gider: sadece -v ile ya da test başarısız olunca görünür.
+		testcontainers.WithLogger(tclog.TestLogger(t)),
 	)
 	testcontainers.CleanupContainer(t, ctr)
 	if err != nil {
