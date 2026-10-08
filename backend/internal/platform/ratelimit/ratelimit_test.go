@@ -141,6 +141,8 @@ func TestByIP(t *testing.T) {
 	rdb := redistest.New(t)
 	l := New(rdb, "login", 1, time.Minute, newClock().Now)
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	var rejected []string
+	l.OnReject(func(name string) { rejected = append(rejected, name) })
 
 	var calls int
 	h := l.ByIP(logger)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -168,6 +170,9 @@ func TestByIP(t *testing.T) {
 	}
 	if !strings.Contains(rec.Body.String(), `"code":"RATE_LIMITED"`) {
 		t.Errorf("gövde = %s", rec.Body.String())
+	}
+	if len(rejected) != 1 || rejected[0] != "login" {
+		t.Errorf("ret bildirimi = %v", rejected)
 	}
 
 	// Aynı /64 ağındaki IPv6 adresleri tek anahtar sayılır.

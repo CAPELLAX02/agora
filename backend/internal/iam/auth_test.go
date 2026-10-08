@@ -627,3 +627,50 @@ func TestSecurityEvents(t *testing.T) {
 		t.Errorf("olaylar =\n  %v\nwant\n  %v", got, want)
 	}
 }
+
+// countingMetrics, sayaç çağrılarını kaydeder.
+type countingMetrics struct {
+	mu     sync.Mutex
+	counts map[string]int
+}
+
+func (m *countingMetrics) inc(key string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.counts[key]++
+}
+
+func (m *countingMetrics) LoginSucceeded(client string) { m.inc("login:" + client) }
+func (m *countingMetrics) LoginFailed(reason string)    { m.inc("fail:" + reason) }
+func (m *countingMetrics) AccountLocked()               { m.inc("locked") }
+func (m *countingMetrics) RefreshReuseDetected()        { m.inc("reuse") }
+func (m *countingMetrics) PasswordReset(stage string)   { m.inc("reset:" + stage) }
+
+func TestAuthMetrics(t *testing.T) {
+	e := newAuthEnv(t)
+	ctx := context.Background()
+	m := &countingMetrics{counts: map[string]int{}}
+	e.auth.SetMetrics(m)
+	e.addUser(t, "22290090", pw, e.hasher)
+
+	tok, _ := e.login("22290090", pw)
+	_, _ = e.login("yok", pw)
+	for range 5 {
+		_, _ = e.login("22290090", "yanlış parola 123")
+	}
+	_, _ = e.auth.Refresh(ctx, tok.RefreshToken)
+	e.clock.Advance(time.Minute)
+	_, _ = e.auth.Refresh(ctx, tok.RefreshToken) // yeniden kullanım
+	e.clock.Advance(time.Hour)
+	_ = e.auth.RequestPasswordReset(ctx, "22290090")
+	link, _ := e.lastResetLink(t)
+	_ = e.auth.ResetPassword(ctx, tokenFromLink(t, link), newPW)
+
+	want := map[string]int{
+		"login:WEB": 1, "fail:unknown_user": 1, "fail:wrong_password": 5, "locked": 1,
+		"reuse": 1, "reset:requested": 1, "reset:completed": 1,
+	}
+	if !reflect.DeepEqual(m.counts, want) {
+		t.Errorf("sayaçlar =\n  %v\nwant\n  %v", m.counts, want)
+	}
+}

@@ -80,6 +80,23 @@ type Revoker interface {
 	Revoke(ctx context.Context, sessionID string) error
 }
 
+// Metrics, kimlik doğrulama olaylarının sayaçlarıdır. *metrics.Auth bunu sağlar.
+type Metrics interface {
+	LoginSucceeded(client string)
+	LoginFailed(reason string)
+	AccountLocked()
+	RefreshReuseDetected()
+	PasswordReset(stage string)
+}
+
+type noopMetrics struct{}
+
+func (noopMetrics) LoginSucceeded(string) {}
+func (noopMetrics) LoginFailed(string)    {}
+func (noopMetrics) AccountLocked()        {}
+func (noopMetrics) RefreshReuseDetected() {}
+func (noopMetrics) PasswordReset(string)  {}
+
 // LoginInput, giriş isteğinin bilgileridir.
 type LoginInput struct {
 	Username  string
@@ -106,6 +123,7 @@ type Auth struct {
 	hasher    Hasher
 	signer    TokenSigner
 	revoker   Revoker
+	metrics   Metrics
 	cfg       AuthConfig
 	now       func() time.Time
 	dummyHash string
@@ -135,10 +153,16 @@ func NewAuth(
 		hasher:    hasher,
 		signer:    signer,
 		revoker:   revoker,
+		metrics:   noopMetrics{},
 		cfg:       cfg,
 		now:       now,
 		dummyHash: dummy,
 	}, nil
+}
+
+// SetMetrics, olay sayaçlarını bağlar. Verilmezse olaylar sayılmaz.
+func (a *Auth) SetMetrics(m Metrics) {
+	a.metrics = m
 }
 
 // Login, kullanıcı adı ve parolayı doğrular, yeni bir oturum açar ve token'ları döndürür.
@@ -221,6 +245,7 @@ func (a *Auth) Login(ctx context.Context, in LoginInput) (Tokens, error) {
 	if err != nil {
 		return Tokens{}, err
 	}
+	a.metrics.LoginSucceeded(string(in.Client))
 	return tokens, nil
 }
 
@@ -256,7 +281,9 @@ func (a *Auth) wrongPassword(ctx context.Context, user User, username string, no
 		return err
 	}
 
+	a.metrics.LoginFailed(reason)
 	if lockedUntil != nil && now.Before(*lockedUntil) {
+		a.metrics.AccountLocked()
 		return &LockedError{Until: *lockedUntil}
 	}
 	return ErrInvalidCredentials
@@ -265,6 +292,7 @@ func (a *Auth) wrongPassword(ctx context.Context, user User, username string, no
 // loginFailed, parola denenmeden ya da parola doğru olduğu halde reddedilen bir
 // girişi kaydeder.
 func (a *Auth) loginFailed(ctx context.Context, userID, username, reason string) error {
+	a.metrics.LoginFailed(reason)
 	return audit.RecordSecurity(ctx, a.pool, audit.SecurityEvent{
 		Type: audit.EventLoginFailed, UserID: userID, UsernameAttempted: username,
 		Details: map[string]any{"reason": reason},
@@ -358,6 +386,9 @@ func (a *Auth) Refresh(ctx context.Context, rawToken string) (Tokens, error) {
 		// dolmadan reddedilsin diye oturumu iptal listesine ekliyoruz.
 		if err := a.revoker.Revoke(ctx, revoked); err != nil {
 			return Tokens{}, err
+		}
+		if errors.Is(result, ErrRefreshTokenReused) {
+			a.metrics.RefreshReuseDetected()
 		}
 		return Tokens{}, result
 	}

@@ -97,6 +97,10 @@ func run() error {
 
 	reg := metrics.NewRegistry()
 	reg.MustRegister(metrics.NewPoolCollector(pool))
+	authMetrics := metrics.NewAuth(reg)
+	auth.SetMetrics(authMetrics)
+	loginLimiter.OnReject(authMetrics.RateLimited)
+	resetLimiter.OnReject(authMetrics.RateLimited)
 
 	app := &application{
 		cfg:     cfg,

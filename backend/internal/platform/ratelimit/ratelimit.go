@@ -47,11 +47,12 @@ return {0, 0, tonumber(oldest[2]) + window - now}
 // Limiter, her anahtar (ör. IP adresi) için kayan bir pencerede en fazla limit
 // kadar isteğe izin verir.
 type Limiter struct {
-	rdb    redis.Scripter
-	name   string
-	limit  int
-	window time.Duration
-	now    func() time.Time
+	rdb      redis.Scripter
+	name     string
+	limit    int
+	window   time.Duration
+	now      func() time.Time
+	onReject func(name string)
 }
 
 // Result, bir isteğin sınırlama kararıdır.
@@ -64,6 +65,11 @@ type Result struct {
 // New, bir Limiter oluşturur. name, Redis anahtarlarını diğer sınırlayıcılardan ayırır.
 func New(rdb redis.Scripter, name string, limit int, window time.Duration, now func() time.Time) *Limiter {
 	return &Limiter{rdb: rdb, name: name, limit: limit, window: window, now: now}
+}
+
+// OnReject, bir istek reddedildiğinde çağrılacak fonksiyonu bağlar (metrikler için).
+func (l *Limiter) OnReject(fn func(name string)) {
+	l.onReject = fn
 }
 
 // Allow, key için bir istek hakkı tüketmeye çalışır.
@@ -104,6 +110,9 @@ func (l *Limiter) ByIP(logger *slog.Logger) httpx.Middleware {
 			}
 
 			if !res.Allowed {
+				if l.onReject != nil {
+					l.onReject(l.name)
+				}
 				w.Header().Set("Retry-After", strconv.Itoa(ceilSeconds(res.RetryAfter)))
 				_ = httpx.WriteProblem(w, r, httpx.Problem{
 					Status: http.StatusTooManyRequests,

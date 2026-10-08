@@ -146,7 +146,11 @@ func (a *Auth) RequestPasswordReset(ctx context.Context, identifier string) erro
 		return ignore(user.ID, "throttled")
 	}
 
-	return a.sendToken(ctx, user, PurposeReset, a.cfg.ResetTokenTTL)
+	if err := a.sendToken(ctx, user, PurposeReset, a.cfg.ResetTokenTTL); err != nil {
+		return err
+	}
+	a.metrics.PasswordReset("requested")
+	return nil
 }
 
 // sendToken, yeni bir bağlantı token'ı üretir ve e-postasını kuyruğa alır. Token,
@@ -275,6 +279,7 @@ func (a *Auth) ResetPassword(ctx context.Context, rawToken, newPassword string) 
 	if err != nil {
 		return err
 	}
+	a.metrics.PasswordReset("completed")
 	return a.revokeAll(ctx, revoked)
 }
 
