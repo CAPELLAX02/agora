@@ -118,6 +118,7 @@ func AccessLog(logger *slog.Logger) Middleware {
 				logger.Log(
 					r.Context(), level, "http isteği",
 					"method", r.Method,
+					"route", Route(r),
 					"path", r.URL.Path,
 					"status", rec.status,
 					"bytes", rec.bytes,

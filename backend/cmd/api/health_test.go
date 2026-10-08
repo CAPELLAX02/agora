@@ -12,6 +12,10 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+
+	"github.com/CAPELLAX02/agora/backend/internal/platform/metrics"
 )
 
 func TestHealthz(t *testing.T) {
@@ -46,6 +50,7 @@ func TestHealthz(t *testing.T) {
 func TestRoutes(t *testing.T) {
 	app := &application{
 		logger:    slog.New(slog.NewTextHandler(io.Discard, nil)),
+		metrics:   metrics.NewHTTP(prometheus.NewRegistry()),
 		version:   "test",
 		startedAt: time.Now(),
 	}

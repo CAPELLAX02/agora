@@ -19,6 +19,7 @@ func (app *application) routes() http.Handler {
 		httpx.WithProblemFallback(mux),
 		httpx.RequestID,
 		httpx.AccessLog(app.logger),
+		httpx.Observe(app.metrics),
 		httpx.Recover(app.logger),
 	)
 }

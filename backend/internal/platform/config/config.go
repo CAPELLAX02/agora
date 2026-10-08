@@ -19,6 +19,7 @@ const devDatabaseURL = "postgres://agora:agora_dev_password@localhost:5432/agora
 type Config struct {
 	Env               string // development, test, production
 	HTTPAddr          string
+	MetricsAddr       string // /metrics ve pprof'un sunulduğu iç (admin) adres
 	LogLevel          string // debug, info, warn, error
 	ReadTimeout       time.Duration
 	WriteTimeout      time.Duration
@@ -55,6 +56,7 @@ func Load() (Config, error) {
 	cfg := Config{
 		Env:               lookup("AGORA_ENV", "development"),
 		HTTPAddr:          lookup("AGORA_HTTP_ADDR", ":8080"),
+		MetricsAddr:       lookup("AGORA_METRICS_ADDR", ":9091"),
 		LogLevel:          lookup("AGORA_LOG_LEVEL", "info"),
 		ReadTimeout:       duration("AGORA_HTTP_READ_TIMEOUT", 5*time.Second),
 		WriteTimeout:      duration("AGORA_HTTP_WRITE_TIMEOUT", 10*time.Second),
@@ -91,6 +93,7 @@ func (c Config) LogValue() slog.Value {
 	return slog.GroupValue(
 		slog.String("env", c.Env),
 		slog.String("http_addr", c.HTTPAddr),
+		slog.String("metrics_addr", c.MetricsAddr),
 		slog.String("log_level", c.LogLevel),
 		slog.String("read_timeout", c.ReadTimeout.String()),
 		slog.String("write_timeout", c.WriteTimeout.String()),
@@ -117,6 +120,10 @@ func (c Config) validate() []error {
 	case "debug", "info", "warn", "error":
 	default:
 		errs = append(errs, fmt.Errorf("AGORA_LOG_LEVEL geçersiz: %q", c.LogLevel))
+	}
+
+	if c.HTTPAddr == c.MetricsAddr {
+		errs = append(errs, fmt.Errorf("AGORA_HTTP_ADDR ile AGORA_METRICS_ADDR aynı olamaz: %q", c.HTTPAddr))
 	}
 
 	if c.DatabaseURL == "" {

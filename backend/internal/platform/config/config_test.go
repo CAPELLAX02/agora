@@ -12,7 +12,7 @@ import (
 func clearAgoraEnv(t *testing.T) {
 	t.Helper()
 	for _, key := range []string{
-		"AGORA_ENV", "AGORA_HTTP_ADDR", "AGORA_LOG_LEVEL",
+		"AGORA_ENV", "AGORA_HTTP_ADDR", "AGORA_METRICS_ADDR", "AGORA_LOG_LEVEL",
 		"AGORA_HTTP_READ_TIMEOUT", "AGORA_HTTP_WRITE_TIMEOUT",
 		"AGORA_HTTP_IDLE_TIMEOUT", "AGORA_SHUTDOWN_TIMEOUT",
 		"AGORA_DATABASE_URL", "AGORA_DB_MAX_CONNS", "AGORA_DB_MIN_CONNS",
@@ -27,6 +27,7 @@ func defaultsWith(modify func(c *Config)) Config {
 	c := Config{
 		Env:             "development",
 		HTTPAddr:        ":8080",
+		MetricsAddr:     ":9091",
 		LogLevel:        "info",
 		ReadTimeout:     5 * time.Second,
 		WriteTimeout:    10 * time.Second,
@@ -79,6 +80,11 @@ func TestLoad(t *testing.T) {
 			name:    "production'da veritabanı adresi zorunlu",
 			env:     map[string]string{"AGORA_ENV": "production"},
 			wantErr: []string{"AGORA_DATABASE_URL zorunlu"},
+		},
+		{
+			name:    "API ve metrik adresi aynı olamaz",
+			env:     map[string]string{"AGORA_METRICS_ADDR": ":8080"},
+			wantErr: []string{"AGORA_HTTP_ADDR ile AGORA_METRICS_ADDR aynı olamaz"},
 		},
 		{
 			name:    "geçersiz tamsayı",
