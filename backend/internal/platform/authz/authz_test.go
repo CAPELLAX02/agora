@@ -226,6 +226,7 @@ func TestRouterRequiresPolicy(t *testing.T) {
 func TestPolicyString(t *testing.T) {
 	for p, want := range map[Policy]string{
 		Public:                  "public",
+		SelfService:             "self-service",
 		Authenticated:           "authenticated",
 		Permission("user:read"): "permission:user:read",
 		{}:                      "tanımsız",
@@ -234,4 +235,32 @@ func TestPolicyString(t *testing.T) {
 			t.Errorf("String() = %q, want %q", got, want)
 		}
 	}
+}
+
+func TestRouterPasswordChangeRequired(t *testing.T) {
+	resolver := &mustChangeResolver{}
+	rt, mux := newTestRouter(resolver)
+	ok := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+	rt.Handle("GET /me", SelfService, ok)
+	rt.Handle("GET /dashboard", Authenticated, ok)
+	rt.Handle("GET /users", Permission("user:read"), ok)
+
+	if rec := serve(mux, "/me", "u1"); rec.Code != http.StatusOK {
+		t.Errorf("SelfService route'u açık olmalı: %d", rec.Code)
+	}
+	for _, path := range []string{"/dashboard", "/users"} {
+		rec := serve(mux, path, "u1")
+		if rec.Code != http.StatusForbidden || !strings.Contains(rec.Body.String(), `"code":"PASSWORD_CHANGE_REQUIRED"`) {
+			t.Errorf("%s: yanıt = %d %s", path, rec.Code, rec.Body.String())
+		}
+	}
+}
+
+// mustChangeResolver, parolasını değiştirmesi gereken bir yöneticiyi taklit eder.
+type mustChangeResolver struct{}
+
+func (mustChangeResolver) Permissions(ctx context.Context, userID string) (*Permissions, error) {
+	p := NewPermissions(userID, []Grant{{Permission: "user:read", ScopeType: ScopeUniversity}})
+	p.RequirePasswordChange()
+	return p, nil
 }

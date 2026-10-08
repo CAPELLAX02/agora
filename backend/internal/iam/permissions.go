@@ -17,8 +17,9 @@ import (
 
 // AccessState, kullanıcının erişimle ilgili güncel durumudur.
 type AccessState struct {
-	Status      UserStatus
-	PermVersion int
+	Status             UserStatus
+	PermVersion        int
+	MustChangePassword bool
 	// Now, veritabanının saatidir. Rol atamalarının valid_from varsayılanı da
 	// veritabanı saatiyle yazılır: atamanın "başlamış mı" sorusu aynı saatle
 	// cevaplanmazsa, uygulama ve veritabanı saatleri arasındaki milisaniyelik bir
@@ -34,8 +35,8 @@ func (r *Repository) AccessState(ctx context.Context, userID string) (AccessStat
 		status string
 	)
 	err := r.db.QueryRow(ctx,
-		`SELECT status, perm_version, now() FROM iam.users WHERE id = $1`, userID,
-	).Scan(&status, &s.PermVersion, &s.Now)
+		`SELECT status, perm_version, must_change_password, now() FROM iam.users WHERE id = $1`, userID,
+	).Scan(&status, &s.PermVersion, &s.MustChangePassword, &s.Now)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return AccessState{}, ErrNotFound
 	}
@@ -105,6 +106,19 @@ func (pr *PermissionResolver) Permissions(ctx context.Context, userID string) (*
 		return nil, authz.ErrAccountInactive
 	}
 
+	perms, err := pr.grants(ctx, repo, userID, state)
+	if err != nil {
+		return nil, err
+	}
+	// Parola zorunluluğu önbelleğe girmez: her istekte güncel durumdan gelir.
+	if state.MustChangePassword {
+		perms.RequirePasswordChange()
+	}
+	return perms, nil
+}
+
+// grants, yetkileri önbellekten ya da veritabanından çözer.
+func (pr *PermissionResolver) grants(ctx context.Context, repo *Repository, userID string, state AccessState) (*authz.Permissions, error) {
 	key := permissionsKey(userID, state.PermVersion)
 
 	data, err := pr.rdb.Get(ctx, key).Bytes()

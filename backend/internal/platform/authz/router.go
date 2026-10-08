@@ -15,6 +15,7 @@ type policyKind int
 const (
 	_ policyKind = iota // sıfır değer: politika verilmemiş
 	public
+	selfService
 	authenticated
 	permission
 )
@@ -30,6 +31,11 @@ var (
 	// Public, herkesin erişebildiği route'lardır (giriş, sağlık, katalog).
 	Public = Policy{kind: public}
 
+	// SelfService, kullanıcının kendi hesabıyla ilgili route'lardır (/me, parola
+	// değiştirme, oturumlarım). Parolasını değiştirmesi gereken kullanıcı da erişebilir:
+	// ilk girişte zorunlu parola değişikliği bu route'larla tamamlanır.
+	SelfService = Policy{kind: selfService}
+
 	// Authenticated, giriş yapmış ve hesabı aktif her kullanıcının erişebildiği route'lardır.
 	Authenticated = Policy{kind: authenticated}
 )
@@ -44,6 +50,8 @@ func (p Policy) String() string {
 	switch p.kind {
 	case public:
 		return "public"
+	case selfService:
+		return "self-service"
 	case authenticated:
 		return "authenticated"
 	case permission:
@@ -76,7 +84,7 @@ func (rt *Router) Handle(pattern string, policy Policy, h http.Handler, mws ...h
 
 	switch policy.kind {
 	case public:
-	case authenticated, permission:
+	case selfService, authenticated, permission:
 		h = httpx.Chain(h, rt.authenticate, rt.authorize(policy))
 	default:
 		panic(fmt.Sprintf("authz: %q route'u için erişim politikası tanımlanmamış", pattern))
@@ -109,6 +117,12 @@ func (rt *Router) authorize(policy Policy) httpx.Middleware {
 				rt.logger.Error("yetkiler çözülemedi",
 					"err", err, "user_id", principal.UserID, "request_id", httpx.RequestIDFrom(r.Context()))
 				httpx.InternalServerError(w, r)
+				return
+			}
+
+			if perms.PasswordChangeRequired() && policy.kind != selfService {
+				problem(w, r, http.StatusForbidden, "PASSWORD_CHANGE_REQUIRED",
+					"Devam etmek için parolanızı değiştirmelisiniz.")
 				return
 			}
 

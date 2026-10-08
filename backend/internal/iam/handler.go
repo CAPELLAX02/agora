@@ -10,6 +10,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/CAPELLAX02/agora/backend/internal/iam/password"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authn"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authz"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/httpx"
@@ -32,6 +33,7 @@ type AuthService interface {
 	Login(ctx context.Context, in LoginInput) (Tokens, error)
 	Refresh(ctx context.Context, rawToken string) (Tokens, error)
 	Logout(ctx context.Context, rawToken string) error
+	ChangePassword(ctx context.Context, in ChangePasswordInput) error
 }
 
 // ProfileStore, profil okuma işlemidir. *Repository bunu sağlar.
@@ -62,8 +64,10 @@ func (h *Handler) Register(rt *authz.Router, limitLogin httpx.Middleware) {
 	rt.HandleFunc("POST /api/v1/auth/refresh", authz.Public, h.refresh)
 	rt.HandleFunc("POST /api/v1/auth/logout", authz.Public, h.logout)
 
-	rt.HandleFunc("GET /api/v1/me", authz.Authenticated, h.me)
-	rt.HandleFunc("GET /api/v1/me/permissions", authz.Authenticated, h.myPermissions)
+	// Kendi hesabıyla ilgili uçlar: parolasını değiştirmesi gereken kullanıcı da erişir.
+	rt.HandleFunc("GET /api/v1/me", authz.SelfService, h.me)
+	rt.HandleFunc("GET /api/v1/me/permissions", authz.SelfService, h.myPermissions)
+	rt.HandleFunc("POST /api/v1/me/password", authz.SelfService, h.changePassword)
 
 	rt.HandleFunc("GET /api/v1/users/{id}", authz.Permission("user:read"), h.getUser)
 }
@@ -79,6 +83,11 @@ type loginRequest struct {
 // token'ı gövdede değil çerezde gönderir.
 type refreshRequest struct {
 	RefreshToken string `json:"refresh_token"`
+}
+
+type changePasswordRequest struct {
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
 }
 
 type tokenResponse struct {
@@ -250,6 +259,75 @@ func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
 		profileResponse: toProfileResponse(p),
 		SessionID:       principal.SessionID,
 	})
+}
+
+// changePassword, oturum açmış kullanıcının parolasını değiştirir. İsteği yapan
+// oturum açık kalır, diğer bütün oturumlar kapatılır.
+func (h *Handler) changePassword(w http.ResponseWriter, r *http.Request) {
+	principal, ok := authn.PrincipalFrom(r.Context())
+	if !ok {
+		h.serverError(w, r, errors.New("iam: /me/password kimlik doğrulama olmadan çağrıldı"))
+		return
+	}
+
+	var req changePasswordRequest
+	if err := httpx.ReadJSON(w, r, &req); err != nil {
+		httpx.InvalidBody(w, r, err)
+		return
+	}
+	var errs []httpx.FieldError
+	if req.CurrentPassword == "" {
+		errs = append(errs, httpx.FieldError{Field: "current_password", Message: "Mevcut parola zorunlu."})
+	}
+	if req.NewPassword == "" {
+		errs = append(errs, httpx.FieldError{Field: "new_password", Message: "Yeni parola zorunlu."})
+	}
+	if len(errs) > 0 {
+		httpx.ValidationFailed(w, r, errs)
+		return
+	}
+
+	err := h.auth.ChangePassword(r.Context(), ChangePasswordInput{
+		UserID:          principal.UserID,
+		SessionID:       principal.SessionID,
+		CurrentPassword: req.CurrentPassword,
+		NewPassword:     req.NewPassword,
+	})
+	var policyErr *PolicyError
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+	case errors.As(err, &policyErr):
+		httpx.ValidationFailed(w, r, policyFieldErrors("new_password", policyErr))
+	case errors.Is(err, ErrInvalidCurrentPassword):
+		_ = httpx.WriteProblem(w, r, httpx.Problem{
+			Status: http.StatusBadRequest,
+			Code:   "INVALID_CURRENT_PASSWORD",
+			Detail: "Mevcut parola hatalı.",
+			Errors: []httpx.FieldError{{Field: "current_password", Message: "Mevcut parola hatalı."}},
+		})
+	default:
+		h.authError(w, r, ClientMobile, err) // kilit (429) ve beklenmeyen hatalar; çereze dokunulmaz
+	}
+}
+
+// violationMessages, parola politikası ihlallerinin kullanıcıya gösterilen karşılıklarıdır.
+var violationMessages = map[password.Violation]string{
+	password.TooShort:             "Parola en az 10 karakter olmalı.",
+	password.TooLong:              "Parola en fazla 128 karakter olabilir.",
+	password.TooCommon:            "Bu parola çok yaygın ve kolay tahmin edilir.",
+	password.ContainsPersonalInfo: "Parola kullanıcı adınızı, adınızı ya da e-postanızı içermemeli.",
+	password.SameAsCurrent:        "Yeni parola mevcut parolanızla aynı olamaz.",
+}
+
+// policyFieldErrors, politika ihlallerini alan hatalarına çevirir. Code makine
+// okunur ihlal kodudur, istemci kendi mesajını seçebilir.
+func policyFieldErrors(field string, e *PolicyError) []httpx.FieldError {
+	errs := make([]httpx.FieldError, 0, len(e.Violations))
+	for _, v := range e.Violations {
+		errs = append(errs, httpx.FieldError{Field: field, Message: violationMessages[v], Code: string(v)})
+	}
+	return errs
 }
 
 // myPermissions, kullanıcının yetkilerini döndürür. Web arayüzü menüleri ve

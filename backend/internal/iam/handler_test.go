@@ -715,3 +715,70 @@ func TestHTTPPermissions(t *testing.T) {
 		}
 	})
 }
+
+// TestHTTPMustChangePassword, ilk girişte parola değiştirme zorunluluğunun uçtan uca
+// işlediğini doğrular: kullanıcı sadece kendi hesabıyla ilgili uçlara erişebilir,
+// parolasını değiştirince her şey açılır.
+func TestHTTPMustChangePassword(t *testing.T) {
+	e := newHTTPEnv(t)
+	ctx := context.Background()
+	userID := e.addUser(t, "P90002")
+	if err := iam.NewRepository(e.pool).AssignRole(ctx, userID, "SYSTEM_ADMIN", iam.ScopeUniversity, ""); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.pool.Exec(ctx, `UPDATE iam.users SET must_change_password = true WHERE id = $1`, userID); err != nil {
+		t.Fatal(err)
+	}
+
+	res := e.do(t, nil, "POST", "/api/v1/auth/login", mobile, credentials("P90002"))
+	var tok tokenBody
+	res.json(t, &tok)
+	if !tok.MustChangePassword {
+		t.Fatal("giriş yanıtı must_change_password = true demeli")
+	}
+	bearer := map[string]string{"Authorization": "Bearer " + tok.AccessToken}
+
+	if res := e.do(t, nil, "GET", "/api/v1/me", bearer, nil); res.status != http.StatusOK {
+		t.Errorf("/me açık olmalı: %d", res.status)
+	}
+	res = e.do(t, nil, "GET", "/api/v1/users/"+userID, bearer, nil)
+	if res.status != http.StatusForbidden || res.code(t) != "PASSWORD_CHANGE_REQUIRED" {
+		t.Fatalf("parola değişmeden yetkili uç: %d\n%s", res.status, res.body)
+	}
+
+	t.Run("politika ihlali alan koduyla döner", func(t *testing.T) {
+		res := e.do(t, nil, "POST", "/api/v1/me/password", bearer,
+			map[string]string{"current_password": pw, "new_password": "kisa"})
+		var p struct {
+			Code   string `json:"code"`
+			Errors []struct {
+				Field string `json:"field"`
+				Code  string `json:"code"`
+			} `json:"errors"`
+		}
+		res.json(t, &p)
+		if res.status != 400 || p.Code != "VALIDATION_FAILED" || len(p.Errors) == 0 ||
+			p.Errors[0].Field != "new_password" || p.Errors[0].Code != "TOO_SHORT" {
+			t.Errorf("yanıt = %d %s", res.status, res.body)
+		}
+	})
+
+	t.Run("yanlış mevcut parola", func(t *testing.T) {
+		res := e.do(t, nil, "POST", "/api/v1/me/password", bearer,
+			map[string]string{"current_password": "yanlış parola 99", "new_password": newPW})
+		if res.status != 400 || res.code(t) != "INVALID_CURRENT_PASSWORD" {
+			t.Errorf("yanıt = %d %s", res.status, res.body)
+		}
+	})
+
+	res = e.do(t, nil, "POST", "/api/v1/me/password", bearer,
+		map[string]string{"current_password": pw, "new_password": newPW})
+	if res.status != http.StatusNoContent {
+		t.Fatalf("parola değiştirme: %d\n%s", res.status, res.body)
+	}
+
+	// Aynı access token ile artık yetkili uçlar açık: zorunluluk her istekte güncel okunur.
+	if res := e.do(t, nil, "GET", "/api/v1/users/"+userID, bearer, nil); res.status != http.StatusOK {
+		t.Errorf("parola değiştikten sonra: %d\n%s", res.status, res.body)
+	}
+}

@@ -39,8 +39,9 @@ type Target struct {
 
 // Permissions, bir kullanıcının belirli bir andaki yetkileridir.
 type Permissions struct {
-	userID string
-	grants map[string][]Grant // yetki kodu → kapsamlar
+	userID                 string
+	grants                 map[string][]Grant // yetki kodu → kapsamlar
+	passwordChangeRequired bool
 }
 
 // NewPermissions, grant listesinden bir yetki kümesi oluşturur.
@@ -55,6 +56,17 @@ func NewPermissions(userID string, grants []Grant) *Permissions {
 // UserID, yetkilerin sahibidir.
 func (p *Permissions) UserID() string {
 	return p.userID
+}
+
+// RequirePasswordChange, kullanıcının parolasını değiştirmeden SelfService dışındaki
+// route'lara erişemeyeceğini işaretler.
+func (p *Permissions) RequirePasswordChange() {
+	p.passwordChangeRequired = true
+}
+
+// PasswordChangeRequired, kullanıcının parolasını değiştirmesi gerekip gerekmediğini söyler.
+func (p *Permissions) PasswordChangeRequired() bool {
+	return p.passwordChangeRequired
 }
 
 // Has, yetkinin herhangi bir kapsamda verilip verilmediğini söyler. Route

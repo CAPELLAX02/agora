@@ -15,10 +15,13 @@ type Problem struct {
 	Errors    []FieldError `json:"errors,omitempty"`
 }
 
-// FieldError, doğrulama hatalarında tek bir alana ait hatayı anlatır.
+// FieldError, doğrulama hatalarında tek bir alana ait hatayı anlatır. Message
+// kullanıcıya gösterilebilir, Code (varsa) makine okunurdur: istemci kendi dilinde
+// mesaj seçmek için onu kullanır.
 type FieldError struct {
 	Field   string `json:"field"`
 	Message string `json:"message"`
+	Code    string `json:"code,omitempty"`
 }
 
 // WriteProblem, p'yi application/problem+json olarak yazar.

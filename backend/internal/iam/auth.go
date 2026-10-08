@@ -165,7 +165,7 @@ func (a *Auth) Login(ctx context.Context, in LoginInput) (Tokens, error) {
 		if !errors.Is(err, password.ErrMismatch) {
 			return Tokens{}, err
 		}
-		return Tokens{}, a.wrongPassword(ctx, user, username, now)
+		return Tokens{}, a.wrongPassword(ctx, user, username, now, "wrong_password")
 	}
 
 	// Hesap durumu parola doğrulandıktan SONRA kontrol edilir: yanlış parolayla
@@ -221,7 +221,7 @@ func (a *Auth) Login(ctx context.Context, in LoginInput) (Tokens, error) {
 
 // wrongPassword, başarısız denemeyi sayar, olayı yazar ve dönülecek hatayı belirler.
 // Sayaç ve olay tek transaction'da yazılır.
-func (a *Auth) wrongPassword(ctx context.Context, user User, username string, now time.Time) error {
+func (a *Auth) wrongPassword(ctx context.Context, user User, username string, now time.Time, reason string) error {
 	var lockedUntil *time.Time
 	err := db.InTx(ctx, a.pool, func(tx pgx.Tx) error {
 		var err error
@@ -233,7 +233,7 @@ func (a *Auth) wrongPassword(ctx context.Context, user User, username string, no
 
 		if err := audit.RecordSecurity(ctx, tx, audit.SecurityEvent{
 			Type: audit.EventLoginFailed, UserID: user.ID, UsernameAttempted: username,
-			Details: map[string]any{"reason": "wrong_password"},
+			Details: map[string]any{"reason": reason},
 		}); err != nil {
 			return err
 		}

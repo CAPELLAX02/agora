@@ -23,11 +23,12 @@ type RevokeReason string
 
 // Oturum sonlandırma sebepleri.
 const (
-	RevokeLogout        RevokeReason = "LOGOUT"
-	RevokeLogoutAll     RevokeReason = "LOGOUT_ALL"
-	RevokeReuseDetected RevokeReason = "REUSE_DETECTED"
-	RevokePasswordReset RevokeReason = "PASSWORD_RESET"
-	RevokeAdmin         RevokeReason = "ADMIN"
+	RevokeLogout         RevokeReason = "LOGOUT"
+	RevokeLogoutAll      RevokeReason = "LOGOUT_ALL"
+	RevokeReuseDetected  RevokeReason = "REUSE_DETECTED"
+	RevokePasswordChange RevokeReason = "PASSWORD_CHANGE"
+	RevokePasswordReset  RevokeReason = "PASSWORD_RESET"
+	RevokeAdmin          RevokeReason = "ADMIN"
 )
 
 // NewSession, oluşturulacak oturumun bilgileridir.
@@ -199,6 +200,46 @@ func (r *Repository) RecordLoginSuccess(ctx context.Context, userID string, at t
 	)
 	if err != nil {
 		return fmt.Errorf("iam: başarılı giriş kaydedilemedi: %w", err)
+	}
+	return nil
+}
+
+// RevokeOtherSessions, kullanıcının keepSessionID dışındaki bütün açık oturumlarını
+// sonlandırır ve sonlandırılan oturumların kimliklerini döndürür. keepSessionID boşsa
+// bütün oturumlar sonlandırılır.
+func (r *Repository) RevokeOtherSessions(ctx context.Context, userID, keepSessionID string, at time.Time, reason RevokeReason) ([]string, error) {
+	rows, err := r.db.Query(ctx, `
+		UPDATE iam.sessions SET revoked_at = $3, revoke_reason = $4
+		WHERE user_id = $1 AND revoked_at IS NULL AND ($2::uuid IS NULL OR id <> $2::uuid)
+		RETURNING id`,
+		userID, nullable(keepSessionID), at, string(reason),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("iam: oturumlar sonlandırılamadı: %w", err)
+	}
+	ids, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return nil, fmt.Errorf("iam: oturumlar sonlandırılamadı: %w", err)
+	}
+	return ids, nil
+}
+
+// UpdatePassword, parolayı değiştirir. Parola değiştirme zorunluluğu, başarısız giriş
+// sayacı ve kilit de sıfırlanır: kullanıcı yeni parolasını bildiğini kanıtlamıştır.
+func (r *Repository) UpdatePassword(ctx context.Context, userID, hash string, at time.Time) error {
+	_, err := r.db.Exec(ctx, `
+		UPDATE iam.users
+		SET password_hash = $2,
+		    password_changed_at = $3,
+		    must_change_password = false,
+		    failed_login_count = 0,
+		    locked_until = NULL,
+		    updated_at = $3
+		WHERE id = $1`,
+		userID, hash, at,
+	)
+	if err != nil {
+		return fmt.Errorf("iam: parola güncellenemedi: %w", err)
 	}
 	return nil
 }

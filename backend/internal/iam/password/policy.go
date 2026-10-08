@@ -27,6 +27,7 @@ const (
 	TooLong              Violation = "TOO_LONG"
 	TooCommon            Violation = "TOO_COMMON"
 	ContainsPersonalInfo Violation = "CONTAINS_PERSONAL_INFO"
+	SameAsCurrent        Violation = "SAME_AS_CURRENT" // parola değiştirmede: yeni parola eskisiyle aynı
 )
 
 //go:embed common.txt
