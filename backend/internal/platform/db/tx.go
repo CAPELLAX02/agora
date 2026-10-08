@@ -58,9 +58,10 @@ func InTx(ctx context.Context, pool *pgxpool.Pool, fn func(tx pgx.Tx) error) (er
 
 // PostgreSQL hata kodları (SQLSTATE).
 const (
-	codeUniqueViolation    = "23505"
-	codeExclusionViolation = "23P01"
-	codeCheckViolation     = "23514"
+	codeUniqueViolation     = "23505"
+	codeExclusionViolation  = "23P01"
+	codeCheckViolation      = "23514"
+	codeForeignKeyViolation = "23503"
 )
 
 // IsConflict, hatanın bir benzersizlik (UNIQUE) ya da dışlama (EXCLUDE) kısıtı
@@ -79,4 +80,11 @@ func IsConflict(err error) bool {
 func IsCheckViolation(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == codeCheckViolation
+}
+
+// IsForeignKeyViolation, hatanın bir yabancı anahtar ihlali olup olmadığını söyler
+// (ör. var olmayan bir kayda başvuru).
+func IsForeignKeyViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == codeForeignKeyViolation
 }

@@ -873,6 +873,245 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /api/v1/buildings:
+    get:
+      tags: [Organizasyon]
+      summary: Binaları listeler
+      description: Yerleşke ve bina koduna göre sıralı. Herkese açık.
+      operationId: listBuildings
+      security: []
+      parameters:
+        - name: campus_id
+          in: query
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IncludeInactive"
+      responses:
+        "200":
+          description: Binalar
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Building" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+    post:
+      tags: [Organizasyon]
+      summary: Bina oluşturur
+      description: Yetkinin binanın birimini kapsaması gerekir. Birime ait olmayan bina için üniversite kapsamı gerekir.
+      operationId: createBuilding
+      x-agora-permission: classroom:manage
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [campus_id, code, name]
+              properties:
+                campus_id: { type: string, format: uuid }
+                faculty_id: { type: string, format: uuid }
+                code: { type: string, pattern: "^[A-Z0-9-]{1,20}$" }
+                name: { type: string, minLength: 1, maxLength: 200 }
+      responses:
+        "201":
+          description: Bina oluşturuldu
+          headers:
+            ETag: { schema: { type: string } }
+            Location: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Building" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/CodeTaken" }
+
+  /api/v1/buildings/{id}:
+    get:
+      tags: [Organizasyon]
+      summary: Bir binayı döndürür
+      operationId: getBuilding
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Bina
+          headers:
+            ETag: { schema: { type: string }, description: Güncellemede If-Match ile geri gönderilir }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Building" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Organizasyon]
+      summary: Binayı günceller
+      description: |
+        Ad, birim ve etkinlik değiştirilebilir; yerleşke ve kod değiştirilemez. Hem mevcut hem
+        yeni birim yetki kapsamında olmalıdır. İyimser kilit: `If-Match` zorunludur.
+      operationId: updateBuilding
+      x-agora-permission: classroom:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [name, is_active]
+              properties:
+                faculty_id: { type: string, format: uuid }
+                name: { type: string, minLength: 1, maxLength: 200 }
+                is_active: { type: boolean }
+      responses:
+        "200":
+          description: Güncel bina
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Building" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "412": { $ref: "#/components/responses/VersionMismatch" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
+
+  /api/v1/classrooms:
+    get:
+      tags: [Organizasyon]
+      summary: Derslikleri listeler
+      description: Bina ve derslik koduna göre sıralı, cursor ile sayfalanır. Herkese açık.
+      operationId: listClassrooms
+      security: []
+      parameters:
+        - name: building_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: campus_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: room_type
+          in: query
+          schema: { $ref: "#/components/schemas/RoomType" }
+        - name: min_capacity
+          in: query
+          schema: { type: integer, minimum: 0 }
+        - $ref: "#/components/parameters/Query"
+        - $ref: "#/components/parameters/IncludeInactive"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Derslikler
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Classroom" }
+                  next_cursor: { type: string }
+        "400": { $ref: "#/components/responses/BadRequest" }
+    post:
+      tags: [Organizasyon]
+      summary: Derslik oluşturur
+      operationId: createClassroom
+      x-agora-permission: classroom:manage
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ClassroomInput" }
+      responses:
+        "201":
+          description: Derslik oluşturuldu
+          headers:
+            ETag: { schema: { type: string } }
+            Location: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Classroom" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/CodeTaken" }
+
+  /api/v1/classrooms/{id}:
+    get:
+      tags: [Organizasyon]
+      summary: Bir dersliği döndürür
+      operationId: getClassroom
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Derslik
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Classroom" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Organizasyon]
+      summary: Dersliği günceller
+      description: Bina ve kod değiştirilemez. İyimser kilit `If-Match` zorunludur.
+      operationId: updateClassroom
+      x-agora-permission: classroom:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [name, capacity, exam_capacity, room_type, is_active]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 200 }
+                capacity: { type: integer, minimum: 0, maximum: 2000 }
+                exam_capacity: { type: integer, minimum: 0, description: Kapasiteden büyük olamaz }
+                room_type: { $ref: "#/components/schemas/RoomType" }
+                features: { type: array, items: { $ref: "#/components/schemas/ClassroomFeature" } }
+                is_active: { type: boolean }
+      responses:
+        "200":
+          description: Güncel derslik
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Classroom" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "412": { $ref: "#/components/responses/VersionMismatch" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
+
   /api/v1/faculties:
     get:
       tags: [Organizasyon]
@@ -1070,6 +1309,12 @@ components:
       in: query
       description: Önceki yanıtın `next_cursor` değeri (opak)
       schema: { type: string }
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      description: Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner.
+      schema: { type: string, examples: ['"3"'] }
     IncludeInactive:
       name: include_inactive
       in: query
@@ -1114,6 +1359,21 @@ components:
       description: |
         `FORBIDDEN` (gerekli yetki yok), `ACCOUNT_DISABLED` (hesap askıya alınmış veya
         kapatılmış) ya da `PASSWORD_CHANGE_REQUIRED` (önce parola değiştirilmeli)
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    CodeTaken:
+      description: "`CODE_TAKEN`: aynı kodla kayıt zaten var"
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    VersionMismatch:
+      description: "`VERSION_MISMATCH`: kayıt siz düzenlerken başka biri tarafından değiştirildi"
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    PreconditionRequired:
+      description: "`PRECONDITION_REQUIRED`: If-Match başlığı eksik"
       content:
         application/problem+json:
           schema: { $ref: "#/components/schemas/Problem" }
@@ -1404,6 +1664,76 @@ components:
         ip: { type: [string, "null"] }
         user_agent: { type: [string, "null"] }
         request_id: { type: [string, "null"] }
+
+    RoomType:
+      type: string
+      enum: [LECTURE, LAB, AMPHI, OFFICE, ONLINE]
+    ClassroomFeature:
+      type: string
+      enum: [PROJECTOR, SMART_BOARD, COMPUTERS, ACCESSIBLE, AIR_CONDITIONING, SOUND_SYSTEM, RECORDING]
+
+    Building:
+      type: object
+      required: [id, code, name, campus, faculty, is_active, classroom_count, version]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, examples: ["MUH-A"] }
+        name: { type: string }
+        campus:
+          type: object
+          required: [id, code, name]
+          properties:
+            id: { type: string, format: uuid }
+            code: { type: string }
+            name: { type: string }
+        faculty:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/Ref"
+        is_active: { type: boolean }
+        classroom_count: { type: integer, description: Aktif derslik sayısı }
+        version: { type: integer }
+
+    ClassroomInput:
+      type: object
+      additionalProperties: false
+      required: [building_id, code, name, capacity, exam_capacity, room_type]
+      properties:
+        building_id: { type: string, format: uuid }
+        code: { type: string, pattern: "^[A-Z0-9-]{1,20}$" }
+        name: { type: string, minLength: 1, maxLength: 200 }
+        capacity: { type: integer, minimum: 0, maximum: 2000 }
+        exam_capacity: { type: integer, minimum: 0, description: Kapasiteden büyük olamaz }
+        room_type: { $ref: "#/components/schemas/RoomType" }
+        features: { type: array, items: { $ref: "#/components/schemas/ClassroomFeature" } }
+
+    Classroom:
+      type: object
+      required: [id, code, name, building, campus, capacity, exam_capacity, room_type, features, is_active, version]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, examples: ["A101"] }
+        name: { type: string }
+        building:
+          type: object
+          required: [id, code, name]
+          properties:
+            id: { type: string, format: uuid }
+            code: { type: string }
+            name: { type: string }
+        campus:
+          type: object
+          required: [id, code, name]
+          properties:
+            id: { type: string, format: uuid }
+            code: { type: string }
+            name: { type: string }
+        capacity: { type: integer }
+        exam_capacity: { type: integer }
+        room_type: { $ref: "#/components/schemas/RoomType" }
+        features: { type: array, items: { $ref: "#/components/schemas/ClassroomFeature" } }
+        is_active: { type: boolean }
+        version: { type: integer }
 
     UnitType:
       type: string

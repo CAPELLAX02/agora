@@ -20,6 +20,7 @@ func (app *application) routes() http.Handler {
 	rt.HandleFunc("GET /readyz", authz.Public, app.readyz)
 
 	org.NewHandler(org.NewRepository(app.db), app.logger).Register(rt)
+	org.NewRoomsHandler(org.NewRepository(app.db), app.logger).Register(rt)
 
 	// Refresh çerezi yerel geliştirmede (http://localhost) Secure olamaz.
 	secureCookie := !app.cfg.IsDevelopment()
