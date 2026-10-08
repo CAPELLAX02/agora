@@ -14,7 +14,7 @@ export
 
 .DEFAULT_GOAL := help
 
-.PHONY: help up down ps logs psql api migrate-up migrate-down migrate-status migration seed \
+.PHONY: help up down ps logs psql redis api migrate-up migrate-down migrate-status migration seed \
         test test-unit cover vet lint vuln fmt contract-lint check
 
 help: ## Komutları listeler
@@ -39,6 +39,9 @@ psql: ## agora veritabanına psql ile bağlanır
 	docker compose exec postgres psql -U agora -d agora
 
 # --- Uygulama ----------------------------------------------------------------
+
+redis: ## Redis'e redis-cli ile bağlanır
+	docker compose exec redis redis-cli
 
 api: ## API'yi çalıştırır
 	go -C $(BACKEND) run ./cmd/api

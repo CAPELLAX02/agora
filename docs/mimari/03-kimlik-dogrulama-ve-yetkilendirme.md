@@ -113,10 +113,19 @@ sequenceDiagram
 
 | Katman | Kural (başlangıç değerleri) |
 | --- | --- |
-| IP bazlı | `/auth/login`: IP başına 20 istek/dk (Redis, kayan pencere) |
+| IP bazlı | `/auth/login`: IP başına 20 istek/dk (Redis, kayan pencere, `AGORA_LOGIN_RATE_LIMIT`). IPv6'da tek adres değil /64 ağı sayılır. Kampüs ağı tek bir NAT IP'sinin arkasındaysa ders seçme gibi yoğun dönemlerde sınır yükseltilmelidir |
 | Hesap bazlı | 5 başarısız denemeden sonra artan bekleme (1, 2, 4, 8 … dk, üst sınır 1 saat). Kalıcı kilit yok (DoS'a açık olur) |
 | Genel API | Kullanıcı başına token bucket (ör. 20 istek/sn patlama, 5/sn sürekli). Ders seçme uç noktaları için ayrı ve daha sıkı kova |
 | Bildirim | Şüpheli giriş (yeni cihaz/IP, çok sayıda başarısız deneme) → kullanıcıya bildirim |
+
+**Redis'e ulaşılamazsa:**
+
+| Kontrol | Davranış | Gerekçe |
+| --- | --- | --- |
+| Oturum iptal listesi (`revoked_sid`) | **Fail closed**: korumalı istekler 503 alır | Tek savunma hattı. Kesinti boyunca iptal edilmiş oturumların çalışması kabul edilemez |
+| Giriş hız sınırı | **Fail open**: istek geçer, hata log'a yazılır | Hesap bazlı kilitleme veritabanında çalışmaya devam eder. Kesintinin tüm girişleri durdurması daha büyük zarar |
+
+Redis `/readyz` kontrolüne dahildir: kesinti sırasında instance trafik almaz.
 
 ### 3.8 Web güvenliği
 

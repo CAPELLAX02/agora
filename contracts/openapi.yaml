@@ -84,6 +84,9 @@ paths:
         Var olmayan kullanıcı ile yanlış parola aynı yanıtı alır. 5 başarısız denemeden
         sonra hesap 1 dakika kilitlenir ve her yeni başarısız denemede süre ikiye katlanır
         (en fazla 1 saat).
+
+        Ayrıca IP başına hız sınırı vardır (varsayılan dakikada 20 deneme, IPv6'da /64
+        ağı başına). Sınır doğru ya da yanlış her denemeyi sayar.
       operationId: login
       security: []
       parameters:
@@ -115,10 +118,12 @@ paths:
         "413": { $ref: "#/components/responses/PayloadTooLarge" }
         "415": { $ref: "#/components/responses/UnsupportedMediaType" }
         "429":
-          description: "`ACCOUNT_LOCKED`: çok sayıda başarısız deneme, hesap geçici olarak kilitli"
+          description: |
+            `ACCOUNT_LOCKED` (bu hesapta çok sayıda başarısız deneme, hesap geçici olarak
+            kilitli) ya da `RATE_LIMITED` (bu IP'den çok sayıda giriş denemesi)
           headers:
             Retry-After:
-              description: Kilidin bitmesine kalan saniye
+              description: Kilidin bitmesine ya da yeni bir deneme hakkının açılmasına kalan saniye
               schema: { type: integer, minimum: 0 }
           content:
             application/problem+json:
@@ -202,6 +207,7 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Me" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
 
   /api/v1/faculties:
     get:
@@ -411,11 +417,20 @@ components:
           schema: { $ref: "#/components/schemas/Problem" }
     Unauthorized:
       description: |
-        `AUTHENTICATION_REQUIRED` (Bearer token yok) ya da `INVALID_TOKEN` (geçersiz
-        veya süresi dolmuş). İstemci bir kez refresh deneyip isteği tekrarlamalıdır.
+        `AUTHENTICATION_REQUIRED` (Bearer token yok), `INVALID_TOKEN` (geçersiz veya
+        süresi dolmuş) ya da `SESSION_REVOKED` (oturum çıkışla ya da güvenlik nedeniyle
+        sonlandırılmış). İstemci bir kez refresh deneyip isteği tekrarlamalıdır. Refresh
+        de başarısız olursa giriş ekranına yönlenmelidir.
       headers:
         WWW-Authenticate:
           schema: { type: string, examples: ['Bearer realm="agora", error="invalid_token"'] }
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    ServiceUnavailable:
+      description: |
+        `SERVICE_UNAVAILABLE`: oturum iptal listesine (Redis) geçici olarak ulaşılamıyor.
+        Token geçerli olabilir. İstemci oturumu kapatmadan biraz sonra tekrar denemelidir.
       content:
         application/problem+json:
           schema: { $ref: "#/components/schemas/Problem" }
