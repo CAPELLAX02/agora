@@ -52,6 +52,20 @@ func NotFound(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
+// ValidationFailed, istekteki alan hatalarını 400 problem yanıtı olarak yazar.
+func ValidationFailed(w http.ResponseWriter, r *http.Request, errs []FieldError) {
+	_ = WriteProblem(
+		w,
+		r,
+		Problem{
+			Status: http.StatusBadRequest,
+			Code:   "VALIDATION_FAILED",
+			Detail: "İstek geçersiz alanlar içeriyor.",
+			Errors: errs,
+		},
+	)
+}
+
 // MethodNotAllowed, 405 problem yanıtı yazar. Allow başlığını çağıran taraf ayarlar.
 func MethodNotAllowed(w http.ResponseWriter, r *http.Request) {
 	_ = WriteProblem(

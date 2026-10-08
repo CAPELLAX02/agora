@@ -7,6 +7,13 @@ import (
 	"net/http"
 )
 
+// ListResponse, liste döndüren tüm uç noktaların ortak yanıt zarfıdır.
+// Çıplak bir JSON dizisi yerine nesne döndürmek, ileride sayfalama gibi
+// alanları geriye dönük uyumluluğu bozmadan eklemeyi sağlar.
+type ListResponse[T any] struct {
+	Items []T `json:"items"`
+}
+
 // WriteJSON, v değerini JSON'a çevirir ve verilen durum koduyla yanıta yazar.
 func WriteJSON(w http.ResponseWriter, status int, v any) error {
 	return writeBody(w, status, "application/json; charset=utf-8", v)

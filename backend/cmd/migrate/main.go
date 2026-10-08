@@ -11,8 +11,6 @@ import (
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/pressly/goose/v3"
-	"github.com/pressly/goose/v3/lock"
 
 	"github.com/CAPELLAX02/agora/backend/internal/platform/config"
 	"github.com/CAPELLAX02/agora/backend/migrations"
@@ -52,15 +50,9 @@ func run(args []string) error {
 	}
 	defer db.Close()
 
-	locker, err := lock.NewPostgresSessionLocker()
+	provider, err := migrations.NewProvider(db)
 	if err != nil {
-		return fmt.Errorf("migration kilidi oluşturulamadı: %w", err)
-	}
-
-	provider, err := goose.NewProvider(goose.DialectPostgres, db, migrations.FS,
-		goose.WithSessionLocker(locker))
-	if err != nil {
-		return fmt.Errorf("goose başlatılamadı: %w", err)
+		return err
 	}
 
 	switch args[0] {
