@@ -1,12 +1,13 @@
 # 07 · Yol Haritası ve Geliştirme Sırası
 
-> **Durum:** Taslak v0.2 · Kararlar §5'te.
+> **Durum:** v0.3 · Kararlar §5'te · İlerleme ve "Bitti" kontrol listesi §6'da.
 
 ## 1. Kritik Karar: Önce Backend mi, Frontend mi?
 
 **Kısıtlar**
 
 - Backend kodunu **sen** yazıyorsun (Go öğrenme projesi). Bu yolun **kritik yolu** (critical path) ve en yavaş ilerleyecek kısım burası. Bu bir sorun değil, projenin amacı zaten bu.
+  - *Güncelleme (2026-10-08):* Go temelleri Ders 1–17'de atıldı. Bundan sonra kodun tamamını Claude yazıyor, Ahmet her dilimde inceliyor (bkz. §4 ve §5 #10).
 - Web ve mobil frontend'i ajan olarak **ben** hızlı üretebilirim.
 - Mobil en sona kalacak (karar verildi).
 
@@ -120,9 +121,10 @@ flowchart LR
 
 ## 4. Çalışma Kuralları (özet)
 
-- Her küçük başarıdan sonra Türkçe, önek kullanmayan commit, yazar CAPELLAX02.
-- `backend/` altına sadece sen yazarsın. Ben backend kodunu chat'te gösteririm ve istersen code review yaparım.
-- Her dilim sonunda doküman ve sözleşme güncellenir.
+- Her küçük başarıdan sonra Türkçe, önek kullanmayan commit, yazar CAPELLAX02. Her commit'ten önce `make check` (ve web'de karşılığı) yeşil olmalı.
+- Ders 17'ye kadar `backend/` kodunu Ahmet yazdı. Ders 17'den sonra bütün kodu Claude yazar. Ahmet her dilim sonunda inceler, "devam" demeden sonraki dilime geçilmez.
+- **Bir faz tamamen bitmeden sonrakine geçilmez:** önce o fazın backend'i eksiksiz (sözleşme, migration, servis, uç, test), sonra web ekranları, sonra uçtan uca testler ve doküman. §6'daki kontrol listesinin bütün maddeleri işaretlenince faz kapanır.
+- Her dilimde sözleşme koddan **önce** güncellenir. Doküman ve kontrol listesi aynı commit dizisinde güncellenir.
 
 ## 5. Kararlar (2026-10-05)
 
@@ -137,3 +139,71 @@ flowchart LR
 | 7 | Kampüs yaşamı özellikleri | Opsiyonel P2 |
 | 8 | Teslim takvimi | **Açık**. Tarihler öğrenilince fazlar sabitlenecek |
 | 9 | Seed müfredatı | Bilgisayar Mühendisliği'nin halka açık gerçek ders planı kullanılacak |
+| 10 | Kodu kim yazar (2026-10-08) | Ders 17'ye kadar backend'i Ahmet yazdı. Bundan sonra bütün kodu Claude yazar, Ahmet dilim sonlarında inceler |
+| 11 | Faz kapanışı (2026-10-08) | Bir faz, §6'daki bütün maddeleri (backend + web + e2e + doküman) bitmeden kapanmaz. Backend'i bitmemiş bir fazın web'ine geçilmez |
+
+## 6. İlerleme ve "Bitti" Kontrol Listesi
+
+> Her commit'te ilgili madde işaretlenir. ✅ bitti · 🔄 sürüyor · ⬜ başlanmadı · ⏭️ bilinçli olarak sonraki faza taşındı (gerekçesiyle).
+
+### Faz 0 — Temel
+
+| Durum | Madde | Not |
+| --- | --- | --- |
+| ✅ | Go modülü, klasör yapısı, `/healthz`, config, `slog`, graceful shutdown | Ders 1–5 |
+| ✅ | PostgreSQL + `pgxpool` + `/readyz`, goose migration'ları | Ders 6–9 |
+| ✅ | `/metrics`, Prometheus, Grafana (panolar kod olarak) | Ders 11–12 |
+| ✅ | Backend CI (gofmt, vet, staticcheck, govulncheck, race testleri) | |
+| ✅ | Redis | Ders 16 |
+| ⬜ | Mailpit (geliştirme SMTP) | Faz 1 şifre sıfırlamayla birlikte |
+| ⏭️ | MinIO | Faz 5'te dosya yüklemeyle birlikte eklenecek: kullanılmayan servis compose'da durmasın |
+| ⬜ | Web: Vite + React + TS + Tailwind + shadcn, ESLint/Prettier/Vitest | Faz 1 backend'i bitince |
+| ⬜ | Web: tasarım sistemi, açık/koyu tema, uygulama kabuğu, i18n | |
+| ⬜ | Web: Redux store, OpenAPI'den RTK Query istemcisi, MSW | |
+| ⬜ | Web CI | |
+
+### Faz 1 — IAM + Organizasyon + Seed
+
+**Backend**
+
+| Durum | Madde | Not |
+| --- | --- | --- |
+| ✅ | Parola hash'leme (argon2id) ve parola politikası | Ders 10 |
+| ✅ | JWT (Ed25519) elle | Ders 12 |
+| ✅ | Giriş, refresh rotasyonu ve yeniden kullanım tespiti, çıkış | Ders 14–15 |
+| ✅ | Hesap kilitleme, giriş hız sınırı, anında oturum iptali | Ders 14, 16 |
+| ✅ | Rol/yetki çözümleme, politikalı router (varsayılan ret), sürümlü yetki önbelleği | Ders 17 |
+| ⬜ | Güvenlik başlıkları ve CORS | |
+| ⬜ | Denetim izi (`audit.audit_log`) ve güvenlik olayları (`audit.security_events`), aylık partition | |
+| ⬜ | Parola değiştirme, `must_change_password` zorunluluğu | |
+| ⬜ | E-posta outbox'ı ve `cmd/worker` (SMTP, üstel geri çekilme) | |
+| ⬜ | Şifre sıfırlama (30 dk, tek kullanımlık token, bütün oturumlar iptal) | |
+| ⬜ | Oturumlarım: listeleme, tek oturumu kapatma, diğer oturumları kapatma | |
+| ⬜ | Kullanıcı yönetimi: listeleme, oluşturma (aktivasyon e-postasıyla), askıya alma | |
+| ⬜ | Rol kataloğu, rol atama ve sonlandırma (görevler ayrılığı, denetim izi) | |
+| ⬜ | Organizasyon: binalar ve derslikler | |
+| ⬜ | Program kaydı (`enrollment.student_programs`) ve danışman ataması | |
+| ⬜ | İş metrikleri (`agora_login_failures_total`, `agora_refresh_reuse_detected_total` …) | |
+| ⬜ | Seed üretici: ~92 bin öğrenci, ~10 bin personel, sentetik programlar, danışmanlar | |
+| ⬜ | MFA (TOTP) ve kurtarma kodları | P1, Faz 1'in son maddesi |
+
+**Web**
+
+| Durum | Madde |
+| --- | --- |
+| ⬜ | Giriş, oturum geri yükleme (sessiz refresh), çıkış |
+| ⬜ | Parola değiştirme (ilk girişte zorunlu), şifre sıfırlama |
+| ⬜ | Oturumlarım, profil |
+| ⬜ | Rol bazlı menü, kontrol paneli iskeleti |
+| ⬜ | Yönetim: kullanıcılar, rol atama, denetim kayıtları |
+
+**Kapanış**
+
+| Durum | Madde |
+| --- | --- |
+| ⬜ | Playwright e2e: giriş, ilk girişte parola değiştirme, şifre sıfırlama, rol atamasının anında etkisi |
+| ⬜ | Sözleşme ve dokümanlar güncel, CI yeşil |
+
+### Faz 2 ve sonrası
+
+Her faz başlarken §2'deki kapsamdan aynı biçimde ayrıntılı bir liste çıkarılır.
