@@ -15,6 +15,8 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
+	"github.com/CAPELLAX02/agora/backend/internal/platform/authn"
+	"github.com/CAPELLAX02/agora/backend/internal/platform/jwt"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/metrics"
 )
 
@@ -47,12 +49,14 @@ func TestHealthz(t *testing.T) {
 }
 
 // TestRoutes, uygulamanın gerçek route tablosunu ve middleware zincirini birlikte doğrular.
+// Veritabanına inmeyen yollar test edilir: istek handler'a ulaşmadan reddedilenler.
 func TestRoutes(t *testing.T) {
 	app := &application{
-		logger:    slog.New(slog.NewTextHandler(io.Discard, nil)),
-		metrics:   metrics.NewHTTP(prometheus.NewRegistry()),
-		version:   "test",
-		startedAt: time.Now(),
+		logger:        slog.New(slog.NewTextHandler(io.Discard, nil)),
+		metrics:       metrics.NewHTTP(prometheus.NewRegistry()),
+		authenticator: authn.New(jwt.NewVerifier("agora", "agora-api", nil, 0), time.Now),
+		version:       "test",
+		startedAt:     time.Now(),
 	}
 
 	srv := httptest.NewServer(app.routes())
@@ -67,6 +71,9 @@ func TestRoutes(t *testing.T) {
 		{http.MethodGet, "/readyz", http.StatusOK},
 		{http.MethodPost, "/healthz", http.StatusMethodNotAllowed},
 		{http.MethodGet, "/olmayan-yol", http.StatusNotFound},
+		{http.MethodPost, "/api/v1/auth/login", http.StatusBadRequest}, // X-Agora-Client yok
+		{http.MethodGet, "/api/v1/auth/login", http.StatusMethodNotAllowed},
+		{http.MethodGet, "/api/v1/me", http.StatusUnauthorized},
 	}
 
 	for _, tt := range tests {

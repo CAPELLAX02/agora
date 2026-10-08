@@ -30,6 +30,13 @@ type Config struct {
 	DBMinConns        int
 	DBMaxConnLifetime time.Duration
 	DBMaxConnIdleTime time.Duration
+
+	// Kimlik doğrulama
+	JWTPrivateKeyFile      string        // Ed25519 özel anahtarı (PEM). Development'ta boşsa geçici anahtar üretilir
+	AccessTokenTTL         time.Duration // access token ömrü
+	SessionIdleTimeout     time.Duration // bu süre refresh yapılmazsa oturum düşer
+	SessionAbsoluteTimeout time.Duration // oturumun refresh'lerle bile aşamayacağı üst sınır
+	PasswordHashWorkers    int           // aynı anda en fazla kaç parola hash'lenir (her biri 64 MiB)
 }
 
 // Load, ortam değişkenlerini okur, varsayılanları uygular ve sonucu doğrular.
@@ -54,19 +61,24 @@ func Load() (Config, error) {
 	}
 
 	cfg := Config{
-		Env:               lookup("AGORA_ENV", "development"),
-		HTTPAddr:          lookup("AGORA_HTTP_ADDR", ":8080"),
-		MetricsAddr:       lookup("AGORA_METRICS_ADDR", ":9091"),
-		LogLevel:          lookup("AGORA_LOG_LEVEL", "info"),
-		ReadTimeout:       duration("AGORA_HTTP_READ_TIMEOUT", 5*time.Second),
-		WriteTimeout:      duration("AGORA_HTTP_WRITE_TIMEOUT", 10*time.Second),
-		IdleTimeout:       duration("AGORA_HTTP_IDLE_TIMEOUT", 60*time.Second),
-		ShutdownTimeout:   duration("AGORA_SHUTDOWN_TIMEOUT", 15*time.Second),
-		DatabaseURL:       lookup("AGORA_DATABASE_URL", ""),
-		DBMaxConns:        integer("AGORA_DB_MAX_CONNS", 10),
-		DBMinConns:        integer("AGORA_DB_MIN_CONNS", 2),
-		DBMaxConnLifetime: duration("AGORA_DB_MAX_CONN_LIFETIME", time.Hour),
-		DBMaxConnIdleTime: duration("AGORA_DB_MAX_CONN_IDLE_TIME", 30*time.Minute),
+		Env:                    lookup("AGORA_ENV", "development"),
+		HTTPAddr:               lookup("AGORA_HTTP_ADDR", ":8080"),
+		MetricsAddr:            lookup("AGORA_METRICS_ADDR", ":9091"),
+		LogLevel:               lookup("AGORA_LOG_LEVEL", "info"),
+		ReadTimeout:            duration("AGORA_HTTP_READ_TIMEOUT", 5*time.Second),
+		WriteTimeout:           duration("AGORA_HTTP_WRITE_TIMEOUT", 10*time.Second),
+		IdleTimeout:            duration("AGORA_HTTP_IDLE_TIMEOUT", 60*time.Second),
+		ShutdownTimeout:        duration("AGORA_SHUTDOWN_TIMEOUT", 15*time.Second),
+		DatabaseURL:            lookup("AGORA_DATABASE_URL", ""),
+		DBMaxConns:             integer("AGORA_DB_MAX_CONNS", 10),
+		DBMinConns:             integer("AGORA_DB_MIN_CONNS", 2),
+		DBMaxConnLifetime:      duration("AGORA_DB_MAX_CONN_LIFETIME", time.Hour),
+		DBMaxConnIdleTime:      duration("AGORA_DB_MAX_CONN_IDLE_TIME", 30*time.Minute),
+		JWTPrivateKeyFile:      lookup("AGORA_JWT_PRIVATE_KEY_FILE", ""),
+		AccessTokenTTL:         duration("AGORA_ACCESS_TOKEN_TTL", 15*time.Minute),
+		SessionIdleTimeout:     duration("AGORA_SESSION_IDLE_TIMEOUT", 2*time.Hour),
+		SessionAbsoluteTimeout: duration("AGORA_SESSION_ABSOLUTE_TIMEOUT", 30*24*time.Hour),
+		PasswordHashWorkers:    integer("AGORA_PASSWORD_HASH_WORKERS", 4),
 	}
 
 	if cfg.DatabaseURL == "" && cfg.Env == "development" {
@@ -87,6 +99,11 @@ func (c Config) IsProduction() bool {
 	return c.Env == "production"
 }
 
+// IsDevelopment, uygulamanın yerel geliştirme ortamında çalışıp çalışmadığını söyler.
+func (c Config) IsDevelopment() bool {
+	return c.Env == "development"
+}
+
 // LogValue, Config'in log'a güvenle yazılabilir halini döndürür (slog.LogValuer).
 // Sadece burada listelenen alanlar log'a girer, gizli bilgiler maskelenir.
 func (c Config) LogValue() slog.Value {
@@ -104,6 +121,11 @@ func (c Config) LogValue() slog.Value {
 		slog.Int("db_min_conns", c.DBMinConns),
 		slog.String("db_max_conn_lifetime", c.DBMaxConnLifetime.String()),
 		slog.String("db_max_conn_idle_time", c.DBMaxConnIdleTime.String()),
+		slog.String("jwt_private_key_file", c.JWTPrivateKeyFile),
+		slog.String("access_token_ttl", c.AccessTokenTTL.String()),
+		slog.String("session_idle_timeout", c.SessionIdleTimeout.String()),
+		slog.String("session_absolute_timeout", c.SessionAbsoluteTimeout.String()),
+		slog.Int("password_hash_workers", c.PasswordHashWorkers),
 	)
 }
 
@@ -133,9 +155,32 @@ func (c Config) validate() []error {
 	if c.DBMaxConns < 1 {
 		errs = append(errs, fmt.Errorf("AGORA_DB_MAX_CONNS en az 1 olmalı: %d", c.DBMaxConns))
 	}
+
 	if c.DBMinConns < 0 || c.DBMinConns > c.DBMaxConns {
 		errs = append(errs, fmt.Errorf("AGORA_DB_MIN_CONNS 0 ile AGORA_DB_MAX_CONNS (%d) arasında olmalı: %d",
 			c.DBMaxConns, c.DBMinConns))
+	}
+
+	if c.JWTPrivateKeyFile == "" && !c.IsDevelopment() {
+		errs = append(errs, errors.New("AGORA_JWT_PRIVATE_KEY_FILE development dışında zorunlu"))
+	}
+
+	if c.AccessTokenTTL < time.Minute || c.AccessTokenTTL > time.Hour {
+		errs = append(errs, fmt.Errorf("AGORA_ACCESS_TOKEN_TTL 1 dk ile 1 saat arasında olmalı: %s", c.AccessTokenTTL))
+	}
+
+	if c.SessionIdleTimeout <= c.AccessTokenTTL {
+		errs = append(errs, fmt.Errorf("AGORA_SESSION_IDLE_TIMEOUT (%s) access token ömründen (%s) uzun olmalı",
+			c.SessionIdleTimeout, c.AccessTokenTTL))
+	}
+
+	if c.SessionAbsoluteTimeout < c.SessionIdleTimeout {
+		errs = append(errs, fmt.Errorf("AGORA_SESSION_ABSOLUTE_TIMEOUT (%s) boşta kalma süresinden (%s) kısa olamaz",
+			c.SessionAbsoluteTimeout, c.SessionIdleTimeout))
+	}
+
+	if c.PasswordHashWorkers < 1 {
+		errs = append(errs, fmt.Errorf("AGORA_PASSWORD_HASH_WORKERS en az 1 olmalı: %d", c.PasswordHashWorkers))
 	}
 
 	return errs

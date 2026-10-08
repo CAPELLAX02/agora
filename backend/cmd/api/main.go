@@ -13,6 +13,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/CAPELLAX02/agora/backend/internal/iam"
+	"github.com/CAPELLAX02/agora/backend/internal/platform/authn"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/config"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/db"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/logging"
@@ -22,13 +24,15 @@ import (
 const version = "0.1.0"
 
 type application struct {
-	cfg       config.Config
-	logger    *slog.Logger
-	db        *pgxpool.Pool
-	metrics   *metrics.HTTP
-	checks    map[string]pinger
-	version   string
-	startedAt time.Time
+	cfg           config.Config
+	logger        *slog.Logger
+	db            *pgxpool.Pool
+	metrics       *metrics.HTTP
+	checks        map[string]pinger
+	version       string
+	startedAt     time.Time
+	auth          *iam.Auth
+	authenticator *authn.Authenticator
 }
 
 func main() {
@@ -63,17 +67,24 @@ func run() error {
 	defer pool.Close()
 	logger.Info("veritabanı bağlantı havuzu hazır", "max_conns", cfg.DBMaxConns)
 
+	auth, authenticator, err := newAuth(ctx, cfg, pool, logger)
+	if err != nil {
+		return err
+	}
+
 	reg := metrics.NewRegistry()
 	reg.MustRegister(metrics.NewPoolCollector(pool))
 
 	app := &application{
-		cfg:       cfg,
-		logger:    logger,
-		db:        pool,
-		metrics:   metrics.NewHTTP(reg),
-		checks:    map[string]pinger{"postgres": pool},
-		version:   version,
-		startedAt: time.Now(),
+		cfg:           cfg,
+		logger:        logger,
+		db:            pool,
+		metrics:       metrics.NewHTTP(reg),
+		checks:        map[string]pinger{"postgres": pool},
+		version:       version,
+		startedAt:     time.Now(),
+		auth:          auth,
+		authenticator: authenticator,
 	}
 
 	servers := []*http.Server{

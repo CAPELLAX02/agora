@@ -17,6 +17,8 @@ func clearAgoraEnv(t *testing.T) {
 		"AGORA_HTTP_IDLE_TIMEOUT", "AGORA_SHUTDOWN_TIMEOUT",
 		"AGORA_DATABASE_URL", "AGORA_DB_MAX_CONNS", "AGORA_DB_MIN_CONNS",
 		"AGORA_DB_MAX_CONN_LIFETIME", "AGORA_DB_MAX_CONN_IDLE_TIME",
+		"AGORA_JWT_PRIVATE_KEY_FILE", "AGORA_ACCESS_TOKEN_TTL", "AGORA_SESSION_IDLE_TIMEOUT",
+		"AGORA_SESSION_ABSOLUTE_TIMEOUT", "AGORA_PASSWORD_HASH_WORKERS",
 	} {
 		t.Setenv(key, "")
 	}
@@ -39,6 +41,11 @@ func defaultsWith(modify func(c *Config)) Config {
 		DBMinConns:        2,
 		DBMaxConnLifetime: time.Hour,
 		DBMaxConnIdleTime: 30 * time.Minute,
+
+		AccessTokenTTL:         15 * time.Minute,
+		SessionIdleTimeout:     2 * time.Hour,
+		SessionAbsoluteTimeout: 30 * 24 * time.Hour,
+		PasswordHashWorkers:    4,
 	}
 	if modify != nil {
 		modify(&c)
@@ -66,6 +73,12 @@ func TestLoad(t *testing.T) {
 				"AGORA_SHUTDOWN_TIMEOUT": "30s",
 				"AGORA_DATABASE_URL":     "postgres://u:p@db:5432/agora",
 				"AGORA_DB_MAX_CONNS":     "25",
+
+				"AGORA_JWT_PRIVATE_KEY_FILE":     "/run/secrets/jwt.pem",
+				"AGORA_ACCESS_TOKEN_TTL":         "10m",
+				"AGORA_SESSION_IDLE_TIMEOUT":     "1h",
+				"AGORA_SESSION_ABSOLUTE_TIMEOUT": "168h",
+				"AGORA_PASSWORD_HASH_WORKERS":    "8",
 			},
 			want: defaultsWith(func(c *Config) {
 				c.Env = "production"
@@ -74,11 +87,42 @@ func TestLoad(t *testing.T) {
 				c.ShutdownTimeout = 30 * time.Second
 				c.DatabaseURL = "postgres://u:p@db:5432/agora"
 				c.DBMaxConns = 25
+
+				c.JWTPrivateKeyFile = "/run/secrets/jwt.pem"
+				c.AccessTokenTTL = 10 * time.Minute
+				c.SessionIdleTimeout = time.Hour
+				c.SessionAbsoluteTimeout = 7 * 24 * time.Hour
+				c.PasswordHashWorkers = 8
 			}),
 		},
 		{
+			name:    "development dışında JWT anahtarı zorunlu",
+			env:     map[string]string{"AGORA_ENV": "test", "AGORA_DATABASE_URL": "postgres://u:p@db/agora"},
+			wantErr: []string{"AGORA_JWT_PRIVATE_KEY_FILE development dışında zorunlu"},
+		},
+		{
+			name:    "access token ömrü sınır dışında",
+			env:     map[string]string{"AGORA_ACCESS_TOKEN_TTL": "2h", "AGORA_SESSION_IDLE_TIMEOUT": "3h"},
+			wantErr: []string{"AGORA_ACCESS_TOKEN_TTL 1 dk ile 1 saat arasında olmalı"},
+		},
+		{
+			name:    "boşta kalma süresi access token ömründen uzun olmalı",
+			env:     map[string]string{"AGORA_SESSION_IDLE_TIMEOUT": "15m"},
+			wantErr: []string{"AGORA_SESSION_IDLE_TIMEOUT (15m0s) access token ömründen (15m0s) uzun olmalı"},
+		},
+		{
+			name:    "mutlak süre boşta kalma süresinden kısa olamaz",
+			env:     map[string]string{"AGORA_SESSION_ABSOLUTE_TIMEOUT": "1h"},
+			wantErr: []string{"AGORA_SESSION_ABSOLUTE_TIMEOUT (1h0m0s) boşta kalma süresinden (2h0m0s) kısa olamaz"},
+		},
+		{
+			name:    "en az bir hash işçisi",
+			env:     map[string]string{"AGORA_PASSWORD_HASH_WORKERS": "0"},
+			wantErr: []string{"AGORA_PASSWORD_HASH_WORKERS en az 1 olmalı"},
+		},
+		{
 			name:    "production'da veritabanı adresi zorunlu",
-			env:     map[string]string{"AGORA_ENV": "production"},
+			env:     map[string]string{"AGORA_ENV": "production", "AGORA_JWT_PRIVATE_KEY_FILE": "/run/secrets/jwt.pem"},
 			wantErr: []string{"AGORA_DATABASE_URL zorunlu"},
 		},
 		{
