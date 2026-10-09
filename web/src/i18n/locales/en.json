@@ -80,7 +80,9 @@
     "openMenu": "Open menu",
     "userMenu": "Account menu",
     "logout": "Sign out",
-    "skipToContent": "Skip to content"
+    "skipToContent": "Skip to content",
+    "academic": "Academic",
+    "calendar": "Academic calendar"
   },
   "auth": {
     "restoring": "Signing you in…",
@@ -493,5 +495,76 @@
     "DEPARTMENT": "Department",
     "PROGRAM": "Programme",
     "NONE": "No scope"
+  },
+  "calendar": {
+    "title": "Academic calendar",
+    "description": "Action windows and key dates of the term.",
+    "term": "Term",
+    "scope": "Unit",
+    "wholeUniversity": "Whole university",
+    "current": "current",
+    "newEvent": "New event",
+    "noTerms": "No terms defined yet.",
+    "termDates": "Term: {{start}} – {{end}}",
+    "termTypes": {
+      "FALL": "Fall",
+      "SPRING": "Spring",
+      "SUMMER": "Summer"
+    },
+    "scopes": {
+      "UNIVERSITY": "University",
+      "FACULTY": "Unit calendar",
+      "PROGRAM": "Program calendar"
+    },
+    "windows": {
+      "title": "Action windows",
+      "description": "Course registration, approvals and grade entry are only possible while their window is open. A unit's own window replaces the university's.",
+      "open": "Open",
+      "closed": "Closed",
+      "until": "Open until {{time}}",
+      "opens": "Opens: {{time}}",
+      "ended": "Ended for this term",
+      "undefined": "Not defined for this term"
+    },
+    "events": {
+      "title": "Calendar",
+      "empty": "No events for this term.",
+      "when": "Date",
+      "event": "Event",
+      "scope": "Scope",
+      "draft": "Draft",
+      "edit": "Edit {{name}}",
+      "delete": "Delete {{name}}",
+      "deleteTitle": "Delete event?",
+      "deleteDescription": "\"{{name}}\" will be removed from the calendar. This is recorded in the audit log.",
+      "deleteConfirm": "Delete",
+      "deleted": "Event deleted."
+    },
+    "form": {
+      "newTitle": "New calendar event",
+      "editTitle": "Edit calendar event",
+      "description": "Events of the same type in the same scope cannot overlap.",
+      "type": "Event type",
+      "typePlaceholder": "Choose a type",
+      "startsAt": "Starts",
+      "endsAt": "Ends",
+      "endsAtHint": "Closed from this moment on.",
+      "endAfterStart": "End must be after start.",
+      "scope": "Scope",
+      "faculty": "Unit",
+      "facultyPlaceholder": "Choose a unit",
+      "titleTr": "Title (Turkish)",
+      "titleEn": "Title (English)",
+      "titleHint": "If empty, the type name is shown.",
+      "note": "Note",
+      "published": "Published",
+      "publishedHint": "Draft events are visible to calendar managers only.",
+      "created": "Event added.",
+      "updated": "Event updated.",
+      "errors": {
+        "EVENT_OVERLAP": "An event of the same type already overlaps in this scope.",
+        "VERSION_MISMATCH": "The event changed while you were editing. Close and reopen the dialog."
+      }
+    }
   }
 }

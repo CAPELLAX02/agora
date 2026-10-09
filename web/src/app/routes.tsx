@@ -56,6 +56,19 @@ export const routes: RouteObject[] = [
                   { path: 'profil', element: <ProfilePage /> },
                   { path: 'guvenlik', element: <SecurityPage /> },
                   {
+                    path: 'takvim',
+                    lazy: async () => {
+                      const { CalendarPage } = await import('@/features/calendar/CalendarPage')
+                      return {
+                        element: (
+                          <RequirePermission permission="calendar:read">
+                            <CalendarPage />
+                          </RequirePermission>
+                        ),
+                      }
+                    },
+                  },
+                  {
                     path: 'yonetim/kullanicilar',
                     lazy: async () => {
                       const { UsersPage } = await import('@/features/admin/UsersPage')

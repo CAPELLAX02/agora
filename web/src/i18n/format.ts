@@ -24,6 +24,18 @@ export function formatDate(value: string | Date | null | undefined): string {
   return new Intl.DateTimeFormat(locale(), { dateStyle: 'medium' }).format(new Date(value))
 }
 
+/**
+ * formatPeriod, [başlangıç, bitiş) aralığını gösterir. Bitiş hariç olduğu için son an
+ * gösterilir: "12 Eyl 00:00" ile biten pencere "11 Eyl 23:59"a kadar açıktır.
+ */
+export function formatPeriod(start: string | Date, end: string | Date): string {
+  const last = new Date(new Date(end).getTime() - 60_000)
+  return new Intl.DateTimeFormat(locale(), { dateStyle: 'medium', timeStyle: 'short' }).formatRange(
+    new Date(start),
+    last,
+  )
+}
+
 /** formatRelative, "3 dakika önce" gibi göreli zamanı gösterir. */
 export function formatRelative(value: string | Date, now: Date = new Date()): string {
   const diff = (new Date(value).getTime() - now.getTime()) / 1000

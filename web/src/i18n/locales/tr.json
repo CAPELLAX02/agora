@@ -80,7 +80,9 @@
     "openMenu": "Menüyü aç",
     "userMenu": "Hesap menüsü",
     "logout": "Çıkış yap",
-    "skipToContent": "İçeriğe geç"
+    "skipToContent": "İçeriğe geç",
+    "academic": "Akademik",
+    "calendar": "Akademik takvim"
   },
   "auth": {
     "restoring": "Oturum açılıyor…",
@@ -493,5 +495,76 @@
     "DEPARTMENT": "Bölüm",
     "PROGRAM": "Program",
     "NONE": "Kapsamsız"
+  },
+  "calendar": {
+    "title": "Akademik takvim",
+    "description": "Dönemin işlem pencereleri ve önemli tarihleri.",
+    "term": "Dönem",
+    "scope": "Birim",
+    "wholeUniversity": "Bütün üniversite",
+    "current": "içinde bulunulan",
+    "newEvent": "Yeni olay",
+    "noTerms": "Henüz tanımlı dönem yok.",
+    "termDates": "Dönem: {{start}} – {{end}}",
+    "termTypes": {
+      "FALL": "Güz",
+      "SPRING": "Bahar",
+      "SUMMER": "Yaz"
+    },
+    "scopes": {
+      "UNIVERSITY": "Üniversite",
+      "FACULTY": "Birim takvimi",
+      "PROGRAM": "Program takvimi"
+    },
+    "windows": {
+      "title": "İşlem pencereleri",
+      "description": "Ders seçme, onay ve not girişi gibi işlemler sadece pencere açıkken yapılabilir. Bir birimin kendi penceresi varsa üniversiteninkinin yerine geçer.",
+      "open": "Açık",
+      "closed": "Kapalı",
+      "until": "{{time}} tarihine kadar açık",
+      "opens": "Açılış: {{time}}",
+      "ended": "Bu dönem için sona erdi",
+      "undefined": "Bu dönem için tanımlanmadı"
+    },
+    "events": {
+      "title": "Takvim",
+      "empty": "Bu dönem için olay yok.",
+      "when": "Tarih",
+      "event": "Olay",
+      "scope": "Kapsam",
+      "draft": "Taslak",
+      "edit": "{{name}} olayını düzenle",
+      "delete": "{{name}} olayını sil",
+      "deleteTitle": "Olay silinsin mi?",
+      "deleteDescription": "\"{{name}}\" takvimden kaldırılacak. Bu işlem denetim kaydına yazılır.",
+      "deleteConfirm": "Sil",
+      "deleted": "Olay silindi."
+    },
+    "form": {
+      "newTitle": "Yeni takvim olayı",
+      "editTitle": "Takvim olayını düzenle",
+      "description": "Aynı kapsamda aynı türden olaylar zaman olarak çakışamaz.",
+      "type": "Olay türü",
+      "typePlaceholder": "Tür seçin",
+      "startsAt": "Başlangıç",
+      "endsAt": "Bitiş",
+      "endsAtHint": "Bu andan itibaren kapalı.",
+      "endAfterStart": "Bitiş başlangıçtan sonra olmalı.",
+      "scope": "Kapsam",
+      "faculty": "Birim",
+      "facultyPlaceholder": "Birim seçin",
+      "titleTr": "Başlık (Türkçe)",
+      "titleEn": "Başlık (İngilizce)",
+      "titleHint": "Boş bırakılırsa türün adı gösterilir.",
+      "note": "Not",
+      "published": "Yayımlandı",
+      "publishedHint": "Taslak olayları sadece takvim yöneticileri görür.",
+      "created": "Olay eklendi.",
+      "updated": "Olay güncellendi.",
+      "errors": {
+        "EVENT_OVERLAP": "Bu kapsamda aynı türden, zaman olarak çakışan bir olay var.",
+        "VERSION_MISMATCH": "Olay siz düzenlerken değişti. Pencereyi kapatıp yeniden açın."
+      }
+    }
   }
 }

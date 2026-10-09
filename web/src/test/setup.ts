@@ -36,6 +36,16 @@ for (const [name, value] of [
   }
 }
 
+// Radix Checkbox gizli girdisinin boyutunu ResizeObserver ile izler; jsdom'da yoktur.
+if (!('ResizeObserver' in window)) {
+  class ResizeObserverStub {
+    observe = noop
+    unobserve = noop
+    disconnect = noop
+  }
+  Object.defineProperty(window, 'ResizeObserver', { value: ResizeObserverStub, writable: true })
+}
+
 // Sunucuya giden her istek bir handler'la karşılanmalı: unutulan bir uç testte hata verir.
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
 beforeEach(async () => {

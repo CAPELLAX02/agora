@@ -1,5 +1,6 @@
 import type { ParseKeys } from 'i18next'
 import {
+  CalendarDaysIcon,
   HomeIcon,
   ScrollTextIcon,
   ShieldCheckIcon,
@@ -23,6 +24,10 @@ export type NavGroup = { label: Key; items: NavItem[] }
 
 export const navGroups: NavGroup[] = [
   { label: 'nav.general', items: [{ to: '/', label: 'nav.dashboard', icon: HomeIcon, end: true }] },
+  {
+    label: 'nav.academic',
+    items: [{ to: '/takvim', label: 'nav.calendar', icon: CalendarDaysIcon, permission: 'calendar:read' }],
+  },
   {
     label: 'nav.account',
     items: [
