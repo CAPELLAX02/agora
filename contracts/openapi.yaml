@@ -65,6 +65,8 @@ tags:
     description: Harf notları, katsayılar, puan aralıkları ve tarihli yönetmelik parametreleri
   - name: Ders açma
     description: Dönemde açılan dersler, şubeler, kontenjanlar, öğretim elemanları ve haftalık program
+  - name: Değerlendirme
+    description: Şubelerin değerlendirme planları (ara sınav, ödev, final ... ağırlıkları)
 
 paths:
   /healthz:
@@ -3129,6 +3131,171 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /api/v1/assessment-types:
+    get:
+      tags: [Değerlendirme]
+      summary: Değerlendirme türlerini listeler
+      operationId: listAssessmentTypes
+      x-agora-permission: course:read
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Türler
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/AssessmentType" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/v1/sections/{id}/assessment-plan:
+    get:
+      tags: [Değerlendirme]
+      summary: Şubenin değerlendirme planını döndürür
+      description: >-
+        Plan herkese açıktır (ders izlencesinin parçası). `editable` ve `can_unlock` isteği
+        yapan kullanıcıya göredir.
+      operationId: getAssessmentPlan
+      x-agora-permission: course:read
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Plan
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AssessmentPlan" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Değerlendirme]
+      summary: Değerlendirme planını yazar
+      description: >-
+        Dönem içi bileşenlerin ve finalin ağırlıkları toplamı 100, tam bir final olmalı.
+        Bütünleme gönderilmez: finalin ağırlığıyla otomatik oluşur. Aynı tür ve sıra
+        numaralı bileşen güncellenir (kimliği korunur), gönderilmeyenler silinir. Şubenin
+        sorumlu ya da ortak öğretim elemanı (`assessment_plan:manage`) veya şubeyi yöneten
+        bölüm (`section:manage`) yazabilir; kilitli plan değişmez. İyimser kilit, `If-Match` zorunlu.
+      operationId: setAssessmentPlan
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [components]
+              properties:
+                components:
+                  type: array
+                  minItems: 1
+                  maxItems: 20
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [type, weight]
+                    properties:
+                      type: { type: string, description: "Değerlendirme türü kodu (MAKEUP hariç)", examples: ["MIDTERM"] }
+                      sequence_no: { type: integer, minimum: 1, maximum: 20, description: "Verilmezse aynı türde sırayla numaralanır" }
+                      name_tr: { type: string, maxLength: 100 }
+                      name_en: { type: string, maxLength: 100 }
+                      weight: { type: number, exclusiveMinimum: 0, maximum: 100, multipleOf: 0.01 }
+                      scheduled_on: { type: string, format: date, description: Dönemin tarihleri içinde }
+      responses:
+        "200":
+          description: Güncel plan
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AssessmentPlan" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`ASSESSMENT_PLAN_LOCKED`: plan kilitli, `SECTION_CANCELLED`: şube iptal edilmiş"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "412": { $ref: "#/components/responses/VersionMismatch" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
+
+  /api/v1/sections/{id}/assessment-plan/lock:
+    post:
+      tags: [Değerlendirme]
+      summary: Değerlendirme planını kilitler
+      description: Notlar kilitli plana göre girilir. Zaten kilitliyse bir şey değişmez.
+      operationId: lockAssessmentPlan
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Kilitli plan
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AssessmentPlan" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`ASSESSMENT_PLAN_INCOMPLETE`: tek final ve toplam 100 değil, `SECTION_CANCELLED`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/sections/{id}/assessment-plan/unlock:
+    post:
+      tags: [Değerlendirme]
+      summary: Plan kilidini açar
+      description: Sadece şubeyi yöneten bölüm açabilir; gerekçe denetim izine yazılır.
+      operationId: unlockAssessmentPlan
+      x-agora-permission: section:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 5, maxLength: 500 }
+      responses:
+        "200":
+          description: Kilidi açılan plan
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AssessmentPlan" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/v1/buildings:
     get:
       tags: [Organizasyon]
@@ -5157,3 +5324,44 @@ components:
           oneOf:
             - type: "null"
             - $ref: "#/components/schemas/DepartmentRef"
+
+    AssessmentType:
+      type: object
+      required: [code, name_tr, name_en, category]
+      properties:
+        code: { type: string, examples: ["MIDTERM"] }
+        name_tr: { type: string }
+        name_en: { type: string }
+        category:
+          type: string
+          enum: [IN_TERM, FINAL, MAKEUP]
+          description: "IN_TERM ve FINAL ağırlıkları toplamı 100; MAKEUP finalin yerine geçer"
+
+    AssessmentPlan:
+      type: object
+      required: [section_id, components, in_term_weight, final_weight, is_complete, locked_at, locked_by, editable, can_unlock, version]
+      properties:
+        section_id: { type: string, format: uuid }
+        components:
+          type: array
+          items:
+            type: object
+            required: [id, type, sequence_no, name_tr, name_en, label_tr, label_en, weight, scheduled_on]
+            properties:
+              id: { type: string, format: uuid }
+              type: { $ref: "#/components/schemas/AssessmentType" }
+              sequence_no: { type: integer }
+              name_tr: { type: [string, "null"] }
+              name_en: { type: [string, "null"] }
+              label_tr: { type: string, description: "Gösterilecek ad: kendi adı ya da tür adı ve (gerekirse) sıra numarası", examples: ["Ara sınav 1"] }
+              label_en: { type: string }
+              weight: { type: number }
+              scheduled_on: { type: [string, "null"], format: date }
+        in_term_weight: { type: number }
+        final_weight: { type: number }
+        is_complete: { type: boolean, description: Tek final ve toplam 100 }
+        locked_at: { type: [string, "null"], format: date-time }
+        locked_by: { type: [string, "null"], description: Kilitleyenin adı }
+        editable: { type: boolean, description: İsteği yapan kullanıcı planı şu an düzenleyebilir mi? }
+        can_unlock: { type: boolean }
+        version: { type: integer }

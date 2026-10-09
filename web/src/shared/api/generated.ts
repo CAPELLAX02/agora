@@ -10,6 +10,7 @@ export const addTagTypes = [
   'M\u00FCfredat',
   'Not \u00F6l\u00E7e\u011Fi ve y\u00F6netmelik',
   'Ders a\u00E7ma',
+  'De\u011Ferlendirme',
   'Organizasyon',
   '\u00D6\u011Frenciler',
 ] as const
@@ -790,6 +791,42 @@ const injectedRtkApi = api
           },
         }),
         providesTags: ['Ders a\u00E7ma'],
+      }),
+      listAssessmentTypes: build.query<ListAssessmentTypesApiResponse, ListAssessmentTypesApiArg>({
+        query: () => ({ url: `/api/v1/assessment-types` }),
+        providesTags: ['De\u011Ferlendirme'],
+      }),
+      getAssessmentPlan: build.query<GetAssessmentPlanApiResponse, GetAssessmentPlanApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/sections/${queryArg.id}/assessment-plan`,
+        }),
+        providesTags: ['De\u011Ferlendirme'],
+      }),
+      setAssessmentPlan: build.mutation<SetAssessmentPlanApiResponse, SetAssessmentPlanApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/sections/${queryArg.id}/assessment-plan`,
+          method: 'PUT',
+          body: queryArg.body,
+          headers: {
+            'If-Match': queryArg['If-Match'],
+          },
+        }),
+        invalidatesTags: ['De\u011Ferlendirme'],
+      }),
+      lockAssessmentPlan: build.mutation<LockAssessmentPlanApiResponse, LockAssessmentPlanApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/sections/${queryArg.id}/assessment-plan/lock`,
+          method: 'POST',
+        }),
+        invalidatesTags: ['De\u011Ferlendirme'],
+      }),
+      unlockAssessmentPlan: build.mutation<UnlockAssessmentPlanApiResponse, UnlockAssessmentPlanApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/sections/${queryArg.id}/assessment-plan/unlock`,
+          method: 'POST',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['De\u011Ferlendirme'],
       }),
       listBuildings: build.query<ListBuildingsApiResponse, ListBuildingsApiArg>({
         query: (queryArg) => ({
@@ -1665,6 +1702,48 @@ export type SearchInstructorsApiArg = {
   departmentId?: string
   limit?: number
 }
+export type ListAssessmentTypesApiResponse = /** status 200 Türler */ {
+  items: AssessmentType[]
+}
+export type ListAssessmentTypesApiArg = void
+export type GetAssessmentPlanApiResponse = /** status 200 Plan */ AssessmentPlan
+export type GetAssessmentPlanApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type SetAssessmentPlanApiResponse = /** status 200 Güncel plan */ AssessmentPlan
+export type SetAssessmentPlanApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
+  'If-Match': string
+  body: {
+    components: {
+      /** Değerlendirme türü kodu (MAKEUP hariç) */
+      type: string
+      /** Verilmezse aynı türde sırayla numaralanır */
+      sequence_no?: number
+      name_tr?: string
+      name_en?: string
+      weight: number
+      /** Dönemin tarihleri içinde */
+      scheduled_on?: string
+    }[]
+  }
+}
+export type LockAssessmentPlanApiResponse = /** status 200 Kilitli plan */ AssessmentPlan
+export type LockAssessmentPlanApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type UnlockAssessmentPlanApiResponse = /** status 200 Kilidi açılan plan */ AssessmentPlan
+export type UnlockAssessmentPlanApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: {
+    reason: string
+  }
+}
 export type ListBuildingsApiResponse = /** status 200 Binalar */ {
   items: Building[]
 }
@@ -2535,6 +2614,39 @@ export type StaffSummary = {
   last_name: string
   department: null | DepartmentRef
 }
+export type AssessmentType = {
+  code: string
+  name_tr: string
+  name_en: string
+  /** IN_TERM ve FINAL ağırlıkları toplamı 100; MAKEUP finalin yerine geçer */
+  category: 'IN_TERM' | 'FINAL' | 'MAKEUP'
+}
+export type AssessmentPlan = {
+  section_id: string
+  components: {
+    id: string
+    type: AssessmentType
+    sequence_no: number
+    name_tr: string | null
+    name_en: string | null
+    /** Gösterilecek ad: kendi adı ya da tür adı ve (gerekirse) sıra numarası */
+    label_tr: string
+    label_en: string
+    weight: number
+    scheduled_on: string | null
+  }[]
+  in_term_weight: number
+  final_weight: number
+  /** Tek final ve toplam 100 */
+  is_complete: boolean
+  locked_at: string | null
+  /** Kilitleyenin adı */
+  locked_by: string | null
+  /** İsteği yapan kullanıcı planı şu an düzenleyebilir mi? */
+  editable: boolean
+  can_unlock: boolean
+  version: number
+}
 export type Ref = {
   id: string
   code: string
@@ -2841,6 +2953,13 @@ export const {
   useLazyMyTeachingQuery,
   useSearchInstructorsQuery,
   useLazySearchInstructorsQuery,
+  useListAssessmentTypesQuery,
+  useLazyListAssessmentTypesQuery,
+  useGetAssessmentPlanQuery,
+  useLazyGetAssessmentPlanQuery,
+  useSetAssessmentPlanMutation,
+  useLockAssessmentPlanMutation,
+  useUnlockAssessmentPlanMutation,
   useListBuildingsQuery,
   useLazyListBuildingsQuery,
   useCreateBuildingMutation,
