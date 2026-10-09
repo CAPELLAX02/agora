@@ -85,7 +85,9 @@
     "calendar": "Academic calendar",
     "catalog": "Course catalog",
     "myCurriculum": "My curriculum",
-    "curricula": "Curricula"
+    "curricula": "Curricula",
+    "schedule": "Weekly schedule",
+    "teaching": "My teaching"
   },
   "auth": {
     "restoring": "Signing you in…",
@@ -753,6 +755,75 @@
         "DOUBLE_MAJOR": "Double major",
         "MINOR": "Minor"
       }
+    }
+  },
+  "schedule": {
+    "title": "Weekly schedule",
+    "description": "The term's timetable: courses offered by a department, a classroom's occupancy or an instructor's classes.",
+    "weekly": "Weekly schedule",
+    "view": "View",
+    "views": {
+      "department": "Department",
+      "classroom": "Classroom",
+      "instructor": "Instructor"
+    },
+    "choose": {
+      "bolum": "Choose a department to see its timetable.",
+      "derslik": "Choose a classroom to see its occupancy.",
+      "hoca": "Search for an instructor to see their timetable."
+    },
+    "building": "Building",
+    "classroom": "Classroom",
+    "capacity_one": "{{count}} seat",
+    "capacity_other": "{{count}} seats",
+    "instructorPlaceholder": "Instructor name or staff number",
+    "noInstructor": "No instructors match the search.",
+    "empty": "No sessions in the timetable for this selection.",
+    "online": "Online",
+    "sessions": {
+      "THEORY": "Theory",
+      "PRACTICE": "Practice",
+      "LAB": "Laboratory"
+    },
+    "days": {
+      "1": "Monday",
+      "2": "Tuesday",
+      "3": "Wednesday",
+      "4": "Thursday",
+      "5": "Friday",
+      "6": "Saturday",
+      "7": "Sunday"
+    },
+    "daysShort": {
+      "1": "Mon",
+      "2": "Tue",
+      "3": "Wed",
+      "4": "Thu",
+      "5": "Fri",
+      "6": "Sat",
+      "7": "Sun"
+    },
+    "layout": "Layout",
+    "layouts": {
+      "grid": "Grid",
+      "list": "List"
+    },
+    "agenda": {
+      "time": "Time",
+      "course": "Course",
+      "instructor": "Instructor"
+    }
+  },
+  "teaching": {
+    "title": "My teaching",
+    "description": "Sections you teach this term and your weekly timetable.",
+    "sections": "My sections",
+    "empty": "You do not teach a section this term.",
+    "plan": "Assessment plan",
+    "roles": {
+      "PRIMARY": "Lead",
+      "CO_INSTRUCTOR": "Co-instructor",
+      "ASSISTANT": "Assistant"
     }
   }
 }

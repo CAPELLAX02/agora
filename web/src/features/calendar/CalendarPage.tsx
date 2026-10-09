@@ -9,7 +9,6 @@ import { formatDate, formatDateTime, formatPeriod } from '@/i18n/format'
 import {
   useDeleteCalendarEventMutation,
   useGetCalendarWindowsQuery,
-  useGetCurrentTermQuery,
   useListFacultiesQuery,
   useListTermEventsQuery,
   useListTermsQuery,
@@ -29,7 +28,8 @@ import { EmptyState, ErrorState } from '@/shared/ui/states'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
 
 import { EventDialog } from './EventDialog'
-import { termLabel } from './term'
+import { TermSelect } from './TermSelect'
+import { useTermParam } from './useTermParam'
 
 const UNIVERSITY = 'UNIVERSITY'
 
@@ -43,12 +43,11 @@ export function CalendarPage() {
   const { has } = usePermissions()
   const [params, setParams] = useSearchParams()
   const terms = useListTermsQuery()
-  const current = useGetCurrentTermQuery()
   const faculties = useListFacultiesQuery({})
   const localized = useLocalized()
   const [editing, setEditing] = useState<CalendarEvent | 'new' | null>(null)
 
-  const termId = params.get('donem') ?? current.data?.id ?? terms.data?.items[0]?.id ?? ''
+  const [termId, setTermId] = useTermParam()
   const facultyId = params.get('birim') ?? ''
   const term = terms.data?.items.find((x) => x.id === termId)
   const canManage = has('calendar:manage')
@@ -83,18 +82,7 @@ export function CalendarPage() {
         }
       />
       <div className="mb-6 flex flex-col gap-3 sm:flex-row">
-        <Select value={termId} onValueChange={(v) => setParam('donem', v)} disabled={!terms.data}>
-          <SelectTrigger className="sm:w-64" aria-label={t('calendar.term')}>
-            <SelectValue placeholder={t('common.loading')} />
-          </SelectTrigger>
-          <SelectContent>
-            {terms.data?.items.map((x) => (
-              <SelectItem key={x.id} value={x.id}>
-                {termLabel(t, x)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <TermSelect value={termId} onChange={setTermId} />
         <Select value={facultyId || UNIVERSITY} onValueChange={(v) => setParam('birim', v)}>
           <SelectTrigger className="sm:w-80" aria-label={t('calendar.scope')}>
             <SelectValue />
@@ -110,7 +98,7 @@ export function CalendarPage() {
         </Select>
       </div>
 
-      {!terms.data || current.isLoading ? (
+      {!terms.data ? (
         <div className="space-y-4">
           <Skeleton className="h-40" />
           <Skeleton className="h-64" />

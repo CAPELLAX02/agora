@@ -85,7 +85,9 @@
     "calendar": "Akademik takvim",
     "catalog": "Ders kataloğu",
     "myCurriculum": "Ders planım",
-    "curricula": "Ders planları"
+    "curricula": "Ders planları",
+    "schedule": "Haftalık program",
+    "teaching": "Verdiğim dersler"
   },
   "auth": {
     "restoring": "Oturum açılıyor…",
@@ -753,6 +755,75 @@
         "DOUBLE_MAJOR": "Çift anadal",
         "MINOR": "Yandal"
       }
+    }
+  },
+  "schedule": {
+    "title": "Haftalık program",
+    "description": "Dönemin ders programı: bir bölümün açtığı dersler, bir dersliğin doluluğu ya da bir öğretim elemanının dersleri.",
+    "weekly": "Haftalık program",
+    "view": "Görünüm",
+    "views": {
+      "department": "Bölüm",
+      "classroom": "Derslik",
+      "instructor": "Öğretim elemanı"
+    },
+    "choose": {
+      "bolum": "Programı görmek için bir bölüm seçin.",
+      "derslik": "Doluluğunu görmek için bir derslik seçin.",
+      "hoca": "Programını görmek için bir öğretim elemanı arayın."
+    },
+    "building": "Bina",
+    "classroom": "Derslik",
+    "capacity_one": "{{count}} kişilik",
+    "capacity_other": "{{count}} kişilik",
+    "instructorPlaceholder": "Öğretim elemanı adı ya da sicil no",
+    "noInstructor": "Aramaya uyan öğretim elemanı yok.",
+    "empty": "Bu seçim için programda oturum yok.",
+    "online": "Çevrim içi",
+    "sessions": {
+      "THEORY": "Teorik",
+      "PRACTICE": "Uygulama",
+      "LAB": "Laboratuvar"
+    },
+    "days": {
+      "1": "Pazartesi",
+      "2": "Salı",
+      "3": "Çarşamba",
+      "4": "Perşembe",
+      "5": "Cuma",
+      "6": "Cumartesi",
+      "7": "Pazar"
+    },
+    "daysShort": {
+      "1": "Pzt",
+      "2": "Sal",
+      "3": "Çar",
+      "4": "Per",
+      "5": "Cum",
+      "6": "Cmt",
+      "7": "Paz"
+    },
+    "layout": "Düzen",
+    "layouts": {
+      "grid": "Izgara",
+      "list": "Liste"
+    },
+    "agenda": {
+      "time": "Saat",
+      "course": "Ders",
+      "instructor": "Öğretim elemanı"
+    }
+  },
+  "teaching": {
+    "title": "Verdiğim dersler",
+    "description": "Dönemde öğretim elemanı olduğunuz şubeler ve haftalık programınız.",
+    "sections": "Şubelerim",
+    "empty": "Bu dönem öğretim elemanı olduğunuz bir şube yok.",
+    "plan": "Değerlendirme planı",
+    "roles": {
+      "PRIMARY": "Sorumlu",
+      "CO_INSTRUCTOR": "Ortak",
+      "ASSISTANT": "Yardımcı"
     }
   }
 }

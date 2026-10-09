@@ -121,6 +121,32 @@ export const routes: RouteObject[] = [
                     },
                   },
                   {
+                    path: 'program',
+                    lazy: async () => {
+                      const { SchedulePage } = await import('@/features/schedule/SchedulePage')
+                      return {
+                        element: (
+                          <RequirePermission permission="course:read">
+                            <SchedulePage />
+                          </RequirePermission>
+                        ),
+                      }
+                    },
+                  },
+                  {
+                    path: 'verdigim-dersler',
+                    lazy: async () => {
+                      const { MyTeachingPage } = await import('@/features/schedule/MyTeachingPage')
+                      return {
+                        element: (
+                          <RequirePermission permission="assessment_plan:manage">
+                            <MyTeachingPage />
+                          </RequirePermission>
+                        ),
+                      }
+                    },
+                  },
+                  {
                     path: 'yonetim/kullanicilar',
                     lazy: async () => {
                       const { UsersPage } = await import('@/features/admin/UsersPage')

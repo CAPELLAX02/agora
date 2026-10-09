@@ -3,7 +3,9 @@ import {
   BookMarkedIcon,
   BookOpenIcon,
   CalendarDaysIcon,
+  CalendarRangeIcon,
   HomeIcon,
+  PresentationIcon,
   LibraryIcon,
   ScrollTextIcon,
   ShieldCheckIcon,
@@ -39,6 +41,13 @@ export const navGroups: NavGroup[] = [
       },
       { to: '/dersler', label: 'nav.catalog', icon: BookOpenIcon, permission: 'course:read' },
       { to: '/ders-planlari', label: 'nav.curricula', icon: LibraryIcon, permission: 'curriculum:read' },
+      { to: '/program', label: 'nav.schedule', icon: CalendarRangeIcon, permission: 'course:read' },
+      {
+        to: '/verdigim-dersler',
+        label: 'nav.teaching',
+        icon: PresentationIcon,
+        permission: 'assessment_plan:manage',
+      },
     ],
   },
   {
