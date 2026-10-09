@@ -38,3 +38,20 @@ Geliştirme sunucusu `/api` isteklerini API'ye aktarır (`AGORA_API_URL`, varsay
 | Çeviri        | `src/i18n/locales/{tr,en}.json`. Anahtarlar tip olarak denetlenir, iki dilin aynı anahtarlara sahip olduğu test edilir                                                                                 |
 | Tema          | Renkler `src/index.css`'teki belirteçlerdir (açık/koyu). Bileşenler renkleri doğrudan kullanmaz                                                                                                        |
 | Testler       | Vitest + Testing Library. API, MSW ile sözleşmedeki biçimde taklit edilir. Bütün uygulama bellek içi router'la çizilip kullanıcı gibi gezilir                                                          |
+
+## Uçtan uca testler
+
+Playwright senaryoları gerçek yığına karşı çalışır: giriş ve çıkış, ilk girişte zorunlu
+parola değişikliği, e-postayla parola sıfırlama, MFA kurulumu ve iki adımlı giriş, rol
+atamasının açık oturumda hemen etkili olması, yöneticinin açtığı hesabın aktivasyonu.
+
+```bash
+make up                                          # PostgreSQL, Redis, Mailpit
+cd web && pnpm exec playwright install chromium  # ilk seferde
+make web-e2e
+```
+
+Testler geliştirme veritabanına dokunmaz: her çalıştırmada `agora_e2e` veritabanı sıfırdan
+kurulur (`e2e/setup-db.sh`), Redis'in 1 numaralı veritabanı kullanılır. API (:18081),
+worker ve web (:4174) testler için ayrıca başlatılır. E-postalar Mailpit API'sinden okunur,
+TOTP kodları testte üretilir.

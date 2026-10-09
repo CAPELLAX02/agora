@@ -23,6 +23,8 @@ export default defineConfig({
     sourcemap: true,
   },
   test: {
+    // e2e/ Playwright'ındır: Vitest sadece birim ve bileşen testlerini çalıştırır.
+    include: ['src/**/*.test.{ts,tsx}'],
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     css: false,

@@ -10,6 +10,7 @@ import { LoginPage } from '@/features/auth/LoginPage'
 import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { AppLayout } from '@/features/shell/AppLayout'
+import { Spinner } from '@/shared/ui/spinner'
 
 import { CrashPage, NotFoundPage } from './ErrorPages'
 
@@ -25,6 +26,12 @@ export const routes: RouteObject[] = [
       </AuthGate>
     ),
     errorElement: <CrashPage />,
+    // Doğrudan bir yönetim sayfası açılınca o sayfanın paketi inene kadar gösterilir.
+    hydrateFallbackElement: (
+      <div className="grid min-h-svh place-items-center">
+        <Spinner className="size-6 text-muted-foreground" />
+      </div>
+    ),
     children: [
       {
         element: <GuestOnly />,

@@ -20,7 +20,7 @@ export
 
 .PHONY: help up down ps logs psql redis api worker migrate-up migrate-down migrate-status migration seed seed-synthetic \
         test test-unit cover vet lint vuln fmt contract-lint check \
-        web-install web-dev web-codegen web-check
+        web-install web-dev web-codegen web-check web-e2e
 
 help: ## Komutları listeler
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -127,3 +127,6 @@ web-codegen: ## OpenAPI sözleşmesinden RTK Query istemcisini üretir
 
 web-check: ## Web: biçim, lint, tip kontrolü, test ve build (CI ile aynı)
 	$(PNPM) check
+
+web-e2e: ## Uçtan uca testler (Playwright): ayrı bir veritabanı kurar, API, worker ve web'i kendisi başlatır
+	$(PNPM) e2e
