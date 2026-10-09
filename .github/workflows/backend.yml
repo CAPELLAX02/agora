@@ -36,7 +36,9 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: backend/go.mod
-          cache-dependency-path: backend/go.sum
+          cache-dependency-path: |
+            backend/go.sum
+            backend/tools/go.sum
 
       - name: Biçim (gofmt)
         run: |
@@ -48,16 +50,18 @@ jobs:
           fi
 
       - name: go.mod düzenli mi (go mod tidy)
-        run: go mod tidy -diff
+        run: |
+          go mod tidy -diff
+          go -C tools mod tidy -diff
 
       - name: go vet
         run: go vet ./...
 
       - name: staticcheck
-        run: go run honnef.co/go/tools/cmd/staticcheck@v0.8.1 ./...
+        run: go tool -modfile=tools/go.mod staticcheck ./...
 
       - name: govulncheck
-        run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
+        run: go tool -modfile=tools/go.mod govulncheck ./...
 
       # testcontainers, GitHub'ın Ubuntu makinesindeki Docker'ı kullanarak her
       # entegrasyon testi için geçici bir PostgreSQL 18 başlatır.
