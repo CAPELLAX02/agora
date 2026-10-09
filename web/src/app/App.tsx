@@ -1,12 +1,26 @@
+import { useState } from 'react'
+import { Provider } from 'react-redux'
+import { createBrowserRouter } from 'react-router'
+import { RouterProvider } from 'react-router/dom'
+
+import { Toaster } from '@/shared/ui/sonner'
+import { TooltipProvider } from '@/shared/ui/tooltip'
+
+import { routes } from './routes'
+import { setupStore } from './store'
+import { ThemeProvider } from './ThemeProvider'
+
 export function App() {
+  const [store] = useState(setupStore)
+  const [router] = useState(() => createBrowserRouter(routes))
   return (
-    <main className="grid min-h-svh place-items-center p-6">
-      <div className="text-center">
-        <h1 className="text-4xl font-semibold tracking-tight text-primary">Agora</h1>
-        <p className="mt-2 text-muted-foreground">
-          Ankara Üniversitesi öğrenci bilgi sistemi ve öğrenme ortamı
-        </p>
-      </div>
-    </main>
+    <Provider store={store}>
+      <ThemeProvider>
+        <TooltipProvider delayDuration={300}>
+          <RouterProvider router={router} />
+          <Toaster position="top-right" richColors closeButton />
+        </TooltipProvider>
+      </ThemeProvider>
+    </Provider>
   )
 }
