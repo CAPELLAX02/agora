@@ -69,8 +69,8 @@ export function CoursesPage() {
     <>
       <PageHeader title={t('catalog.title')} description={t('catalog.description')} />
       <Card className="gap-0 py-0">
-        <CardContent className="flex flex-col gap-3 border-b p-4 lg:flex-row">
-          <div className="relative flex-1">
+        <CardContent className="flex flex-col gap-3 border-b p-4 md:flex-row md:flex-wrap">
+          <div className="relative min-w-48 flex-1">
             <SearchIcon className="absolute top-2.5 left-3 size-4 text-muted-foreground" aria-hidden />
             <Input
               type="search"
@@ -85,7 +85,7 @@ export function CoursesPage() {
             />
           </div>
           <Select value={facultyId || ALL} onValueChange={(v) => setParam({ birim: v, bolum: '' })}>
-            <SelectTrigger className="lg:w-56" aria-label={t('catalog.faculty')}>
+            <SelectTrigger className="md:w-56" aria-label={t('catalog.faculty')}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -102,7 +102,7 @@ export function CoursesPage() {
             onValueChange={(v) => setParam({ bolum: v })}
             disabled={!facultyId}
           >
-            <SelectTrigger className="lg:w-56" aria-label={t('catalog.department')}>
+            <SelectTrigger className="md:w-56" aria-label={t('catalog.department')}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -115,7 +115,7 @@ export function CoursesPage() {
             </SelectContent>
           </Select>
           <Select value={kind || ALL} onValueChange={(v) => setParam({ tur: v })}>
-            <SelectTrigger className="lg:w-44" aria-label={t('catalog.kind')}>
+            <SelectTrigger className="md:w-44" aria-label={t('catalog.kind')}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

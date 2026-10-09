@@ -4,6 +4,7 @@ import {
   BookOpenIcon,
   CalendarDaysIcon,
   CalendarRangeIcon,
+  ClipboardListIcon,
   HomeIcon,
   PresentationIcon,
   LibraryIcon,
@@ -48,6 +49,7 @@ export const navGroups: NavGroup[] = [
         icon: PresentationIcon,
         permission: 'assessment_plan:manage',
       },
+      { to: '/ders-acma', label: 'nav.offerings', icon: ClipboardListIcon, permission: 'offering:manage' },
     ],
   },
   {

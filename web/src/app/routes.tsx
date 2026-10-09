@@ -147,6 +147,32 @@ export const routes: RouteObject[] = [
                     },
                   },
                   {
+                    path: 'ders-acma',
+                    lazy: async () => {
+                      const { OfferingsPage } = await import('@/features/offering/OfferingsPage')
+                      return {
+                        element: (
+                          <RequirePermission permission="offering:manage">
+                            <OfferingsPage />
+                          </RequirePermission>
+                        ),
+                      }
+                    },
+                  },
+                  {
+                    path: 'ders-acma/:id',
+                    lazy: async () => {
+                      const { OfferingDetailPage } = await import('@/features/offering/OfferingDetailPage')
+                      return {
+                        element: (
+                          <RequirePermission permission="offering:manage">
+                            <OfferingDetailPage />
+                          </RequirePermission>
+                        ),
+                      }
+                    },
+                  },
+                  {
                     path: 'yonetim/kullanicilar',
                     lazy: async () => {
                       const { UsersPage } = await import('@/features/admin/UsersPage')

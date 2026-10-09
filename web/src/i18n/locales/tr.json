@@ -87,7 +87,8 @@
     "myCurriculum": "Ders planım",
     "curricula": "Ders planları",
     "schedule": "Haftalık program",
-    "teaching": "Verdiğim dersler"
+    "teaching": "Verdiğim dersler",
+    "offerings": "Ders açma"
   },
   "auth": {
     "restoring": "Oturum açılıyor…",
@@ -824,6 +825,126 @@
       "PRIMARY": "Sorumlu",
       "CO_INSTRUCTOR": "Ortak",
       "ASSISTANT": "Yardımcı"
+    }
+  },
+  "offering": {
+    "title": "Ders açma",
+    "description": "Bölümün dönemde açtığı dersler, şubeleri, öğretim elemanları, kontenjanları ve haftalık programı.",
+    "new": "Ders aç",
+    "chooseDepartment": "Ders açmaları görmek için dönem ve bölüm seçin.",
+    "empty": "Bu dönem bu bölümde açılmış ders yok.",
+    "status": "Durum",
+    "sections": "Şube",
+    "enrolled": "Kayıtlı / kontenjan",
+    "statuses": {
+      "PLANNED": "Planlanıyor",
+      "OPEN": "Ders seçmeye açık",
+      "CLOSED": "Kapandı",
+      "CANCELLED": "İptal"
+    },
+    "create": {
+      "title": "Ders aç",
+      "description": "Ders planlama durumunda açılır; şubeleri ve programı kurulduktan sonra ders seçmeye açılır.",
+      "externalRef": "Eski sistem numarası",
+      "externalRefHint": "İsteğe bağlı; aktarılan verilerde eski ders açma numarası.",
+      "submit": "Dersi aç",
+      "success": "Ders açıldı."
+    },
+    "detail": {
+      "subtitle": "{{term}} · {{department}} · {{hours}} saat, {{ects}} AKTS",
+      "noSections": "Henüz şube yok. Öğrenci gruplarına göre şube ekleyin."
+    },
+    "transitions": {
+      "to": {
+        "OPEN": "Ders seçmeye aç",
+        "PLANNED": "Planlamaya geri al",
+        "CLOSED": "Kapat",
+        "CANCELLED": "İptal et"
+      },
+      "done": {
+        "OPEN": "Ders seçmeye açıldı.",
+        "PLANNED": "Planlamaya alındı.",
+        "CLOSED": "Ders kapatıldı.",
+        "CANCELLED": "Ders iptal edildi."
+      },
+      "delete": "Sil",
+      "deleted": "Ders açma silindi.",
+      "cancelTitle": "Ders iptal edilsin mi?",
+      "cancelDescription": "Bütün şubeler iptal edilir ve derslikleri boşalır. Kayıtlı öğrenci varken yapılamaz.",
+      "deleteTitle": "Ders açma silinsin mi?",
+      "deleteDescription": "Planlama aşamasındaki açılış şubeleriyle birlikte silinir."
+    },
+    "section": {
+      "title": "Şube {{code}}",
+      "add": "Şube ekle",
+      "editTitle": "Şube {{code}}",
+      "dialogDescription": "Kontenjan kayıtlı öğrencinin ve program kontenjanlarının altına inemez; teorik oturumların derslikleri kontenjanı almalıdır.",
+      "edit": "Düzenle",
+      "delete": "Şube {{code}} sil",
+      "deleteTitle": "Şube silinsin mi?",
+      "deleteDescription": "Kayıtlı öğrencisi olmayan şube oturumlarıyla birlikte silinir.",
+      "created": "Şube eklendi.",
+      "updated": "Şube güncellendi.",
+      "cancelled": "İptal",
+      "reserved": "Ayrılmış kontenjan",
+      "summary": "{{enrolled}} / {{capacity}} öğrenci · {{language}} · {{mode}}",
+      "code": "Şube kodu",
+      "codeHint": "1-3 harf ya da rakam (ör. 1, 2, A).",
+      "capacity": "Kontenjan",
+      "quotaMode": "Kontenjan türü",
+      "quotaModeHint": "Ayrılmış: sadece kontenjan verilen programların öğrencileri seçebilir.",
+      "quotaModes": {
+        "OPEN": "Herkese açık",
+        "RESERVED": "Programlara ayrılmış"
+      },
+      "mode": "Öğretim biçimi",
+      "modes": {
+        "IN_PERSON": "Yüz yüze",
+        "ONLINE": "Çevrim içi",
+        "HYBRID": "Karma"
+      },
+      "instructors": "Öğretim elemanları",
+      "editInstructors": "Düzenle",
+      "noInstructors": "Atanmadı.",
+      "quotas": "Program kontenjanları",
+      "editQuotas": "Düzenle",
+      "openToAll": "Bütün programlara açık.",
+      "slots": "Haftalık program",
+      "noSlots": "Henüz oturum yok."
+    },
+    "slot": {
+      "add": "Oturum ekle",
+      "added": "Oturum eklendi.",
+      "description": "Derslik, şubenin diğer oturumları ve öğretim elemanlarının dersleriyle çakışma denetlenir. Teorik oturumun dersliği en az {{capacity}} kişilik olmalı.",
+      "day": "Gün",
+      "start": "Başlangıç",
+      "end": "Bitiş",
+      "endHint": "Bu saatte biter (ör. 09:00-11:50).",
+      "type": "Oturum türü",
+      "online": "Dersliksiz (çevrim içi)",
+      "delete": "{{day}} {{time}} oturumunu sil",
+      "deleteTitle": "Oturum silinsin mi?",
+      "deleteDescription": "Oturum haftalık programdan kaldırılır ve dersliği boşalır."
+    },
+    "instructors": {
+      "title": "Şube {{code}} öğretim elemanları",
+      "description": "Tam bir sorumlu öğretim elemanı olmalı. Atananların şubenin oturum saatlerinde başka dersi olmamalı.",
+      "search": "Öğretim elemanı ekle",
+      "role": "{{name}} rolü",
+      "remove": "{{name}} kaldır",
+      "saved": "Öğretim elemanları kaydedildi."
+    },
+    "quotas": {
+      "title": "Şube {{code}} program kontenjanları",
+      "description": "Toplam {{total}} / {{capacity}}. Programdan kayıtlı öğrenci varsa kontenjanı kaldırılamaz.",
+      "quota": "Kontenjan",
+      "add": "Program ekle",
+      "remove": "Programı kaldır",
+      "saved": "Kontenjanlar kaydedildi."
+    },
+    "errors": {
+      "COURSE_ALREADY_OFFERED": "Bu ders bu dönem zaten açılmış; yeni öğrenci grubu için şube ekleyin.",
+      "SECTION_CODE_TAKEN": "Bu kodla bir şube zaten var."
     }
   }
 }

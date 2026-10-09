@@ -87,7 +87,8 @@
     "myCurriculum": "My curriculum",
     "curricula": "Curricula",
     "schedule": "Weekly schedule",
-    "teaching": "My teaching"
+    "teaching": "My teaching",
+    "offerings": "Course offering"
   },
   "auth": {
     "restoring": "Signing you in…",
@@ -824,6 +825,126 @@
       "PRIMARY": "Lead",
       "CO_INSTRUCTOR": "Co-instructor",
       "ASSISTANT": "Assistant"
+    }
+  },
+  "offering": {
+    "title": "Course offering",
+    "description": "Courses a department offers in a term: sections, instructors, quotas and weekly timetable.",
+    "new": "Offer course",
+    "chooseDepartment": "Choose a term and department to see its offerings.",
+    "empty": "This department offers no courses in this term.",
+    "status": "Status",
+    "sections": "Sections",
+    "enrolled": "Enrolled / capacity",
+    "statuses": {
+      "PLANNED": "Planning",
+      "OPEN": "Open for registration",
+      "CLOSED": "Closed",
+      "CANCELLED": "Cancelled"
+    },
+    "create": {
+      "title": "Offer a course",
+      "description": "The offering starts in planning; it opens for registration once sections and timetable are set.",
+      "externalRef": "Legacy number",
+      "externalRefHint": "Optional; the legacy offering number in migrated data.",
+      "submit": "Offer",
+      "success": "Course offered."
+    },
+    "detail": {
+      "subtitle": "{{term}} · {{department}} · {{hours}} hours, {{ects}} ECTS",
+      "noSections": "No sections yet. Add sections for student groups."
+    },
+    "transitions": {
+      "to": {
+        "OPEN": "Open for registration",
+        "PLANNED": "Back to planning",
+        "CLOSED": "Close",
+        "CANCELLED": "Cancel"
+      },
+      "done": {
+        "OPEN": "Opened for registration.",
+        "PLANNED": "Moved back to planning.",
+        "CLOSED": "Offering closed.",
+        "CANCELLED": "Offering cancelled."
+      },
+      "delete": "Delete",
+      "deleted": "Offering deleted.",
+      "cancelTitle": "Cancel the offering?",
+      "cancelDescription": "All sections are cancelled and their classrooms freed. Not possible while students are enrolled.",
+      "deleteTitle": "Delete the offering?",
+      "deleteDescription": "An offering in planning is deleted together with its sections."
+    },
+    "section": {
+      "title": "Section {{code}}",
+      "add": "Add section",
+      "editTitle": "Section {{code}}",
+      "dialogDescription": "Capacity cannot drop below enrolled students or programme quotas; theory session classrooms must fit the capacity.",
+      "edit": "Edit",
+      "delete": "Delete section {{code}}",
+      "deleteTitle": "Delete section?",
+      "deleteDescription": "A section without enrolled students is deleted together with its sessions.",
+      "created": "Section added.",
+      "updated": "Section updated.",
+      "cancelled": "Cancelled",
+      "reserved": "Reserved quota",
+      "summary": "{{enrolled}} / {{capacity}} students · {{language}} · {{mode}}",
+      "code": "Section code",
+      "codeHint": "1-3 letters or digits (e.g. 1, 2, A).",
+      "capacity": "Capacity",
+      "quotaMode": "Quota type",
+      "quotaModeHint": "Reserved: only students of programmes with a quota can register.",
+      "quotaModes": {
+        "OPEN": "Open to all",
+        "RESERVED": "Reserved for programmes"
+      },
+      "mode": "Mode of instruction",
+      "modes": {
+        "IN_PERSON": "In person",
+        "ONLINE": "Online",
+        "HYBRID": "Hybrid"
+      },
+      "instructors": "Instructors",
+      "editInstructors": "Edit",
+      "noInstructors": "Not assigned.",
+      "quotas": "Programme quotas",
+      "editQuotas": "Edit",
+      "openToAll": "Open to all programmes.",
+      "slots": "Weekly timetable",
+      "noSlots": "No sessions yet."
+    },
+    "slot": {
+      "add": "Add session",
+      "added": "Session added.",
+      "description": "Conflicts with the classroom, the section's other sessions and the instructors' classes are checked. A theory session's classroom must seat at least {{capacity}}.",
+      "day": "Day",
+      "start": "Start",
+      "end": "End",
+      "endHint": "Ends at this time (e.g. 09:00-11:50).",
+      "type": "Session type",
+      "online": "No classroom (online)",
+      "delete": "Delete the {{day}} {{time}} session",
+      "deleteTitle": "Delete session?",
+      "deleteDescription": "The session is removed from the timetable and its classroom freed."
+    },
+    "instructors": {
+      "title": "Section {{code}} instructors",
+      "description": "Exactly one lead instructor is required. Assignees must not have other classes during the section's sessions.",
+      "search": "Add instructor",
+      "role": "Role of {{name}}",
+      "remove": "Remove {{name}}",
+      "saved": "Instructors saved."
+    },
+    "quotas": {
+      "title": "Section {{code}} programme quotas",
+      "description": "Total {{total}} / {{capacity}}. A programme's quota cannot be removed while its students are enrolled.",
+      "quota": "Quota",
+      "add": "Add programme",
+      "remove": "Remove programme",
+      "saved": "Quotas saved."
+    },
+    "errors": {
+      "COURSE_ALREADY_OFFERED": "This course is already offered this term; add a section for a new student group.",
+      "SECTION_CODE_TAKEN": "A section with this code already exists."
     }
   }
 }

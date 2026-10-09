@@ -6,7 +6,10 @@ import { cn } from '@/shared/lib/utils'
 
 export const Select = SelectPrimitive.Root
 export const SelectGroup = SelectPrimitive.Group
-export const SelectValue = SelectPrimitive.Value
+/** SelectValue, seçili değeri gösterir; uzun değerler tetikleyicinin içinde kırpılır. */
+export function SelectValue(props: ComponentProps<typeof SelectPrimitive.Value>) {
+  return <SelectPrimitive.Value data-slot="select-value" {...props} />
+}
 
 export function SelectTrigger({
   className,
