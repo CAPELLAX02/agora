@@ -2389,6 +2389,8 @@ export type CurriculumItem = {
   national_credit: number
   /** Ders satırında dersin, yuvada yuvanın AKTS'si */
   ects: number
+  /** Yuvada havuzdan seçilecek ders sayısı (saat, kredi ve AKTS bu derslerin toplamı); ders satırında 1 */
+  course_count: number
   is_compulsory: boolean
   /** Yarıyıl içindeki sıra */
   position: number
@@ -2436,6 +2438,8 @@ export type CurriculumItemRequest = {
   national_credit?: number
   /** Sadece yuvada */
   ects?: number
+  /** Sadece yuvada: havuzdan seçilecek ders sayısı */
+  course_count?: number
   /** Ders satırında varsayılan true, yuva zorunlu olamaz */
   is_compulsory?: boolean
   position?: number

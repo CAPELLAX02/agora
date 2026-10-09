@@ -71,6 +71,7 @@ type curriculumItemResponse struct {
 	PracticeHours    int                `json:"practice_hours"`
 	NationalCredit   float64            `json:"national_credit"`
 	ECTS             float64            `json:"ects"`
+	CourseCount      int                `json:"course_count"`
 	IsCompulsory     bool               `json:"is_compulsory"`
 	Position         int                `json:"position"`
 }
@@ -127,7 +128,7 @@ func toCurriculumItemResponse(it CurriculumItem) curriculumItemResponse {
 	res := curriculumItemResponse{
 		ID: it.ID, SemesterNo: it.SemesterNo, ItemType: string(it.Type), Code: it.Code(),
 		HasPrerequisites: it.HasPrerequisites, TheoryHours: it.TheoryHours, PracticeHours: it.PracticeHours,
-		NationalCredit: it.NationalCredit, ECTS: it.ECTS, IsCompulsory: it.IsCompulsory, Position: it.Position,
+		NationalCredit: it.NationalCredit, ECTS: it.ECTS, CourseCount: it.CourseCount, IsCompulsory: it.IsCompulsory, Position: it.Position,
 	}
 	if it.Course != nil {
 		c := toCourseRef(*it.Course)
@@ -482,6 +483,7 @@ type itemRequest struct {
 	PracticeHours   int     `json:"practice_hours"`
 	NationalCredit  float64 `json:"national_credit"`
 	ECTS            float64 `json:"ects"`
+	CourseCount     int     `json:"course_count"`
 	IsCompulsory    *bool   `json:"is_compulsory"`
 	Position        int     `json:"position"`
 }
@@ -490,7 +492,7 @@ func (req itemRequest) validate() (ItemInput, []httpx.FieldError) {
 	in := ItemInput{
 		SemesterNo: req.SemesterNo, Type: ItemType(req.ItemType), CourseID: req.CourseID, GroupID: req.ElectiveGroupID,
 		TheoryHours: req.TheoryHours, PracticeHours: req.PracticeHours, NationalCredit: req.NationalCredit, ECTS: req.ECTS,
-		IsCompulsory: req.IsCompulsory == nil || *req.IsCompulsory, Position: req.Position,
+		CourseCount: req.CourseCount, IsCompulsory: req.IsCompulsory == nil || *req.IsCompulsory, Position: req.Position,
 	}
 	var errs []httpx.FieldError
 	if in.SemesterNo < 1 || in.SemesterNo > 12 {
@@ -507,6 +509,9 @@ func (req itemRequest) validate() (ItemInput, []httpx.FieldError) {
 		if in.GroupID != "" {
 			errs = append(errs, httpx.FieldError{Field: "elective_group_id", Message: "Ders satırında boş bırakılmalı."})
 		}
+		if in.CourseCount != 0 {
+			errs = append(errs, httpx.FieldError{Field: "course_count", Message: "Sadece seçmeli yuvada verilir."})
+		}
 	case ItemElectiveSlot:
 		if !httpx.ValidUUID(in.GroupID) {
 			errs = append(errs, httpx.FieldError{Field: "elective_group_id", Message: "Seçmeli yuvada zorunlu."})
@@ -516,6 +521,12 @@ func (req itemRequest) validate() (ItemInput, []httpx.FieldError) {
 		}
 		if req.IsCompulsory != nil && *req.IsCompulsory {
 			errs = append(errs, httpx.FieldError{Field: "is_compulsory", Message: "Seçmeli yuva zorunlu olamaz."})
+		}
+		if in.CourseCount == 0 {
+			in.CourseCount = 1
+		}
+		if in.CourseCount < 1 || in.CourseCount > 20 {
+			errs = append(errs, httpx.FieldError{Field: "course_count", Message: "1 ile 20 arasında olmalı."})
 		}
 		for field, v := range map[string]int{"theory_hours": in.TheoryHours, "practice_hours": in.PracticeHours} {
 			if v < 0 || v > 40 {

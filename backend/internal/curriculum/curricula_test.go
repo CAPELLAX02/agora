@@ -70,8 +70,8 @@ func TestCurriculumLifecycle(t *testing.T) {
 	items := []curriculum.ItemInput{
 		{SemesterNo: 1, Type: curriculum.ItemCourse, CourseID: c1, IsCompulsory: true},
 		{SemesterNo: 2, Type: curriculum.ItemCourse, CourseID: c2, IsCompulsory: true},
-		{SemesterNo: 3, Type: curriculum.ItemElectiveSlot, GroupID: group, TheoryHours: 3, NationalCredit: 3, ECTS: 6},
-		{SemesterNo: 4, Type: curriculum.ItemElectiveSlot, GroupID: group, TheoryHours: 3, NationalCredit: 3, ECTS: 6}, // yuva tekrarlanabilir
+		{SemesterNo: 3, Type: curriculum.ItemElectiveSlot, GroupID: group, TheoryHours: 6, NationalCredit: 6, ECTS: 6, CourseCount: 2},
+		{SemesterNo: 4, Type: curriculum.ItemElectiveSlot, GroupID: group, TheoryHours: 3, NationalCredit: 3, ECTS: 6, CourseCount: 1}, // yuva tekrarlanabilir
 	}
 	for _, it := range items {
 		if _, err := repo.AddItem(ctx, "", v2022, it); err != nil {
@@ -106,7 +106,7 @@ func TestCurriculumLifecycle(t *testing.T) {
 		len(sum.ElectiveKinds) != 1 || sum.ElectiveKinds[0].ECTS != 12 {
 		t.Errorf("özet = %+v", sum)
 	}
-	if got[0].Code() != "COM1001" || got[2].Code() != "COMTE02" || got[2].TheoryHours != 3 {
+	if got[0].Code() != "COM1001" || got[2].Code() != "COMTE02" || got[2].TheoryHours != 6 || got[2].CourseCount != 2 || got[0].CourseCount != 1 {
 		t.Errorf("satırlar = %+v", got)
 	}
 
@@ -251,7 +251,7 @@ func TestHTTPCurricula(t *testing.T) {
 		t.Fatalf("yuva: %d %s", res.status, res.raw)
 	}
 	slot := res.body["items"].([]any)[1].(map[string]any)
-	if slot["code"] != "COMTE02" || slot["is_compulsory"] != false || slot["ects"] != 5.0 {
+	if slot["code"] != "COMTE02" || slot["is_compulsory"] != false || slot["ects"] != 5.0 || slot["course_count"] != 1.0 {
 		t.Errorf("yuva: %v", slot)
 	}
 	res = s.do("PUT", items+"/"+slot["id"].(string), deptMg, nil, map[string]any{"semester_no": 3, "item_type": "ELECTIVE_SLOT", "elective_group_id": group, "theory_hours": 3, "national_credit": 3, "ects": 6})

@@ -5010,7 +5010,7 @@ components:
     CurriculumItem:
       type: object
       required: [id, semester_no, item_type, code, name_tr, name_en, course, course_kind, has_prerequisites, elective_group,
-                 theory_hours, practice_hours, national_credit, ects, is_compulsory, position]
+                 theory_hours, practice_hours, national_credit, ects, course_count, is_compulsory, position]
       properties:
         id: { type: string, format: uuid }
         semester_no: { type: integer, minimum: 1, maximum: 12 }
@@ -5035,6 +5035,7 @@ components:
         practice_hours: { type: integer }
         national_credit: { type: number }
         ects: { type: number, description: "Ders satırında dersin, yuvada yuvanın AKTS'si" }
+        course_count: { type: integer, description: "Yuvada havuzdan seçilecek ders sayısı (saat, kredi ve AKTS bu derslerin toplamı); ders satırında 1" }
         is_compulsory: { type: boolean }
         position: { type: integer, description: Yarıyıl içindeki sıra }
 
@@ -5051,6 +5052,7 @@ components:
         practice_hours: { type: integer, minimum: 0, maximum: 40, description: Sadece yuvada }
         national_credit: { type: number, minimum: 0, maximum: 60, multipleOf: 0.1, description: Sadece yuvada }
         ects: { type: number, minimum: 0, maximum: 60, multipleOf: 0.1, description: Sadece yuvada }
+        course_count: { type: integer, minimum: 1, maximum: 20, default: 1, description: "Sadece yuvada: havuzdan seçilecek ders sayısı" }
         is_compulsory: { type: boolean, default: true, description: "Ders satırında varsayılan true, yuva zorunlu olamaz" }
         position: { type: integer, minimum: 0, maximum: 999, default: 0 }
 

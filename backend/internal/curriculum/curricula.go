@@ -95,6 +95,7 @@ type CurriculumItem struct {
 	PracticeHours    int
 	NationalCredit   float64
 	ECTS             float64
+	CourseCount      int // yuvada havuzdan seçilecek ders sayısı; ders satırında 1
 	IsCompulsory     bool
 	Position         int
 }
@@ -254,7 +255,8 @@ func (r *Repository) curriculumItems(ctx context.Context, q db.Querier, curricul
 		       EXISTS (SELECT 1 FROM curriculum.course_prerequisites cp WHERE cp.course_id = c.id),
 		       g.id, g.code, g.name_tr, g.name_en, g.group_kind,
 		       coalesce(c.theory_hours, i.slot_theory_hours), coalesce(c.practice_hours, i.slot_practice_hours),
-		       coalesce(c.national_credit, i.slot_national_credit), coalesce(c.ects, i.slot_ects)
+		       coalesce(c.national_credit, i.slot_national_credit), coalesce(c.ects, i.slot_ects),
+		       coalesce(i.slot_course_count, 1)
 		FROM curriculum.curriculum_items i
 		LEFT JOIN curriculum.courses c ON c.id = i.course_id
 		LEFT JOIN curriculum.elective_groups g ON g.id = i.elective_group_id
@@ -265,18 +267,18 @@ func (r *Repository) curriculumItems(ctx context.Context, q db.Querier, curricul
 	}
 	items, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (CurriculumItem, error) {
 		var (
-			it                                   CurriculumItem
-			semester, position, theory, practice int16
-			itemType                             string
-			cID, cCode, cTR, cEN, cKind          *string
-			hasPre                               bool
-			gID, gCode, gTR, gEN, gKind          *string
+			it                                          CurriculumItem
+			semester, position, theory, practice, count int16
+			itemType                                    string
+			cID, cCode, cTR, cEN, cKind                 *string
+			hasPre                                      bool
+			gID, gCode, gTR, gEN, gKind                 *string
 		)
 		err := row.Scan(&it.ID, &semester, &itemType, &it.IsCompulsory, &position,
 			&cID, &cCode, &cTR, &cEN, &cKind, &hasPre,
 			&gID, &gCode, &gTR, &gEN, &gKind,
-			&theory, &practice, &it.NationalCredit, &it.ECTS)
-		it.SemesterNo, it.Position, it.Type = int(semester), int(position), ItemType(itemType)
+			&theory, &practice, &it.NationalCredit, &it.ECTS, &count)
+		it.SemesterNo, it.Position, it.Type, it.CourseCount = int(semester), int(position), ItemType(itemType), int(count)
 		it.TheoryHours, it.PracticeHours = int(theory), int(practice)
 		if cID != nil {
 			it.Course = &CourseRef{ID: *cID, Code: *cCode, NameTR: *cTR, NameEN: *cEN, ECTS: it.ECTS}
@@ -367,9 +369,9 @@ func (r *Repository) CreateCurriculum(ctx context.Context, actorID, programID st
 			tag, err := tx.Exec(ctx, `
 				INSERT INTO curriculum.curriculum_items
 				    (curriculum_id, semester_no, item_type, course_id, elective_group_id, slot_theory_hours, slot_practice_hours,
-				     slot_national_credit, slot_ects, is_compulsory, position)
+				     slot_national_credit, slot_ects, slot_course_count, is_compulsory, position)
 				SELECT $1, semester_no, item_type, course_id, elective_group_id, slot_theory_hours, slot_practice_hours,
-				       slot_national_credit, slot_ects, is_compulsory, position
+				       slot_national_credit, slot_ects, slot_course_count, is_compulsory, position
 				FROM curriculum.curriculum_items WHERE curriculum_id = $2`, id, copyFromID)
 			if err != nil {
 				return fmt.Errorf("curriculum: satırlar kopyalanamadı: %w", err)
@@ -569,15 +571,17 @@ type ItemInput struct {
 	PracticeHours  int
 	NationalCredit float64
 	ECTS           float64
+	CourseCount    int // sadece yuvada
 	IsCompulsory   bool
 	Position       int
 }
 
 func (in ItemInput) args() []any {
 	if in.Type == ItemCourse {
-		return []any{in.SemesterNo, string(in.Type), in.CourseID, nil, nil, nil, nil, nil, in.IsCompulsory, in.Position}
+		return []any{in.SemesterNo, string(in.Type), in.CourseID, nil, nil, nil, nil, nil, nil, in.IsCompulsory, in.Position}
 	}
-	return []any{in.SemesterNo, string(in.Type), nil, in.GroupID, in.TheoryHours, in.PracticeHours, in.NationalCredit, in.ECTS, false, in.Position}
+	return []any{in.SemesterNo, string(in.Type), nil, in.GroupID, in.TheoryHours, in.PracticeHours, in.NationalCredit, in.ECTS,
+		in.CourseCount, false, in.Position}
 }
 
 func (in ItemInput) audit() map[string]any {
@@ -585,7 +589,7 @@ func (in ItemInput) audit() map[string]any {
 	if in.Type == ItemCourse {
 		m["course_id"], m["is_compulsory"] = in.CourseID, in.IsCompulsory
 	} else {
-		m["elective_group_id"], m["ects"] = in.GroupID, in.ECTS
+		m["elective_group_id"], m["ects"], m["course_count"] = in.GroupID, in.ECTS, in.CourseCount
 	}
 	return m
 }
@@ -597,8 +601,8 @@ func (r *Repository) AddItem(ctx context.Context, actorID, curriculumID string, 
 		err := tx.QueryRow(ctx, `
 			INSERT INTO curriculum.curriculum_items
 			    (curriculum_id, semester_no, item_type, course_id, elective_group_id, slot_theory_hours, slot_practice_hours,
-			     slot_national_credit, slot_ects, is_compulsory, position)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
+			     slot_national_credit, slot_ects, slot_course_count, is_compulsory, position)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
 			append([]any{curriculumID}, in.args()...)...).Scan(&id)
 		if err := itemWriteError(err); err != nil {
 			return err
@@ -616,7 +620,8 @@ func (r *Repository) UpdateItem(ctx context.Context, actorID, curriculumID, item
 		tag, err := tx.Exec(ctx, `
 			UPDATE curriculum.curriculum_items
 			SET semester_no = $3, item_type = $4, course_id = $5, elective_group_id = $6, slot_theory_hours = $7,
-			    slot_practice_hours = $8, slot_national_credit = $9, slot_ects = $10, is_compulsory = $11, position = $12
+			    slot_practice_hours = $8, slot_national_credit = $9, slot_ects = $10, slot_course_count = $11,
+			    is_compulsory = $12, position = $13
 			WHERE curriculum_id = $1 AND id = $2`,
 			append([]any{curriculumID, itemID}, in.args()...)...)
 		if err := itemWriteError(err); err != nil {
