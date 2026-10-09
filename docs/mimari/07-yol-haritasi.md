@@ -157,10 +157,10 @@ flowchart LR
 | ✅ | Redis | Ders 16 |
 | ✅ | Mailpit (geliştirme SMTP) | `http://localhost:8025` |
 | ⏭️ | MinIO | Faz 5'te dosya yüklemeyle birlikte eklenecek: kullanılmayan servis compose'da durmasın |
-| ⬜ | Web: Vite + React + TS + Tailwind + shadcn, ESLint/Prettier/Vitest | Faz 1 backend'i bitince |
-| ⬜ | Web: tasarım sistemi, açık/koyu tema, uygulama kabuğu, i18n | |
-| ⬜ | Web: Redux store, OpenAPI'den RTK Query istemcisi, MSW | |
-| ⬜ | Web CI | |
+| ✅ | Web: Vite + React + TS + Tailwind + shadcn, ESLint/Prettier/Vitest | pnpm (corepack), TypeScript strict, tip bilgili ESLint |
+| ✅ | Web: tasarım sistemi, açık/koyu tema, uygulama kabuğu, i18n | Radix tabanlı bileşenler, OKLCH renk belirteçleri, TR/EN (anahtarlar tip kontrollü, iki dilin eşliği testli) |
+| ✅ | Web: Redux store, OpenAPI'den RTK Query istemcisi, MSW | Access token sadece bellekte, 401'de tek uçuşlu sessiz yenileme, MSW ile bütünleşik testler |
+| ✅ | Web CI | Biçim, lint, tip, test, build; üretilmiş istemcinin sözleşmeyle uyumu |
 
 ### Faz 1 — IAM + Organizasyon + Seed
 
@@ -191,12 +191,12 @@ flowchart LR
 
 | Durum | Madde |
 | --- | --- |
-| ⬜ | Giriş, oturum geri yükleme (sessiz refresh), çıkış |
-| ⬜ | Parola değiştirme (ilk girişte zorunlu), şifre sıfırlama |
-| ⬜ | İki adımlı doğrulama: girişin ikinci adımı, kurulum (QR), kurtarma kodları, MFA öneri bandı |
-| ⬜ | Oturumlarım, profil |
-| ⬜ | Rol bazlı menü, kontrol paneli iskeleti |
-| ⬜ | Yönetim: kullanıcılar, rol atama, denetim kayıtları |
+| ✅ | Giriş, oturum geri yükleme (sessiz refresh), çıkış |
+| ✅ | Parola değiştirme (ilk girişte zorunlu), şifre sıfırlama ve hesap aktivasyonu |
+| ✅ | İki adımlı doğrulama: girişin ikinci adımı, kurulum (QR), kurtarma kodları, MFA öneri bandı |
+| ✅ | Oturumlarım, güvenlik geçmişi, profil |
+| ✅ | Rol bazlı menü, kontrol paneli iskeleti |
+| ✅ | Yönetim: kullanıcılar, hesap işlemleri, rol atama, MFA sıfırlama, denetim kayıtları |
 
 **Kapanış**
 
