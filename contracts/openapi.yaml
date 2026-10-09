@@ -56,6 +56,8 @@ tags:
   - name: Denetim
     description: Denetim izi ve güvenlik olayları (sistem yöneticisi ve denetçi)
 
+  - name: Akademik takvim
+    description: Akademik yıllar, dönemler ve işlem pencereleri (ders seçme, not girişi ...)
 paths:
   /healthz:
     get:
@@ -1204,6 +1206,435 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/v1/academic-years:
+    get:
+      tags: [Akademik takvim]
+      summary: Akademik yılları ve dönemlerini listeler
+      description: En yeniden eskiye. Her yıl dönemleriyle (güz, bahar, yaz) birlikte döner.
+      operationId: listAcademicYears
+      x-agora-permission: calendar:read
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Yıllar
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/AcademicYear" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Akademik takvim]
+      summary: Akademik yıl tanımlar
+      description: Üniversite geneli tanımdır, birim kapsamlı takvim yetkisi yetmez.
+      operationId: createAcademicYear
+      x-agora-permission: calendar:manage
+      x-agora-mfa: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [start_year, starts_on, ends_on]
+              properties:
+                start_year: { type: integer, minimum: 1946, maximum: 2100, examples: [2026] }
+                starts_on: { type: string, format: date }
+                ends_on: { type: string, format: date }
+      responses:
+        "201":
+          description: Oluşturulan yıl
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AcademicYear" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: "`ACADEMIC_YEAR_EXISTS`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/academic-years/{id}/terms:
+    post:
+      tags: [Akademik takvim]
+      summary: Akademik yıla dönem ekler
+      description: Dönem kodu yıl ve türden üretilir (`2026-FALL`). Dönem yılın tarihleri içinde olmalıdır.
+      operationId: createTerm
+      x-agora-permission: calendar:manage
+      x-agora-mfa: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [term_type, starts_on, ends_on]
+              properties:
+                term_type: { $ref: "#/components/schemas/TermType" }
+                starts_on: { type: string, format: date }
+                ends_on: { type: string, format: date }
+      responses:
+        "201":
+          description: Oluşturulan dönem
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Term" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`TERM_EXISTS`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/terms:
+    get:
+      tags: [Akademik takvim]
+      summary: Dönemleri listeler
+      description: En yeniden eskiye.
+      operationId: listTerms
+      x-agora-permission: calendar:read
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Dönemler
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/Term" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/v1/terms/current:
+    get:
+      tags: [Akademik takvim]
+      summary: Aktif (içinde bulunulan) dönem
+      operationId: getCurrentTerm
+      x-agora-permission: calendar:read
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Aktif dönem
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Term" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404":
+          description: "`NO_CURRENT_TERM`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/terms/{id}:
+    get:
+      tags: [Akademik takvim]
+      summary: Bir dönemi döndürür
+      operationId: getTerm
+      x-agora-permission: calendar:read
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Dönem
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Term" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Akademik takvim]
+      summary: Dönemin tarihlerini ve durumunu günceller
+      description: Kapatılan dönem aktif dönem olmaktan çıkar. İyimser kilit, `If-Match` zorunlu.
+      operationId: updateTerm
+      x-agora-permission: calendar:manage
+      x-agora-mfa: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [starts_on, ends_on, status]
+              properties:
+                starts_on: { type: string, format: date }
+                ends_on: { type: string, format: date }
+                status: { $ref: "#/components/schemas/TermStatus" }
+      responses:
+        "200":
+          description: Güncel dönem
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Term" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "412": { $ref: "#/components/responses/VersionMismatch" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
+
+  /api/v1/terms/{id}/current:
+    post:
+      tags: [Akademik takvim]
+      summary: Dönemi aktif dönem yapar
+      description: Dönemin durumu ACTIVE olur, önceki aktif dönem aktiflikten çıkar. Aynı anda tek aktif dönem vardır.
+      operationId: makeTermCurrent
+      x-agora-permission: calendar:manage
+      x-agora-mfa: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Aktif dönem
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Term" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`TERM_CLOSED`: kapanmış dönem aktif yapılamaz"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/calendar/event-types:
+    get:
+      tags: [Akademik takvim]
+      summary: Takvim olay türleri
+      description: "`is_action_window` olan türler bir işlemin yapılabildiği pencerelerdir (ders seçme, not girişi ...)."
+      operationId: listCalendarEventTypes
+      x-agora-permission: calendar:read
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Türler
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/CalendarEventType" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/v1/calendar/windows:
+    get:
+      tags: [Akademik takvim]
+      summary: İşlem pencerelerinin durumu
+      description: |
+        Her işlem penceresi türü için "şu an açık mı, ne zaman açılacak?" sorusunun hedefe
+        göre cevabı. Dar kapsam geniş kapsamı geçersiz kılar: program için tanımlı olay varsa
+        o, yoksa biriminin, o da yoksa üniversitenin olayları uygulanır. Dönem verilmezse
+        aktif dönem kullanılır. `program_id` verilirse birimi programdan bulunur.
+      operationId: getCalendarWindows
+      x-agora-permission: calendar:read
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: term_id, in: query, schema: { type: string, format: uuid } }
+        - { name: faculty_id, in: query, schema: { type: string, format: uuid } }
+        - { name: program_id, in: query, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Pencereler
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CalendarWindows" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404":
+          description: "`NO_CURRENT_TERM`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/terms/{id}/events:
+    get:
+      tags: [Akademik takvim]
+      summary: Dönemin takvim olayları
+      description: |
+        Başlangıç zamanına göre sıralı. `faculty_id` ya da `program_id` verilirse sadece o
+        hedefe uygulanan kapsamlar (üniversite + birim + program) döner. Yayımlanmamış
+        (taslak) olayları sadece takvimi yönetenler görür.
+      operationId: listTermEvents
+      x-agora-permission: calendar:read
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - { name: type, in: query, schema: { type: string, examples: ["COURSE_REGISTRATION"] } }
+        - { name: faculty_id, in: query, schema: { type: string, format: uuid } }
+        - { name: program_id, in: query, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Olaylar
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/CalendarEvent" } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [Akademik takvim]
+      summary: Döneme takvim olayı ekler
+      description: |
+        Aynı türden aynı kapsamda zaman olarak çakışan olay olamaz. Kapsam yetki alanında
+        olmalıdır: üniversite kapsamı için üniversite genelinde takvim yetkisi gerekir.
+        Aralık yarı açıktır: [starts_at, ends_at).
+      operationId: createCalendarEvent
+      x-agora-permission: calendar:manage
+      x-agora-mfa: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CalendarEventRequest" }
+      responses:
+        "201":
+          description: Oluşturulan olay
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CalendarEvent" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`EVENT_OVERLAP`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/calendar-events/{id}:
+    get:
+      tags: [Akademik takvim]
+      summary: Bir takvim olayını döndürür
+      operationId: getCalendarEvent
+      x-agora-permission: calendar:read
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Olay
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CalendarEvent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Akademik takvim]
+      summary: Takvim olayını günceller
+      description: Tür değiştirilemez. Hem mevcut hem yeni kapsam yetki alanında olmalıdır. `If-Match` zorunlu.
+      operationId: updateCalendarEvent
+      x-agora-permission: calendar:manage
+      x-agora-mfa: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CalendarEventRequest" }
+      responses:
+        "200":
+          description: Güncel olay
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CalendarEvent" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`EVENT_OVERLAP`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "412": { $ref: "#/components/responses/VersionMismatch" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
+    delete:
+      tags: [Akademik takvim]
+      summary: Takvim olayını siler
+      description: Silme denetim izine yazılır.
+      operationId: deleteCalendarEvent
+      x-agora-permission: calendar:manage
+      x-agora-mfa: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "204":
+          description: Silindi
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /api/v1/buildings:
     get:
@@ -2559,3 +2990,120 @@ components:
         department: { $ref: "#/components/schemas/Ref" }
         faculty: { $ref: "#/components/schemas/Ref" }
         is_active: { type: boolean }
+
+    TermType:
+      type: string
+      enum: [FALL, SPRING, SUMMER]
+
+    TermStatus:
+      type: string
+      enum: [PLANNED, ACTIVE, CLOSED]
+
+    Term:
+      type: object
+      required: [id, code, academic_year, start_year, term_type, starts_on, ends_on, status, is_current, version]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, examples: ["2026-FALL"] }
+        academic_year: { type: string, examples: ["2026-2027"] }
+        start_year: { type: integer, examples: [2026] }
+        term_type: { $ref: "#/components/schemas/TermType" }
+        starts_on: { type: string, format: date }
+        ends_on: { type: string, format: date }
+        status: { $ref: "#/components/schemas/TermStatus" }
+        is_current: { type: boolean }
+        version: { type: integer }
+
+    AcademicYear:
+      type: object
+      required: [id, start_year, label, starts_on, ends_on, terms]
+      properties:
+        id: { type: string, format: uuid }
+        start_year: { type: integer, examples: [2026] }
+        label: { type: string, examples: ["2026-2027"] }
+        starts_on: { type: string, format: date }
+        ends_on: { type: string, format: date }
+        terms: { type: array, items: { $ref: "#/components/schemas/Term" } }
+
+    CalendarEventType:
+      type: object
+      required: [code, name_tr, name_en, category, is_action_window]
+      properties:
+        code: { type: string, examples: ["COURSE_REGISTRATION"] }
+        name_tr: { type: string }
+        name_en: { type: string }
+        category: { type: string, enum: [REGISTRATION, INSTRUCTION, EXAM, GRADING, ADMISSION, OTHER] }
+        is_action_window: { type: boolean }
+
+    CalendarScopeType:
+      type: string
+      enum: [UNIVERSITY, FACULTY, PROGRAM]
+
+    CalendarEvent:
+      type: object
+      required: [id, term_id, type, title_tr, title_en, starts_at, ends_at, scope_type, scope, is_published, note, version]
+      properties:
+        id: { type: string, format: uuid }
+        term_id: { type: string, format: uuid }
+        type: { $ref: "#/components/schemas/CalendarEventType" }
+        title_tr: { type: [string, "null"], description: Boşsa türün adı gösterilir }
+        title_en: { type: [string, "null"] }
+        starts_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time, description: Hariç }
+        scope_type: { $ref: "#/components/schemas/CalendarScopeType" }
+        scope:
+          type: [object, "null"]
+          description: Birim ya da program, üniversite kapsamında null
+          required: [id, name]
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+        is_published: { type: boolean }
+        note: { type: [string, "null"] }
+        version: { type: integer }
+
+    CalendarEventRequest:
+      type: object
+      additionalProperties: false
+      required: [starts_at, ends_at, scope_type]
+      properties:
+        type: { type: string, description: "Sadece oluşturmada zorunlu, sonradan değişmez" }
+        title_tr: { type: string, maxLength: 200 }
+        title_en: { type: string, maxLength: 200 }
+        starts_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time }
+        scope_type: { $ref: "#/components/schemas/CalendarScopeType" }
+        scope_id: { type: string, format: uuid, description: Üniversite kapsamında boş }
+        is_published: { type: boolean, default: true }
+        note: { type: string, maxLength: 1000 }
+
+    CalendarWindow:
+      type: object
+      required: [type, scope_type, open, current, next, events]
+      properties:
+        type: { $ref: "#/components/schemas/CalendarEventType" }
+        scope_type:
+          description: Uygulanan olayların kapsamı, hiç olay yoksa null
+          oneOf:
+            - $ref: "#/components/schemas/CalendarScopeType"
+            - type: "null"
+        open: { type: boolean }
+        current:
+          description: Şu an açık olan olay
+          oneOf:
+            - $ref: "#/components/schemas/CalendarEvent"
+            - type: "null"
+        next:
+          description: Açık değilse sıradaki olay
+          oneOf:
+            - $ref: "#/components/schemas/CalendarEvent"
+            - type: "null"
+        events: { type: array, items: { $ref: "#/components/schemas/CalendarEvent" } }
+
+    CalendarWindows:
+      type: object
+      required: [term, at, items]
+      properties:
+        term: { $ref: "#/components/schemas/Term" }
+        at: { type: string, format: date-time, description: Sorgunun cevaplandığı an }
+        items: { type: array, items: { $ref: "#/components/schemas/CalendarWindow" } }

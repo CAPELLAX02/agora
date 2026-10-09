@@ -88,3 +88,21 @@ func IsForeignKeyViolation(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == codeForeignKeyViolation
 }
+
+// IsExclusionViolation, hatanın bir dışlama (EXCLUDE) kısıtı ihlali olup olmadığını
+// söyler (ör. aynı derslikte aynı saatte iki ders). IsConflict bunu da kapsar. Bu
+// fonksiyon çakışmayı "zaten var" durumundan ayırmak için kullanılır.
+func IsExclusionViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == codeExclusionViolation
+}
+
+// ConstraintName, kısıt ihlalinde ihlal edilen kısıtın adını döndürür. Bir tabloda
+// birden fazla kısıt varsa hangisinin ihlal edildiğini ayırt etmek için kullanılır.
+func ConstraintName(err error) string {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		return pgErr.ConstraintName
+	}
+	return ""
+}

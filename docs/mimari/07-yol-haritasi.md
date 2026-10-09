@@ -205,6 +205,41 @@ flowchart LR
 | ✅ | Playwright e2e: giriş, ilk girişte parola değiştirme, şifre sıfırlama, MFA kurulumu ve iki adımlı giriş, rol atamasının anında etkisi, hesap aktivasyonu (gerçek yığınla, CI'da da) |
 | ✅ | Sözleşme ve dokümanlar güncel, CI yeşil. Go 1.27.2'ye geçildi (net/http HTTP/2 açıkları GO-2026-6611/6612/6613/6617); staticcheck ve govulncheck `backend/tools` modülünde sabitlendi |
 
+### Faz 2 — Takvim + Müfredat + Ders Açma
+
+**Backend**
+
+| Durum | Madde | Not |
+| --- | --- | --- |
+| ✅ | Akademik yıl ve dönemler, tek aktif dönem | `academic.academic_years`, `academic.terms`, kısmi benzersiz index ile tek aktif dönem; yıl ve dönem tanımı üniversite geneli yetki ister |
+| ✅ | Takvim olayları ve pencere motoru | Tipli zaman pencereleri, kapsam (üniversite → fakülte → program) geçersiz kılma, aynı kapsamda çakışma yok (`EXCLUDE`), taslak olaylar, `GET /calendar/windows` |
+| ⬜ | Ders kataloğu, ön koşullar (VE/VEYA grupları), eşdeğerlikler | Döngüsel ön koşul engeli, eski ↔ yeni kod eşdeğerliği |
+| ⬜ | Seçmeli gruplar ve ders havuzları | Teknik seçmeli, üniversite alan dışı, pedagojik formasyon, genel sosyal |
+| ⬜ | Versiyonlu müfredat ve öğrenci program kaydına bağlantı | Taslak → yürürlükte → arşiv, yarıyıl yerleşimi, giriş yılına göre müfredat |
+| ⬜ | Not ölçeği ve yönetmelik parametreleri (veri olarak) | Harf, katsayı, aralık, ortalamaya etkisi; AKTS limitleri |
+| ⬜ | Ders açma, şube, kontenjan ve program bazlı alt kontenjan, öğretim elemanı ataması | |
+| ⬜ | Haftalık program ve çakışma kontrolü | Derslik çakışması veritabanında (`EXCLUDE`), öğretim elemanı çakışması serviste, derslik kapasitesi |
+| ⬜ | Değerlendirme planı | Bileşenler ve ağırlıklar (toplam %100), bütünleme = final, plan kilidi |
+| ⬜ | Seed: gerçek BM (İngilizce) müfredatı, 2026-2027 takvimi, not ölçeği, BM güz dönemi ders açma ve programı | Müfredat bölümün yayımladığı formlardan (2022, 2023, 2026 sürümleri) |
+
+**Web**
+
+| Durum | Madde |
+| --- | --- |
+| ⬜ | Akademik takvim: dönem seçici, açık/kapalı pencereler, olay yönetimi |
+| ⬜ | Ders kataloğu ve ders detayı (ön koşul, eşdeğerlik, havuzlar) |
+| ⬜ | Ders planı (müfredat): öğrenci için kendi programı (program bağlamı seçici), personel için program ve sürüm gezgini, taslak düzenleme |
+| ⬜ | Haftalık program görünümü (öğretim elemanı, bölüm, derslik) |
+| ⬜ | Ders açma ekranları (bölüm başkanı): ders açma, şube, kontenjan, öğretim elemanı, program yerleşimi ve çakışma geri bildirimi |
+| ⬜ | Değerlendirme planı (öğretim elemanı) ve not ölçeği |
+
+**Kapanış**
+
+| Durum | Madde |
+| --- | --- |
+| ⬜ | Playwright e2e: takvim penceresi, müfredat görüntüleme, ders açma ve çakışma senaryoları |
+| ⬜ | Sözleşme ve dokümanlar güncel, CI yeşil |
+
 ### Faz 2 ve sonrası
 
 Her faz başlarken §2'deki kapsamdan aynı biçimde ayrıntılı bir liste çıkarılır.

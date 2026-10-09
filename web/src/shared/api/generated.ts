@@ -5,6 +5,7 @@ export const addTagTypes = [
   'Hesap',
   'Kullan\u0131c\u0131lar',
   'Denetim',
+  'Akademik takvim',
   'Organizasyon',
   '\u00D6\u011Frenciler',
 ] as const
@@ -279,6 +280,114 @@ const injectedRtkApi = api
           },
         }),
         providesTags: ['Denetim'],
+      }),
+      listAcademicYears: build.query<ListAcademicYearsApiResponse, ListAcademicYearsApiArg>({
+        query: () => ({ url: `/api/v1/academic-years` }),
+        providesTags: ['Akademik takvim'],
+      }),
+      createAcademicYear: build.mutation<CreateAcademicYearApiResponse, CreateAcademicYearApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/academic-years`,
+          method: 'POST',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['Akademik takvim'],
+      }),
+      createTerm: build.mutation<CreateTermApiResponse, CreateTermApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/academic-years/${queryArg.id}/terms`,
+          method: 'POST',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['Akademik takvim'],
+      }),
+      listTerms: build.query<ListTermsApiResponse, ListTermsApiArg>({
+        query: () => ({ url: `/api/v1/terms` }),
+        providesTags: ['Akademik takvim'],
+      }),
+      getCurrentTerm: build.query<GetCurrentTermApiResponse, GetCurrentTermApiArg>({
+        query: () => ({ url: `/api/v1/terms/current` }),
+        providesTags: ['Akademik takvim'],
+      }),
+      getTerm: build.query<GetTermApiResponse, GetTermApiArg>({
+        query: (queryArg) => ({ url: `/api/v1/terms/${queryArg.id}` }),
+        providesTags: ['Akademik takvim'],
+      }),
+      updateTerm: build.mutation<UpdateTermApiResponse, UpdateTermApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/terms/${queryArg.id}`,
+          method: 'PUT',
+          body: queryArg.body,
+          headers: {
+            'If-Match': queryArg['If-Match'],
+          },
+        }),
+        invalidatesTags: ['Akademik takvim'],
+      }),
+      makeTermCurrent: build.mutation<MakeTermCurrentApiResponse, MakeTermCurrentApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/terms/${queryArg.id}/current`,
+          method: 'POST',
+        }),
+        invalidatesTags: ['Akademik takvim'],
+      }),
+      listCalendarEventTypes: build.query<ListCalendarEventTypesApiResponse, ListCalendarEventTypesApiArg>({
+        query: () => ({ url: `/api/v1/calendar/event-types` }),
+        providesTags: ['Akademik takvim'],
+      }),
+      getCalendarWindows: build.query<GetCalendarWindowsApiResponse, GetCalendarWindowsApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/calendar/windows`,
+          params: {
+            term_id: queryArg.termId,
+            faculty_id: queryArg.facultyId,
+            program_id: queryArg.programId,
+          },
+        }),
+        providesTags: ['Akademik takvim'],
+      }),
+      listTermEvents: build.query<ListTermEventsApiResponse, ListTermEventsApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/terms/${queryArg.id}/events`,
+          params: {
+            type: queryArg['type'],
+            faculty_id: queryArg.facultyId,
+            program_id: queryArg.programId,
+          },
+        }),
+        providesTags: ['Akademik takvim'],
+      }),
+      createCalendarEvent: build.mutation<CreateCalendarEventApiResponse, CreateCalendarEventApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/terms/${queryArg.id}/events`,
+          method: 'POST',
+          body: queryArg.calendarEventRequest,
+        }),
+        invalidatesTags: ['Akademik takvim'],
+      }),
+      getCalendarEvent: build.query<GetCalendarEventApiResponse, GetCalendarEventApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/calendar-events/${queryArg.id}`,
+        }),
+        providesTags: ['Akademik takvim'],
+      }),
+      updateCalendarEvent: build.mutation<UpdateCalendarEventApiResponse, UpdateCalendarEventApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/calendar-events/${queryArg.id}`,
+          method: 'PUT',
+          body: queryArg.calendarEventRequest,
+          headers: {
+            'If-Match': queryArg['If-Match'],
+          },
+        }),
+        invalidatesTags: ['Akademik takvim'],
+      }),
+      deleteCalendarEvent: build.mutation<DeleteCalendarEventApiResponse, DeleteCalendarEventApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/calendar-events/${queryArg.id}`,
+          method: 'DELETE',
+        }),
+        invalidatesTags: ['Akademik takvim'],
       }),
       listBuildings: build.query<ListBuildingsApiResponse, ListBuildingsApiArg>({
         query: (queryArg) => ({
@@ -701,6 +810,100 @@ export type ListSecurityEventsApiArg = {
   /** Önceki yanıtın `next_cursor` değeri (opak) */
   cursor?: string
 }
+export type ListAcademicYearsApiResponse = /** status 200 Yıllar */ {
+  items: AcademicYear[]
+}
+export type ListAcademicYearsApiArg = void
+export type CreateAcademicYearApiResponse = /** status 201 Oluşturulan yıl */ AcademicYear
+export type CreateAcademicYearApiArg = {
+  body: {
+    start_year: number
+    starts_on: string
+    ends_on: string
+  }
+}
+export type CreateTermApiResponse = /** status 201 Oluşturulan dönem */ Term
+export type CreateTermApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: {
+    term_type: TermType
+    starts_on: string
+    ends_on: string
+  }
+}
+export type ListTermsApiResponse = /** status 200 Dönemler */ {
+  items: Term[]
+}
+export type ListTermsApiArg = void
+export type GetCurrentTermApiResponse = /** status 200 Aktif dönem */ Term
+export type GetCurrentTermApiArg = void
+export type GetTermApiResponse = /** status 200 Dönem */ Term
+export type GetTermApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type UpdateTermApiResponse = /** status 200 Güncel dönem */ Term
+export type UpdateTermApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
+  'If-Match': string
+  body: {
+    starts_on: string
+    ends_on: string
+    status: TermStatus
+  }
+}
+export type MakeTermCurrentApiResponse = /** status 200 Aktif dönem */ Term
+export type MakeTermCurrentApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type ListCalendarEventTypesApiResponse = /** status 200 Türler */ {
+  items: CalendarEventType[]
+}
+export type ListCalendarEventTypesApiArg = void
+export type GetCalendarWindowsApiResponse = /** status 200 Pencereler */ CalendarWindows
+export type GetCalendarWindowsApiArg = {
+  termId?: string
+  facultyId?: string
+  programId?: string
+}
+export type ListTermEventsApiResponse = /** status 200 Olaylar */ {
+  items: CalendarEvent[]
+}
+export type ListTermEventsApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  type?: string
+  facultyId?: string
+  programId?: string
+}
+export type CreateCalendarEventApiResponse = /** status 201 Oluşturulan olay */ CalendarEvent
+export type CreateCalendarEventApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  calendarEventRequest: CalendarEventRequest
+}
+export type GetCalendarEventApiResponse = /** status 200 Olay */ CalendarEvent
+export type GetCalendarEventApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type UpdateCalendarEventApiResponse = /** status 200 Güncel olay */ CalendarEvent
+export type UpdateCalendarEventApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
+  'If-Match': string
+  calendarEventRequest: CalendarEventRequest
+}
+export type DeleteCalendarEventApiResponse = unknown
+export type DeleteCalendarEventApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
 export type ListBuildingsApiResponse = /** status 200 Binalar */ {
   items: Building[]
 }
@@ -1109,6 +1312,86 @@ export type AuditLogEntry = {
   user_agent: string | null
   request_id: string | null
 }
+export type TermType = 'FALL' | 'SPRING' | 'SUMMER'
+export type TermStatus = 'PLANNED' | 'ACTIVE' | 'CLOSED'
+export type Term = {
+  id: string
+  code: string
+  academic_year: string
+  start_year: number
+  term_type: TermType
+  starts_on: string
+  ends_on: string
+  status: TermStatus
+  is_current: boolean
+  version: number
+}
+export type AcademicYear = {
+  id: string
+  start_year: number
+  label: string
+  starts_on: string
+  ends_on: string
+  terms: Term[]
+}
+export type CalendarEventType = {
+  code: string
+  name_tr: string
+  name_en: string
+  category: 'REGISTRATION' | 'INSTRUCTION' | 'EXAM' | 'GRADING' | 'ADMISSION' | 'OTHER'
+  is_action_window: boolean
+}
+export type CalendarScopeType = 'UNIVERSITY' | 'FACULTY' | 'PROGRAM'
+export type CalendarEvent = {
+  id: string
+  term_id: string
+  type: CalendarEventType
+  /** Boşsa türün adı gösterilir */
+  title_tr: string | null
+  title_en: string | null
+  starts_at: string
+  /** Hariç */
+  ends_at: string
+  scope_type: CalendarScopeType
+  /** Birim ya da program, üniversite kapsamında null */
+  scope: {
+    id: string
+    name: string
+  } | null
+  is_published: boolean
+  note: string | null
+  version: number
+}
+export type CalendarWindow = {
+  type: CalendarEventType
+  /** Uygulanan olayların kapsamı, hiç olay yoksa null */
+  scope_type: CalendarScopeType | null
+  open: boolean
+  /** Şu an açık olan olay */
+  current: CalendarEvent | null
+  /** Açık değilse sıradaki olay */
+  next: CalendarEvent | null
+  events: CalendarEvent[]
+}
+export type CalendarWindows = {
+  term: Term
+  /** Sorgunun cevaplandığı an */
+  at: string
+  items: CalendarWindow[]
+}
+export type CalendarEventRequest = {
+  /** Sadece oluşturmada zorunlu, sonradan değişmez */
+  type?: string
+  title_tr?: string
+  title_en?: string
+  starts_at: string
+  ends_at: string
+  scope_type: CalendarScopeType
+  /** Üniversite kapsamında boş */
+  scope_id?: string
+  is_published?: boolean
+  note?: string
+}
 export type Ref = {
   id: string
   code: string
@@ -1321,6 +1604,29 @@ export const {
   useLazyListAuditLogQuery,
   useListSecurityEventsQuery,
   useLazyListSecurityEventsQuery,
+  useListAcademicYearsQuery,
+  useLazyListAcademicYearsQuery,
+  useCreateAcademicYearMutation,
+  useCreateTermMutation,
+  useListTermsQuery,
+  useLazyListTermsQuery,
+  useGetCurrentTermQuery,
+  useLazyGetCurrentTermQuery,
+  useGetTermQuery,
+  useLazyGetTermQuery,
+  useUpdateTermMutation,
+  useMakeTermCurrentMutation,
+  useListCalendarEventTypesQuery,
+  useLazyListCalendarEventTypesQuery,
+  useGetCalendarWindowsQuery,
+  useLazyGetCalendarWindowsQuery,
+  useListTermEventsQuery,
+  useLazyListTermEventsQuery,
+  useCreateCalendarEventMutation,
+  useGetCalendarEventQuery,
+  useLazyGetCalendarEventQuery,
+  useUpdateCalendarEventMutation,
+  useDeleteCalendarEventMutation,
   useListBuildingsQuery,
   useLazyListBuildingsQuery,
   useCreateBuildingMutation,
