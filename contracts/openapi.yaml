@@ -63,6 +63,8 @@ tags:
     description: Programların versiyonlu ders planları (müfredat sürümleri) ve öğrencinin izlediği plan
   - name: Not ölçeği ve yönetmelik
     description: Harf notları, katsayılar, puan aralıkları ve tarihli yönetmelik parametreleri
+  - name: Ders açma
+    description: Dönemde açılan dersler, şubeler, kontenjanlar, öğretim elemanları ve haftalık program
 
 paths:
   /healthz:
@@ -2581,6 +2583,552 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/v1/terms/{id}/offerings:
+    get:
+      tags: [Ders açma]
+      summary: Dönemde açılan dersleri listeler
+      description: >-
+        Ders koduna göre sıralı, sayfalı. Açılan dersler ve programları herkese açıktır.
+      operationId: listOfferings
+      x-agora-permission: course:read
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - name: department_id
+          in: query
+          description: Dersi açan bölüm
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/Query"
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/OfferingStatus" }
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/Offering" } }
+                  next_cursor: { type: string, description: Sonraki sayfa varsa dolu }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [Ders açma]
+      summary: Dönemde ders açar
+      description: >-
+        Açan bölümü kapsayan ders açma yetkisi gerekir. Bir ders bir dönemde bir kez açılır;
+        farklı öğrenci grupları için şube eklenir. Yeni açılan ders planlama (PLANNED) durumundadır.
+      operationId: createOffering
+      x-agora-permission: offering:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OfferingCreateRequest" }
+      responses:
+        "201":
+          description: Açılan ders
+          headers:
+            ETag: { schema: { type: string } }
+            Location: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OfferingDetail" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`COURSE_ALREADY_OFFERED`: ders bu dönemde zaten açılmış, `TERM_CLOSED`: dönem kapanmış"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/offerings/{id}:
+    get:
+      tags: [Ders açma]
+      summary: Açılan dersi şubeleriyle döndürür
+      operationId: getOffering
+      x-agora-permission: course:read
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Açılan ders
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OfferingDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Ders açma]
+      summary: Açılan dersin durumunu ve notlarını günceller
+      description: >-
+        Geçişler: PLANNED → OPEN → CLOSED, OPEN → PLANNED, PLANNED/OPEN → CANCELLED. İptal
+        edilen dersin şubeleri de iptal olur, derslikleri boşalır. İyimser kilit, `If-Match` zorunlu.
+      operationId: updateOffering
+      x-agora-permission: offering:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OfferingUpdateRequest" }
+      responses:
+        "200":
+          description: Güncel ders
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OfferingDetail" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`INVALID_STATUS_TRANSITION`: geçersiz durum geçişi, `HAS_ENROLLMENTS`: kayıtlı öğrenci varken iptal ya da planlamaya dönüş"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "412": { $ref: "#/components/responses/VersionMismatch" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
+    delete:
+      tags: [Ders açma]
+      summary: Planlama aşamasındaki açılışı siler
+      operationId: deleteOffering
+      x-agora-permission: offering:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "204": { description: Silindi }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`INVALID_STATUS_TRANSITION`: sadece PLANNED açılış silinir, `HAS_ENROLLMENTS`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/offerings/{id}/sections:
+    post:
+      tags: [Ders açma]
+      summary: Açılan derse şube ekler
+      description: >-
+        Dil verilmezse dersin dili, kontenjan modu verilmezse OPEN kullanılır.
+      operationId: createSection
+      x-agora-permission: section:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SectionRequest" }
+      responses:
+        "201":
+          description: Güncel ders
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OfferingDetail" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`SECTION_CODE_TAKEN`, `INVALID_STATUS_TRANSITION`: iptal edilmiş ya da kapanmış ders, `TERM_CLOSED`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/sections/{id}:
+    get:
+      tags: [Ders açma]
+      summary: Şubeyi döndürür
+      operationId: getSection
+      x-agora-permission: course:read
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Şube
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Section" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Ders açma]
+      summary: Şubeyi günceller
+      description: >-
+        Gönderilmeyen alanlar değişmez, şube kodu değiştirilemez. Kontenjan kayıtlı öğrencinin
+        ve program kontenjanları toplamının altına inemez; teorik oturumların derslikleri yeni
+        kontenjanı almalıdır. İptal (status CANCELLED) kayıtlı öğrenci yokken yapılır ve
+        oturumları siler.
+      operationId: updateSection
+      x-agora-permission: section:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SectionRequest" }
+      responses:
+        "200":
+          description: Güncel şube
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Section" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`BELOW_ENROLLED`, `QUOTA_EXCEEDS_CAPACITY`, `CLASSROOM_TOO_SMALL`, `HAS_ENROLLMENTS` ya da `SECTION_CANCELLED`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "412": { $ref: "#/components/responses/VersionMismatch" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
+    delete:
+      tags: [Ders açma]
+      summary: Kayıtlı öğrencisi olmayan şubeyi siler
+      operationId: deleteSection
+      x-agora-permission: section:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "204": { description: Silindi }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`HAS_ENROLLMENTS`: kayıtlı öğrenci var"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/sections/{id}/instructors:
+    put:
+      tags: [Ders açma]
+      summary: Şubenin öğretim elemanlarını değiştirir
+      description: >-
+        Verilen küme mevcut atamaların yerine geçer. Küme boş değilse tam bir sorumlu
+        (PRIMARY) olmalı; sadece görevdeki akademik personel atanabilir.
+      operationId: setSectionInstructors
+      x-agora-permission: section:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  maxItems: 10
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [staff_id, role]
+                    properties:
+                      staff_id: { type: string, format: uuid }
+                      role: { $ref: "#/components/schemas/InstructorRole" }
+      responses:
+        "200":
+          description: Güncel şube
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Section" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`INSTRUCTOR_CONFLICT`: öğretim elemanının şubenin oturum saatlerinde başka dersi var, `SECTION_CANCELLED`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/sections/{id}/quotas:
+    put:
+      tags: [Ders açma]
+      summary: Şubenin program kontenjanlarını değiştirir
+      description: >-
+        RESERVED modda sadece kontenjan ayrılmış programların öğrencileri şubeyi seçebilir.
+      operationId: setSectionQuotas
+      x-agora-permission: quota:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  maxItems: 50
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [program_id, quota]
+                    properties:
+                      program_id: { type: string, format: uuid }
+                      quota: { type: integer, minimum: 0, maximum: 2000 }
+      responses:
+        "200":
+          description: Güncel şube
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Section" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`QUOTA_EXCEEDS_CAPACITY`: toplam şube kontenjanını aşıyor, `BELOW_ENROLLED`: programdan kayıtlı öğrencinin altında"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/sections/{id}/slots:
+    post:
+      tags: [Ders açma]
+      summary: Şubeye haftalık oturum ekler
+      description: >-
+        Derslik çakışması veritabanında (EXCLUDE), öğretim elemanı çakışması serviste denetlenir.
+        Teorik oturumun dersliği şube kontenjanını almalıdır (uygulama ve laboratuvar
+        oturumları gruplarla yapılabilir).
+      operationId: addScheduleSlot
+      x-agora-permission: schedule:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ScheduleSlotRequest" }
+      responses:
+        "201":
+          description: Güncel şube
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Section" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`CLASSROOM_CONFLICT`, `INSTRUCTOR_CONFLICT`, `SECTION_OVERLAP`, `CLASSROOM_TOO_SMALL`, `CLASSROOM_INACTIVE` ya da `SECTION_CANCELLED`; detay çakışan dersi ve saati söyler"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/schedule-slots/{id}:
+    put:
+      tags: [Ders açma]
+      summary: Oturumu değiştirir
+      operationId: updateScheduleSlot
+      x-agora-permission: schedule:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ScheduleSlotRequest" }
+      responses:
+        "200":
+          description: Güncel şube
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Section" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`CLASSROOM_CONFLICT`, `INSTRUCTOR_CONFLICT`, `SECTION_OVERLAP`, `CLASSROOM_TOO_SMALL` ya da `CLASSROOM_INACTIVE`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+    delete:
+      tags: [Ders açma]
+      summary: Oturumu kaldırır
+      operationId: deleteScheduleSlot
+      x-agora-permission: schedule:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "204": { description: Silindi }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/terms/{id}/schedule:
+    get:
+      tags: [Ders açma]
+      summary: Dönemin haftalık programı
+      description: >-
+        Süzgeçlerden tam olarak biri verilmelidir. İptal edilmiş şubeler dönmez.
+      operationId: termSchedule
+      x-agora-permission: course:read
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - name: department_id
+          in: query
+          description: Bölümün açtığı derslerin programı
+          schema: { type: string, format: uuid }
+        - name: classroom_id
+          in: query
+          description: Dersliğin doluluğu
+          schema: { type: string, format: uuid }
+        - name: staff_id
+          in: query
+          description: Öğretim elemanının programı
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/ScheduleEntry" } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/me/teaching:
+    get:
+      tags: [Ders açma]
+      summary: Öğretim elemanının haftalık programı
+      description: >-
+        Personel olmayan ya da aktif dönem tanımlı olmayan kullanıcıya boş liste döner.
+      operationId: myTeaching
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: term_id
+          in: query
+          description: Varsayılan aktif dönem
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/ScheduleEntry" } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/instructors:
+    get:
+      tags: [Ders açma]
+      summary: Atanabilir öğretim elemanlarını arar
+      description: >-
+        Görevdeki akademik personel; unvan sırasına ve ada göre.
+      operationId: searchInstructors
+      x-agora-permission: section:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Query"
+        - name: department_id
+          in: query
+          description: Kadrosunun bulunduğu bölüm
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/StaffSummary" } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /api/v1/buildings:
     get:
       tags: [Organizasyon]
@@ -4422,3 +4970,190 @@ components:
         effective_to: { type: [string, "null"], format: date, description: "Hariç; null ise hâlâ geçerli" }
         description_tr: { type: string }
         note: { type: [string, "null"] }
+
+    NamedRef:
+      type: object
+      description: Kodlu ve iki dilde adlı bir kaydın özeti (ders, birim ...)
+      required: [id, code, name_tr, name_en]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name_tr: { type: string }
+        name_en: { type: string }
+
+    OfferingStatus:
+      type: string
+      description: "PLANNED: hazırlanıyor (ders seçmede görünmez), OPEN: ders seçmeye açık, CLOSED: dönem bitti, CANCELLED: açılmadı"
+      enum: [PLANNED, OPEN, CLOSED, CANCELLED]
+
+    InstructorRole:
+      type: string
+      description: "PRIMARY: sorumlu (not girişi ve değerlendirme planı), CO_INSTRUCTOR: ortak, ASSISTANT: yardımcı"
+      enum: [PRIMARY, CO_INSTRUCTOR, ASSISTANT]
+
+    Offering:
+      type: object
+      required: [id, term, course, department, status, external_ref, note, section_count, total_capacity, total_enrolled, version]
+      properties:
+        id: { type: string, format: uuid }
+        term:
+          type: object
+          required: [id, code]
+          properties:
+            id: { type: string, format: uuid }
+            code: { type: string, examples: ["2026-FALL"] }
+        course:
+          allOf:
+            - $ref: "#/components/schemas/NamedRef"
+            - type: object
+              required: [theory_hours, practice_hours, national_credit, ects, language]
+              properties:
+                theory_hours: { type: integer }
+                practice_hours: { type: integer }
+                national_credit: { type: number }
+                ects: { type: number }
+                language: { type: string, enum: [TR, EN] }
+        department: { $ref: "#/components/schemas/DepartmentRef" }
+        status: { $ref: "#/components/schemas/OfferingStatus" }
+        external_ref: { type: [string, "null"], description: Eski sistemdeki ders açma numarası }
+        note: { type: [string, "null"] }
+        section_count: { type: integer, description: Etkin şube sayısı }
+        total_capacity: { type: integer }
+        total_enrolled: { type: integer }
+        version: { type: integer }
+
+    OfferingDetail:
+      allOf:
+        - $ref: "#/components/schemas/Offering"
+        - type: object
+          required: [sections]
+          properties:
+            sections: { type: array, items: { $ref: "#/components/schemas/Section" } }
+
+    OfferingCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [course_id, department_id]
+      properties:
+        course_id: { type: string, format: uuid }
+        department_id: { type: string, format: uuid, description: Dersi açan bölüm }
+        external_ref: { type: string, maxLength: 50 }
+        note: { type: string, maxLength: 1000 }
+
+    OfferingUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status: { $ref: "#/components/schemas/OfferingStatus" }
+        external_ref: { type: string, maxLength: 50 }
+        note: { type: string, maxLength: 1000 }
+
+    Instructor:
+      type: object
+      required: [staff_id, staff_no, title, first_name, last_name, role]
+      properties:
+        staff_id: { type: string, format: uuid }
+        staff_no: { type: string }
+        title: { type: [string, "null"], examples: ["Doç. Dr."] }
+        first_name: { type: string }
+        last_name: { type: string }
+        role: { $ref: "#/components/schemas/InstructorRole" }
+
+    ScheduleSlot:
+      type: object
+      required: [id, day_of_week, start_time, end_time, session_type, classroom]
+      properties:
+        id: { type: string, format: uuid }
+        day_of_week: { type: integer, minimum: 1, maximum: 7, description: "ISO: 1 pazartesi, 7 pazar" }
+        start_time: { type: string, pattern: "^[0-2][0-9]:[0-5][0-9]$", examples: ["09:00"] }
+        end_time: { type: string, pattern: "^[0-2][0-9]:[0-5][0-9]$", description: Hariç, examples: ["10:50"] }
+        session_type: { type: string, enum: [THEORY, PRACTICE, LAB] }
+        classroom:
+          description: Çevrim içi oturumda null
+          oneOf:
+            - type: "null"
+            - type: object
+              required: [id, code, name, building_code, capacity]
+              properties:
+                id: { type: string, format: uuid }
+                code: { type: string }
+                name: { type: string }
+                building_code: { type: string }
+                capacity: { type: integer }
+
+    ScheduleSlotRequest:
+      type: object
+      additionalProperties: false
+      required: [day_of_week, start_time, end_time]
+      properties:
+        day_of_week: { type: integer, minimum: 1, maximum: 7 }
+        start_time: { type: string, pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$", description: "07:00 ve sonrası" }
+        end_time: { type: string, pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$", description: "Hariç; 23:00 ve öncesi" }
+        classroom_id: { type: string, format: uuid, description: Çevrim içi oturumda boş }
+        session_type: { type: string, enum: [THEORY, PRACTICE, LAB], default: THEORY }
+
+    Section:
+      type: object
+      required: [id, offering_id, section_code, capacity, enrolled_count, quota_mode, instruction_mode, language, status,
+                 instructors, quotas, slots, version]
+      properties:
+        id: { type: string, format: uuid }
+        offering_id: { type: string, format: uuid }
+        section_code: { type: string, examples: ["1"] }
+        capacity: { type: integer }
+        enrolled_count: { type: integer }
+        quota_mode: { type: string, enum: [OPEN, RESERVED], description: "RESERVED: sadece kontenjan ayrılmış programlardan" }
+        instruction_mode: { type: string, enum: [IN_PERSON, ONLINE, HYBRID] }
+        language: { type: string, enum: [TR, EN] }
+        status: { type: string, enum: [ACTIVE, CANCELLED] }
+        instructors: { type: array, items: { $ref: "#/components/schemas/Instructor" } }
+        quotas:
+          type: array
+          items:
+            type: object
+            required: [program, quota, enrolled]
+            properties:
+              program: { $ref: "#/components/schemas/ProgramRef" }
+              quota: { type: integer }
+              enrolled: { type: integer }
+        slots: { type: array, items: { $ref: "#/components/schemas/ScheduleSlot" } }
+        version: { type: integer }
+
+    SectionRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        section_code: { type: string, pattern: "^[A-Za-z0-9]{1,3}$", description: "Sadece oluşturmada (zorunlu)" }
+        capacity: { type: integer, minimum: 0, maximum: 2000, description: Oluşturmada zorunlu }
+        quota_mode: { type: string, enum: [OPEN, RESERVED] }
+        instruction_mode: { type: string, enum: [IN_PERSON, ONLINE, HYBRID] }
+        language: { type: string, enum: [TR, EN] }
+        status: { type: string, enum: [ACTIVE, CANCELLED], description: Sadece güncellemede }
+
+    ScheduleEntry:
+      allOf:
+        - $ref: "#/components/schemas/ScheduleSlot"
+        - type: object
+          required: [term_id, offering_id, section_id, section_code, course, instructors]
+          properties:
+            term_id: { type: string, format: uuid }
+            offering_id: { type: string, format: uuid }
+            section_id: { type: string, format: uuid }
+            section_code: { type: string }
+            course: { $ref: "#/components/schemas/NamedRef" }
+            instructors: { type: array, items: { $ref: "#/components/schemas/Instructor" } }
+
+    StaffSummary:
+      type: object
+      required: [staff_id, staff_no, title, first_name, last_name, department]
+      properties:
+        staff_id: { type: string, format: uuid }
+        staff_no: { type: string }
+        title: { type: [string, "null"] }
+        first_name: { type: string }
+        last_name: { type: string }
+        department:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/DepartmentRef"

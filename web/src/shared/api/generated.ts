@@ -9,6 +9,7 @@ export const addTagTypes = [
   'Ders katalo\u011Fu',
   'M\u00FCfredat',
   'Not \u00F6l\u00E7e\u011Fi ve y\u00F6netmelik',
+  'Ders a\u00E7ma',
   'Organizasyon',
   '\u00D6\u011Frenciler',
 ] as const
@@ -647,6 +648,149 @@ const injectedRtkApi = api
           invalidatesTags: ['Not \u00F6l\u00E7e\u011Fi ve y\u00F6netmelik'],
         },
       ),
+      listOfferings: build.query<ListOfferingsApiResponse, ListOfferingsApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/terms/${queryArg.id}/offerings`,
+          params: {
+            department_id: queryArg.departmentId,
+            q: queryArg.q,
+            status: queryArg.status,
+            limit: queryArg.limit,
+            cursor: queryArg.cursor,
+          },
+        }),
+        providesTags: ['Ders a\u00E7ma'],
+      }),
+      createOffering: build.mutation<CreateOfferingApiResponse, CreateOfferingApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/terms/${queryArg.id}/offerings`,
+          method: 'POST',
+          body: queryArg.offeringCreateRequest,
+        }),
+        invalidatesTags: ['Ders a\u00E7ma'],
+      }),
+      getOffering: build.query<GetOfferingApiResponse, GetOfferingApiArg>({
+        query: (queryArg) => ({ url: `/api/v1/offerings/${queryArg.id}` }),
+        providesTags: ['Ders a\u00E7ma'],
+      }),
+      updateOffering: build.mutation<UpdateOfferingApiResponse, UpdateOfferingApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/offerings/${queryArg.id}`,
+          method: 'PUT',
+          body: queryArg.offeringUpdateRequest,
+          headers: {
+            'If-Match': queryArg['If-Match'],
+          },
+        }),
+        invalidatesTags: ['Ders a\u00E7ma'],
+      }),
+      deleteOffering: build.mutation<DeleteOfferingApiResponse, DeleteOfferingApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/offerings/${queryArg.id}`,
+          method: 'DELETE',
+        }),
+        invalidatesTags: ['Ders a\u00E7ma'],
+      }),
+      createSection: build.mutation<CreateSectionApiResponse, CreateSectionApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/offerings/${queryArg.id}/sections`,
+          method: 'POST',
+          body: queryArg.sectionRequest,
+        }),
+        invalidatesTags: ['Ders a\u00E7ma'],
+      }),
+      getSection: build.query<GetSectionApiResponse, GetSectionApiArg>({
+        query: (queryArg) => ({ url: `/api/v1/sections/${queryArg.id}` }),
+        providesTags: ['Ders a\u00E7ma'],
+      }),
+      updateSection: build.mutation<UpdateSectionApiResponse, UpdateSectionApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/sections/${queryArg.id}`,
+          method: 'PUT',
+          body: queryArg.sectionRequest,
+          headers: {
+            'If-Match': queryArg['If-Match'],
+          },
+        }),
+        invalidatesTags: ['Ders a\u00E7ma'],
+      }),
+      deleteSection: build.mutation<DeleteSectionApiResponse, DeleteSectionApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/sections/${queryArg.id}`,
+          method: 'DELETE',
+        }),
+        invalidatesTags: ['Ders a\u00E7ma'],
+      }),
+      setSectionInstructors: build.mutation<SetSectionInstructorsApiResponse, SetSectionInstructorsApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/sections/${queryArg.id}/instructors`,
+          method: 'PUT',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['Ders a\u00E7ma'],
+      }),
+      setSectionQuotas: build.mutation<SetSectionQuotasApiResponse, SetSectionQuotasApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/sections/${queryArg.id}/quotas`,
+          method: 'PUT',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['Ders a\u00E7ma'],
+      }),
+      addScheduleSlot: build.mutation<AddScheduleSlotApiResponse, AddScheduleSlotApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/sections/${queryArg.id}/slots`,
+          method: 'POST',
+          body: queryArg.scheduleSlotRequest,
+        }),
+        invalidatesTags: ['Ders a\u00E7ma'],
+      }),
+      updateScheduleSlot: build.mutation<UpdateScheduleSlotApiResponse, UpdateScheduleSlotApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/schedule-slots/${queryArg.id}`,
+          method: 'PUT',
+          body: queryArg.scheduleSlotRequest,
+        }),
+        invalidatesTags: ['Ders a\u00E7ma'],
+      }),
+      deleteScheduleSlot: build.mutation<DeleteScheduleSlotApiResponse, DeleteScheduleSlotApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/schedule-slots/${queryArg.id}`,
+          method: 'DELETE',
+        }),
+        invalidatesTags: ['Ders a\u00E7ma'],
+      }),
+      termSchedule: build.query<TermScheduleApiResponse, TermScheduleApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/terms/${queryArg.id}/schedule`,
+          params: {
+            department_id: queryArg.departmentId,
+            classroom_id: queryArg.classroomId,
+            staff_id: queryArg.staffId,
+          },
+        }),
+        providesTags: ['Ders a\u00E7ma'],
+      }),
+      myTeaching: build.query<MyTeachingApiResponse, MyTeachingApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/me/teaching`,
+          params: {
+            term_id: queryArg.termId,
+          },
+        }),
+        providesTags: ['Ders a\u00E7ma'],
+      }),
+      searchInstructors: build.query<SearchInstructorsApiResponse, SearchInstructorsApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/instructors`,
+          params: {
+            q: queryArg.q,
+            department_id: queryArg.departmentId,
+            limit: queryArg.limit,
+          },
+        }),
+        providesTags: ['Ders a\u00E7ma'],
+      }),
       listBuildings: build.query<ListBuildingsApiResponse, ListBuildingsApiArg>({
         query: (queryArg) => ({
           url: `/api/v1/buildings`,
@@ -1386,6 +1530,140 @@ export type SetRegulationParameterApiArg = {
     /** Karar bilgisi vb. */
     note?: string
   }
+}
+export type ListOfferingsApiResponse = /** status 200 Liste */ {
+  items: Offering[]
+  /** Sonraki sayfa varsa dolu */
+  next_cursor?: string
+}
+export type ListOfferingsApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Dersi açan bölüm */
+  departmentId?: string
+  /** Kodda veya adda geçen metin (büyük/küçük harf ve Türkçe karakter duyarsız) */
+  q?: string
+  status?: OfferingStatus
+  limit?: number
+  /** Önceki yanıtın `next_cursor` değeri (opak) */
+  cursor?: string
+}
+export type CreateOfferingApiResponse = /** status 201 Açılan ders */ OfferingDetail
+export type CreateOfferingApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  offeringCreateRequest: OfferingCreateRequest
+}
+export type GetOfferingApiResponse = /** status 200 Açılan ders */ OfferingDetail
+export type GetOfferingApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type UpdateOfferingApiResponse = /** status 200 Güncel ders */ OfferingDetail
+export type UpdateOfferingApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
+  'If-Match': string
+  offeringUpdateRequest: OfferingUpdateRequest
+}
+export type DeleteOfferingApiResponse = unknown
+export type DeleteOfferingApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type CreateSectionApiResponse = /** status 201 Güncel ders */ OfferingDetail
+export type CreateSectionApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  sectionRequest: SectionRequest
+}
+export type GetSectionApiResponse = /** status 200 Şube */ Section
+export type GetSectionApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type UpdateSectionApiResponse = /** status 200 Güncel şube */ Section
+export type UpdateSectionApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
+  'If-Match': string
+  sectionRequest: SectionRequest
+}
+export type DeleteSectionApiResponse = unknown
+export type DeleteSectionApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type SetSectionInstructorsApiResponse = /** status 200 Güncel şube */ Section
+export type SetSectionInstructorsApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: {
+    items: {
+      staff_id: string
+      role: InstructorRole
+    }[]
+  }
+}
+export type SetSectionQuotasApiResponse = /** status 200 Güncel şube */ Section
+export type SetSectionQuotasApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: {
+    items: {
+      program_id: string
+      quota: number
+    }[]
+  }
+}
+export type AddScheduleSlotApiResponse = /** status 201 Güncel şube */ Section
+export type AddScheduleSlotApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  scheduleSlotRequest: ScheduleSlotRequest
+}
+export type UpdateScheduleSlotApiResponse = /** status 200 Güncel şube */ Section
+export type UpdateScheduleSlotApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  scheduleSlotRequest: ScheduleSlotRequest
+}
+export type DeleteScheduleSlotApiResponse = unknown
+export type DeleteScheduleSlotApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type TermScheduleApiResponse = /** status 200 Liste */ {
+  items: ScheduleEntry[]
+}
+export type TermScheduleApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Bölümün açtığı derslerin programı */
+  departmentId?: string
+  /** Dersliğin doluluğu */
+  classroomId?: string
+  /** Öğretim elemanının programı */
+  staffId?: string
+}
+export type MyTeachingApiResponse = /** status 200 Liste */ {
+  items: ScheduleEntry[]
+}
+export type MyTeachingApiArg = {
+  /** Varsayılan aktif dönem */
+  termId?: string
+}
+export type SearchInstructorsApiResponse = /** status 200 Liste */ {
+  items: StaffSummary[]
+}
+export type SearchInstructorsApiArg = {
+  /** Kodda veya adda geçen metin (büyük/küçük harf ve Türkçe karakter duyarsız) */
+  q?: string
+  /** Kadrosunun bulunduğu bölüm */
+  departmentId?: string
+  limit?: number
 }
 export type ListBuildingsApiResponse = /** status 200 Binalar */ {
   items: Building[]
@@ -2128,6 +2406,135 @@ export type RegulationParameter = {
   description_tr: string
   note: string | null
 }
+export type NamedRef = {
+  id: string
+  code: string
+  name_tr: string
+  name_en: string
+}
+export type OfferingStatus = 'PLANNED' | 'OPEN' | 'CLOSED' | 'CANCELLED'
+export type Offering = {
+  id: string
+  term: {
+    id: string
+    code: string
+  }
+  course: NamedRef & {
+    theory_hours: number
+    practice_hours: number
+    national_credit: number
+    ects: number
+    language: 'TR' | 'EN'
+  }
+  department: DepartmentRef
+  status: OfferingStatus
+  /** Eski sistemdeki ders açma numarası */
+  external_ref: string | null
+  note: string | null
+  /** Etkin şube sayısı */
+  section_count: number
+  total_capacity: number
+  total_enrolled: number
+  version: number
+}
+export type InstructorRole = 'PRIMARY' | 'CO_INSTRUCTOR' | 'ASSISTANT'
+export type Instructor = {
+  staff_id: string
+  staff_no: string
+  title: string | null
+  first_name: string
+  last_name: string
+  role: InstructorRole
+}
+export type ScheduleSlot = {
+  id: string
+  /** ISO: 1 pazartesi, 7 pazar */
+  day_of_week: number
+  start_time: string
+  /** Hariç */
+  end_time: string
+  session_type: 'THEORY' | 'PRACTICE' | 'LAB'
+  /** Çevrim içi oturumda null */
+  classroom: null | {
+    id: string
+    code: string
+    name: string
+    building_code: string
+    capacity: number
+  }
+}
+export type Section = {
+  id: string
+  offering_id: string
+  section_code: string
+  capacity: number
+  enrolled_count: number
+  /** RESERVED: sadece kontenjan ayrılmış programlardan */
+  quota_mode: 'OPEN' | 'RESERVED'
+  instruction_mode: 'IN_PERSON' | 'ONLINE' | 'HYBRID'
+  language: 'TR' | 'EN'
+  status: 'ACTIVE' | 'CANCELLED'
+  instructors: Instructor[]
+  quotas: {
+    program: ProgramRef
+    quota: number
+    enrolled: number
+  }[]
+  slots: ScheduleSlot[]
+  version: number
+}
+export type OfferingDetail = Offering & {
+  sections: Section[]
+}
+export type OfferingCreateRequest = {
+  course_id: string
+  /** Dersi açan bölüm */
+  department_id: string
+  external_ref?: string
+  note?: string
+}
+export type OfferingUpdateRequest = {
+  status: OfferingStatus
+  external_ref?: string
+  note?: string
+}
+export type SectionRequest = {
+  /** Sadece oluşturmada (zorunlu) */
+  section_code?: string
+  /** Oluşturmada zorunlu */
+  capacity?: number
+  quota_mode?: 'OPEN' | 'RESERVED'
+  instruction_mode?: 'IN_PERSON' | 'ONLINE' | 'HYBRID'
+  language?: 'TR' | 'EN'
+  /** Sadece güncellemede */
+  status?: 'ACTIVE' | 'CANCELLED'
+}
+export type ScheduleSlotRequest = {
+  day_of_week: number
+  /** 07:00 ve sonrası */
+  start_time: string
+  /** Hariç; 23:00 ve öncesi */
+  end_time: string
+  /** Çevrim içi oturumda boş */
+  classroom_id?: string
+  session_type?: 'THEORY' | 'PRACTICE' | 'LAB'
+}
+export type ScheduleEntry = ScheduleSlot & {
+  term_id: string
+  offering_id: string
+  section_id: string
+  section_code: string
+  course: NamedRef
+  instructors: Instructor[]
+}
+export type StaffSummary = {
+  staff_id: string
+  staff_no: string
+  title: string | null
+  first_name: string
+  last_name: string
+  department: null | DepartmentRef
+}
 export type Ref = {
   id: string
   code: string
@@ -2411,6 +2818,29 @@ export const {
   useGetRegulationParameterHistoryQuery,
   useLazyGetRegulationParameterHistoryQuery,
   useSetRegulationParameterMutation,
+  useListOfferingsQuery,
+  useLazyListOfferingsQuery,
+  useCreateOfferingMutation,
+  useGetOfferingQuery,
+  useLazyGetOfferingQuery,
+  useUpdateOfferingMutation,
+  useDeleteOfferingMutation,
+  useCreateSectionMutation,
+  useGetSectionQuery,
+  useLazyGetSectionQuery,
+  useUpdateSectionMutation,
+  useDeleteSectionMutation,
+  useSetSectionInstructorsMutation,
+  useSetSectionQuotasMutation,
+  useAddScheduleSlotMutation,
+  useUpdateScheduleSlotMutation,
+  useDeleteScheduleSlotMutation,
+  useTermScheduleQuery,
+  useLazyTermScheduleQuery,
+  useMyTeachingQuery,
+  useLazyMyTeachingQuery,
+  useSearchInstructorsQuery,
+  useLazySearchInstructorsQuery,
   useListBuildingsQuery,
   useLazyListBuildingsQuery,
   useCreateBuildingMutation,
