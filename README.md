@@ -21,7 +21,7 @@ Gerekenler: Docker, Go (sürüm `backend/go.mod`'da), Node.js 22 (pnpm ayrıca k
 ```bash
 make up            # PostgreSQL, Redis, Mailpit, Prometheus, Grafana
 make migrate-up    # şema
-make seed          # organizasyon kataloğu ve demo hesaplar (tekrar çalıştırılabilir)
+make seed          # organizasyon, takvim, ders planları, ders açma ve demo hesaplar (tekrar çalıştırılabilir)
 make api           # API: http://localhost:8080
 make worker        # e-postalar (parola sıfırlama, aktivasyon) için
 make web-install   # ilk seferde
@@ -55,6 +55,9 @@ make web-dev       # web: http://localhost:5173
 | `22290003`    | Can Polat         | Öğrenci, **geçici parola**: ilk girişte parolasını değiştirmek zorunda  |
 | `P10001`      | Ayşe Demir        | Öğretim elemanı ve danışman (Bilgisayar Mühendisliği)                   |
 | `P10002`      | Mehmet Yıldız     | Öğretim elemanı ve bölüm başkanı (Bilgisayar Mühendisliği)              |
+| `P10003` … `P10007` | Elif Şahin, Burak Arslan, Selin Koç, Kerem Aydın, Zehra Kurt | Bilgisayar Mühendisliği öğretim elemanları (2026 güz derslerini verir) |
+| `P10010`      | Ahmet Güneş       | Öğretim elemanı (Matematik; Matematik I)                                |
+| `P10011`      | Gizem Erdoğan     | Öğretim elemanı (Fizik; Fizik I ve laboratuvarı)                        |
 | `P20001`      | Fatma Çelik       | Fakülte öğrenci işleri (Mühendislik Fakültesi)                          |
 | `P20002`      | Hasan Öztürk      | Merkezi öğrenci işleri (Daire Başkanlığı)                               |
 | `P90001`      | Sistem Yöneticisi | Sistem yöneticisi                                                       |
@@ -62,6 +65,13 @@ make web-dev       # web: http://localhost:5173
 **İki adımlı doğrulama:** hesap ve rol yönetimi, denetim kayıtları gibi hassas yetkiler sadece MFA ile açılmış oturumlarda kullanılabilir. `P90001` ile ilk girişte üstte çıkan banttan MFA kurun (Google/Microsoft Authenticator ya da benzeri bir uygulama). Telefon kaybolursa kurtarma kodları ya da başka bir yöneticinin "MFA'yı sıfırla" işlemi kullanılır. Geliştirme veritabanını sıfırlamak her şeyi başa döndürür.
 
 **E-postalar:** parola sıfırlama ve aktivasyon bağlantıları worker çalışırken (`make worker`) Mailpit'e düşer.
+
+### Akademik veri
+
+- **Takvim:** 2026-2027 akademik yılı; güz dönemi içinde bulunulan dönemdir. Ders seçme, ekle-bırak, sınav ve not girişi pencereleri temsilî tarihlerle tanımlıdır. Mühendislik Fakültesi'nin ekle-bırak süresi fakülte düzeyinde uzatılmıştır: kapsam önceliği (program → fakülte → üniversite) `GET /api/v1/calendar/windows?faculty_id=...` ile görülebilir.
+- **Ders planları:** Bilgisayar Mühendisliği (İngilizce) programının bölümün yayımladığı **gerçek** ders planları: 2022 (2018-2022 girişliler), 2023 (2023-2025) ve 2026 (2026 ve sonrası) sürümleri, 170 ders, teknik seçmeli havuzları, pedagojik formasyon grubu, eski ↔ yeni kod eşdeğerlikleri ve ön koşullar. Planlarda listelenmeyen üniversite alan dışı seçmeli havuzu için birkaç sentetik ders (`UNVG...`) eklenmiştir. Öğrenci kayıtları giriş yılına göre doğru sürüme bağlanır. Üretici: `infra/seed/dev/005_bm_curriculum.sql` başlığına bakın.
+- **Not ölçeği ve yönetmelik:** Ankara Üniversitesi lisans not ölçeği ve tarihli yönetmelik parametreleri (AKTS üst sınırları, final barajı ...) migration'la gelir.
+- **2026 güz ders açma:** Bilgisayar Mühendisliği'nin 38 dersi (her sınıfın zorunluları ve teknik seçmelileri), şubeleri, haftalık programı (derslik, şube ve öğretim elemanı çakışması olmadan), öğretim elemanları ve değerlendirme planları. `COM2501`'in kontenjanının bir kısmı Yapay Zekâ ve Veri Mühendisliğine ayrılmıştır; birkaç dersin değerlendirme planı kilitlidir.
 
 ### Büyük veri seti
 

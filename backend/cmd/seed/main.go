@@ -89,6 +89,14 @@ var users = []seedUser{
 			{code: "DEPARTMENT_HEAD", scope: iam.ScopeDepartment, scopeCode: "BIL"},
 		},
 	},
+	// 2026 güz ders açmalarının öğretim elemanları.
+	instructor("P10003", "Elif", "Şahin", "elif.sahin", "ASSIST_PROF", "BIL"),
+	instructor("P10004", "Burak", "Arslan", "burak.arslan", "ASSIST_PROF", "BIL"),
+	instructor("P10005", "Selin", "Koç", "selin.koc", "ASSOC_PROF", "BIL"),
+	instructor("P10006", "Kerem", "Aydın", "kerem.aydin", "LECTURER_DR", "BIL"),
+	instructor("P10007", "Zehra", "Kurt", "zehra.kurt", "RESEARCH_ASSISTANT", "BIL"),
+	instructor("P10010", "Ahmet", "Güneş", "ahmet.gunes", "ASSOC_PROF", "MAT"),
+	instructor("P10011", "Gizem", "Erdoğan", "gizem.erdogan", "ASSIST_PROF", "FIZ"),
 	{
 		username: "P20001", firstName: "Fatma", lastName: "Çelik",
 		email: "fatma.celik@agora.test", staffType: people.StaffAdministrative,
@@ -104,6 +112,15 @@ var users = []seedUser{
 		email: "admin@agora.test", staffType: people.StaffAdministrative,
 		roles: []role{{code: "SYSTEM_ADMIN", scope: iam.ScopeUniversity}},
 	},
+}
+
+// instructor, bölümünde ders veren bir akademik personeldir.
+func instructor(no, first, last, mail, title, dept string) seedUser {
+	return seedUser{
+		username: no, firstName: first, lastName: last, email: mail + "@agora.test",
+		staffType: people.StaffAcademic, title: title, deptCode: dept,
+		roles: []role{{code: "INSTRUCTOR", scope: iam.ScopeDepartment, scopeCode: dept}},
+	}
 }
 
 func main() {
@@ -191,6 +208,13 @@ func run() error {
 		}
 	}
 
+	if err := seedFall2026(ctx, pool); err != nil {
+		return fmt.Errorf("2026 güz ders açmaları: %w", err)
+	}
+	if err := linkCurricula(ctx, pool); err != nil {
+		return err
+	}
+
 	fmt.Printf("\nTüm seed kullanıcılarının parolası: %s\n", plain)
 	return nil
 }
@@ -230,6 +254,27 @@ func enrollDemoStudents(ctx context.Context, pool *pgxpool.Pool) error {
 			return fmt.Errorf("%s danışman atanamadı: %w", no, err)
 		}
 		fmt.Printf("KAYDEDİLDİ %-9s BIL-EN-NO, danışman P10001\n", no)
+	}
+	return nil
+}
+
+// linkCurricula, henüz bir müfredat sürümüne bağlı olmayan öğrenci kayıtlarını giriş
+// yıllarına göre programlarının yürürlükteki sürümüne bağlar. Sürüm yürürlüğe girerken
+// (API) aynı bağlama yapılır; seed'de sürümler SQL ile yürürlükte geldiği ve öğrenciler
+// sonradan oluşturulduğu için burada tekrarlanır.
+func linkCurricula(ctx context.Context, pool *pgxpool.Pool) error {
+	tag, err := pool.Exec(ctx, `
+		UPDATE enrollment.student_programs sp
+		SET curriculum_id = c.id, version = sp.version + 1, updated_at = now()
+		FROM curriculum.curricula c
+		WHERE sp.curriculum_id IS NULL AND c.program_id = sp.program_id AND c.status = 'ACTIVE'
+		  AND sp.admission_year >= c.effective_from_year
+		  AND (c.effective_to_year IS NULL OR sp.admission_year <= c.effective_to_year)`)
+	if err != nil {
+		return fmt.Errorf("öğrenciler müfredata bağlanamadı: %w", err)
+	}
+	if n := tag.RowsAffected(); n > 0 {
+		fmt.Printf("BAĞLANDI   %d öğrenci kaydı giriş yılına göre müfredat sürümüne bağlandı\n", n)
 	}
 	return nil
 }
