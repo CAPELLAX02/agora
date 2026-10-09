@@ -83,6 +83,11 @@ func TestSynthetic(t *testing.T) {
 			SELECT count(DISTINCT d.faculty_id) - (SELECT count(DISTINCT ra.scope_id) FROM iam.role_assignments ra
 			    JOIN iam.roles r ON r.id = ra.role_id WHERE r.code = 'FACULTY_REGISTRAR')
 			FROM org.departments d JOIN org.programs p ON p.department_id = d.id`,
+		"öğrenci rolü olmayan öğrenci hesabı": `
+			SELECT count(*) FROM people.students s
+			JOIN iam.users u ON u.person_id = s.person_id
+			WHERE NOT EXISTS (SELECT 1 FROM iam.role_assignments ra JOIN iam.roles r ON r.id = ra.role_id
+			                  WHERE ra.user_id = u.id AND r.code = 'STUDENT')`,
 		"hazırlıkta olup sınıfı 0 olmayan": `
 			SELECT count(*) FROM enrollment.student_programs WHERE (status = 'PREP') <> (class_level = 0)`,
 		"ilk yılında not ortalaması olan": `

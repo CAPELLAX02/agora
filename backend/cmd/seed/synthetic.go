@@ -230,7 +230,8 @@ func (g *generator) newUser(personID id, username, email string) id {
 	return id
 }
 
-func (g *generator) assign(userID id, role, scopeType string, scopeID id, since time.Time) {
+// assign, kullanıcıya rol atar. scopeID, kapsamsız (NONE) ve üniversite geneli rollerde nil olmalı.
+func (g *generator) assign(userID id, role, scopeType string, scopeID any, since time.Time) {
 	g.roles = append(g.roles, []any{userID, g.roleIDs[role], scopeType, scopeID, since, "Sentetik seed"})
 }
 
@@ -396,7 +397,7 @@ func (g *generator) generateStudents(programs []program, counts []int, advisors 
 			pr := g.newPerson(18+offset, 21+offset)
 			studentID := g.uuid()
 			g.students = append(g.students, []any{studentID, pr.id, no})
-			g.newUser(pr.id, no, no+"@ogrenci.agora.test")
+			userID := g.newUser(pr.id, no, no+"@ogrenci.agora.test")
 
 			status, class := "ACTIVE", min(offset+1, years)
 			if p.PrepClass && offset == 0 && g.rng.IntN(10) < 4 {
@@ -429,6 +430,7 @@ func (g *generator) generateStudents(programs []program, counts []int, advisors 
 				admissionType = "TRANSFER_EXTERNAL"
 			}
 			admitted := time.Date(admission, time.September, 10+g.rng.IntN(15), 0, 0, 0, 0, time.UTC)
+			g.assign(userID, "STUDENT", "NONE", nil, admitted)
 
 			spID := g.uuid()
 			g.studentPrograms = append(g.studentPrograms, []any{
