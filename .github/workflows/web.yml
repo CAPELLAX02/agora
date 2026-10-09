@@ -49,6 +49,12 @@ jobs:
       - name: Bağımlılıklar
         run: pnpm install --frozen-lockfile
 
+      # Sözleşme değişip istemci yeniden üretilmediyse web ile API ayrışmış demektir.
+      - name: API istemcisi sözleşmeyle uyumlu mu
+        run: |
+          pnpm codegen
+          git diff --exit-code -- src/shared/api/generated.ts
+
       - name: Biçim (Prettier)
         run: pnpm format:check
 
