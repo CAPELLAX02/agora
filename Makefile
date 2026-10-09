@@ -23,12 +23,12 @@ export
         web-install web-dev web-codegen web-check web-e2e
 
 help: ## Komutları listeler
-	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
+	@grep -hE '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
 # --- Altyapı -----------------------------------------------------------------
 
-up: ## Docker servislerini başlatır (PostgreSQL, Redis)
+up: ## Docker servislerini başlatır (PostgreSQL, Redis, Mailpit, Prometheus, Grafana)
 	docker compose up -d
 
 down: ## Docker servislerini durdurur (veriler volume'larda korunur)
