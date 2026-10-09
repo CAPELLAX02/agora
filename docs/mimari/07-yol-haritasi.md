@@ -216,7 +216,7 @@ flowchart LR
 | ✅ | Ders kataloğu, ön koşullar (VE/VEYA grupları), eşdeğerlikler | `curriculum.courses`; kod sabit (değişen ders yeni kodla açılıp eşdeğerlikle bağlanır), ön koşul kümesi tek seferde değişir, döngü özyinelemeli sorguyla engellenir (`PREREQUISITE_CYCLE`), eski ↔ yeni kod eşdeğerliği; bölüm kapsamlı yetki |
 | ✅ | Seçmeli gruplar ve ders havuzları | Teknik seçmeli, üniversite alan dışı, pedagojik formasyon, genel sosyal; havuz üyeliği idempotent `PUT` |
 | ✅ | Versiyonlu müfredat ve öğrenci program kaydına bağlantı | Taslak → yürürlükte → arşiv; yürürlükteki sürümlerin giriş yılları çakışamaz (`EXCLUDE`); yürürlüğe girerken AKTS toplamı ve yarıyıl sınırı doğrulanır, aralıktaki öğrenci kayıtları bağlanır; ders satırı ve seçmeli yuva; `GET /me/curricula` |
-| ⬜ | Not ölçeği ve yönetmelik parametreleri (veri olarak) | Harf, katsayı, aralık, ortalamaya etkisi; AKTS limitleri |
+| ✅ | Not ölçeği ve yönetmelik parametreleri (veri olarak) | Ankara Üniversitesi lisans ölçeği (A … F2, F1 devamsızlık, BŞR/BŞZ, MUAF); puan aralıkları 0-100'ü boşluksuz kapsar (`EXCLUDE` + doğrulama), tek varsayılan ölçek; parametreler tarihli (`daterange` çakışmasız), yeni değer eskisini kapatır, JSON türü korunur |
 | ⬜ | Ders açma, şube, kontenjan ve program bazlı alt kontenjan, öğretim elemanı ataması | |
 | ⬜ | Haftalık program ve çakışma kontrolü | Derslik çakışması veritabanında (`EXCLUDE`), öğretim elemanı çakışması serviste, derslik kapasitesi |
 | ⬜ | Değerlendirme planı | Bileşenler ve ağırlıklar (toplam %100), bütünleme = final, plan kilidi |

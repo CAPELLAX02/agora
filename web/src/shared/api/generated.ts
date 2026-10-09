@@ -8,6 +8,7 @@ export const addTagTypes = [
   'Akademik takvim',
   'Ders katalo\u011Fu',
   'M\u00FCfredat',
+  'Not \u00F6l\u00E7e\u011Fi ve y\u00F6netmelik',
   'Organizasyon',
   '\u00D6\u011Frenciler',
 ] as const
@@ -588,6 +589,64 @@ const injectedRtkApi = api
         query: () => ({ url: `/api/v1/me/curricula` }),
         providesTags: ['M\u00FCfredat'],
       }),
+      listGradeScales: build.query<ListGradeScalesApiResponse, ListGradeScalesApiArg>({
+        query: () => ({ url: `/api/v1/grade-scales` }),
+        providesTags: ['Not \u00F6l\u00E7e\u011Fi ve y\u00F6netmelik'],
+      }),
+      createGradeScale: build.mutation<CreateGradeScaleApiResponse, CreateGradeScaleApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/grade-scales`,
+          method: 'POST',
+          body: queryArg.gradeScaleRequest,
+        }),
+        invalidatesTags: ['Not \u00F6l\u00E7e\u011Fi ve y\u00F6netmelik'],
+      }),
+      getGradeScale: build.query<GetGradeScaleApiResponse, GetGradeScaleApiArg>({
+        query: (queryArg) => ({ url: `/api/v1/grade-scales/${queryArg.id}` }),
+        providesTags: ['Not \u00F6l\u00E7e\u011Fi ve y\u00F6netmelik'],
+      }),
+      updateGradeScale: build.mutation<UpdateGradeScaleApiResponse, UpdateGradeScaleApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/grade-scales/${queryArg.id}`,
+          method: 'PUT',
+          body: queryArg.gradeScaleRequest,
+          headers: {
+            'If-Match': queryArg['If-Match'],
+          },
+        }),
+        invalidatesTags: ['Not \u00F6l\u00E7e\u011Fi ve y\u00F6netmelik'],
+      }),
+      listRegulationParameters: build.query<
+        ListRegulationParametersApiResponse,
+        ListRegulationParametersApiArg
+      >({
+        query: (queryArg) => ({
+          url: `/api/v1/regulation-parameters`,
+          params: {
+            at: queryArg.at,
+          },
+        }),
+        providesTags: ['Not \u00F6l\u00E7e\u011Fi ve y\u00F6netmelik'],
+      }),
+      getRegulationParameterHistory: build.query<
+        GetRegulationParameterHistoryApiResponse,
+        GetRegulationParameterHistoryApiArg
+      >({
+        query: (queryArg) => ({
+          url: `/api/v1/regulation-parameters/${queryArg.key}`,
+        }),
+        providesTags: ['Not \u00F6l\u00E7e\u011Fi ve y\u00F6netmelik'],
+      }),
+      setRegulationParameter: build.mutation<SetRegulationParameterApiResponse, SetRegulationParameterApiArg>(
+        {
+          query: (queryArg) => ({
+            url: `/api/v1/regulation-parameters/${queryArg.key}`,
+            method: 'POST',
+            body: queryArg.body,
+          }),
+          invalidatesTags: ['Not \u00F6l\u00E7e\u011Fi ve y\u00F6netmelik'],
+        },
+      ),
       listBuildings: build.query<ListBuildingsApiResponse, ListBuildingsApiArg>({
         query: (queryArg) => ({
           url: `/api/v1/buildings`,
@@ -1280,6 +1339,54 @@ export type MyCurriculaApiResponse = /** status 200 Ders planları */ {
   }[]
 }
 export type MyCurriculaApiArg = void
+export type ListGradeScalesApiResponse = /** status 200 Ölçekler */ {
+  items: GradeScale[]
+}
+export type ListGradeScalesApiArg = void
+export type CreateGradeScaleApiResponse = /** status 201 Oluşturulan ölçek */ GradeScale
+export type CreateGradeScaleApiArg = {
+  gradeScaleRequest: GradeScaleRequest
+}
+export type GetGradeScaleApiResponse = /** status 200 Ölçek */ GradeScale
+export type GetGradeScaleApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type UpdateGradeScaleApiResponse = /** status 200 Güncel ölçek */ GradeScale
+export type UpdateGradeScaleApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
+  'If-Match': string
+  gradeScaleRequest: GradeScaleRequest
+}
+export type ListRegulationParametersApiResponse = /** status 200 Parametreler */ {
+  items: RegulationParameter[]
+}
+export type ListRegulationParametersApiArg = {
+  /** Varsayılan bugün */
+  at?: string
+}
+export type GetRegulationParameterHistoryApiResponse = /** status 200 Değerler */ {
+  items: RegulationParameter[]
+}
+export type GetRegulationParameterHistoryApiArg = {
+  key: string
+}
+export type SetRegulationParameterApiResponse = /** status 201 Parametrenin güncel geçmişi */ {
+  items: RegulationParameter[]
+}
+export type SetRegulationParameterApiArg = {
+  key: string
+  body: {
+    /** Önceki değerle aynı JSON türünde (sayı, nesne, dizi ...) */
+    value: any
+    /** Son değerin başlangıcından sonra olmalı */
+    effective_from: string
+    /** Karar bilgisi vb. */
+    note?: string
+  }
+}
 export type ListBuildingsApiResponse = /** status 200 Binalar */ {
   items: Building[]
 }
@@ -1976,6 +2083,51 @@ export type CurriculumItemRequest = {
   is_compulsory?: boolean
   position?: number
 }
+export type GradeItem = {
+  letter: string
+  /** 4'lük sistemde katsayı; ortalamaya girmeyen harflerde null */
+  coefficient: number | null
+  /** Puan aralığının alt ucu (dahil); puanla verilmeyen harflerde null */
+  min_score: number | null
+  /** Puan aralığının üst ucu (dahil) */
+  max_score: number | null
+  is_passing: boolean
+  /** Ağırlıklı not ortalamasına girer mi? */
+  counts_in_gpa: boolean
+  /** AKTS kazandırır mı? */
+  earns_ects: boolean
+  /** Devamsızlıktan kalma notu (F1) */
+  is_attendance_fail: boolean
+}
+export type GradeScale = {
+  id: string
+  code: string
+  name_tr: string
+  name_en: string
+  effective_from_year: number
+  is_default: boolean
+  items: GradeItem[]
+  version: number
+}
+export type GradeScaleRequest = {
+  /** Sadece oluşturmada; büyük harfe çevrilir */
+  code?: string
+  name_tr: string
+  name_en: string
+  effective_from_year: number
+  is_default?: boolean
+  items: GradeItem[]
+}
+export type RegulationParameter = {
+  key: string
+  /** Parametreye göre sayı, nesne ya da dizi */
+  value: any
+  effective_from: string
+  /** Hariç; null ise hâlâ geçerli */
+  effective_to: string | null
+  description_tr: string
+  note: string | null
+}
 export type Ref = {
   id: string
   code: string
@@ -2248,6 +2400,17 @@ export const {
   useDeleteCurriculumItemMutation,
   useMyCurriculaQuery,
   useLazyMyCurriculaQuery,
+  useListGradeScalesQuery,
+  useLazyListGradeScalesQuery,
+  useCreateGradeScaleMutation,
+  useGetGradeScaleQuery,
+  useLazyGetGradeScaleQuery,
+  useUpdateGradeScaleMutation,
+  useListRegulationParametersQuery,
+  useLazyListRegulationParametersQuery,
+  useGetRegulationParameterHistoryQuery,
+  useLazyGetRegulationParameterHistoryQuery,
+  useSetRegulationParameterMutation,
   useListBuildingsQuery,
   useLazyListBuildingsQuery,
   useCreateBuildingMutation,

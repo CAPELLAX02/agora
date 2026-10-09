@@ -61,6 +61,8 @@ tags:
     description: Dersler, ön koşullar, eşdeğerlikler (intibak) ve seçmeli ders grupları
   - name: Müfredat
     description: Programların versiyonlu ders planları (müfredat sürümleri) ve öğrencinin izlediği plan
+  - name: Not ölçeği ve yönetmelik
+    description: Harf notları, katsayılar, puan aralıkları ve tarihli yönetmelik parametreleri
 
 paths:
   /healthz:
@@ -2369,6 +2371,216 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /api/v1/grade-scales:
+    get:
+      tags: [Not ölçeği ve yönetmelik]
+      summary: Not ölçeklerini listeler
+      description: Önce varsayılan ölçek, sonra yeniden eskiye. Harfler gösterim sırasındadır.
+      operationId: listGradeScales
+      x-agora-permission: curriculum:read
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Ölçekler
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/GradeScale" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Not ölçeği ve yönetmelik]
+      summary: Not ölçeği tanımlar
+      description: >-
+        Puanla verilen harflerin aralıkları tam sayıdır ve 0-100 arasını boşluksuz, çakışmasız
+        kapsar. Varsayılan yapılırsa önceki varsayılan ölçek varsayılanlıktan çıkar. Üniversite
+        kapsamlı yetki gerekir.
+      operationId: createGradeScale
+      x-agora-permission: gradescale:manage
+      x-agora-mfa: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GradeScaleRequest" }
+      responses:
+        "201":
+          description: Oluşturulan ölçek
+          headers:
+            ETag: { schema: { type: string } }
+            Location: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GradeScale" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: "`GRADE_SCALE_CODE_TAKEN`: bu kodla bir ölçek zaten var"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/grade-scales/{id}:
+    get:
+      tags: [Not ölçeği ve yönetmelik]
+      summary: Not ölçeğini döndürür
+      operationId: getGradeScale
+      x-agora-permission: curriculum:read
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Ölçek
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GradeScale" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Not ölçeği ve yönetmelik]
+      summary: Not ölçeğini günceller
+      description: >-
+        Harfler tümüyle değiştirilir, kod değişmez. Varsayılan ölçek doğrudan varsayılanlıktan
+        çıkarılamaz; başka bir ölçek varsayılan yapılır. İyimser kilit, `If-Match` zorunlu.
+      operationId: updateGradeScale
+      x-agora-permission: gradescale:manage
+      x-agora-mfa: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GradeScaleRequest" }
+      responses:
+        "200":
+          description: Güncel ölçek
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GradeScale" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`DEFAULT_SCALE_REQUIRED`: varsayılan ölçek doğrudan kaldırılamaz"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "412": { $ref: "#/components/responses/VersionMismatch" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
+
+  /api/v1/regulation-parameters:
+    get:
+      tags: [Not ölçeği ve yönetmelik]
+      summary: Verilen günde geçerli yönetmelik parametrelerini listeler
+      description: Kurallar kodda sabit değil, tarihli veri olarak tutulur (AKTS üst sınırları, final barajı ...).
+      operationId: listRegulationParameters
+      x-agora-permission: curriculum:read
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: at
+          in: query
+          description: Varsayılan bugün
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Parametreler
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/RegulationParameter" } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/v1/regulation-parameters/{key}:
+    parameters:
+      - name: key
+        in: path
+        required: true
+        schema: { type: string, examples: ["ects_limit_by_gpa"] }
+    get:
+      tags: [Not ölçeği ve yönetmelik]
+      summary: Parametrenin bütün değerlerini (geçmişiyle) döndürür
+      description: Yeniden eskiye.
+      operationId: getRegulationParameterHistory
+      x-agora-permission: curriculum:read
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Değerler
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/RegulationParameter" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [Not ölçeği ve yönetmelik]
+      summary: Parametreye yeni bir değer ekler
+      description: >-
+        Yeni değer `effective_from` gününden itibaren geçerli olur, son değer o gün kapanır.
+        Yeni parametre tanımlanamaz (onu okuyan kural da kodda yazılmalı) ve değerin JSON türü
+        değişemez. Üniversite kapsamlı yetki gerekir.
+      operationId: setRegulationParameter
+      x-agora-permission: gradescale:manage
+      x-agora-mfa: true
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [value, effective_from]
+              properties:
+                value: { description: "Önceki değerle aynı JSON türünde (sayı, nesne, dizi ...)" }
+                effective_from: { type: string, format: date, description: Son değerin başlangıcından sonra olmalı }
+                note: { type: string, maxLength: 1000, description: Karar bilgisi vb. }
+      responses:
+        "201":
+          description: Parametrenin güncel geçmişi
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/RegulationParameter" } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/v1/buildings:
     get:
       tags: [Organizasyon]
@@ -4161,3 +4373,52 @@ components:
                     properties:
                       kind: { $ref: "#/components/schemas/ElectiveGroupKind" }
                       ects: { type: number }
+
+    GradeItem:
+      type: object
+      required: [letter, coefficient, min_score, max_score, is_passing, counts_in_gpa, earns_ects, is_attendance_fail]
+      properties:
+        letter: { type: string, examples: ["B1"] }
+        coefficient: { type: [number, "null"], description: "4'lük sistemde katsayı; ortalamaya girmeyen harflerde null", examples: [3.5] }
+        min_score: { type: [number, "null"], description: "Puan aralığının alt ucu (dahil); puanla verilmeyen harflerde null" }
+        max_score: { type: [number, "null"], description: Puan aralığının üst ucu (dahil) }
+        is_passing: { type: boolean }
+        counts_in_gpa: { type: boolean, description: Ağırlıklı not ortalamasına girer mi? }
+        earns_ects: { type: boolean, description: AKTS kazandırır mı? }
+        is_attendance_fail: { type: boolean, description: Devamsızlıktan kalma notu (F1) }
+
+    GradeScale:
+      type: object
+      required: [id, code, name_tr, name_en, effective_from_year, is_default, items, version]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, examples: ["AU-LISANS"] }
+        name_tr: { type: string }
+        name_en: { type: string }
+        effective_from_year: { type: integer }
+        is_default: { type: boolean }
+        items: { type: array, items: { $ref: "#/components/schemas/GradeItem" } }
+        version: { type: integer }
+
+    GradeScaleRequest:
+      type: object
+      additionalProperties: false
+      required: [name_tr, name_en, effective_from_year, items]
+      properties:
+        code: { type: string, pattern: "^[A-Za-z0-9-]{2,30}$", description: "Sadece oluşturmada; büyük harfe çevrilir" }
+        name_tr: { type: string, minLength: 1, maxLength: 200 }
+        name_en: { type: string, minLength: 1, maxLength: 200 }
+        effective_from_year: { type: integer, minimum: 1946, maximum: 2100 }
+        is_default: { type: boolean, default: false }
+        items: { type: array, minItems: 1, maxItems: 30, items: { $ref: "#/components/schemas/GradeItem" } }
+
+    RegulationParameter:
+      type: object
+      required: [key, value, effective_from, effective_to, description_tr, note]
+      properties:
+        key: { type: string, examples: ["ects_limit_by_gpa"] }
+        value: { description: "Parametreye göre sayı, nesne ya da dizi" }
+        effective_from: { type: string, format: date }
+        effective_to: { type: [string, "null"], format: date, description: "Hariç; null ise hâlâ geçerli" }
+        description_tr: { type: string }
+        note: { type: [string, "null"] }

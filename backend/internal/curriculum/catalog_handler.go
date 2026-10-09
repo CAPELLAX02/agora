@@ -2,12 +2,14 @@ package curriculum
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"math"
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/CAPELLAX02/agora/backend/internal/org"
@@ -54,6 +56,14 @@ type Store interface {
 	AddItem(ctx context.Context, actorID, curriculumID string, in ItemInput) (string, error)
 	UpdateItem(ctx context.Context, actorID, curriculumID, itemID string, in ItemInput) error
 	DeleteItem(ctx context.Context, actorID, curriculumID, itemID string) error
+
+	GradeScales(ctx context.Context) ([]GradeScale, error)
+	GradeScale(ctx context.Context, id string) (GradeScale, error)
+	CreateGradeScale(ctx context.Context, actorID string, in GradeScaleInput) (string, error)
+	UpdateGradeScale(ctx context.Context, actorID, id string, version int, in GradeScaleInput) error
+	RegulationParameters(ctx context.Context, at time.Time) ([]RegulationParameter, error)
+	RegulationHistory(ctx context.Context, key string) ([]RegulationParameter, error)
+	SetRegulationParameter(ctx context.Context, actorID, key string, value json.RawMessage, from time.Time, note string) error
 }
 
 // TargetResolver, birimlerin yetki hedeflerini çözer. *org.Targets bunu sağlar.
@@ -92,6 +102,7 @@ func (h *Handler) Register(rt *authz.Router) {
 	rt.HandleFunc("DELETE /api/v1/elective-groups/{id}/courses/{courseId}", authz.Permission(permCurriculumManage), h.removeGroupCourse)
 
 	h.registerCurricula(rt)
+	h.registerGradeScales(rt)
 }
 
 // --- Yanıt tipleri -------------------------------------------------------------
