@@ -83,7 +83,9 @@
     "skipToContent": "Skip to content",
     "academic": "Academic",
     "calendar": "Academic calendar",
-    "catalog": "Course catalog"
+    "catalog": "Course catalog",
+    "myCurriculum": "My curriculum",
+    "curricula": "Curricula"
   },
   "auth": {
     "restoring": "Signing you in…",
@@ -456,10 +458,6 @@
         "description": "The role is granted in the selected scope. An empty start means now, an empty end means no end date.",
         "role": "Role",
         "rolePlaceholder": "Choose a role",
-        "faculty": "Unit",
-        "department": "Department",
-        "program": "Programme",
-        "scopePlaceholder": "Choose",
         "validFrom": "Start (optional)",
         "validUntil": "End (optional)",
         "submit": "Assign",
@@ -639,6 +637,122 @@
       "groups": "Elective pools",
       "groupsHint": "Elective slots in curricula can be filled from these pools.",
       "noGroups": "Not in an elective pool."
+    },
+    "search": {
+      "clear": "Clear selection",
+      "results": "Search results"
+    }
+  },
+  "org": {
+    "faculty": "Unit",
+    "department": "Department",
+    "program": "Programme",
+    "choose": "Choose"
+  },
+  "curriculum": {
+    "title": "Curricula",
+    "description": "Versioned curricula of programmes: which entry years follow which plan and the semester layout.",
+    "newVersion": "New version",
+    "versions": "Versions",
+    "noVersions": "This programme has no curriculum.",
+    "chooseProgram": "Choose a programme to see its curricula.",
+    "studentCount_one": "{{count}} student follows",
+    "studentCount_other": "{{count}} students follow",
+    "years": "Entrants {{from}}-{{to}}",
+    "yearsOpen": "Entrants from {{from}}",
+    "statuses": {
+      "DRAFT": "Draft",
+      "ACTIVE": "In force",
+      "ARCHIVED": "Archived"
+    },
+    "actions": {
+      "edit": "Edit details",
+      "activate": "Put into force",
+      "archive": "Archive",
+      "delete": "Delete draft"
+    },
+    "view": {
+      "summary": "Graduation summary",
+      "total": "Total",
+      "compulsory": "Compulsory",
+      "elective": "Elective",
+      "semester": "Semester {{no}}",
+      "yearSeason": "Year {{year}} {{season}}",
+      "fall": "fall",
+      "spring": "spring",
+      "semesterTotal": "Semester total",
+      "electiveCount_one": "{{count}} course",
+      "electiveCount_other": "{{count}} courses",
+      "hasPrerequisites": "Has prerequisites",
+      "pool": "{{name}} pool",
+      "emptyPool": "No courses in this pool.",
+      "ectsValue": "{{ects}} ECTS",
+      "empty": "This version has no courses yet."
+    },
+    "edit": {
+      "add": "Add row",
+      "addTitle": "Add a curriculum row",
+      "addDescription": "Place a compulsory course or a slot to be filled from an elective pool into a semester.",
+      "course": "Course",
+      "slot": "Elective slot",
+      "semester": "Semester",
+      "group": "Elective pool",
+      "count": "Courses",
+      "theory": "Theory",
+      "practice": "Practice",
+      "slotHint": "Hours, credit and ECTS are totals of the slot's courses (e.g. 2 courses × 4 ECTS = 8).",
+      "itemAdded": "Row added.",
+      "removeItem": "Remove {{code}}"
+    },
+    "form": {
+      "newTitle": "New curriculum version",
+      "newDescription": "The version starts as a draft and is put into force after its rows are edited.",
+      "editTitle": "Edit version details",
+      "editDescription": "The first entry year and ECTS total of a version in force cannot change.",
+      "nameTr": "Name (Turkish)",
+      "nameEn": "Name (English)",
+      "from": "First entry year",
+      "to": "Last entry year",
+      "toHint": "Empty means open to new entrants.",
+      "toAfterFrom": "Cannot be before the first entry year.",
+      "total": "Total ECTS",
+      "decision": "Decision",
+      "decisionHint": "Senate decision etc.",
+      "copyFrom": "Copy rows from",
+      "empty": "Start empty",
+      "created": "Draft version created.",
+      "updated": "Version updated."
+    },
+    "confirm": {
+      "activateTitle": "Put version into force?",
+      "activate": "Once \"{{name}}\" is in force its semester layout is frozen and students in its entry-year range are linked to it.",
+      "activated": "Version is in force.",
+      "archiveTitle": "Archive version?",
+      "archive": "\"{{name}}\" is archived if no student follows it any more.",
+      "archived": "Version archived.",
+      "deleteTitle": "Delete draft?",
+      "delete": "The draft \"{{name}}\" and its rows will be deleted.",
+      "deleted": "Draft deleted.",
+      "removeTitle": "Remove row?",
+      "remove": "{{code}} will be removed from the curriculum.",
+      "removeConfirm": "Remove",
+      "removed": "Row removed."
+    },
+    "errors": {
+      "COURSE_ALREADY_IN_CURRICULUM": "This course is already in the curriculum."
+    },
+    "my": {
+      "title": "My curriculum",
+      "description": "The curriculum you follow in your programme, based on your entry year.",
+      "programs": "My programmes",
+      "noPrograms": "You are not enrolled in a programme.",
+      "notAssigned": "Your {{program}} enrolment is not linked to a curriculum version yet. Contact the registrar.",
+      "admission": "Entry year {{year}}",
+      "kinds": {
+        "MAJOR": "Major",
+        "DOUBLE_MAJOR": "Double major",
+        "MINOR": "Minor"
+      }
     }
   }
 }

@@ -41,14 +41,11 @@ export function OrgPicker({
 
   return (
     <div className="grid gap-4">
-      <Field
-        label={t('userDetail.roles.assignDialog.faculty')}
-        error={depth === 'faculty' ? error : undefined}
-      >
+      <Field label={t('org.faculty')} error={depth === 'faculty' ? error : undefined}>
         {(p) => (
           <Select value={value.facultyId} onValueChange={(v) => onChange({ ...emptyOrg, facultyId: v })}>
             <SelectTrigger {...p} className="w-full">
-              <SelectValue placeholder={t('userDetail.roles.assignDialog.scopePlaceholder')} />
+              <SelectValue placeholder={t('org.choose')} />
             </SelectTrigger>
             <SelectContent>
               {faculties.data?.items.map((f) => (
@@ -61,10 +58,7 @@ export function OrgPicker({
         )}
       </Field>
       {depth !== 'faculty' && (
-        <Field
-          label={t('userDetail.roles.assignDialog.department')}
-          error={depth === 'department' ? error : undefined}
-        >
+        <Field label={t('org.department')} error={depth === 'department' ? error : undefined}>
           {(p) => (
             <Select
               value={value.departmentId}
@@ -72,7 +66,7 @@ export function OrgPicker({
               onValueChange={(v) => onChange({ ...value, departmentId: v, programId: '' })}
             >
               <SelectTrigger {...p} className="w-full">
-                <SelectValue placeholder={t('userDetail.roles.assignDialog.scopePlaceholder')} />
+                <SelectValue placeholder={t('org.choose')} />
               </SelectTrigger>
               <SelectContent>
                 {departments.data?.items.map((d) => (
@@ -86,7 +80,7 @@ export function OrgPicker({
         </Field>
       )}
       {depth === 'program' && (
-        <Field label={t('userDetail.roles.assignDialog.program')} error={error}>
+        <Field label={t('org.program')} error={error}>
           {(p) => (
             <Select
               value={value.programId}
@@ -94,7 +88,7 @@ export function OrgPicker({
               onValueChange={(v) => onChange({ ...value, programId: v })}
             >
               <SelectTrigger {...p} className="w-full">
-                <SelectValue placeholder={t('userDetail.roles.assignDialog.scopePlaceholder')} />
+                <SelectValue placeholder={t('org.choose')} />
               </SelectTrigger>
               <SelectContent>
                 {programs.data?.items.map((pr) => (

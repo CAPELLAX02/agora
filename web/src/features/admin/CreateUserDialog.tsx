@@ -15,8 +15,8 @@ import { FormDialog } from '@/shared/ui/form-dialog'
 import { Input } from '@/shared/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 
-import { OrgPicker } from './OrgPicker'
-import { emptyOrg, type OrgSelection } from './orgSelection'
+import { OrgPicker } from '@/features/org/OrgPicker'
+import { emptyOrg, type OrgSelection } from '@/features/org/orgSelection'
 
 const titles = [
   'PROF',

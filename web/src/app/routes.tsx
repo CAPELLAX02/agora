@@ -95,6 +95,32 @@ export const routes: RouteObject[] = [
                     },
                   },
                   {
+                    path: 'ders-planim',
+                    lazy: async () => {
+                      const { MyCurriculumPage } = await import('@/features/curriculum/MyCurriculumPage')
+                      return {
+                        element: (
+                          <RequirePermission permission="curriculum:read">
+                            <MyCurriculumPage />
+                          </RequirePermission>
+                        ),
+                      }
+                    },
+                  },
+                  {
+                    path: 'ders-planlari',
+                    lazy: async () => {
+                      const { CurriculaPage } = await import('@/features/curriculum/CurriculaPage')
+                      return {
+                        element: (
+                          <RequirePermission permission="curriculum:read">
+                            <CurriculaPage />
+                          </RequirePermission>
+                        ),
+                      }
+                    },
+                  },
+                  {
                     path: 'yonetim/kullanicilar',
                     lazy: async () => {
                       const { UsersPage } = await import('@/features/admin/UsersPage')

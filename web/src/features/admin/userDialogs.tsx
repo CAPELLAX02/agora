@@ -23,8 +23,8 @@ import { Textarea } from '@/shared/ui/textarea'
 import { useRoleName } from '@/features/account/scope'
 
 import { useAccountErrors } from './accountErrors'
-import { OrgPicker } from './OrgPicker'
-import { emptyOrg, type OrgSelection } from './orgSelection'
+import { OrgPicker } from '@/features/org/OrgPicker'
+import { emptyOrg, type OrgSelection } from '@/features/org/orgSelection'
 
 function ReasonField({
   value,

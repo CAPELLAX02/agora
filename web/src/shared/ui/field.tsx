@@ -28,7 +28,7 @@ export function Field({ label, error, hint, className, children }: FieldProps) {
   const messageId = `${id}-message`
   const message = error ?? hint
   return (
-    <div className={cn('grid gap-2', className)} data-invalid={error ? true : undefined}>
+    <div className={cn('grid min-w-0 gap-2', className)} data-invalid={error ? true : undefined}>
       <Label htmlFor={id}>{label}</Label>
       {children({ id, 'aria-invalid': Boolean(error), 'aria-describedby': message ? messageId : undefined })}
       {message && (

@@ -83,7 +83,9 @@
     "skipToContent": "İçeriğe geç",
     "academic": "Akademik",
     "calendar": "Akademik takvim",
-    "catalog": "Ders kataloğu"
+    "catalog": "Ders kataloğu",
+    "myCurriculum": "Ders planım",
+    "curricula": "Ders planları"
   },
   "auth": {
     "restoring": "Oturum açılıyor…",
@@ -456,10 +458,6 @@
         "description": "Rol, seçilen kapsamda verilir. Başlangıç boşsa hemen, bitiş boşsa süresiz geçerlidir.",
         "role": "Rol",
         "rolePlaceholder": "Rol seçin",
-        "faculty": "Birim",
-        "department": "Bölüm",
-        "program": "Program",
-        "scopePlaceholder": "Seçin",
         "validFrom": "Başlangıç (isteğe bağlı)",
         "validUntil": "Bitiş (isteğe bağlı)",
         "submit": "Ata",
@@ -639,6 +637,122 @@
       "groups": "Seçmeli havuzlar",
       "groupsHint": "Ders planlarındaki seçmeli yuvalardan bu havuzlar aracılığıyla alınabilir.",
       "noGroups": "Bir seçmeli havuzda değil."
+    },
+    "search": {
+      "clear": "Seçimi kaldır",
+      "results": "Arama sonuçları"
+    }
+  },
+  "org": {
+    "faculty": "Birim",
+    "department": "Bölüm",
+    "program": "Program",
+    "choose": "Seçin"
+  },
+  "curriculum": {
+    "title": "Ders planları",
+    "description": "Programların versiyonlu ders planları: hangi giriş yılının hangi planı izlediği ve yarıyıl yerleşimi.",
+    "newVersion": "Yeni sürüm",
+    "versions": "Sürümler",
+    "noVersions": "Bu programın ders planı yok.",
+    "chooseProgram": "Ders planlarını görmek için bir program seçin.",
+    "studentCount_one": "{{count}} öğrenci izliyor",
+    "studentCount_other": "{{count}} öğrenci izliyor",
+    "years": "{{from}}-{{to}} girişliler",
+    "yearsOpen": "{{from}} ve sonrası girişliler",
+    "statuses": {
+      "DRAFT": "Taslak",
+      "ACTIVE": "Yürürlükte",
+      "ARCHIVED": "Arşivde"
+    },
+    "actions": {
+      "edit": "Bilgileri düzenle",
+      "activate": "Yürürlüğe koy",
+      "archive": "Arşivle",
+      "delete": "Taslağı sil"
+    },
+    "view": {
+      "summary": "Mezuniyet özeti",
+      "total": "Toplam",
+      "compulsory": "Zorunlu",
+      "elective": "Seçmeli",
+      "semester": "{{no}}. yarıyıl",
+      "yearSeason": "{{year}}. sınıf {{season}}",
+      "fall": "güz",
+      "spring": "bahar",
+      "semesterTotal": "Yarıyıl toplamı",
+      "electiveCount_one": "{{count}} ders",
+      "electiveCount_other": "{{count}} ders",
+      "hasPrerequisites": "Ön koşulu var",
+      "pool": "{{name}} havuzu",
+      "emptyPool": "Havuzda ders tanımlı değil.",
+      "ectsValue": "{{ects}} AKTS",
+      "empty": "Bu sürümde henüz ders yok."
+    },
+    "edit": {
+      "add": "Satır ekle",
+      "addTitle": "Ders planına satır ekle",
+      "addDescription": "Bir yarıyıla zorunlu ders ya da seçmeli havuzdan ders alınacak bir yuva yerleştirin.",
+      "course": "Ders",
+      "slot": "Seçmeli yuva",
+      "semester": "Yarıyıl",
+      "group": "Seçmeli havuz",
+      "count": "Ders sayısı",
+      "theory": "Teorik",
+      "practice": "Uygulama",
+      "slotHint": "Saat, kredi ve AKTS yuvadaki derslerin toplamıdır (ör. 2 ders × 4 AKTS = 8).",
+      "itemAdded": "Satır eklendi.",
+      "removeItem": "{{code}} satırını kaldır"
+    },
+    "form": {
+      "newTitle": "Yeni ders planı sürümü",
+      "newDescription": "Sürüm taslak olarak açılır; satırlar düzenlendikten sonra yürürlüğe konur.",
+      "editTitle": "Sürüm bilgilerini düzenle",
+      "editDescription": "Yürürlükteki sürümde giriş yılı başlangıcı ve AKTS toplamı değiştirilemez.",
+      "nameTr": "Ad (Türkçe)",
+      "nameEn": "Ad (İngilizce)",
+      "from": "İlk giriş yılı",
+      "to": "Son giriş yılı",
+      "toHint": "Boşsa yeni girişlere açık.",
+      "toAfterFrom": "İlk giriş yılından önce olamaz.",
+      "total": "Toplam AKTS",
+      "decision": "Karar",
+      "decisionHint": "Senato kararı vb.",
+      "copyFrom": "Satırları kopyala",
+      "empty": "Boş başla",
+      "created": "Taslak sürüm açıldı.",
+      "updated": "Sürüm güncellendi."
+    },
+    "confirm": {
+      "activateTitle": "Sürüm yürürlüğe girsin mi?",
+      "activate": "\"{{name}}\" yürürlüğe girince yarıyıl yerleşimi donar ve giriş yılı aralığındaki öğrenciler bu sürüme bağlanır.",
+      "activated": "Sürüm yürürlüğe girdi.",
+      "archiveTitle": "Sürüm arşivlensin mi?",
+      "archive": "\"{{name}}\" artık hiçbir öğrenci tarafından izlenmiyorsa arşivlenir.",
+      "archived": "Sürüm arşivlendi.",
+      "deleteTitle": "Taslak silinsin mi?",
+      "delete": "\"{{name}}\" taslağı satırlarıyla birlikte silinecek.",
+      "deleted": "Taslak silindi.",
+      "removeTitle": "Satır kaldırılsın mı?",
+      "remove": "{{code}} ders planından kaldırılacak.",
+      "removeConfirm": "Kaldır",
+      "removed": "Satır kaldırıldı."
+    },
+    "errors": {
+      "COURSE_ALREADY_IN_CURRICULUM": "Bu ders ders planında zaten var."
+    },
+    "my": {
+      "title": "Ders planım",
+      "description": "Kayıtlı olduğunuz programın, giriş yılınıza göre izlediğiniz ders planı.",
+      "programs": "Programlarım",
+      "noPrograms": "Kayıtlı olduğunuz bir program yok.",
+      "notAssigned": "{{program}} kaydınız henüz bir ders planı sürümüne bağlanmamış. Öğrenci işlerine başvurun.",
+      "admission": "Giriş yılınız {{year}}",
+      "kinds": {
+        "MAJOR": "Anadal",
+        "DOUBLE_MAJOR": "Çift anadal",
+        "MINOR": "Yandal"
+      }
     }
   }
 }

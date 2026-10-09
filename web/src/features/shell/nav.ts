@@ -1,8 +1,10 @@
 import type { ParseKeys } from 'i18next'
 import {
+  BookMarkedIcon,
   BookOpenIcon,
   CalendarDaysIcon,
   HomeIcon,
+  LibraryIcon,
   ScrollTextIcon,
   ShieldCheckIcon,
   UserRoundIcon,
@@ -29,7 +31,14 @@ export const navGroups: NavGroup[] = [
     label: 'nav.academic',
     items: [
       { to: '/takvim', label: 'nav.calendar', icon: CalendarDaysIcon, permission: 'calendar:read' },
+      {
+        to: '/ders-planim',
+        label: 'nav.myCurriculum',
+        icon: BookMarkedIcon,
+        permission: 'registration:manage_own',
+      },
       { to: '/dersler', label: 'nav.catalog', icon: BookOpenIcon, permission: 'course:read' },
+      { to: '/ders-planlari', label: 'nav.curricula', icon: LibraryIcon, permission: 'curriculum:read' },
     ],
   },
   {
