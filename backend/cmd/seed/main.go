@@ -50,6 +50,10 @@ type seedUser struct {
 	title     string // akademik unvan kodu
 	deptCode  string // personelin bağlı olduğu bölüm
 	roles     []role
+
+	// mustChangePassword, hesabın geçici parolayla açıldığını söyler: ilk girişte
+	// parola değiştirilmeden başka bir şey yapılamaz (eski sistemden aktarılan hesaplar gibi).
+	mustChangePassword bool
 }
 
 // Kurgusal kişiler. Gerçek kişilerle ilgisi yoktur.
@@ -62,6 +66,11 @@ var users = []seedUser{
 	{
 		username: "22290002", firstName: "Ece", lastName: "Kaya",
 		email: "ece.kaya@ogrenci.agora.test", student: true,
+		roles: []role{{code: "STUDENT", scope: iam.ScopeNone}},
+	},
+	{
+		username: "22290003", firstName: "Can", lastName: "Polat",
+		email: "can.polat@ogrenci.agora.test", student: true, mustChangePassword: true,
 		roles: []role{{code: "STUDENT", scope: iam.ScopeNone}},
 	},
 	{
@@ -258,6 +267,7 @@ func createUser(ctx context.Context, tx pgx.Tx, u seedUser, hash string) error {
 
 	userID, err := iamRepo.CreateUser(ctx, iam.NewUser{
 		PersonID: personID, Username: u.username, Email: u.email, PasswordHash: hash,
+		MustChangePassword: u.mustChangePassword,
 	})
 	if err != nil {
 		return err
