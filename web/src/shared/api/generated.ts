@@ -6,6 +6,7 @@ export const addTagTypes = [
   'Kullan\u0131c\u0131lar',
   'Denetim',
   'Akademik takvim',
+  'Ders katalo\u011Fu',
   'Organizasyon',
   '\u00D6\u011Frenciler',
 ] as const
@@ -388,6 +389,126 @@ const injectedRtkApi = api
           method: 'DELETE',
         }),
         invalidatesTags: ['Akademik takvim'],
+      }),
+      listCourses: build.query<ListCoursesApiResponse, ListCoursesApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/courses`,
+          params: {
+            q: queryArg.q,
+            department_id: queryArg.departmentId,
+            kind: queryArg.kind,
+            include_inactive: queryArg.includeInactive,
+            limit: queryArg.limit,
+            cursor: queryArg.cursor,
+          },
+        }),
+        providesTags: ['Ders katalo\u011Fu'],
+      }),
+      createCourse: build.mutation<CreateCourseApiResponse, CreateCourseApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/courses`,
+          method: 'POST',
+          body: queryArg.courseRequest,
+        }),
+        invalidatesTags: ['Ders katalo\u011Fu'],
+      }),
+      getCourse: build.query<GetCourseApiResponse, GetCourseApiArg>({
+        query: (queryArg) => ({ url: `/api/v1/courses/${queryArg.id}` }),
+        providesTags: ['Ders katalo\u011Fu'],
+      }),
+      updateCourse: build.mutation<UpdateCourseApiResponse, UpdateCourseApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/courses/${queryArg.id}`,
+          method: 'PUT',
+          body: queryArg.courseRequest,
+          headers: {
+            'If-Match': queryArg['If-Match'],
+          },
+        }),
+        invalidatesTags: ['Ders katalo\u011Fu'],
+      }),
+      setCoursePrerequisites: build.mutation<SetCoursePrerequisitesApiResponse, SetCoursePrerequisitesApiArg>(
+        {
+          query: (queryArg) => ({
+            url: `/api/v1/courses/${queryArg.id}/prerequisites`,
+            method: 'PUT',
+            body: queryArg.body,
+          }),
+          invalidatesTags: ['Ders katalo\u011Fu'],
+        },
+      ),
+      addCourseEquivalence: build.mutation<AddCourseEquivalenceApiResponse, AddCourseEquivalenceApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/courses/${queryArg.id}/equivalences`,
+          method: 'POST',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['Ders katalo\u011Fu'],
+      }),
+      deleteCourseEquivalence: build.mutation<
+        DeleteCourseEquivalenceApiResponse,
+        DeleteCourseEquivalenceApiArg
+      >({
+        query: (queryArg) => ({
+          url: `/api/v1/courses/${queryArg.id}/equivalences/${queryArg.equivalenceId}`,
+          method: 'DELETE',
+        }),
+        invalidatesTags: ['Ders katalo\u011Fu'],
+      }),
+      listElectiveGroups: build.query<ListElectiveGroupsApiResponse, ListElectiveGroupsApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/elective-groups`,
+          params: {
+            q: queryArg.q,
+            kind: queryArg.kind,
+            department_id: queryArg.departmentId,
+          },
+        }),
+        providesTags: ['Ders katalo\u011Fu'],
+      }),
+      createElectiveGroup: build.mutation<CreateElectiveGroupApiResponse, CreateElectiveGroupApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/elective-groups`,
+          method: 'POST',
+          body: queryArg.electiveGroupRequest,
+        }),
+        invalidatesTags: ['Ders katalo\u011Fu'],
+      }),
+      getElectiveGroup: build.query<GetElectiveGroupApiResponse, GetElectiveGroupApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/elective-groups/${queryArg.id}`,
+        }),
+        providesTags: ['Ders katalo\u011Fu'],
+      }),
+      updateElectiveGroup: build.mutation<UpdateElectiveGroupApiResponse, UpdateElectiveGroupApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/elective-groups/${queryArg.id}`,
+          method: 'PUT',
+          body: queryArg.electiveGroupRequest,
+          headers: {
+            'If-Match': queryArg['If-Match'],
+          },
+        }),
+        invalidatesTags: ['Ders katalo\u011Fu'],
+      }),
+      addElectiveGroupCourse: build.mutation<AddElectiveGroupCourseApiResponse, AddElectiveGroupCourseApiArg>(
+        {
+          query: (queryArg) => ({
+            url: `/api/v1/elective-groups/${queryArg.id}/courses/${queryArg.courseId}`,
+            method: 'PUT',
+          }),
+          invalidatesTags: ['Ders katalo\u011Fu'],
+        },
+      ),
+      removeElectiveGroupCourse: build.mutation<
+        RemoveElectiveGroupCourseApiResponse,
+        RemoveElectiveGroupCourseApiArg
+      >({
+        query: (queryArg) => ({
+          url: `/api/v1/elective-groups/${queryArg.id}/courses/${queryArg.courseId}`,
+          method: 'DELETE',
+        }),
+        invalidatesTags: ['Ders katalo\u011Fu'],
       }),
       listBuildings: build.query<ListBuildingsApiResponse, ListBuildingsApiArg>({
         query: (queryArg) => ({
@@ -904,6 +1025,109 @@ export type DeleteCalendarEventApiArg = {
   /** Geçerli bir UUID değilse 404 döner. */
   id: string
 }
+export type ListCoursesApiResponse = /** status 200 Dersler */ {
+  items: Course[]
+  /** Sonraki sayfa varsa dolu */
+  next_cursor?: string
+}
+export type ListCoursesApiArg = {
+  /** Kodda veya adda geçen metin (büyük/küçük harf ve Türkçe karakter duyarsız) */
+  q?: string
+  /** Sahibi bu bölüm olan dersler */
+  departmentId?: string
+  kind?: CourseKind
+  /** Pasif kayıtlar da dönsün mü? */
+  includeInactive?: boolean
+  limit?: number
+  /** Önceki yanıtın `next_cursor` değeri (opak) */
+  cursor?: string
+}
+export type CreateCourseApiResponse = /** status 201 Oluşturulan ders */ CourseDetail
+export type CreateCourseApiArg = {
+  courseRequest: CourseRequest
+}
+export type GetCourseApiResponse = /** status 200 Ders */ CourseDetail
+export type GetCourseApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type UpdateCourseApiResponse = /** status 200 Güncel ders */ CourseDetail
+export type UpdateCourseApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
+  'If-Match': string
+  courseRequest: CourseRequest
+}
+export type SetCoursePrerequisitesApiResponse = /** status 200 Güncel ders */ CourseDetail
+export type SetCoursePrerequisitesApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: {
+    items: {
+      course_id: string
+      requirement?: PrerequisiteRequirement
+      group_no?: number
+    }[]
+  }
+}
+export type AddCourseEquivalenceApiResponse = /** status 201 Güncel ders */ CourseDetail
+export type AddCourseEquivalenceApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: {
+    equivalent_course_id: string
+    /** Eski ders de yenisinin yerine sayılır mı? */
+    is_bidirectional?: boolean
+    /** Bu girişten itibaren geçerli */
+    valid_from_year?: number
+    note?: string
+  }
+}
+export type DeleteCourseEquivalenceApiResponse = unknown
+export type DeleteCourseEquivalenceApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  equivalenceId: string
+}
+export type ListElectiveGroupsApiResponse = /** status 200 Gruplar */ {
+  items: ElectiveGroup[]
+}
+export type ListElectiveGroupsApiArg = {
+  /** Kodda veya adda geçen metin (büyük/küçük harf ve Türkçe karakter duyarsız) */
+  q?: string
+  kind?: ElectiveGroupKind
+  departmentId?: string
+}
+export type CreateElectiveGroupApiResponse = /** status 201 Oluşturulan grup */ ElectiveGroupDetail
+export type CreateElectiveGroupApiArg = {
+  electiveGroupRequest: ElectiveGroupRequest
+}
+export type GetElectiveGroupApiResponse = /** status 200 Grup */ ElectiveGroupDetail
+export type GetElectiveGroupApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type UpdateElectiveGroupApiResponse = /** status 200 Güncel grup */ ElectiveGroupDetail
+export type UpdateElectiveGroupApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
+  'If-Match': string
+  electiveGroupRequest: ElectiveGroupRequest
+}
+export type AddElectiveGroupCourseApiResponse = unknown
+export type AddElectiveGroupCourseApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  courseId: string
+}
+export type RemoveElectiveGroupCourseApiResponse = unknown
+export type RemoveElectiveGroupCourseApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  courseId: string
+}
 export type ListBuildingsApiResponse = /** status 200 Binalar */ {
   items: Building[]
 }
@@ -1392,6 +1616,118 @@ export type CalendarEventRequest = {
   is_published?: boolean
   note?: string
 }
+export type DepartmentRef = {
+  id: string
+  code: string
+  name_tr: string
+  name_en: string
+}
+export type CourseKind = 'REGULAR' | 'NON_CREDIT' | 'INTERNSHIP' | 'PROJECT' | 'PREP' | 'ACTIVITY'
+export type GradingMode = 'LETTER' | 'PASS_FAIL'
+export type Course = {
+  id: string
+  code: string
+  name_tr: string
+  name_en: string
+  /** Boşsa üniversite ortak dersi */
+  owner_department: null | DepartmentRef
+  theory_hours: number
+  practice_hours: number
+  /** Ulusal kredi */
+  national_credit: number
+  ects: number
+  language: 'TR' | 'EN'
+  kind: CourseKind
+  grading_mode: GradingMode
+  description_tr: string | null
+  description_en: string | null
+  learning_outcomes: string[]
+  is_active: boolean
+  version: number
+}
+export type CourseRef = {
+  id: string
+  code: string
+  name_tr: string
+  name_en: string
+  ects: number
+}
+export type PrerequisiteRequirement = 'PASSED' | 'ATTENDED'
+export type ElectiveGroupKind = 'TECHNICAL' | 'UNIVERSITY_GENERAL' | 'PEDAGOGICAL' | 'SOCIAL' | 'FREE'
+export type ElectiveGroupRef = {
+  id: string
+  code: string
+  name_tr: string
+  name_en: string
+  kind: ElectiveGroupKind
+}
+export type CourseDetail = Course & {
+  /** Aynı group_no içindekiler VEYA, farklı gruplar VE ile bağlanır. */
+  prerequisites: {
+    course: CourseRef
+    requirement: PrerequisiteRequirement
+    group_no: number
+  }[]
+  /** Bu dersi ön koşul olarak isteyen dersler */
+  required_by: CourseRef[]
+  equivalences: {
+    id: string
+    /** REPLACES: bu ders diğerinin (eski kodun) yerini alır. REPLACED_BY: bu dersin yerini diğeri almıştır. */
+    relation: 'REPLACES' | 'REPLACED_BY'
+    course: CourseRef
+    is_bidirectional: boolean
+    valid_from_year: number | null
+    note: string | null
+  }[]
+  /** Dersin bulunduğu seçmeli havuzlar */
+  elective_groups: ElectiveGroupRef[]
+}
+export type CourseRequest = {
+  /** Oluşturmada zorunlu, büyük harfe çevrilir. Güncellemede boş bırakılır ya da aynı gönderilir. */
+  code?: string
+  /** Boşsa üniversite ortak dersi */
+  owner_department_id?: string
+  name_tr: string
+  name_en: string
+  theory_hours?: number
+  practice_hours?: number
+  national_credit?: number
+  ects: number
+  language: 'TR' | 'EN'
+  kind?: CourseKind
+  grading_mode?: GradingMode
+  description_tr?: string
+  description_en?: string
+  learning_outcomes?: string[]
+  /** Oluşturmada varsayılan true, güncellemede gönderilmezse değişmez */
+  is_active?: boolean
+}
+export type ElectiveGroup = {
+  id: string
+  code: string
+  name_tr: string
+  name_en: string
+  /** Boşsa üniversite geneli havuz */
+  owner_department: null | DepartmentRef
+  kind: ElectiveGroupKind
+  is_active: boolean
+  course_count: number
+  version: number
+}
+export type ElectiveGroupDetail = ElectiveGroup & {
+  courses: Course[]
+}
+export type ElectiveGroupRequest = {
+  /** Oluşturmada zorunlu, büyük harfe çevrilir. Güncellemede boş bırakılır ya da aynı gönderilir. */
+  code?: string
+  name_tr: string
+  name_en: string
+  /** Boşsa üniversite geneli havuz */
+  owner_department_id?: string
+  kind: ElectiveGroupKind
+  /** Oluşturmada varsayılan true, güncellemede gönderilmezse değişmez */
+  is_active?: boolean
+}
 export type Ref = {
   id: string
   code: string
@@ -1627,6 +1963,23 @@ export const {
   useLazyGetCalendarEventQuery,
   useUpdateCalendarEventMutation,
   useDeleteCalendarEventMutation,
+  useListCoursesQuery,
+  useLazyListCoursesQuery,
+  useCreateCourseMutation,
+  useGetCourseQuery,
+  useLazyGetCourseQuery,
+  useUpdateCourseMutation,
+  useSetCoursePrerequisitesMutation,
+  useAddCourseEquivalenceMutation,
+  useDeleteCourseEquivalenceMutation,
+  useListElectiveGroupsQuery,
+  useLazyListElectiveGroupsQuery,
+  useCreateElectiveGroupMutation,
+  useGetElectiveGroupQuery,
+  useLazyGetElectiveGroupQuery,
+  useUpdateElectiveGroupMutation,
+  useAddElectiveGroupCourseMutation,
+  useRemoveElectiveGroupCourseMutation,
   useListBuildingsQuery,
   useLazyListBuildingsQuery,
   useCreateBuildingMutation,

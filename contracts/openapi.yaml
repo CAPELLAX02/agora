@@ -55,9 +55,11 @@ tags:
     description: Program kayıtları ve danışmanlık
   - name: Denetim
     description: Denetim izi ve güvenlik olayları (sistem yöneticisi ve denetçi)
-
   - name: Akademik takvim
     description: Akademik yıllar, dönemler ve işlem pencereleri (ders seçme, not girişi ...)
+  - name: Ders kataloğu
+    description: Dersler, ön koşullar, eşdeğerlikler (intibak) ve seçmeli ders grupları
+
 paths:
   /healthz:
     get:
@@ -1636,6 +1638,398 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/v1/courses:
+    get:
+      tags: [Ders kataloğu]
+      summary: Dersleri listeler
+      description: Koda göre sıralı, sayfalı. Varsayılan olarak sadece etkin dersler döner.
+      operationId: listCourses
+      x-agora-permission: course:read
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Query"
+        - name: department_id
+          in: query
+          description: Sahibi bu bölüm olan dersler
+          schema: { type: string, format: uuid }
+        - name: kind
+          in: query
+          schema: { $ref: "#/components/schemas/CourseKind" }
+        - $ref: "#/components/parameters/IncludeInactive"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Dersler
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/Course" } }
+                  next_cursor: { type: string, description: Sonraki sayfa varsa dolu }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Ders kataloğu]
+      summary: Kataloğa ders ekler
+      description: >-
+        Sahibi bir bölüm olan dersi o bölümü kapsayan yetki, sahibi olmayan (üniversite ortak)
+        dersi sadece üniversite kapsamlı yetki açabilir.
+      operationId: createCourse
+      x-agora-permission: course:manage
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CourseRequest" }
+      responses:
+        "201":
+          description: Oluşturulan ders
+          headers:
+            ETag: { schema: { type: string } }
+            Location: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CourseDetail" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: "`COURSE_CODE_TAKEN`: bu kodla bir ders zaten var"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/courses/{id}:
+    get:
+      tags: [Ders kataloğu]
+      summary: Dersi ilişkileriyle döndürür
+      description: Ön koşullar, bu dersi isteyen dersler, eşdeğerlikler ve dersin bulunduğu seçmeli havuzlar.
+      operationId: getCourse
+      x-agora-permission: course:read
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Ders
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CourseDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Ders kataloğu]
+      summary: Dersi günceller
+      description: >-
+        Kod değişmez: saati, kredisi ya da AKTS'si değişen ders yeni kodla açılır ve eşdeğerlikle
+        bağlanır. Başka bölüme devirde hem eski hem yeni sahip yetki alanında olmalı. İyimser
+        kilit, `If-Match` zorunlu.
+      operationId: updateCourse
+      x-agora-permission: course:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CourseRequest" }
+      responses:
+        "200":
+          description: Güncel ders
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CourseDetail" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "412": { $ref: "#/components/responses/VersionMismatch" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
+
+  /api/v1/courses/{id}/prerequisites:
+    put:
+      tags: [Ders kataloğu]
+      summary: Dersin ön koşullarını değiştirir
+      description: >-
+        Verilen küme mevcut ön koşulların yerine geçer (boş dizi hepsini kaldırır). Aynı
+        `group_no` içindekiler VEYA, farklı gruplar VE ile bağlanır. Yeni küme doğrudan ya da
+        dolaylı bir döngü oluşturursa 409 döner.
+      operationId: setCoursePrerequisites
+      x-agora-permission: course:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  maxItems: 20
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [course_id]
+                    properties:
+                      course_id: { type: string, format: uuid }
+                      requirement: { $ref: "#/components/schemas/PrerequisiteRequirement" }
+                      group_no: { type: integer, minimum: 1, maximum: 20, default: 1 }
+      responses:
+        "200":
+          description: Güncel ders
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CourseDetail" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`PREREQUISITE_CYCLE`: ön koşullar döngü oluşturuyor"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/courses/{id}/equivalences:
+    post:
+      tags: [Ders kataloğu]
+      summary: Dersle eski bir ders arasında eşdeğerlik tanımlar
+      description: >-
+        Yoldaki ders yeni, `equivalent_course_id` eski koddur (intibak). Aynı çift ters yönde
+        de olsa bir kez bağlanabilir.
+      operationId: addCourseEquivalence
+      x-agora-permission: course:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [equivalent_course_id]
+              properties:
+                equivalent_course_id: { type: string, format: uuid }
+                is_bidirectional: { type: boolean, default: true, description: "Eski ders de yenisinin yerine sayılır mı?" }
+                valid_from_year: { type: integer, minimum: 1946, maximum: 2100, description: Bu girişten itibaren geçerli }
+                note: { type: string, maxLength: 500 }
+      responses:
+        "201":
+          description: Güncel ders
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CourseDetail" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`EQUIVALENCE_EXISTS`: bu iki ders zaten eşdeğer"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/courses/{id}/equivalences/{equivalenceId}:
+    delete:
+      tags: [Ders kataloğu]
+      summary: Eşdeğerliği kaldırır
+      description: Eşdeğerliğin iki dersinden birinin yolu üzerinden silinebilir.
+      operationId: deleteCourseEquivalence
+      x-agora-permission: course:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - name: equivalenceId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Kaldırıldı }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/elective-groups:
+    get:
+      tags: [Ders kataloğu]
+      summary: Seçmeli ders gruplarını (havuzları) listeler
+      operationId: listElectiveGroups
+      x-agora-permission: curriculum:read
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Query"
+        - name: kind
+          in: query
+          schema: { $ref: "#/components/schemas/ElectiveGroupKind" }
+        - name: department_id
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Gruplar
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/ElectiveGroup" } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Ders kataloğu]
+      summary: Seçmeli ders grubu oluşturur
+      description: Sahibi olmayan (üniversite geneli) grubu sadece üniversite kapsamlı yetki açabilir.
+      operationId: createElectiveGroup
+      x-agora-permission: curriculum:manage
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ElectiveGroupRequest" }
+      responses:
+        "201":
+          description: Oluşturulan grup
+          headers:
+            ETag: { schema: { type: string } }
+            Location: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ElectiveGroupDetail" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: "`GROUP_CODE_TAKEN`: bu kodla bir grup zaten var"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/elective-groups/{id}:
+    get:
+      tags: [Ders kataloğu]
+      summary: Seçmeli grubu dersleriyle döndürür
+      operationId: getElectiveGroup
+      x-agora-permission: curriculum:read
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Grup
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ElectiveGroupDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Ders kataloğu]
+      summary: Seçmeli grubu günceller
+      description: Kod değişmez. İyimser kilit, `If-Match` zorunlu.
+      operationId: updateElectiveGroup
+      x-agora-permission: curriculum:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ElectiveGroupRequest" }
+      responses:
+        "200":
+          description: Güncel grup
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ElectiveGroupDetail" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "412": { $ref: "#/components/responses/VersionMismatch" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
+
+  /api/v1/elective-groups/{id}/courses/{courseId}:
+    put:
+      tags: [Ders kataloğu]
+      summary: Dersi havuza ekler
+      description: İdempotent; ders zaten havuzdaysa bir şey değişmez.
+      operationId: addElectiveGroupCourse
+      x-agora-permission: curriculum:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - name: courseId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Ders havuzda }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Ders kataloğu]
+      summary: Dersi havuzdan çıkarır
+      operationId: removeElectiveGroupCourse
+      x-agora-permission: curriculum:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - name: courseId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Çıkarıldı }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/v1/buildings:
     get:
       tags: [Organizasyon]
@@ -3107,3 +3501,182 @@ components:
         term: { $ref: "#/components/schemas/Term" }
         at: { type: string, format: date-time, description: Sorgunun cevaplandığı an }
         items: { type: array, items: { $ref: "#/components/schemas/CalendarWindow" } }
+
+    CourseKind:
+      type: string
+      description: >-
+        NON_CREDIT ortalamaya girmez (ör. Üniversite Yaşamına Uyum), ACTIVITY bilimsel/kültürel
+        etkinlik dersidir.
+      enum: [REGULAR, NON_CREDIT, INTERNSHIP, PROJECT, PREP, ACTIVITY]
+    GradingMode:
+      type: string
+      description: PASS_FAIL dersler BŞR/BŞZ ile notlandırılır.
+      enum: [LETTER, PASS_FAIL]
+    PrerequisiteRequirement:
+      type: string
+      description: PASSED dersten geçmiş, ATTENDED dersi almış ve devam şartını sağlamış olmak.
+      enum: [PASSED, ATTENDED]
+    ElectiveGroupKind:
+      type: string
+      enum: [TECHNICAL, UNIVERSITY_GENERAL, PEDAGOGICAL, SOCIAL, FREE]
+
+    DepartmentRef:
+      type: object
+      required: [id, code, name_tr, name_en]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, examples: ["BIL"] }
+        name_tr: { type: string }
+        name_en: { type: string }
+
+    Course:
+      type: object
+      required: [id, code, name_tr, name_en, owner_department, theory_hours, practice_hours, national_credit, ects,
+                 language, kind, grading_mode, description_tr, description_en, learning_outcomes, is_active, version]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, examples: ["COM1001"] }
+        name_tr: { type: string, examples: ["Bilgisayar Programlama I"] }
+        name_en: { type: string, examples: ["Computer Programming I"] }
+        owner_department:
+          description: Boşsa üniversite ortak dersi
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/DepartmentRef"
+        theory_hours: { type: integer, minimum: 0, maximum: 40 }
+        practice_hours: { type: integer, minimum: 0, maximum: 40 }
+        national_credit: { type: number, description: Ulusal kredi }
+        ects: { type: number, examples: [6] }
+        language: { type: string, enum: [TR, EN] }
+        kind: { $ref: "#/components/schemas/CourseKind" }
+        grading_mode: { $ref: "#/components/schemas/GradingMode" }
+        description_tr: { type: [string, "null"] }
+        description_en: { type: [string, "null"] }
+        learning_outcomes: { type: array, items: { type: string } }
+        is_active: { type: boolean }
+        version: { type: integer }
+
+    CourseRequest:
+      type: object
+      additionalProperties: false
+      required: [name_tr, name_en, ects, language]
+      properties:
+        code:
+          type: string
+          pattern: "^[A-Za-z]{2,6}[0-9]{3,4}$"
+          description: "Oluşturmada zorunlu, büyük harfe çevrilir. Güncellemede boş bırakılır ya da aynı gönderilir."
+        owner_department_id: { type: string, format: uuid, description: Boşsa üniversite ortak dersi }
+        name_tr: { type: string, minLength: 1, maxLength: 200 }
+        name_en: { type: string, minLength: 1, maxLength: 200 }
+        theory_hours: { type: integer, minimum: 0, maximum: 40, default: 0 }
+        practice_hours: { type: integer, minimum: 0, maximum: 40, default: 0 }
+        national_credit: { type: number, minimum: 0, maximum: 60, multipleOf: 0.1, default: 0 }
+        ects: { type: number, minimum: 0, maximum: 60, multipleOf: 0.1 }
+        language: { type: string, enum: [TR, EN] }
+        kind: { $ref: "#/components/schemas/CourseKind" }
+        grading_mode: { $ref: "#/components/schemas/GradingMode" }
+        description_tr: { type: string, maxLength: 4000 }
+        description_en: { type: string, maxLength: 4000 }
+        learning_outcomes: { type: array, maxItems: 30, items: { type: string, maxLength: 500 } }
+        is_active: { type: boolean, description: "Oluşturmada varsayılan true, güncellemede gönderilmezse değişmez" }
+
+    CourseRef:
+      type: object
+      required: [id, code, name_tr, name_en, ects]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name_tr: { type: string }
+        name_en: { type: string }
+        ects: { type: number }
+
+    ElectiveGroupRef:
+      type: object
+      required: [id, code, name_tr, name_en, kind]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, examples: ["COMTE02"] }
+        name_tr: { type: string }
+        name_en: { type: string }
+        kind: { $ref: "#/components/schemas/ElectiveGroupKind" }
+
+    CourseDetail:
+      allOf:
+        - $ref: "#/components/schemas/Course"
+        - type: object
+          required: [prerequisites, required_by, equivalences, elective_groups]
+          properties:
+            prerequisites:
+              type: array
+              description: Aynı group_no içindekiler VEYA, farklı gruplar VE ile bağlanır.
+              items:
+                type: object
+                required: [course, requirement, group_no]
+                properties:
+                  course: { $ref: "#/components/schemas/CourseRef" }
+                  requirement: { $ref: "#/components/schemas/PrerequisiteRequirement" }
+                  group_no: { type: integer }
+            required_by:
+              type: array
+              description: Bu dersi ön koşul olarak isteyen dersler
+              items: { $ref: "#/components/schemas/CourseRef" }
+            equivalences:
+              type: array
+              items:
+                type: object
+                required: [id, relation, course, is_bidirectional, valid_from_year, note]
+                properties:
+                  id: { type: string, format: uuid }
+                  relation:
+                    type: string
+                    enum: [REPLACES, REPLACED_BY]
+                    description: "REPLACES: bu ders diğerinin (eski kodun) yerini alır. REPLACED_BY: bu dersin yerini diğeri almıştır."
+                  course: { $ref: "#/components/schemas/CourseRef" }
+                  is_bidirectional: { type: boolean }
+                  valid_from_year: { type: [integer, "null"] }
+                  note: { type: [string, "null"] }
+            elective_groups:
+              type: array
+              description: Dersin bulunduğu seçmeli havuzlar
+              items: { $ref: "#/components/schemas/ElectiveGroupRef" }
+
+    ElectiveGroup:
+      type: object
+      required: [id, code, name_tr, name_en, owner_department, kind, is_active, course_count, version]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, examples: ["COMTE02"] }
+        name_tr: { type: string, examples: ["2. Sınıf Teknik Seçmeli Dersler"] }
+        name_en: { type: string }
+        owner_department:
+          description: Boşsa üniversite geneli havuz
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/DepartmentRef"
+        kind: { $ref: "#/components/schemas/ElectiveGroupKind" }
+        is_active: { type: boolean }
+        course_count: { type: integer }
+        version: { type: integer }
+
+    ElectiveGroupDetail:
+      allOf:
+        - $ref: "#/components/schemas/ElectiveGroup"
+        - type: object
+          required: [courses]
+          properties:
+            courses: { type: array, items: { $ref: "#/components/schemas/Course" } }
+
+    ElectiveGroupRequest:
+      type: object
+      additionalProperties: false
+      required: [name_tr, name_en, kind]
+      properties:
+        code:
+          type: string
+          pattern: "^[A-Za-z0-9]{3,20}$"
+          description: "Oluşturmada zorunlu, büyük harfe çevrilir. Güncellemede boş bırakılır ya da aynı gönderilir."
+        name_tr: { type: string, minLength: 1, maxLength: 200 }
+        name_en: { type: string, minLength: 1, maxLength: 200 }
+        owner_department_id: { type: string, format: uuid, description: Boşsa üniversite geneli havuz }
+        kind: { $ref: "#/components/schemas/ElectiveGroupKind" }
+        is_active: { type: boolean, description: "Oluşturmada varsayılan true, güncellemede gönderilmezse değişmez" }

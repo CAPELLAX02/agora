@@ -213,8 +213,8 @@ flowchart LR
 | --- | --- | --- |
 | ✅ | Akademik yıl ve dönemler, tek aktif dönem | `academic.academic_years`, `academic.terms`, kısmi benzersiz index ile tek aktif dönem; yıl ve dönem tanımı üniversite geneli yetki ister |
 | ✅ | Takvim olayları ve pencere motoru | Tipli zaman pencereleri, kapsam (üniversite → fakülte → program) geçersiz kılma, aynı kapsamda çakışma yok (`EXCLUDE`), taslak olaylar, `GET /calendar/windows` |
-| ⬜ | Ders kataloğu, ön koşullar (VE/VEYA grupları), eşdeğerlikler | Döngüsel ön koşul engeli, eski ↔ yeni kod eşdeğerliği |
-| ⬜ | Seçmeli gruplar ve ders havuzları | Teknik seçmeli, üniversite alan dışı, pedagojik formasyon, genel sosyal |
+| ✅ | Ders kataloğu, ön koşullar (VE/VEYA grupları), eşdeğerlikler | `curriculum.courses`; kod sabit (değişen ders yeni kodla açılıp eşdeğerlikle bağlanır), ön koşul kümesi tek seferde değişir, döngü özyinelemeli sorguyla engellenir (`PREREQUISITE_CYCLE`), eski ↔ yeni kod eşdeğerliği; bölüm kapsamlı yetki |
+| ✅ | Seçmeli gruplar ve ders havuzları | Teknik seçmeli, üniversite alan dışı, pedagojik formasyon, genel sosyal; havuz üyeliği idempotent `PUT` |
 | ⬜ | Versiyonlu müfredat ve öğrenci program kaydına bağlantı | Taslak → yürürlükte → arşiv, yarıyıl yerleşimi, giriş yılına göre müfredat |
 | ⬜ | Not ölçeği ve yönetmelik parametreleri (veri olarak) | Harf, katsayı, aralık, ortalamaya etkisi; AKTS limitleri |
 | ⬜ | Ders açma, şube, kontenjan ve program bazlı alt kontenjan, öğretim elemanı ataması | |
