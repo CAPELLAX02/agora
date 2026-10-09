@@ -28,7 +28,7 @@ export function UserMenu() {
   const { data: me } = useGetMeQuery()
 
   if (!me) {
-    return <Skeleton className="size-8 rounded-full" />
+    return <Skeleton className="size-8 rounded-md" />
   }
   return (
     <DropdownMenu>

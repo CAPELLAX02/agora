@@ -13,7 +13,8 @@
  * ve vurgu için sıcak bir altın sarısı. Nötrler hafif mavi tonludur.
  */
 :root {
-  --radius: 0.625rem;
+  /* Köşeler bilinçli olarak keskine yakın: kurumsal, sade bir görünüm. */
+  --radius: 0.25rem;
 
   --background: oklch(0.99 0.003 260);
   --foreground: oklch(0.2 0.03 262);
@@ -95,10 +96,11 @@
 @theme inline {
   --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  --radius-xs: calc(var(--radius) * 0.25);
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) * 1.5);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
