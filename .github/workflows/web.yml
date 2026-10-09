@@ -69,3 +69,70 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  # Uçtan uca testler gerçek yığınla çalışır: API, worker, PostgreSQL, Redis, Mailpit.
+  e2e:
+    name: uçtan uca (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: agora
+          POSTGRES_PASSWORD: agora_dev_password
+          POSTGRES_DB: agora
+          TZ: UTC
+          PGTZ: UTC
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U agora -d agora"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:8-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+      mailpit:
+        image: axllent/mailpit:v1.31.2
+        env:
+          MP_SMTP_AUTH_ACCEPT_ANY: 1
+          MP_SMTP_AUTH_ALLOW_INSECURE: 1
+        ports: ["1025:1025", "8025:8025"]
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: corepack
+        run: corepack enable
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: Bağımlılıklar
+        run: pnpm install --frozen-lockfile
+
+      - name: Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Uçtan uca testler
+        run: pnpm e2e
+
+      - name: Rapor
+        if: failure()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: playwright-report
+          path: web/playwright-report
+          retention-days: 7
+
