@@ -238,7 +238,7 @@ flowchart LR
 | Durum | Madde |
 | --- | --- |
 | ✅ | Playwright e2e: takvim penceresi, müfredat görüntüleme, ders açma ve çakışma senaryoları (seed'in gerçek BM verisiyle, tarihten bağımsız; derslik ve öğretim elemanı çakışma mesajları) |
-| ⬜ | Sözleşme ve dokümanlar güncel, CI yeşil |
+| ✅ | Sözleşme ve dokümanlar güncel (veri modeli, yetkilendirme politikaları, README'de akademik veri ve demo hesap rehberi), CI yeşil (backend, web kontrolü ve Playwright) |
 
 ### Faz 2 ve sonrası
 
