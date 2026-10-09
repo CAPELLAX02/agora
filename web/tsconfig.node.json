@@ -19,5 +19,5 @@
     "erasableSyntaxOnly": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["vite.config.ts", "openapi-config.ts", "eslint.config.js"]
+  "include": ["vite.config.ts"]
 }

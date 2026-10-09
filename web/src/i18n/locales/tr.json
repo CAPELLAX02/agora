@@ -1,0 +1,497 @@
+{
+  "app": {
+    "name": "Agora",
+    "tagline": "Ankara Üniversitesi öğrenci bilgi sistemi ve öğrenme ortamı",
+    "features": {
+      "oneplace": "Ders seçimi, notlar ve öğrenme ortamı tek yerde",
+      "secure": "İki adımlı doğrulamayla korunan hesap",
+      "anywhere": "Web ve mobilde, Türkçe ve İngilizce"
+    }
+  },
+  "common": {
+    "loading": "Yükleniyor…",
+    "save": "Kaydet",
+    "cancel": "Vazgeç",
+    "close": "Kapat",
+    "back": "Geri",
+    "continue": "Devam",
+    "confirm": "Onayla",
+    "retry": "Tekrar dene",
+    "copy": "Kopyala",
+    "copied": "Kopyalandı",
+    "download": "İndir",
+    "search": "Ara",
+    "loadMore": "Daha fazla göster",
+    "all": "Tümü",
+    "none": "—",
+    "yes": "Evet",
+    "no": "Hayır",
+    "actions": "İşlemler",
+    "reason": "Gerekçe",
+    "reasonHint": "Denetim kaydına yazılır.",
+    "showPassword": "Parolayı göster",
+    "hidePassword": "Parolayı gizle",
+    "required": "Bu alan zorunlu.",
+    "comingSoon": "Yakında",
+    "current": "Bu cihaz",
+    "invalidEmail": "Geçerli bir e-posta adresi girin."
+  },
+  "errors": {
+    "generic": "Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.",
+    "network": "Sunucuya ulaşılamıyor. Bağlantınızı kontrol edin.",
+    "forbidden": "Bu işlem için yetkiniz yok.",
+    "mfaRequired": "Bu işlem için iki adımlı doğrulamayla giriş yapmalısınız.",
+    "notFound": "Aradığınız kayıt bulunamadı.",
+    "rateLimited": "Çok fazla istek gönderildi. Biraz bekleyip tekrar deneyin.",
+    "unavailable": "Hizmet geçici olarak kullanılamıyor. Biraz sonra tekrar deneyin.",
+    "requestId": "Hata kodu: {{id}}",
+    "pageNotFound": {
+      "title": "Sayfa bulunamadı",
+      "description": "Aradığınız sayfa taşınmış ya da hiç var olmamış olabilir.",
+      "home": "Ana sayfaya dön"
+    },
+    "crash": {
+      "title": "Bir şeyler ters gitti",
+      "description": "Sayfa yüklenirken beklenmeyen bir hata oluştu.",
+      "reload": "Sayfayı yenile"
+    }
+  },
+  "theme": {
+    "label": "Tema",
+    "light": "Açık",
+    "dark": "Koyu",
+    "system": "Sistem"
+  },
+  "language": {
+    "label": "Dil",
+    "tr": "Türkçe",
+    "en": "English"
+  },
+  "nav": {
+    "main": "Ana menü",
+    "general": "Genel",
+    "dashboard": "Ana sayfa",
+    "account": "Hesap",
+    "profile": "Profilim",
+    "security": "Güvenlik",
+    "admin": "Yönetim",
+    "users": "Kullanıcılar",
+    "audit": "Denetim kayıtları",
+    "openMenu": "Menüyü aç",
+    "userMenu": "Hesap menüsü",
+    "logout": "Çıkış yap",
+    "skipToContent": "İçeriğe geç"
+  },
+  "auth": {
+    "restoring": "Oturum açılıyor…",
+    "login": {
+      "title": "Giriş yap",
+      "description": "Öğrenci ya da personel numaranız ve parolanızla giriş yapın.",
+      "username": "Öğrenci / personel numarası",
+      "usernamePlaceholder": "ör. 22290001",
+      "password": "Parola",
+      "forgot": "Parolamı unuttum",
+      "submit": "Giriş yap",
+      "usernameRequired": "Numaranızı girin.",
+      "passwordRequired": "Parolanızı girin."
+    },
+    "messages": {
+      "expired": "Oturumunuzun süresi doldu. Lütfen tekrar giriş yapın.",
+      "loggedOut": "Çıkış yaptınız.",
+      "passwordSet": "Parolanız kaydedildi. Yeni parolanızla giriş yapabilirsiniz.",
+      "accountActivated": "Hesabınız etkinleştirildi. Belirlediğiniz parolayla giriş yapabilirsiniz."
+    },
+    "errors": {
+      "INVALID_CREDENTIALS": "Numara ya da parola hatalı.",
+      "ACCOUNT_LOCKED": "Çok sayıda başarısız deneme yapıldı. Hesap geçici olarak kilitlendi, {{time}} sonra tekrar deneyin.",
+      "ACCOUNT_DISABLED": "Hesabınız aktif değil. Öğrenci işleri ya da bilgi işlem birimiyle iletişime geçin.",
+      "RATE_LIMITED": "Çok fazla deneme yapıldı. {{time}} sonra tekrar deneyin.",
+      "INVALID_MFA_CODE": "Kod hatalı. Tekrar deneyin.",
+      "INVALID_MFA_TOKEN": "Doğrulama süresi doldu. Lütfen tekrar giriş yapın."
+    },
+    "mfa": {
+      "title": "İki adımlı doğrulama",
+      "description": "Doğrulayıcı uygulamanızdaki 6 haneli kodu girin.",
+      "recoveryDescription": "Kurtarma kodlarınızdan birini girin. Her kod bir kez kullanılabilir.",
+      "code": "Doğrulama kodu",
+      "recoveryCode": "Kurtarma kodu",
+      "recoveryPlaceholder": "xxxxx-xxxxx",
+      "submit": "Doğrula",
+      "useRecovery": "Telefonuma erişemiyorum, kurtarma kodu kullan",
+      "useApp": "Doğrulayıcı uygulamayı kullan",
+      "otherAccount": "Farklı bir hesapla giriş yap",
+      "codeRequired": "6 haneli kodu girin.",
+      "recoveryRequired": "Kurtarma kodunu girin."
+    },
+    "forgot": {
+      "title": "Parolamı unuttum",
+      "description": "Numaranızı ya da e-posta adresinizi girin. Hesabınız varsa parola sıfırlama bağlantısı gönderelim.",
+      "identifier": "Öğrenci / personel numarası ya da e-posta",
+      "submit": "Bağlantı gönder",
+      "sentTitle": "E-postanızı kontrol edin",
+      "sentDescription": "Bilgiler bir hesapla eşleşiyorsa birkaç dakika içinde bir bağlantı gönderilecek. Bağlantı 30 dakika geçerlidir. E-posta gelmezse istenmeyen posta klasörüne bakın.",
+      "backToLogin": "Girişe dön"
+    },
+    "reset": {
+      "verifying": "Bağlantı doğrulanıyor…",
+      "invalidTitle": "Bağlantı geçersiz",
+      "invalidDescription": "Bağlantı geçersiz, kullanılmış ya da süresi dolmuş. Yeni bir bağlantı isteyin.",
+      "requestNew": "Yeni bağlantı iste",
+      "resetTitle": "Yeni parola belirleyin",
+      "resetDescription": "Hesabınız için yeni bir parola belirleyin. Bütün cihazlardaki oturumlarınız kapatılacak.",
+      "activationTitle": "Hesabınızı etkinleştirin",
+      "activationDescription": "Agora'ya hoş geldiniz. Hesabınızı kullanmaya başlamak için bir parola belirleyin.",
+      "expiresAt": "Bağlantı {{time}} tarihine kadar geçerli.",
+      "submit": "Parolayı kaydet"
+    }
+  },
+  "password": {
+    "current": "Mevcut parola",
+    "new": "Yeni parola",
+    "confirm": "Yeni parola (tekrar)",
+    "mismatch": "Parolalar eşleşmiyor.",
+    "hint": "En az 10 karakter. Kolay tahmin edilen parolalar ile adınızı, numaranızı ya da e-postanızı içeren parolalar kabul edilmez. Birkaç kelimeden oluşan bir cümle iyi bir seçimdir.",
+    "violations": {
+      "TOO_SHORT": "Parola en az 10 karakter olmalı.",
+      "TOO_LONG": "Parola en fazla 128 karakter olabilir.",
+      "TOO_COMMON": "Bu parola çok yaygın ve kolay tahmin edilir.",
+      "CONTAINS_PERSONAL_INFO": "Parola adınızı, numaranızı ya da e-postanızı içermemeli.",
+      "SAME_AS_CURRENT": "Yeni parola mevcut parolanızla aynı olamaz."
+    },
+    "invalidCurrent": "Mevcut parola hatalı.",
+    "force": {
+      "title": "Parolanızı değiştirin",
+      "description": "Devam etmeden önce size verilen geçici parolayı değiştirmeniz gerekiyor.",
+      "submit": "Parolayı değiştir"
+    },
+    "change": {
+      "title": "Parola",
+      "description": "Parolanızı değiştirdiğinizde bu cihaz dışındaki bütün oturumlarınız kapatılır.",
+      "submit": "Parolayı değiştir",
+      "success": "Parolanız değiştirildi. Diğer oturumlarınız kapatıldı."
+    }
+  },
+  "shell": {
+    "mfaBanner": {
+      "title": "İki adımlı doğrulama gerekli",
+      "description": "Hesabınızdaki bazı yetkiler (ör. yönetim işlemleri) sadece iki adımlı doğrulamayla açılmış oturumlarda kullanılabilir.",
+      "enable": "İki adımlı doğrulamayı aç",
+      "relogin": "Yeniden giriş yap"
+    }
+  },
+  "dashboard": {
+    "greeting": "Hoş geldiniz, {{name}}",
+    "today": "{{date}}",
+    "roles": {
+      "title": "Rolleriniz",
+      "empty": "Hesabınıza henüz bir rol atanmamış.",
+      "until": "{{date}} tarihine kadar"
+    },
+    "security": {
+      "title": "Hesap güvenliği",
+      "mfaOn": "İki adımlı doğrulama açık",
+      "mfaOff": "İki adımlı doğrulama kapalı",
+      "lastLogin": "Son giriş: {{time}}",
+      "manage": "Güvenlik ayarları"
+    },
+    "shortcuts": {
+      "title": "Hızlı erişim"
+    },
+    "upcoming": {
+      "title": "Akademik modüller",
+      "description": "Ders seçimi, not ve transkript, devamsızlık ve öğrenme ortamı modülleri sırayla burada yer alacak."
+    }
+  },
+  "profile": {
+    "title": "Profilim",
+    "description": "Hesap bilgileriniz ve rolleriniz.",
+    "info": "Hesap bilgileri",
+    "firstName": "Ad",
+    "lastName": "Soyad",
+    "username": "Kullanıcı adı",
+    "email": "E-posta",
+    "status": "Durum",
+    "lastLogin": "Son giriş",
+    "mfa": "İki adımlı doğrulama",
+    "roles": "Rollerim",
+    "role": "Rol",
+    "scope": "Kapsam",
+    "validUntil": "Bitiş",
+    "noEnd": "Süresiz",
+    "university": "Üniversite geneli",
+    "noScope": "Kişisel"
+  },
+  "status": {
+    "PENDING": "Aktivasyon bekliyor",
+    "ACTIVE": "Aktif",
+    "SUSPENDED": "Askıda",
+    "DISABLED": "Kapalı"
+  },
+  "security": {
+    "title": "Güvenlik",
+    "description": "Parolanız, iki adımlı doğrulama, oturumlarınız ve hesap hareketleri.",
+    "tabs": {
+      "password": "Parola",
+      "mfa": "İki adımlı doğrulama",
+      "sessions": "Oturumlar",
+      "history": "Güvenlik geçmişi"
+    }
+  },
+  "mfa": {
+    "title": "İki adımlı doğrulama",
+    "about": "Girişte parolanıza ek olarak telefonunuzdaki doğrulayıcı uygulamanın ürettiği 6 haneli kod istenir. Parolanız ele geçirilse bile hesabınıza girilemez. Google Authenticator, Microsoft Authenticator ya da benzeri bir uygulama kullanabilirsiniz.",
+    "enabledSince": "{{date}} tarihinden beri açık",
+    "on": "Açık",
+    "off": "Kapalı",
+    "start": "Kurulumu başlat",
+    "recoveryRemaining_one": "{{count}} kurtarma kodu kaldı",
+    "recoveryRemaining_other": "{{count}} kurtarma kodu kaldı",
+    "recoveryLow": "Kurtarma kodlarınız azaldı. Yenilerini oluşturun.",
+    "regenerate": "Kurtarma kodlarını yenile",
+    "disable": "Kapat",
+    "setup": {
+      "title": "İki adımlı doğrulamayı kur",
+      "scan": "Doğrulayıcı uygulamanızla bu QR kodu okutun.",
+      "manual": "QR kodu okutamıyorsanız bu anahtarı elle girin:",
+      "secretLabel": "Kurulum anahtarı",
+      "verifyTitle": "Kurulumu doğrulayın",
+      "verifyDescription": "Uygulamanın gösterdiği 6 haneli kodu ve mevcut parolanızı girin.",
+      "enable": "Etkinleştir",
+      "next": "Kodu girdim, devam"
+    },
+    "codes": {
+      "title": "Kurtarma kodlarınız",
+      "description": "Telefonunuza erişemezseniz bu kodlarla giriş yapabilirsiniz. Her kod bir kez kullanılır. Kodlar bir daha gösterilmeyecek: şimdi güvenli bir yere kaydedin.",
+      "confirm": "Kodları güvenli bir yere kaydettim",
+      "fileName": "agora-kurtarma-kodlari.txt",
+      "fileHeader": "Agora kurtarma kodları ({{username}}). Her kod bir kez kullanılabilir."
+    },
+    "enabled": "İki adımlı doğrulama açıldı. Diğer oturumlarınız kapatıldı.",
+    "disabled": "İki adımlı doğrulama kapatıldı.",
+    "regenerated": "Yeni kurtarma kodları oluşturuldu. Eskileri artık geçersiz.",
+    "disableDialog": {
+      "title": "İki adımlı doğrulamayı kapat",
+      "description": "Hesabınız sadece parolayla korunacak ve iki adımlı doğrulama gerektiren yetkileriniz kullanılamayacak. Mevcut parolanızı ve bir doğrulama kodu girin."
+    },
+    "regenerateDialog": {
+      "title": "Kurtarma kodlarını yenile",
+      "description": "Eski kodların hepsi geçersiz olur. Doğrulayıcı uygulamanızdaki kodu girin."
+    },
+    "errors": {
+      "INVALID_MFA_CODE": "Kod hatalı. Uygulamadaki güncel kodu girin.",
+      "MFA_ALREADY_ENABLED": "İki adımlı doğrulama zaten açık.",
+      "MFA_NOT_ENABLED": "İki adımlı doğrulama açık değil.",
+      "MFA_SETUP_REQUIRED": "Kurulumun süresi doldu. Lütfen baştan başlayın."
+    }
+  },
+  "sessions": {
+    "title": "Oturumlar",
+    "description": "Hesabınızın açık olduğu cihazlar. Tanımadığınız bir oturumu hemen kapatın ve parolanızı değiştirin.",
+    "lastSeen": "Son etkinlik {{time}}",
+    "started": "Açılış {{time}}",
+    "ip": "IP: {{ip}}",
+    "end": "Oturumu kapat",
+    "endOthers": "Diğer bütün oturumları kapat",
+    "endOthersConfirm": "Bu cihaz dışındaki bütün oturumlarınız kapatılacak. Devam edilsin mi?",
+    "ended": "Oturum kapatıldı.",
+    "endedOthers_one": "{{count}} oturum kapatıldı.",
+    "endedOthers_other": "{{count}} oturum kapatıldı.",
+    "empty": "Başka açık oturumunuz yok.",
+    "unknownBrowser": "Bilinmeyen tarayıcı",
+    "client": {
+      "WEB": "Web",
+      "MOBILE": "Mobil uygulama"
+    },
+    "device": {
+      "DESKTOP": "Bilgisayar",
+      "MOBILE": "Telefon",
+      "TABLET": "Tablet",
+      "UNKNOWN": "Cihaz"
+    }
+  },
+  "events": {
+    "title": "Güvenlik geçmişi",
+    "description": "Hesabınızdaki giriş ve güvenlik hareketleri. Tanımadığınız bir hareket görürseniz parolanızı değiştirin.",
+    "empty": "Kayıt yok.",
+    "when": "Zaman",
+    "event": "Olay",
+    "ip": "IP adresi",
+    "user": "Kullanıcı",
+    "details": "Ayrıntı",
+    "types": {
+      "LOGIN_SUCCEEDED": "Giriş yapıldı",
+      "LOGIN_FAILED": "Başarısız giriş denemesi",
+      "ACCOUNT_LOCKED": "Hesap geçici olarak kilitlendi",
+      "LOGOUT": "Çıkış yapıldı",
+      "REFRESH_TOKEN_REUSED": "Şüpheli oturum kullanımı engellendi",
+      "PASSWORD_CHANGED": "Parola değiştirildi",
+      "PASSWORD_RESET_REQUESTED": "Parola sıfırlama bağlantısı istendi",
+      "PASSWORD_RESET_COMPLETED": "Parola sıfırlandı",
+      "SESSION_REVOKED": "Oturum kapatıldı",
+      "OTHER_SESSIONS_REVOKED": "Diğer oturumlar kapatıldı",
+      "MFA_ENABLED": "İki adımlı doğrulama açıldı",
+      "MFA_DISABLED": "İki adımlı doğrulama kapatıldı",
+      "MFA_CHALLENGE_STARTED": "Parola doğrulandı, ikinci adım bekleniyor",
+      "MFA_RECOVERY_CODES_RENEWED": "Kurtarma kodları yenilendi"
+    },
+    "reasons": {
+      "unknown_user": "bilinmeyen kullanıcı",
+      "wrong_password": "yanlış parola",
+      "account_locked": "hesap kilitliyken",
+      "account_inactive": "hesap aktif değil",
+      "wrong_otp": "yanlış doğrulama kodu",
+      "wrong_recovery_code": "yanlış kurtarma kodu",
+      "mfa_unavailable": "iki adımlı doğrulama değişti",
+      "password_change_wrong_current": "parola değiştirirken yanlış parola",
+      "mfa_enable_wrong_password": "MFA açarken yanlış parola",
+      "mfa_disable_wrong_password": "MFA kapatırken yanlış parola"
+    },
+    "allTypes": "Bütün olaylar"
+  },
+  "users": {
+    "title": "Kullanıcılar",
+    "description": "Öğrenci ve personel hesapları.",
+    "searchPlaceholder": "Ad, numara ya da e-posta ile ara",
+    "new": "Yeni kullanıcı",
+    "empty": "Aramaya uyan kullanıcı yok.",
+    "name": "Ad soyad",
+    "username": "Numara",
+    "email": "E-posta",
+    "kind": "Tür",
+    "status": "Durum",
+    "lastLogin": "Son giriş",
+    "never": "Hiç giriş yapmadı",
+    "allStatuses": "Bütün durumlar",
+    "allKinds": "Bütün türler",
+    "kinds": {
+      "STUDENT": "Öğrenci",
+      "STAFF": "Personel"
+    },
+    "create": {
+      "title": "Yeni kullanıcı",
+      "description": "Hesap aktivasyon bekleyerek açılır. Kullanıcı e-postasına gelen bağlantıyla parolasını kendisi belirler.",
+      "kind": "Hesap türü",
+      "studentNumber": "Öğrenci numarası",
+      "staffNumber": "Personel numarası",
+      "firstName": "Ad",
+      "lastName": "Soyad",
+      "email": "E-posta",
+      "staffType": "Personel türü",
+      "staffTypes": {
+        "ACADEMIC": "Akademik",
+        "ADMINISTRATIVE": "İdari"
+      },
+      "academicTitle": "Unvan",
+      "titles": {
+        "PROF": "Prof. Dr.",
+        "ASSOC_PROF": "Doç. Dr.",
+        "ASSIST_PROF": "Dr. Öğr. Üyesi",
+        "LECTURER_DR": "Öğr. Gör. Dr.",
+        "LECTURER": "Öğr. Gör.",
+        "RESEARCH_ASSISTANT_DR": "Arş. Gör. Dr.",
+        "RESEARCH_ASSISTANT": "Arş. Gör."
+      },
+      "submit": "Hesabı oluştur",
+      "success": "Hesap oluşturuldu, aktivasyon e-postası gönderildi.",
+      "noTitle": "Unvan yok"
+    },
+    "errors": {
+      "ACCOUNT_EXISTS": "Bu numara ya da e-posta başka bir hesapta kayıtlı.",
+      "SELF_ACTION_FORBIDDEN": "Bu işlemi kendi hesabınızda yapamazsınız.",
+      "INVALID_STATUS_CHANGE": "Aktivasyonu tamamlanmamış bir hesap elle etkinleştirilemez. Aktivasyon e-postasını yeniden gönderin.",
+      "ACCOUNT_NOT_PENDING": "Hesap aktivasyon beklemiyor.",
+      "ACCOUNT_NOT_ACTIVE": "Hesap aktif değil.",
+      "MFA_NOT_ENABLED": "Kullanıcının iki adımlı doğrulaması açık değil.",
+      "LAST_SYSTEM_ADMIN": "Son sistem yöneticisinin rolü sonlandırılamaz.",
+      "ROLE_ALREADY_ASSIGNED": "Bu rol bu kapsamda çakışan bir dönemde zaten atanmış."
+    }
+  },
+  "userDetail": {
+    "back": "Kullanıcılar",
+    "account": "Hesap",
+    "createdAt": "Oluşturulma",
+    "actions": {
+      "title": "Hesap işlemleri",
+      "changeStatus": "Durumu değiştir",
+      "resendActivation": "Aktivasyon e-postasını yeniden gönder",
+      "sendReset": "Parola sıfırlama e-postası gönder",
+      "resetMfa": "İki adımlı doğrulamayı sıfırla",
+      "activationSent": "Aktivasyon e-postası kuyruğa alındı.",
+      "resetSent": "Parola sıfırlama e-postası kuyruğa alındı."
+    },
+    "statusDialog": {
+      "title": "Hesap durumunu değiştir",
+      "description": "Askıya alınan ya da kapatılan hesabın bütün oturumları hemen sonlandırılır.",
+      "newStatus": "Yeni durum",
+      "success": "Hesap durumu güncellendi."
+    },
+    "mfaDialog": {
+      "title": "İki adımlı doğrulamayı sıfırla",
+      "description": "Telefonunu ve kurtarma kodlarını kaybeden kullanıcı için. Kimliği yüz yüze doğrulamadan bu işlemi yapmayın: hesabın en kolay ele geçirilme yolu budur. Kullanıcının bütün oturumları kapatılır.",
+      "success": "İki adımlı doğrulama sıfırlandı."
+    },
+    "roles": {
+      "title": "Roller",
+      "description": "Rol atamaları ve geçmişi. Değişiklikler anında etkili olur.",
+      "assign": "Rol ata",
+      "end": "Sonlandır",
+      "empty": "Rol ataması yok.",
+      "role": "Rol",
+      "scope": "Kapsam",
+      "period": "Geçerlilik",
+      "state": "Durum",
+      "from": "Başlangıç",
+      "until": "Bitiş",
+      "openEnded": "süresiz",
+      "states": {
+        "ACTIVE": "Geçerli",
+        "UPCOMING": "Başlamadı",
+        "ENDED": "Sona erdi"
+      },
+      "assignDialog": {
+        "title": "Rol ata",
+        "description": "Rol, seçilen kapsamda verilir. Başlangıç boşsa hemen, bitiş boşsa süresiz geçerlidir.",
+        "role": "Rol",
+        "rolePlaceholder": "Rol seçin",
+        "faculty": "Birim",
+        "department": "Bölüm",
+        "program": "Program",
+        "scopePlaceholder": "Seçin",
+        "validFrom": "Başlangıç (isteğe bağlı)",
+        "validUntil": "Bitiş (isteğe bağlı)",
+        "submit": "Ata",
+        "success": "Rol atandı."
+      },
+      "endDialog": {
+        "title": "Rol atamasını sonlandır",
+        "description": "{{role}} rolü hemen sona erer ve kullanıcının bu roldeki yetkileri kalkar.",
+        "success": "Rol ataması sonlandırıldı."
+      }
+    }
+  },
+  "audit": {
+    "title": "Denetim kayıtları",
+    "description": "Yazma işlemlerinin denetim izi ve güvenlik olayları.",
+    "tabs": {
+      "log": "İşlem kayıtları",
+      "security": "Güvenlik olayları"
+    },
+    "when": "Zaman",
+    "actor": "İşlemi yapan",
+    "action": "İşlem",
+    "entity": "Kayıt",
+    "changes": "Değişiklik",
+    "before": "Önce",
+    "after": "Sonra",
+    "system": "Sistem",
+    "empty": "Kayıt yok.",
+    "actionFilter": "İşlem (ör. role.assign)"
+  },
+  "scope": {
+    "UNIVERSITY": "Üniversite",
+    "FACULTY": "Birim",
+    "DEPARTMENT": "Bölüm",
+    "PROGRAM": "Program",
+    "NONE": "Kapsamsız"
+  }
+}

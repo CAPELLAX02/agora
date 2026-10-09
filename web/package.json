@@ -17,7 +17,7 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "codegen": "rtk-query-codegen-openapi openapi-config.ts && prettier --write src/shared/api/generated.ts",
+    "codegen": "rtk-query-codegen-openapi openapi-config.js && prettier --write src/shared/api/generated.ts",
     "check": "prettier --check . && eslint . --max-warnings 0 && tsc -b --noEmit && vitest run && vite build"
   },
   "dependencies": {

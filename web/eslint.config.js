@@ -32,6 +32,11 @@ export default defineConfig([
     },
   },
   {
+    // shadcn/ui yaklaşımı: bileşen dosyaları stil varyantlarını (ör. buttonVariants) da dışa açar.
+    files: ['src/shared/ui/**/*.tsx'],
+    rules: { 'react-refresh/only-export-components': 'off' },
+  },
+  {
     files: ['eslint.config.js'],
     extends: [js.configs.recommended],
     languageOptions: { globals: globals.node },

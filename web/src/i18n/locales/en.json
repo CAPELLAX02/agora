@@ -1,0 +1,497 @@
+{
+  "app": {
+    "name": "Agora",
+    "tagline": "Ankara University student information system and learning environment",
+    "features": {
+      "oneplace": "Course registration, grades and learning in one place",
+      "secure": "Accounts protected with two-step verification",
+      "anywhere": "On the web and mobile, in Turkish and English"
+    }
+  },
+  "common": {
+    "loading": "Loading…",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "back": "Back",
+    "continue": "Continue",
+    "confirm": "Confirm",
+    "retry": "Try again",
+    "copy": "Copy",
+    "copied": "Copied",
+    "download": "Download",
+    "search": "Search",
+    "loadMore": "Show more",
+    "all": "All",
+    "none": "—",
+    "yes": "Yes",
+    "no": "No",
+    "actions": "Actions",
+    "reason": "Reason",
+    "reasonHint": "Recorded in the audit log.",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "required": "This field is required.",
+    "comingSoon": "Coming soon",
+    "current": "This device",
+    "invalidEmail": "Enter a valid email address."
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "network": "Cannot reach the server. Check your connection.",
+    "forbidden": "You are not allowed to do this.",
+    "mfaRequired": "Sign in with two-step verification to do this.",
+    "notFound": "The record you are looking for was not found.",
+    "rateLimited": "Too many requests. Wait a moment and try again.",
+    "unavailable": "The service is temporarily unavailable. Try again shortly.",
+    "requestId": "Error code: {{id}}",
+    "pageNotFound": {
+      "title": "Page not found",
+      "description": "The page you are looking for may have moved or never existed.",
+      "home": "Back to home"
+    },
+    "crash": {
+      "title": "Something went wrong",
+      "description": "An unexpected error occurred while loading the page.",
+      "reload": "Reload the page"
+    }
+  },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "language": {
+    "label": "Language",
+    "tr": "Türkçe",
+    "en": "English"
+  },
+  "nav": {
+    "main": "Main menu",
+    "general": "General",
+    "dashboard": "Home",
+    "account": "Account",
+    "profile": "My profile",
+    "security": "Security",
+    "admin": "Administration",
+    "users": "Users",
+    "audit": "Audit log",
+    "openMenu": "Open menu",
+    "userMenu": "Account menu",
+    "logout": "Sign out",
+    "skipToContent": "Skip to content"
+  },
+  "auth": {
+    "restoring": "Signing you in…",
+    "login": {
+      "title": "Sign in",
+      "description": "Sign in with your student or staff number and password.",
+      "username": "Student / staff number",
+      "usernamePlaceholder": "e.g. 22290001",
+      "password": "Password",
+      "forgot": "Forgot password?",
+      "submit": "Sign in",
+      "usernameRequired": "Enter your number.",
+      "passwordRequired": "Enter your password."
+    },
+    "messages": {
+      "expired": "Your session has expired. Please sign in again.",
+      "loggedOut": "You have signed out.",
+      "passwordSet": "Your password has been saved. You can sign in with your new password.",
+      "accountActivated": "Your account is active. Sign in with the password you have set."
+    },
+    "errors": {
+      "INVALID_CREDENTIALS": "Incorrect number or password.",
+      "ACCOUNT_LOCKED": "Too many failed attempts. The account is temporarily locked, try again in {{time}}.",
+      "ACCOUNT_DISABLED": "Your account is not active. Contact the registrar's office or IT services.",
+      "RATE_LIMITED": "Too many attempts. Try again in {{time}}.",
+      "INVALID_MFA_CODE": "Incorrect code. Try again.",
+      "INVALID_MFA_TOKEN": "Verification timed out. Please sign in again."
+    },
+    "mfa": {
+      "title": "Two-step verification",
+      "description": "Enter the 6-digit code from your authenticator app.",
+      "recoveryDescription": "Enter one of your recovery codes. Each code can be used once.",
+      "code": "Verification code",
+      "recoveryCode": "Recovery code",
+      "recoveryPlaceholder": "xxxxx-xxxxx",
+      "submit": "Verify",
+      "useRecovery": "I can't access my phone, use a recovery code",
+      "useApp": "Use the authenticator app",
+      "otherAccount": "Sign in with a different account",
+      "codeRequired": "Enter the 6-digit code.",
+      "recoveryRequired": "Enter the recovery code."
+    },
+    "forgot": {
+      "title": "Forgot password",
+      "description": "Enter your number or email address. If you have an account, we will send you a password reset link.",
+      "identifier": "Student / staff number or email",
+      "submit": "Send link",
+      "sentTitle": "Check your email",
+      "sentDescription": "If the details match an account, a link will be sent within a few minutes. The link is valid for 30 minutes. If it doesn't arrive, check your spam folder.",
+      "backToLogin": "Back to sign in"
+    },
+    "reset": {
+      "verifying": "Checking the link…",
+      "invalidTitle": "Invalid link",
+      "invalidDescription": "The link is invalid, already used or expired. Request a new one.",
+      "requestNew": "Request a new link",
+      "resetTitle": "Set a new password",
+      "resetDescription": "Choose a new password for your account. You will be signed out on all devices.",
+      "activationTitle": "Activate your account",
+      "activationDescription": "Welcome to Agora. Set a password to start using your account.",
+      "expiresAt": "The link is valid until {{time}}.",
+      "submit": "Save password"
+    }
+  },
+  "password": {
+    "current": "Current password",
+    "new": "New password",
+    "confirm": "New password (again)",
+    "mismatch": "Passwords do not match.",
+    "hint": "At least 10 characters. Easy-to-guess passwords and passwords containing your name, number or email are not accepted. A sentence of several words is a good choice.",
+    "violations": {
+      "TOO_SHORT": "The password must be at least 10 characters.",
+      "TOO_LONG": "The password can be at most 128 characters.",
+      "TOO_COMMON": "This password is too common and easy to guess.",
+      "CONTAINS_PERSONAL_INFO": "The password must not contain your name, number or email.",
+      "SAME_AS_CURRENT": "The new password must differ from your current one."
+    },
+    "invalidCurrent": "The current password is incorrect.",
+    "force": {
+      "title": "Change your password",
+      "description": "Before you continue, you need to change the temporary password you were given.",
+      "submit": "Change password"
+    },
+    "change": {
+      "title": "Password",
+      "description": "Changing your password signs you out on every other device.",
+      "submit": "Change password",
+      "success": "Your password has been changed. Your other sessions were signed out."
+    }
+  },
+  "shell": {
+    "mfaBanner": {
+      "title": "Two-step verification required",
+      "description": "Some of your permissions (e.g. administration) can only be used in sessions signed in with two-step verification.",
+      "enable": "Turn on two-step verification",
+      "relogin": "Sign in again"
+    }
+  },
+  "dashboard": {
+    "greeting": "Welcome, {{name}}",
+    "today": "{{date}}",
+    "roles": {
+      "title": "Your roles",
+      "empty": "No role has been assigned to your account yet.",
+      "until": "until {{date}}"
+    },
+    "security": {
+      "title": "Account security",
+      "mfaOn": "Two-step verification is on",
+      "mfaOff": "Two-step verification is off",
+      "lastLogin": "Last sign-in: {{time}}",
+      "manage": "Security settings"
+    },
+    "shortcuts": {
+      "title": "Shortcuts"
+    },
+    "upcoming": {
+      "title": "Academic modules",
+      "description": "Course registration, grades and transcripts, attendance and the learning environment will appear here in turn."
+    }
+  },
+  "profile": {
+    "title": "My profile",
+    "description": "Your account details and roles.",
+    "info": "Account details",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "username": "Username",
+    "email": "Email",
+    "status": "Status",
+    "lastLogin": "Last sign-in",
+    "mfa": "Two-step verification",
+    "roles": "My roles",
+    "role": "Role",
+    "scope": "Scope",
+    "validUntil": "Ends",
+    "noEnd": "No end date",
+    "university": "University-wide",
+    "noScope": "Personal"
+  },
+  "status": {
+    "PENDING": "Awaiting activation",
+    "ACTIVE": "Active",
+    "SUSPENDED": "Suspended",
+    "DISABLED": "Disabled"
+  },
+  "security": {
+    "title": "Security",
+    "description": "Your password, two-step verification, sessions and account activity.",
+    "tabs": {
+      "password": "Password",
+      "mfa": "Two-step verification",
+      "sessions": "Sessions",
+      "history": "Security history"
+    }
+  },
+  "mfa": {
+    "title": "Two-step verification",
+    "about": "When you sign in, a 6-digit code from the authenticator app on your phone is required in addition to your password. Even if your password is stolen, nobody can get into your account. You can use Google Authenticator, Microsoft Authenticator or a similar app.",
+    "enabledSince": "On since {{date}}",
+    "on": "On",
+    "off": "Off",
+    "start": "Start setup",
+    "recoveryRemaining_one": "{{count}} recovery code left",
+    "recoveryRemaining_other": "{{count}} recovery codes left",
+    "recoveryLow": "You are running out of recovery codes. Generate new ones.",
+    "regenerate": "Regenerate recovery codes",
+    "disable": "Turn off",
+    "setup": {
+      "title": "Set up two-step verification",
+      "scan": "Scan this QR code with your authenticator app.",
+      "manual": "If you can't scan the QR code, enter this key manually:",
+      "secretLabel": "Setup key",
+      "verifyTitle": "Verify the setup",
+      "verifyDescription": "Enter the 6-digit code shown in the app and your current password.",
+      "enable": "Turn on",
+      "next": "I've entered the code, continue"
+    },
+    "codes": {
+      "title": "Your recovery codes",
+      "description": "If you can't access your phone, you can sign in with these codes. Each code can be used once. They won't be shown again: save them somewhere safe now.",
+      "confirm": "I have saved the codes somewhere safe",
+      "fileName": "agora-recovery-codes.txt",
+      "fileHeader": "Agora recovery codes ({{username}}). Each code can be used once."
+    },
+    "enabled": "Two-step verification is on. Your other sessions were signed out.",
+    "disabled": "Two-step verification is off.",
+    "regenerated": "New recovery codes generated. The old ones no longer work.",
+    "disableDialog": {
+      "title": "Turn off two-step verification",
+      "description": "Your account will be protected by your password only and permissions that require two-step verification will be unavailable. Enter your current password and a verification code."
+    },
+    "regenerateDialog": {
+      "title": "Regenerate recovery codes",
+      "description": "All old codes will stop working. Enter the code from your authenticator app."
+    },
+    "errors": {
+      "INVALID_MFA_CODE": "Incorrect code. Enter the current code from the app.",
+      "MFA_ALREADY_ENABLED": "Two-step verification is already on.",
+      "MFA_NOT_ENABLED": "Two-step verification is not on.",
+      "MFA_SETUP_REQUIRED": "The setup has expired. Please start again."
+    }
+  },
+  "sessions": {
+    "title": "Sessions",
+    "description": "Devices where your account is signed in. End any session you don't recognise and change your password.",
+    "lastSeen": "Last active {{time}}",
+    "started": "Signed in {{time}}",
+    "ip": "IP: {{ip}}",
+    "end": "End session",
+    "endOthers": "Sign out all other sessions",
+    "endOthersConfirm": "All your sessions except this device will be signed out. Continue?",
+    "ended": "Session ended.",
+    "endedOthers_one": "{{count}} session ended.",
+    "endedOthers_other": "{{count}} sessions ended.",
+    "empty": "You have no other open sessions.",
+    "unknownBrowser": "Unknown browser",
+    "client": {
+      "WEB": "Web",
+      "MOBILE": "Mobile app"
+    },
+    "device": {
+      "DESKTOP": "Computer",
+      "MOBILE": "Phone",
+      "TABLET": "Tablet",
+      "UNKNOWN": "Device"
+    }
+  },
+  "events": {
+    "title": "Security history",
+    "description": "Sign-ins and security activity on your account. If you see something you don't recognise, change your password.",
+    "empty": "No records.",
+    "when": "Time",
+    "event": "Event",
+    "ip": "IP address",
+    "user": "User",
+    "details": "Details",
+    "types": {
+      "LOGIN_SUCCEEDED": "Signed in",
+      "LOGIN_FAILED": "Failed sign-in attempt",
+      "ACCOUNT_LOCKED": "Account temporarily locked",
+      "LOGOUT": "Signed out",
+      "REFRESH_TOKEN_REUSED": "Suspicious session use blocked",
+      "PASSWORD_CHANGED": "Password changed",
+      "PASSWORD_RESET_REQUESTED": "Password reset link requested",
+      "PASSWORD_RESET_COMPLETED": "Password reset",
+      "SESSION_REVOKED": "Session ended",
+      "OTHER_SESSIONS_REVOKED": "Other sessions ended",
+      "MFA_ENABLED": "Two-step verification turned on",
+      "MFA_DISABLED": "Two-step verification turned off",
+      "MFA_CHALLENGE_STARTED": "Password verified, waiting for second step",
+      "MFA_RECOVERY_CODES_RENEWED": "Recovery codes regenerated"
+    },
+    "reasons": {
+      "unknown_user": "unknown user",
+      "wrong_password": "wrong password",
+      "account_locked": "while account locked",
+      "account_inactive": "account not active",
+      "wrong_otp": "wrong verification code",
+      "wrong_recovery_code": "wrong recovery code",
+      "mfa_unavailable": "two-step verification changed",
+      "password_change_wrong_current": "wrong password while changing password",
+      "mfa_enable_wrong_password": "wrong password while turning on 2FA",
+      "mfa_disable_wrong_password": "wrong password while turning off 2FA"
+    },
+    "allTypes": "All events"
+  },
+  "users": {
+    "title": "Users",
+    "description": "Student and staff accounts.",
+    "searchPlaceholder": "Search by name, number or email",
+    "new": "New user",
+    "empty": "No users match your search.",
+    "name": "Name",
+    "username": "Number",
+    "email": "Email",
+    "kind": "Type",
+    "status": "Status",
+    "lastLogin": "Last sign-in",
+    "never": "Never signed in",
+    "allStatuses": "All statuses",
+    "allKinds": "All types",
+    "kinds": {
+      "STUDENT": "Student",
+      "STAFF": "Staff"
+    },
+    "create": {
+      "title": "New user",
+      "description": "The account is created awaiting activation. The user sets their own password through the link sent to their email.",
+      "kind": "Account type",
+      "studentNumber": "Student number",
+      "staffNumber": "Staff number",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "Email",
+      "staffType": "Staff type",
+      "staffTypes": {
+        "ACADEMIC": "Academic",
+        "ADMINISTRATIVE": "Administrative"
+      },
+      "academicTitle": "Title",
+      "titles": {
+        "PROF": "Prof. Dr.",
+        "ASSOC_PROF": "Assoc. Prof. Dr.",
+        "ASSIST_PROF": "Assist. Prof. Dr.",
+        "LECTURER_DR": "Lecturer Dr.",
+        "LECTURER": "Lecturer",
+        "RESEARCH_ASSISTANT_DR": "Research Assistant Dr.",
+        "RESEARCH_ASSISTANT": "Research Assistant"
+      },
+      "submit": "Create account",
+      "success": "Account created, activation email sent.",
+      "noTitle": "No title"
+    },
+    "errors": {
+      "ACCOUNT_EXISTS": "This number or email is already registered to another account.",
+      "SELF_ACTION_FORBIDDEN": "You can't do this on your own account.",
+      "INVALID_STATUS_CHANGE": "An account that hasn't been activated can't be activated manually. Resend the activation email.",
+      "ACCOUNT_NOT_PENDING": "The account is not awaiting activation.",
+      "ACCOUNT_NOT_ACTIVE": "The account is not active.",
+      "MFA_NOT_ENABLED": "Two-step verification is not on for this user.",
+      "LAST_SYSTEM_ADMIN": "The last system administrator's role can't be ended.",
+      "ROLE_ALREADY_ASSIGNED": "This role is already assigned in this scope for an overlapping period."
+    }
+  },
+  "userDetail": {
+    "back": "Users",
+    "account": "Account",
+    "createdAt": "Created",
+    "actions": {
+      "title": "Account actions",
+      "changeStatus": "Change status",
+      "resendActivation": "Resend activation email",
+      "sendReset": "Send password reset email",
+      "resetMfa": "Reset two-step verification",
+      "activationSent": "Activation email queued.",
+      "resetSent": "Password reset email queued."
+    },
+    "statusDialog": {
+      "title": "Change account status",
+      "description": "All sessions of a suspended or disabled account are ended immediately.",
+      "newStatus": "New status",
+      "success": "Account status updated."
+    },
+    "mfaDialog": {
+      "title": "Reset two-step verification",
+      "description": "For a user who lost both their phone and their recovery codes. Don't do this without verifying their identity in person: it is the easiest way to take over an account. All the user's sessions will be ended.",
+      "success": "Two-step verification reset."
+    },
+    "roles": {
+      "title": "Roles",
+      "description": "Role assignments and history. Changes take effect immediately.",
+      "assign": "Assign role",
+      "end": "End",
+      "empty": "No role assignments.",
+      "role": "Role",
+      "scope": "Scope",
+      "period": "Validity",
+      "state": "State",
+      "from": "From",
+      "until": "Until",
+      "openEnded": "open-ended",
+      "states": {
+        "ACTIVE": "Active",
+        "UPCOMING": "Upcoming",
+        "ENDED": "Ended"
+      },
+      "assignDialog": {
+        "title": "Assign role",
+        "description": "The role is granted in the selected scope. An empty start means now, an empty end means no end date.",
+        "role": "Role",
+        "rolePlaceholder": "Choose a role",
+        "faculty": "Unit",
+        "department": "Department",
+        "program": "Programme",
+        "scopePlaceholder": "Choose",
+        "validFrom": "Start (optional)",
+        "validUntil": "End (optional)",
+        "submit": "Assign",
+        "success": "Role assigned."
+      },
+      "endDialog": {
+        "title": "End role assignment",
+        "description": "The {{role}} role ends immediately and the user loses its permissions.",
+        "success": "Role assignment ended."
+      }
+    }
+  },
+  "audit": {
+    "title": "Audit log",
+    "description": "Audit trail of write operations and security events.",
+    "tabs": {
+      "log": "Operations",
+      "security": "Security events"
+    },
+    "when": "Time",
+    "actor": "Performed by",
+    "action": "Action",
+    "entity": "Record",
+    "changes": "Change",
+    "before": "Before",
+    "after": "After",
+    "system": "System",
+    "empty": "No records.",
+    "actionFilter": "Action (e.g. role.assign)"
+  },
+  "scope": {
+    "UNIVERSITY": "University",
+    "FACULTY": "Unit",
+    "DEPARTMENT": "Department",
+    "PROGRAM": "Programme",
+    "NONE": "No scope"
+  }
+}
