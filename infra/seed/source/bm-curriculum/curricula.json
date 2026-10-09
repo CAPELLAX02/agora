@@ -1,0 +1,3787 @@
+[
+ {
+  "year": 2022,
+  "semesters": {
+   "1": {
+    "rows": [
+     {
+      "code": "COM1001",
+      "name_en": "Computer Programming I",
+      "name_tr": "BİLGİSAYAR PROGRAMLAMA I",
+      "theory": 4.0,
+      "practice": 2.0,
+      "credit": 5.0,
+      "ects": 6.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COM1013",
+      "name_en": "Introduction to Computer Science",
+      "name_tr": "BİLGİSAYAR BİLİMLERİNE GİRİŞ",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "PHY0101",
+      "name_en": "Physics I",
+      "name_tr": "FİZİK I",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "PHY0151",
+      "name_en": "Physics Laboratory I",
+      "name_tr": "FİZİK LABORATUVARI I",
+      "theory": 0.0,
+      "practice": 2.0,
+      "credit": 1.0,
+      "ects": 2.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "MTH0141",
+      "name_en": "Calculus I",
+      "name_tr": "MATEMATİK I",
+      "theory": 4.0,
+      "practice": 0.0,
+      "credit": 4.0,
+      "ects": 6.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "TUR101",
+      "name_en": "Turkish Language I",
+      "name_tr": "TÜRK DİLİ I",
+      "theory": 2.0,
+      "practice": 0.0,
+      "credit": 2.0,
+      "ects": 1.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "HIS101",
+      "name_en": "Ataturk’s Principles and History of Revolution I",
+      "name_tr": "ATATÜRK İLKELERİ VE İNKİLAP TARİHİ I",
+      "theory": 2.0,
+      "practice": 0.0,
+      "credit": 2.0,
+      "ects": 1.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "OUL101",
+      "name_en": "Orientation Programming to the University Life",
+      "name_tr": "ÜNİVERSİTE YAŞAMINA UYUM",
+      "theory": 0,
+      "practice": 0,
+      "credit": 0,
+      "ects": 0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "ENG101",
+      "name_en": "Development of Reading and Writing Skills in English I",
+      "name_tr": "İNGİLİZCE OKUMA VE YAZMA BECERİLERİNİN GELİŞİMİ I",
+      "theory": 4.0,
+      "practice": 0.0,
+      "credit": 4.0,
+      "ects": 2.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "GENELSOSSEC",
+      "name_en": "Genel Sosyal Seçmeli Ders Grubu",
+      "name_tr": "Genel Sosyal Seçmeli Ders Grubu",
+      "theory": 0.0,
+      "practice": 2.0,
+      "credit": 0.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    ],
+    "total_ects": 30
+   },
+   "2": {
+    "rows": [
+     {
+      "code": "COM1002",
+      "name_en": "Computer Programming II",
+      "name_tr": "BİLGİSAYAR PROGRAMLAMA II",
+      "theory": 4.0,
+      "practice": 2.0,
+      "credit": 5.0,
+      "ects": 6.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "PHY0102",
+      "name_en": "Physics II",
+      "name_tr": "FİZİK II",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "PHY0152",
+      "name_en": "Physics Laboratory II",
+      "name_tr": "FİZİK LABORATUVARI II",
+      "theory": 0.0,
+      "practice": 2.0,
+      "credit": 1.0,
+      "ects": 2.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "MTH0142",
+      "name_en": "Calculus II",
+      "name_tr": "MATEMATİK II",
+      "theory": 4.0,
+      "practice": 0.0,
+      "credit": 4.0,
+      "ects": 6.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "MTH0120",
+      "name_en": "Linear Algebra",
+      "name_tr": "LİNEER CEBİR",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "TUR102",
+      "name_en": "Turkish Language II",
+      "name_tr": "TÜRK DİLİ II",
+      "theory": 2.0,
+      "practice": 0.0,
+      "credit": 2.0,
+      "ects": 1.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "HIS102",
+      "name_en": "Ataturk’s Principles and History of Revolution II",
+      "name_tr": "ATATÜRK İLKELERİ VE İNKİLAP TARİHİ II",
+      "theory": 2.0,
+      "practice": 0.0,
+      "credit": 2.0,
+      "ects": 1.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "OUL102",
+      "name_en": "Orientation Programming to the University Life",
+      "name_tr": "ÜNİVERSİTE YAŞAMINA UYUM",
+      "theory": 1.0,
+      "practice": 0.0,
+      "credit": 1.0,
+      "ects": 2.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "ENG102",
+      "name_en": "Development of Reading and Writing Skills in English II",
+      "name_tr": "İNGİLİZCE OKUMA VE YAZMA BECERİLERİNİN GELİŞİMİ II",
+      "theory": 4.0,
+      "practice": 0.0,
+      "credit": 4.0,
+      "ects": 2.0,
+      "prereq_flag": false,
+      "intibak": null
+     }
+    ],
+    "total_ects": 30
+   },
+   "3": {
+    "rows": [
+     {
+      "code": "COM2031",
+      "name_en": "Discrete Structures",
+      "name_tr": "AYRIK YAPILAR",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COM2041",
+      "name_en": "Programming Language Concepts",
+      "name_tr": "PROGRAMLAMA DİLİ KAVRAMLARI",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 6.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COM2067",
+      "name_en": "Data Structures",
+      "name_tr": "VERİ YAPILARI",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 6.0,
+      "prereq_flag": true,
+      "intibak": null
+     },
+     {
+      "code": "COM2075",
+      "name_en": "Digital Logic Design",
+      "name_tr": "SAYISAL MANTIK TASARIMI",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 6.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "ENG201",
+      "name_en": "Advanced Reading And Communication Techniques In English I",
+      "name_tr": "İNGİLİZCE İLERİ OKUMA VE İLETİŞİM TEKNİKLERİ I",
+      "theory": 4.0,
+      "practice": 0.0,
+      "credit": 4.0,
+      "ects": 2.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COMTE02",
+      "name_en": "Computer Engineering Technical Electives 2’nd Year",
+      "name_tr": "BİLGİSAYAR MÜH. TEKNİK SEÇMELİ 2. YIL",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    ],
+    "total_ects": 30
+   },
+   "4": {
+    "rows": [
+     {
+      "code": "COM2044",
+      "name_en": "Object Oriented Programming",
+      "name_tr": "NESNE YÖNELİMLİ PROGRAMLAMA",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 6.0,
+      "prereq_flag": true,
+      "intibak": null
+     },
+     {
+      "code": "COM2058",
+      "name_en": "Database Management",
+      "name_tr": "VERİTABANI YÖNETİMİ",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "STA250",
+      "name_en": "Probability and Statistics",
+      "name_tr": "OLASILIK VE İSTATİSTİK",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "MTH0210",
+      "name_en": "Differential Equations",
+      "name_tr": "DİFERANSİYEL DENKLEMLER",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "ENG202",
+      "name_en": "Advanced Reading And Communication Techniques In English II",
+      "name_tr": "İNGİLİZCE İLERİ OKUMA VE İLETİŞİM TEKNİKLERİ II",
+      "theory": 4.0,
+      "practice": 0.0,
+      "credit": 4.0,
+      "ects": 2.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COMTE02",
+      "name_en": "Computer Engineering Technical Electives 2’nd Year",
+      "name_tr": "BİLGİSAYAR MÜH. TEKNİK SEÇMELİ 2. YIL",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "UNVSEC",
+      "name_en": "Alan Dışı (Üniversite) Seçmeli Dersler",
+      "name_tr": "Alan Dışı (Üniversite) Seçmeli Dersler",
+      "theory": 2.0,
+      "practice": 0.0,
+      "credit": 2.0,
+      "ects": 3.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    ],
+    "total_ects": 30
+   },
+   "5": {
+    "rows": [
+     {
+      "code": "COM3035",
+      "name_en": "Operating Systems",
+      "name_tr": "İŞLETİM SİSTEMLERİ",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COM3037",
+      "name_en": "Computer Graphics",
+      "name_tr": "BİLGİSAYAR GRAFIKLERİ",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COM3067",
+      "name_en": "Algorithms",
+      "name_tr": "ALGORİTMALAR",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COM3071",
+      "name_en": "Occupational Health and Safety I",
+      "name_tr": "İŞ SAĞLIĞI VE GÜVENLİĞİ I",
+      "theory": 1.0,
+      "practice": 0.0,
+      "credit": 1.0,
+      "ects": 1.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "SCS301",
+      "name_en": "Scientific, Cultural and Social Activities",
+      "name_tr": "BİLİMSEL, SOSYAL VE KÜLTÜREL ETKİNLİKLER",
+      "theory": 0,
+      "practice": 0,
+      "credit": 0,
+      "ects": 3.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COMTE03",
+      "name_en": "Computer Engineering Technical Electives 3’rd Year",
+      "name_tr": "BİLGİSAYAR MÜH. TEKNİK SEÇMELİ 3. YIL",
+      "theory": 6.0,
+      "practice": 0.0,
+      "credit": 6.0,
+      "ects": 8.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "UNVSEC",
+      "name_en": "Alan Dışı (Üniversite) Seçmeli Dersler",
+      "name_tr": "Alan Dışı (Üniversite) Seçmeli Dersler",
+      "theory": 2.0,
+      "practice": 0.0,
+      "credit": 2.0,
+      "ects": 3.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    ],
+    "total_ects": 30
+   },
+   "6": {
+    "rows": [
+     {
+      "code": "COM3032",
+      "name_en": "Computer Networks",
+      "name_tr": "BİLGİSAYAR AĞLARI",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COM3064",
+      "name_en": "Automata Theory",
+      "name_tr": "OTOMATA TEORİSİ",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COM3068",
+      "name_en": "Software Engineering",
+      "name_tr": "YAZILIM MÜHENDİSLİĞİ",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COM3076",
+      "name_en": "Computer Architecture",
+      "name_tr": "BİLGİSAYAR MİMARİSİ",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COM3072",
+      "name_en": "Occupational Health and Safety II",
+      "name_tr": "İŞ SAĞLIĞI VE GÜVENLİĞİ II",
+      "theory": 1.0,
+      "practice": 0.0,
+      "credit": 1.0,
+      "ects": 1.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "PPL302",
+      "name_en": "Progress to Professional Life",
+      "name_tr": "MESLEKİ YAŞAMA UYUM",
+      "theory": 1.0,
+      "practice": 0.0,
+      "credit": 1.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "COMTE03",
+      "name_en": "Computer Engineering Technical Electives 3 Year",
+      "name_tr": "BİLGİSAYAR MÜH. TEKNİK SEÇMELİ 3. YIL",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "UNVSEC",
+      "name_en": "Alan Dışı (Üniversite) Seçmeli Dersler",
+      "name_tr": "Alan Dışı (Üniversite) Seçmeli Dersler",
+      "theory": 2.0,
+      "practice": 0.0,
+      "credit": 2.0,
+      "ects": 3.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    ],
+    "total_ects": 30
+   },
+   "7": {
+    "rows": [
+     {
+      "code": "COM4061",
+      "name_en": "Research Techniques I",
+      "name_tr": "ARAŞTIRMA TEKNİKLERİ I",
+      "theory": 2.0,
+      "practice": 2.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COM4099",
+      "name_en": "Summer Practice",
+      "name_tr": "STAJ",
+      "theory": 0,
+      "practice": 0,
+      "credit": 0,
+      "ects": 6.0,
+      "prereq_flag": true,
+      "intibak": null
+     },
+     {
+      "code": "COMTE04",
+      "name_en": "Computer Engineering Technical Electives 4th Year",
+      "name_tr": "Bilgisayar Müh. Teknik Seçmeli 4. Yıl",
+      "theory": 6,
+      "practice": 0,
+      "credit": 6,
+      "ects": 12,
+      "prereq_flag": null,
+      "intibak": null,
+      "override": true
+     },
+     {
+      "code": "UNVSEC",
+      "name_en": "University Out-of-Field Electives",
+      "name_tr": "Alan Dışı (Üniversite) Seçmeli Dersler",
+      "theory": 4,
+      "practice": 0,
+      "credit": 4,
+      "ects": 6,
+      "prereq_flag": null,
+      "intibak": null,
+      "override": true
+     }
+    ],
+    "total_ects": 30
+   },
+   "8": {
+    "rows": [
+     {
+      "code": "COM4062",
+      "name_en": "Research Techniques II",
+      "name_tr": "ARAŞTIRMA TEKNİKLERİ II",
+      "theory": 2.0,
+      "practice": 2.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COMTE04",
+      "name_en": "Computer Engineering Technical Electives 4’th Year",
+      "name_tr": "BİLGİSAYAR MÜH. TEKNİK SEÇMELİ 4. YIL",
+      "theory": 9.0,
+      "practice": 0.0,
+      "credit": 9.0,
+      "ects": 18.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "UNVSEC",
+      "name_en": "Alan Dışı (Üniversite) Seçmeli Dersler",
+      "name_tr": "Alan Dışı (Üniversite) Seçmeli Dersler",
+      "theory": 4.0,
+      "practice": 0.0,
+      "credit": 4.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    ],
+    "total_ects": 30
+   }
+  },
+  "groups": {
+   "GENELSOSSEC": {
+    "name": "Genel Sosyal Seçmeli Dersler",
+    "courses": {
+     "ART107": {
+      "code": "ART107",
+      "name_en": "Painting",
+      "name_tr": "RESİM",
+      "theory": 0.0,
+      "practice": 2.0,
+      "credit": 0.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "ART109": {
+      "code": "ART109",
+      "name_en": "Music",
+      "name_tr": "MÜZİK",
+      "theory": 0.0,
+      "practice": 2.0,
+      "credit": 0.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "ART111": {
+      "code": "ART111",
+      "name_en": "Sculpture",
+      "name_tr": "HEYKEL",
+      "theory": 0.0,
+      "practice": 2.0,
+      "credit": 0.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "ART123": {
+      "code": "ART123",
+      "name_en": "Folk Dance",
+      "name_tr": "HALK OYUNLARI",
+      "theory": 0.0,
+      "practice": 2.0,
+      "credit": 0.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "ART131": {
+      "code": "ART131",
+      "name_en": "Drama",
+      "name_tr": "DRAMA",
+      "theory": 0.0,
+      "practice": 2.0,
+      "credit": 0.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "ART163": {
+      "code": "ART163",
+      "name_en": "Museum Training",
+      "name_tr": "MÜZE EĞİTİMİ",
+      "theory": 0.0,
+      "practice": 2.0,
+      "credit": 0.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "ART219": {
+      "code": "ART219",
+      "name_en": "Modern Dance",
+      "name_tr": "MODERN DANS",
+      "theory": 0.0,
+      "practice": 2.0,
+      "credit": 0.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    }
+   },
+   "COMTE02": {
+    "name": "2. SINIF Güz Yarıyılı Alan Seçmeli Dersler",
+    "courses": {
+     "COM2501": {
+      "code": "COM2501",
+      "name_en": "Scientific Programming",
+      "name_tr": "BİLİMSEL PROGRAMLAMA",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM2537": {
+      "code": "COM2537",
+      "name_en": "Introduction to Web Based Programming",
+      "name_tr": "AĞ TABANLI PROGRAMLAMAYA GİRİŞ",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM2553": {
+      "code": "COM2553",
+      "name_en": "File Organization",
+      "name_tr": "DOSYA ORGANİZASYONU",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM2502": {
+      "code": "COM2502",
+      "name_en": "Introduction to Data Science",
+      "name_tr": "VERİ BİLİMİNE GİRİŞ",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM2534": {
+      "code": "COM2534",
+      "name_en": "Electronics",
+      "name_tr": "ELEKTRONİK",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM2536": {
+      "code": "COM2536",
+      "name_en": "Fuzzy Logic",
+      "name_tr": "BULANIK MANTIK",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    }
+   },
+   "UNVSEC": {
+    "name": "TEMEL ALAN:",
+    "courses": {}
+   },
+   "COMTE03": {
+    "name": "3. SINIF Güz Yarıyılı Alan Seçmeli Dersler",
+    "courses": {
+     "COM3525": {
+      "code": "COM3525",
+      "name_en": "Microprocessors and Embedded Systems",
+      "name_tr": "MİKROİŞLEMCİLER VE GÖMÜLÜ SİSTEMLER",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM3533": {
+      "code": "COM3533",
+      "name_en": "Numerical Analysis Methods",
+      "name_tr": "SAYISAL ANALİZ TEKNİKLERİ",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM3549": {
+      "code": "COM3549",
+      "name_en": "Parallel Data Processing",
+      "name_tr": "PARALEL VERİ İŞLEME",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM3551": {
+      "code": "COM3551",
+      "name_en": "Artificial Intelligence",
+      "name_tr": "YAPAY ZEKA",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM3557": {
+      "code": "COM3557",
+      "name_en": "Data Communication",
+      "name_tr": "VERİ İLETİŞİMİ",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM3536": {
+      "code": "COM3536",
+      "name_en": "Signals and Systems",
+      "name_tr": "SİNYALLER VE SİSTEMLER",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM3542": {
+      "code": "COM3542",
+      "name_en": "Advanced Algorithms",
+      "name_tr": "İLERİ ALGORİTMALAR",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM3548": {
+      "code": "COM3548",
+      "name_en": "Pattern Recognition",
+      "name_tr": "ÖRÜNTÜ TANIMA",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM3576": {
+      "code": "COM3576",
+      "name_en": "Expert Systems",
+      "name_tr": "UZMAN SİSTEMLER",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM3596": {
+      "code": "COM3596",
+      "name_en": "Computer Simulation and Modeling",
+      "name_tr": "BİLGİSAYAR SİMÜLASYONU VE MODELLEME",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    }
+   },
+   "COMTE04": {
+    "name": "KODU:",
+    "courses": {
+     "COM4501": {
+      "code": "COM4501",
+      "name_en": "Android Operating System For Mobile Devices",
+      "name_tr": "MOBİL CİHAZLAR İÇİN ANDROİD İŞLETİM SİSTEMİ",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4503": {
+      "code": "COM4503",
+      "name_en": "Advanced Microprocessors",
+      "name_tr": "İLERİ MİKROİŞLEMCİLER",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4505": {
+      "code": "COM4505",
+      "name_en": "RFID and Computer Applications",
+      "name_tr": "RFİD VE BİLGİSAYAR UYGULAMALARI",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4507": {
+      "code": "COM4507",
+      "name_en": "Robotics",
+      "name_tr": "ROBOTİK",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4509": {
+      "code": "COM4509",
+      "name_en": "Remote Sensing",
+      "name_tr": "UZAKTAN ALGILAMA",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4511": {
+      "code": "COM4511",
+      "name_en": "Information Technologies Management",
+      "name_tr": "BİLGİ TEKNOLOJİLERİ YÖNETİMİ",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4513": {
+      "code": "COM4513",
+      "name_en": "Special Topics I",
+      "name_tr": "ÖZEL KONULAR I",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4515": {
+      "code": "COM4515",
+      "name_en": "Advanced Operating Systems",
+      "name_tr": "İLERİ İŞLETİM SİSTEMLERİ",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4517": {
+      "code": "COM4517",
+      "name_en": "Information Systems",
+      "name_tr": "BİLGİ SİSTEMLERİ",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4519": {
+      "code": "COM4519",
+      "name_en": "Data Mining",
+      "name_tr": "VERİ MADENCİLİĞİ",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4502": {
+      "code": "COM4502",
+      "name_en": "Applications Development with Android Operating System",
+      "name_tr": "ANDROİD İŞLETİM SİSTEMİ İLE UYGULAMALAR GELİŞTİRME",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4504": {
+      "code": "COM4504",
+      "name_en": "Digital Image Processing",
+      "name_tr": "SAYISAL GÖRÜNTÜ İŞLEME",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4506": {
+      "code": "COM4506",
+      "name_en": "Hardware Design Languages",
+      "name_tr": "DONANIM TASARIM DİLLERİ",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4508": {
+      "code": "COM4508",
+      "name_en": "Advanced Electronics",
+      "name_tr": "İLERİ ELEKTRONİK",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4510": {
+      "code": "COM4510",
+      "name_en": "Information Technology and Security Governance",
+      "name_tr": "BİLGİ TEKNOLOJİLERİ VE GÜVENLİK YÖNETİMİ",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4512": {
+      "code": "COM4512",
+      "name_en": "Wireless Communication and Computer Networks",
+      "name_tr": "KABLOSUZ İLETİŞİM VE BİLGİSAYAR AĞLARI",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4514": {
+      "code": "COM4514",
+      "name_en": "Special Topics II",
+      "name_tr": "ÖZEL KONULAR II",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4516": {
+      "code": "COM4516",
+      "name_en": "Parallel Programming",
+      "name_tr": "PARALEL PROGRAMLAMA",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4518": {
+      "code": "COM4518",
+      "name_en": "Advanced Computer Networks",
+      "name_tr": "İLERİ BİLGİSAYAR AĞLARI",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4520": {
+      "code": "COM4520",
+      "name_en": "CISCO",
+      "name_tr": "CISCO",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    }
+   }
+  },
+  "totals": {
+   "credit": 165,
+   "ects": 240
+  }
+ },
+ {
+  "year": 2023,
+  "semesters": {
+   "1": {
+    "rows": [
+     {
+      "code": "COM1001",
+      "name_en": "Computer Programming I",
+      "name_tr": "BİLGİSAYAR PROGRAMLAMA I",
+      "theory": 4.0,
+      "practice": 2.0,
+      "credit": 5.0,
+      "ects": 6.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COM1013",
+      "name_en": "Introduction to Computer Science",
+      "name_tr": "BİLGİSAYAR BİLİMLERİNE GİRİŞ",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "PHY0101",
+      "name_en": "Physics I",
+      "name_tr": "FİZİK I",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "PHY0151",
+      "name_en": "Physics Laboratory I",
+      "name_tr": "FİZİK LABORATUVARI I",
+      "theory": 0.0,
+      "practice": 2.0,
+      "credit": 1.0,
+      "ects": 2.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "MTH0141",
+      "name_en": "Calculus I",
+      "name_tr": "MATEMATİK I",
+      "theory": 4.0,
+      "practice": 0.0,
+      "credit": 4.0,
+      "ects": 6.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "TUR101",
+      "name_en": "Turkish Language I",
+      "name_tr": "TÜRK DİLİ I",
+      "theory": 2.0,
+      "practice": 0.0,
+      "credit": 2.0,
+      "ects": 1.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "HIS101",
+      "name_en": "Ataturk’s Principles and History of Revolution I",
+      "name_tr": "ATATÜRK İLKELERİ VE İNKİLAP TARİHİ I",
+      "theory": 2.0,
+      "practice": 0.0,
+      "credit": 2.0,
+      "ects": 1.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "OUL101",
+      "name_en": "Orientation Program to the University Life",
+      "name_tr": "ÜNİVERSİTE YAŞAMINA UYUM",
+      "theory": 0,
+      "practice": 0,
+      "credit": 0,
+      "ects": 0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "ENG101",
+      "name_en": "Development of Reading and Writing Skills in English I",
+      "name_tr": "İNGİLİZCE OKUMA VE YAZMA BECERİLERİNİN GELİŞİMİ I",
+      "theory": 4.0,
+      "practice": 0.0,
+      "credit": 4.0,
+      "ects": 2.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "GENELSOSSEC",
+      "name_en": "Genel Sosyal Seçmeli Ders Grubu",
+      "name_tr": "Genel Sosyal Seçmeli Ders Grubu",
+      "theory": 0.0,
+      "practice": 2.0,
+      "credit": 0.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    ],
+    "total_ects": 30
+   },
+   "2": {
+    "rows": [
+     {
+      "code": "COM1002",
+      "name_en": "Computer Programming II",
+      "name_tr": "BİLGİSAYAR PROGRAMLAMA II",
+      "theory": 4.0,
+      "practice": 2.0,
+      "credit": 5.0,
+      "ects": 6.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "PHY0102",
+      "name_en": "Physics II",
+      "name_tr": "FİZİK II",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "PHY0152",
+      "name_en": "Physics Laboratory II",
+      "name_tr": "FİZİK LABORATUVARI II",
+      "theory": 0.0,
+      "practice": 2.0,
+      "credit": 1.0,
+      "ects": 2.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "MTH0142",
+      "name_en": "Calculus II",
+      "name_tr": "MATEMATİK II",
+      "theory": 4.0,
+      "practice": 0.0,
+      "credit": 4.0,
+      "ects": 6.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "MTH0120",
+      "name_en": "Linear Algebra",
+      "name_tr": "LİNEER CEBİR",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "TUR102",
+      "name_en": "Turkish Language II",
+      "name_tr": "TÜRK DİLİ II",
+      "theory": 2.0,
+      "practice": 0.0,
+      "credit": 2.0,
+      "ects": 1.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "HIS102",
+      "name_en": "Ataturk’s Principles and History of Revolution II",
+      "name_tr": "ATATÜRK İLKELERİ VE İNKİLAP TARİHİ II",
+      "theory": 2.0,
+      "practice": 0.0,
+      "credit": 2.0,
+      "ects": 1.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "OUL102",
+      "name_en": "Orientation Program to the University Life",
+      "name_tr": "ÜNİVERSİTE YAŞAMINA UYUM",
+      "theory": 1.0,
+      "practice": 0.0,
+      "credit": 1.0,
+      "ects": 2.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "ENG102",
+      "name_en": "Development of Reading and Writing Skills in English II",
+      "name_tr": "İNGİLİZCE OKUMA VE YAZMA BECERİLERİNİN GELİŞİMİ II",
+      "theory": 4.0,
+      "practice": 0.0,
+      "credit": 4.0,
+      "ects": 2.0,
+      "prereq_flag": false,
+      "intibak": null
+     }
+    ],
+    "total_ects": 30
+   },
+   "3": {
+    "rows": [
+     {
+      "code": "COM2039",
+      "name_en": "Discrete Structures",
+      "name_tr": "AYRIK YAPILAR",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COM2043",
+      "name_en": "Programming Language Concepts",
+      "name_tr": "PROGRAMLAMA DİLİ KAVRAMLARI",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COM2067",
+      "name_en": "Data Structures",
+      "name_tr": "VERİ YAPILARI",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 6.0,
+      "prereq_flag": true,
+      "intibak": null
+     },
+     {
+      "code": "COM2077",
+      "name_en": "Digital Logic Design",
+      "name_tr": "SAYISAL MANTIK TASARIMI",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "ENG201",
+      "name_en": "Advanced Reading And Communication Techniques In English I",
+      "name_tr": "İNGİLİZCE İLERİ OKUMA VE İLETİŞİM TEKNİKLERİ I",
+      "theory": 4.0,
+      "practice": 0.0,
+      "credit": 4.0,
+      "ects": 2.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COMTE02",
+      "name_en": "Computer Engineering Technical Electives 2’nd Year",
+      "name_tr": "BİLGİSAYAR MÜH. TEKNİK SEÇMELİ 2. YIL",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "UNVSEC",
+      "name_en": "Alan Dışı (Üniversite) Seçmeli Dersler",
+      "name_tr": "Alan Dışı (Üniversite) Seçmeli Dersler",
+      "theory": 2.0,
+      "practice": 0.0,
+      "credit": 2.0,
+      "ects": 3.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    ],
+    "total_ects": 30
+   },
+   "4": {
+    "rows": [
+     {
+      "code": "COM2044",
+      "name_en": "Object Oriented Programming",
+      "name_tr": "NESNE YÖNELİMLİ PROGRAMLAMA",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 6.0,
+      "prereq_flag": true,
+      "intibak": null
+     },
+     {
+      "code": "COM2058",
+      "name_en": "Database Management",
+      "name_tr": "VERİTABANI YÖNETİMİ",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "STA250",
+      "name_en": "Probability and Statistics",
+      "name_tr": "OLASILIK VE İSTATİSTİK",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "MTH0210",
+      "name_en": "Differential Equations",
+      "name_tr": "DİFERANSİYEL DENKLEMLER",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "ENG202",
+      "name_en": "Advanced Reading And Communication Techniques In English II",
+      "name_tr": "İNGİLİZCE İLERİ OKUMA VE İLETİŞİM TEKNİKLERİ II",
+      "theory": 4.0,
+      "practice": 0.0,
+      "credit": 4.0,
+      "ects": 2.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COMTE02",
+      "name_en": "Computer Engineering Technical Electives 2’nd Year",
+      "name_tr": "BİLGİSAYAR MÜH. TEKNİK SEÇMELİ 2. YIL",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "UNVSEC",
+      "name_en": "Alan Dışı (Üniversite) Seçmeli Dersler",
+      "name_tr": "Alan Dışı (Üniversite) Seçmeli Dersler",
+      "theory": 2.0,
+      "practice": 0.0,
+      "credit": 2.0,
+      "ects": 3.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    ],
+    "total_ects": 30
+   },
+   "5": {
+    "rows": [
+     {
+      "code": "COM3025",
+      "name_en": "Microprocessors and Embedded Systems",
+      "name_tr": "MİKROİŞLEMCİLER VE GÖMÜLÜ SİSTEMLER",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COM3035",
+      "name_en": "Operating Systems",
+      "name_tr": "İŞLETİM SİSTEMLERİ",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COM3067",
+      "name_en": "Algorithms",
+      "name_tr": "ALGORİTMALAR",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COM3071",
+      "name_en": "Occupational Health and Safety I",
+      "name_tr": "İŞ SAĞLIĞI VE GÜVENLİĞİ I",
+      "theory": 1.0,
+      "practice": 0.0,
+      "credit": 1.0,
+      "ects": 1.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "SCS301",
+      "name_en": "Scientific, Cultural and Social Activities",
+      "name_tr": "BİLİMSEL, SOSYAL VE KÜLTÜREL ETKİNLİKLER",
+      "theory": 0,
+      "practice": 0,
+      "credit": 0,
+      "ects": 3.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COMTE03",
+      "name_en": "Computer Engineering Technical Electives 3’rd Year",
+      "name_tr": "BİLGİSAYAR MÜH. TEKNİK SEÇMELİ 3. YIL",
+      "theory": 6.0,
+      "practice": 0.0,
+      "credit": 6.0,
+      "ects": 8.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "UNVSEC",
+      "name_en": "Alan Dışı (Üniversite) Seçmeli Dersler",
+      "name_tr": "Alan Dışı (Üniversite) Seçmeli Dersler",
+      "theory": 2.0,
+      "practice": 0.0,
+      "credit": 2.0,
+      "ects": 3.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    ],
+    "total_ects": 30
+   },
+   "6": {
+    "rows": [
+     {
+      "code": "COM3032",
+      "name_en": "Computer Networks",
+      "name_tr": "BİLGİSAYAR AĞLARI",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COM3064",
+      "name_en": "Automata Theory",
+      "name_tr": "OTOMATA TEORİSİ",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COM3068",
+      "name_en": "Software Engineering",
+      "name_tr": "YAZILIM MÜHENDİSLİĞİ",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COM3076",
+      "name_en": "Computer Architecture",
+      "name_tr": "BİLGİSAYAR MİMARİSİ",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COM3072",
+      "name_en": "Occupational Health and Safety II",
+      "name_tr": "İŞ SAĞLIĞI VE GÜVENLİĞİ II",
+      "theory": 1.0,
+      "practice": 0.0,
+      "credit": 1.0,
+      "ects": 1.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "PPL302",
+      "name_en": "Progress to Professional Life",
+      "name_tr": "MESLEKİ YAŞAMA UYUM",
+      "theory": 1.0,
+      "practice": 0.0,
+      "credit": 1.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "COMTE03",
+      "name_en": "Computer Engineering Technical Electives 3 Year",
+      "name_tr": "BİLGİSAYAR MÜH. TEKNİK SEÇMELİ 3. YIL",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "UNVSEC",
+      "name_en": "Alan Dışı (Üniversite) Seçmeli Dersler",
+      "name_tr": "Alan Dışı (Üniversite) Seçmeli Dersler",
+      "theory": 2.0,
+      "practice": 0.0,
+      "credit": 2.0,
+      "ects": 3.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    ],
+    "total_ects": 30
+   },
+   "7": {
+    "rows": [
+     {
+      "code": "COM4061",
+      "name_en": "Research Techniques I",
+      "name_tr": "ARAŞTIRMA TEKNİKLERİ I",
+      "theory": 2.0,
+      "practice": 2.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COM4099",
+      "name_en": "Summer Practice",
+      "name_tr": "STAJ",
+      "theory": 0,
+      "practice": 0,
+      "credit": 0,
+      "ects": 6.0,
+      "prereq_flag": true,
+      "intibak": null
+     },
+     {
+      "code": "COMTE04",
+      "name_en": "Computer Engineering Technical Electives 4’th Year",
+      "name_tr": "BİLGİSAYAR MÜH. TEKNİK SEÇMELİ 4. YIL",
+      "theory": 9.0,
+      "practice": 0.0,
+      "credit": 9.0,
+      "ects": 18.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    ],
+    "total_ects": 30
+   },
+   "8": {
+    "rows": [
+     {
+      "code": "COM4062",
+      "name_en": "Research Techniques II",
+      "name_tr": "ARAŞTIRMA TEKNİKLERİ II",
+      "theory": 2.0,
+      "practice": 2.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COMTE04",
+      "name_en": "Computer Engineering Technical Electives 4’th Year",
+      "name_tr": "BİLGİSAYAR MÜH. TEKNİK SEÇMELİ 4. YIL",
+      "theory": 12.0,
+      "practice": 0.0,
+      "credit": 12.0,
+      "ects": 24.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    ],
+    "total_ects": 30
+   }
+  },
+  "groups": {
+   "GENELSOSSEC": {
+    "name": "Genel Sosyal Seçmeli Dersler",
+    "courses": {
+     "ART107": {
+      "code": "ART107",
+      "name_en": "Painting",
+      "name_tr": "RESİM",
+      "theory": 0.0,
+      "practice": 2.0,
+      "credit": 0.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "ART109": {
+      "code": "ART109",
+      "name_en": "Music",
+      "name_tr": "MÜZİK",
+      "theory": 0.0,
+      "practice": 2.0,
+      "credit": 0.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "ART111": {
+      "code": "ART111",
+      "name_en": "Sculpture",
+      "name_tr": "HEYKEL",
+      "theory": 0.0,
+      "practice": 2.0,
+      "credit": 0.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "ART123": {
+      "code": "ART123",
+      "name_en": "Folk Dance",
+      "name_tr": "HALK OYUNLARI",
+      "theory": 0.0,
+      "practice": 2.0,
+      "credit": 0.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "ART131": {
+      "code": "ART131",
+      "name_en": "Drama",
+      "name_tr": "DRAMA",
+      "theory": 0.0,
+      "practice": 2.0,
+      "credit": 0.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "ART163": {
+      "code": "ART163",
+      "name_en": "Museum Training",
+      "name_tr": "MÜZE EĞİTİMİ",
+      "theory": 0.0,
+      "practice": 2.0,
+      "credit": 0.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "ART219": {
+      "code": "ART219",
+      "name_en": "Modern Dance",
+      "name_tr": "MODERN DANS",
+      "theory": 0.0,
+      "practice": 2.0,
+      "credit": 0.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    }
+   },
+   "COMTE02": {
+    "name": "2. SINIF Güz Yarıyılı Alan Seçmeli Dersler",
+    "courses": {
+     "COM2501": {
+      "code": "COM2501",
+      "name_en": "Scientific Programming",
+      "name_tr": "BİLİMSEL PROGRAMLAMA",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM2537": {
+      "code": "COM2537",
+      "name_en": "Introduction to Web Based Programming",
+      "name_tr": "AĞ TABANLI PROGRAMLAMAYA GİRİŞ",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM2553": {
+      "code": "COM2553",
+      "name_en": "File Organization",
+      "name_tr": "DOSYA ORGANİZASYONU",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM2502": {
+      "code": "COM2502",
+      "name_en": "Introduction to Data Science",
+      "name_tr": "VERİ BİLİMİNE GİRİŞ",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM2534": {
+      "code": "COM2534",
+      "name_en": "Electronics",
+      "name_tr": "ELEKTRONİK",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM2536": {
+      "code": "COM2536",
+      "name_en": "Fuzzy Logic",
+      "name_tr": "BULANIK MANTIK",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "PEN218": {
+      "code": "PEN218",
+      "name_en": "INTRODUCTION TO MEASUREMENT METHODS",
+      "name_tr": "INTRODUCTION TO MEASUREMENT METHODS",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    }
+   },
+   "COMTE03": {
+    "name": "3. SINIF Güz Yarıyılı Alan Seçmeli Dersler",
+    "courses": {
+     "COM3537": {
+      "code": "COM3537",
+      "name_en": "Computer Graphics",
+      "name_tr": "BİLGİSAYAR GRAFİKLERİ",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM3533": {
+      "code": "COM3533",
+      "name_en": "Numerical Analysis Methods",
+      "name_tr": "SAYISAL ANALİZ TEKNİKLERİ",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM3549": {
+      "code": "COM3549",
+      "name_en": "Parallel Data Processing",
+      "name_tr": "PARALEL VERİ İŞLEME",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM3551": {
+      "code": "COM3551",
+      "name_en": "Artificial Intelligence",
+      "name_tr": "YAPAY ZEKA",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM3557": {
+      "code": "COM3557",
+      "name_en": "Data Communication",
+      "name_tr": "VERİ İLETİŞİMİ",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "EEE317": {
+      "code": "EEE317",
+      "name_en": "MODELING AND SIMULATION",
+      "name_tr": "MODELING AND SIMULATION",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "ENE355": {
+      "code": "ENE355",
+      "name_en": "MEASUREMENT AND INSTRUMENTATION",
+      "name_tr": "MEASUREMENT AND INSTRUMENTATION",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM3536": {
+      "code": "COM3536",
+      "name_en": "Signals and Systems",
+      "name_tr": "SİNYALLER VE SİSTEMLER",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM3542": {
+      "code": "COM3542",
+      "name_en": "Advanced Algorithms",
+      "name_tr": "İLERİ ALGORİTMALAR",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM3548": {
+      "code": "COM3548",
+      "name_en": "Pattern Recognition",
+      "name_tr": "ÖRÜNTÜ TANIMA",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM3576": {
+      "code": "COM3576",
+      "name_en": "Expert Systems",
+      "name_tr": "UZMAN SİSTEMLER",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM3596": {
+      "code": "COM3596",
+      "name_en": "Computer Simulation and Modeling",
+      "name_tr": "BİLGİSAYAR SİMÜLASYONU VE MODELLEME",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "BME3346": {
+      "code": "BME3346",
+      "name_en": "NANOMEDICINE",
+      "name_tr": "NANOMEDICINE",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "BME3314": {
+      "code": "BME3314",
+      "name_en": "MICROPROCESSORS",
+      "name_tr": "MICROPROCESSORS",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "BME3336": {
+      "code": "BME3336",
+      "name_en": "INTRODUCTION TO POLYMER ENGINEERING",
+      "name_tr": "INTRODUCTION TO POLYMER ENGINEERING",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "EEE328": {
+      "code": "EEE328",
+      "name_en": "DIGITAL SIGNAL PROCESSING",
+      "name_tr": "DIGITAL SIGNAL PROCESSING",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "ENE356": {
+      "code": "ENE356",
+      "name_en": "NANOSCIENCE AND NANOTECHNOLOGY",
+      "name_tr": "NANOSCIENCE AND NANOTECHNOLOGY",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "CEN338": {
+      "code": "CEN338",
+      "name_en": "INTRODUCTION TO DYNAMIC SIMULATION",
+      "name_tr": "INTRODUCTION TO DYNAMIC SIMULATION",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 5.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    }
+   },
+   "COMTE04": {
+    "name": "KODU:",
+    "courses": {
+     "COM4501": {
+      "code": "COM4501",
+      "name_en": "Android Operating System For Mobile Devices",
+      "name_tr": "MOBİL CİHAZLAR İÇİN ANDROİD İŞLETİM SİSTEMİ",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4503": {
+      "code": "COM4503",
+      "name_en": "Advanced Microprocessors",
+      "name_tr": "İLERİ MİKROİŞLEMCİLER",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4505": {
+      "code": "COM4505",
+      "name_en": "RFID and Computer Applications",
+      "name_tr": "RFİD VE BİLGİSAYAR UYGULAMALARI",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4507": {
+      "code": "COM4507",
+      "name_en": "Robotics",
+      "name_tr": "ROBOTİK",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4509": {
+      "code": "COM4509",
+      "name_en": "Remote Sensing",
+      "name_tr": "UZAKTAN ALGILAMA",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4511": {
+      "code": "COM4511",
+      "name_en": "Information Technologies Management",
+      "name_tr": "BİLGİ TEKNOLOJİLERİ YÖNETİMİ",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4513": {
+      "code": "COM4513",
+      "name_en": "Special Topics I",
+      "name_tr": "ÖZEL KONULAR I",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4515": {
+      "code": "COM4515",
+      "name_en": "Advanced Operating Systems",
+      "name_tr": "İLERİ İŞLETİM SİSTEMLERİ",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4517": {
+      "code": "COM4517",
+      "name_en": "Information Systems",
+      "name_tr": "BİLGİ SİSTEMLERİ",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4519": {
+      "code": "COM4519",
+      "name_en": "Data Mining",
+      "name_tr": "VERİ MADENCİLİĞİ",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4502": {
+      "code": "COM4502",
+      "name_en": "Applications Development with Android Operating System",
+      "name_tr": "ANDROİD İŞLETİM SİSTEMİ İLE UYGULAMALAR GELİŞTİRME",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4504": {
+      "code": "COM4504",
+      "name_en": "Digital Image Processing",
+      "name_tr": "SAYISAL GÖRÜNTÜ İŞLEME",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4506": {
+      "code": "COM4506",
+      "name_en": "Hardware Design Languages",
+      "name_tr": "DONANIM TASARIM DİLLERİ",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4508": {
+      "code": "COM4508",
+      "name_en": "Advanced Electronics",
+      "name_tr": "İLERİ ELEKTRONİK",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4510": {
+      "code": "COM4510",
+      "name_en": "Information Technology and Security Governance",
+      "name_tr": "BİLGİ TEKNOLOJİLERİ VE GÜVENLİK YÖNETİMİ",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4512": {
+      "code": "COM4512",
+      "name_en": "Wireless Communication and Computer Networks",
+      "name_tr": "KABLOSUZ İLETİŞİM VE BİLGİSAYAR AĞLARI",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4514": {
+      "code": "COM4514",
+      "name_en": "Special Topics II",
+      "name_tr": "ÖZEL KONULAR II",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4516": {
+      "code": "COM4516",
+      "name_en": "Parallel Programming",
+      "name_tr": "PARALEL PROGRAMLAMA",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4518": {
+      "code": "COM4518",
+      "name_en": "Advanced Computer Networks",
+      "name_tr": "İLERİ BİLGİSAYAR AĞLARI",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4520": {
+      "code": "COM4520",
+      "name_en": "CISCO",
+      "name_tr": "CISCO",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    }
+   }
+  },
+  "totals": {
+   "credit": 165,
+   "ects": 240
+  }
+ },
+ {
+  "year": 2026,
+  "semesters": {
+   "1": {
+    "rows": [
+     {
+      "code": "COM1007",
+      "name_en": "COMPUTER PROGRAMMING I",
+      "name_tr": "Bilgisayar Programlama I",
+      "theory": 4.0,
+      "practice": 2.0,
+      "credit": 5.0,
+      "ects": 7.0,
+      "prereq_flag": null,
+      "intibak": "COM1001"
+     },
+     {
+      "code": "COM1015",
+      "name_en": "INTRODUCTION TO COMPUTER SCIENCE",
+      "name_tr": "Bilgisayar Bilimlerine Giriş",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": "COM1013"
+     },
+     {
+      "code": "PHY0105",
+      "name_en": "PHYSICS I",
+      "name_tr": "Fizik I",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "PHY0151",
+      "name_en": "PHYSICS LABORATORY I",
+      "name_tr": "Fizik Laboratuvarı I",
+      "theory": 0.0,
+      "practice": 2.0,
+      "credit": 1.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "MTH0143",
+      "name_en": "CALCULUS I",
+      "name_tr": "Matematik I",
+      "theory": 4.0,
+      "practice": 0.0,
+      "credit": 4.0,
+      "ects": 5.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "TUR171",
+      "name_en": "TURKISH LANGUAGE I",
+      "name_tr": "Türk Dili I",
+      "theory": 2.0,
+      "practice": 0.0,
+      "credit": 2.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "HIS103",
+      "name_en": "ATATURK’S PRINCIPLES AND HISTORY OF REVOLUTION I",
+      "name_tr": "Atatürk İlkeleri ve İnkilap Tarihi I",
+      "theory": 2.0,
+      "practice": 0.0,
+      "credit": 2.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "OUL101",
+      "name_en": "ORIENTATION TO UNIVERSITY LIFE",
+      "name_tr": "Üniversite Yaşamına Uyum",
+      "theory": 0.0,
+      "practice": 0.0,
+      "credit": 0.0,
+      "ects": 0.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "ENG101",
+      "name_en": "DEVELOPMENT OF READING AND WRITING SKILLS IN ENGLISH I",
+      "name_tr": "İngilizce Okuma ve Yazma Becerilerinin Geliştirilmesi I",
+      "theory": 4.0,
+      "practice": 0.0,
+      "credit": 4.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    ],
+    "total_ects": 30
+   },
+   "2": {
+    "rows": [
+     {
+      "code": "COM1002",
+      "name_en": "COMPUTER PROGRAMMING II",
+      "name_tr": "Bilgisayar Programlama II",
+      "theory": 4.0,
+      "practice": 2.0,
+      "credit": 5.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "PHY0106",
+      "name_en": "PHYSICS II",
+      "name_tr": "Fizik II",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "PHY0152",
+      "name_en": "PHYSICS LABORATORY II",
+      "name_tr": "Fizik Laboratuvarı II",
+      "theory": 0.0,
+      "practice": 2.0,
+      "credit": 1.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "MTH0144",
+      "name_en": "CALCULUS II",
+      "name_tr": "Matematik II",
+      "theory": 4.0,
+      "practice": 0.0,
+      "credit": 4.0,
+      "ects": 5.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "MTH0120",
+      "name_en": "LINEAR ALGEBRA",
+      "name_tr": "Lineer Cebir",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 5.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "TUR174",
+      "name_en": "TURKISH LANGUAGE II",
+      "name_tr": "Türk Dili II",
+      "theory": 2.0,
+      "practice": 0.0,
+      "credit": 2.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "HIS104",
+      "name_en": "ATATURK’S PRINCIPLES AND HISTORY OF REVOLUTION II",
+      "name_tr": "Atatürk İlkeleri ve İnkilap Tarihi II",
+      "theory": 2.0,
+      "practice": 0.0,
+      "credit": 2.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "OUL102",
+      "name_en": "ORIENTATION TO UNIVERSITY LIFE AND LIFE SKILLS",
+      "name_tr": "Üniversite Yaşamına Uyum ve Yaşam Becerileri",
+      "theory": 1.0,
+      "practice": 0.0,
+      "credit": 1.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "ENG102",
+      "name_en": "DEVELOPMENT OF READING AND WRITING SKILLS IN ENGLISH II",
+      "name_tr": "İngilizce Okuma ve Yazma Becerilerinin Geliştirilmesi II",
+      "theory": 4.0,
+      "practice": 0.0,
+      "credit": 4.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    ],
+    "total_ects": 30
+   },
+   "3": {
+    "rows": [
+     {
+      "code": "COM2039",
+      "name_en": "DISCRETE STRUCTURES",
+      "name_tr": "Ayrık Yapılar",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 5.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "COM2043",
+      "name_en": "PROGRAMMING LANGUAGE CONCEPTS",
+      "name_tr": "Programlama Dili Kavramları",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 5.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "COM2067",
+      "name_en": "DATA STRUCTURES",
+      "name_tr": "Veri Yapıları",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "COM2077",
+      "name_en": "DIGITAL LOGIC DESIGN",
+      "name_tr": "Sayısal Mantık Tasarımı",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 5.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "ENG201",
+      "name_en": "ADVANCED READING AND COMMUNICATION TECHNIQUES IN ENGLISH I",
+      "name_tr": "İngilizce İleri Okuma ve İletişim Teknikleri I",
+      "theory": 4.0,
+      "practice": 0.0,
+      "credit": 4.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "COMTE02",
+      "name_en": "COMPUTER ENGINEERING TECHNICAL ELECTIVES 2’ND YEAR",
+      "name_tr": "Bilgisayar Müh. Teknik Seçmeli 2. Yıl) (1 ELECTIVE COURSE",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "UNVGOFECG",
+      "name_en": "UNIVERSITY GENERAL OUT OF FIELD ELECTIVE COURSE GROUP",
+      "name_tr": "Üniversite Alan Dışı Genel Seçmeli Ders Grubu",
+      "theory": 2.0,
+      "practice": 0.0,
+      "credit": 2.0,
+      "ects": 3.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "PFESECG3YY",
+      "name_en": "Pedagojik Formasyon Eğitim Grubu 3YY",
+      "name_tr": "İsteğe Bağlı 2 Seçmeli Ders) (PEDAGOGICAL FORMATION TRAINING GROUP-2 ELECTIVE COURSES",
+      "theory": 0.0,
+      "practice": 0.0,
+      "credit": 0.0,
+      "ects": 0.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    ],
+    "total_ects": 30
+   },
+   "4": {
+    "rows": [
+     {
+      "code": "COM2044",
+      "name_en": "OBJECT ORIENTED PROGRAMMING",
+      "name_tr": "Nesne Yönelimli Programlama",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 6.0,
+      "prereq_flag": true,
+      "intibak": null
+     },
+     {
+      "code": "COM2058",
+      "name_en": "DATABASE MANAGEMENT",
+      "name_tr": "Veritabanı Yönetimi",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "STA250",
+      "name_en": "PROBABILITY AND STATISTICS",
+      "name_tr": "Olasılık ve İstatistik",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "MTH0210",
+      "name_en": "DIFFERENTIAL EQUATIONS",
+      "name_tr": "Diferansiyel Denklemler",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 5.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "ENG202",
+      "name_en": "ADVANCED READING AND COMMUNICATION TECHNIQUES IN ENGLISH II",
+      "name_tr": "İngilizce İleri Okuma ve İletişim Teknikleri II",
+      "theory": 4.0,
+      "practice": 0.0,
+      "credit": 4.0,
+      "ects": 2.0,
+      "prereq_flag": false,
+      "intibak": null
+     },
+     {
+      "code": "COMTE02",
+      "name_en": "COMPUTER ENGINEERING TECHNICAL ELECTIVES 2’ND YEAR",
+      "name_tr": "Bilgisayar Müh. Teknik Seçmeli 2. Yıl) (1 ELECTIVE COURSE",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "UNVGOFECG",
+      "name_en": "UNIVERSITY GENERAL OUT OF FIELD ELECTIVE COURSE GROUP",
+      "name_tr": "Üniversite Alan Dışı Genel Seçmeli Ders Grubu",
+      "theory": 2.0,
+      "practice": 0.0,
+      "credit": 2.0,
+      "ects": 3.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "PFESECG4YY",
+      "name_en": "Pedagojik Formasyon Eğitim Grubu 4YY",
+      "name_tr": "İsteğe Bağlı 2 Seçmeli Ders) (PEDAGOGICAL FORMATION TRAINING GROUP-2 ELECTIVE COURSES",
+      "theory": 0.0,
+      "practice": 0.0,
+      "credit": 0.0,
+      "ects": 0.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    ],
+    "total_ects": 30
+   },
+   "5": {
+    "rows": [
+     {
+      "code": "COM3023",
+      "name_en": "MICROPROCESSORS AND EMBEDDED SYSTEMS",
+      "name_tr": "Mikroişlemciler ve Gömülü Sistemler",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": "COM3025"
+     },
+     {
+      "code": "COM3033",
+      "name_en": "OPERATING SYSTEMS",
+      "name_tr": "İşletim Sistemleri",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 6.0,
+      "prereq_flag": null,
+      "intibak": "COM3035"
+     },
+     {
+      "code": "COM3067",
+      "name_en": "ALGORITHMS",
+      "name_tr": "Algoritmalar",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 5.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "COM3073",
+      "name_en": "OCCUPATIONAL HEALTH AND SAFETY I",
+      "name_tr": "İş Sağlığı ve Güvenliği I",
+      "theory": 2.0,
+      "practice": 0.0,
+      "credit": 2.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": "COM3071"
+     },
+     {
+      "code": "SCS301",
+      "name_en": "SCIENTIFIC, CULTURAL AND SOCIAL ACTIVITIES",
+      "name_tr": "Bilimsel, Sosyal ve Kültürel Etkinlikler",
+      "theory": 0.0,
+      "practice": 0.0,
+      "credit": 0.0,
+      "ects": 3.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "COMTE03",
+      "name_en": "COMPUTER ENGINEERING TECHNICAL ELECTIVES 3’RD YEAR",
+      "name_tr": "Bilgisayar Müh. Alan Seçmeli 3. Yıl) (2 ELECTIVE COURSES",
+      "theory": 6.0,
+      "practice": 0.0,
+      "credit": 6.0,
+      "ects": 8.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "PFESECG5YY",
+      "name_en": "Pedagojik Formasyon Eğitim Grubu 5YY",
+      "name_tr": "İsteğe Bağlı 2 Seçmeli Ders) (PEDAGOGICAL FORMATION TRAINING GROUP-2 ELECTIVE COURSES",
+      "theory": 0.0,
+      "practice": 0.0,
+      "credit": 0.0,
+      "ects": 0.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    ],
+    "total_ects": 30
+   },
+   "6": {
+    "rows": [
+     {
+      "code": "COM3032",
+      "name_en": "COMPUTER NETWORKS",
+      "name_tr": "Bilgisayar Ağları",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 5.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "COM3066",
+      "name_en": "AUTOMATA THEORY",
+      "name_tr": "Otomata Teorisi",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": "COM3064"
+     },
+     {
+      "code": "COM3070",
+      "name_en": "SOFTWARE ENGINEERING",
+      "name_tr": "Yazılım Mühendisliği",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": "COM3068"
+     },
+     {
+      "code": "COM3076",
+      "name_en": "COMPUTER ARCHITECTURE",
+      "name_tr": "Bilgisayar Mimarisi",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 5.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "COM3074",
+      "name_en": "OCCUPATIONAL HEALTH AND SAFETY II",
+      "name_tr": "İş Sağlığı ve Güvenliği II",
+      "theory": 2.0,
+      "practice": 0.0,
+      "credit": 2.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": "COM3073"
+     },
+     {
+      "code": "PPL302",
+      "name_en": "PROGRESS TO PROFESSIONAL LIFE",
+      "name_tr": "Mesleki Yaşama Uyum",
+      "theory": 1.0,
+      "practice": 0.0,
+      "credit": 1.0,
+      "ects": 2.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "COMTE03",
+      "name_en": "COMPUTER ENGINEERING TECHNICAL ELECTIVES 3’RD YEAR",
+      "name_tr": "Bilgisayar Müh. Alan Seçmeli 3. Yıl) (2 ELECTIVE COURSES",
+      "theory": 6.0,
+      "practice": 0.0,
+      "credit": 6.0,
+      "ects": 8.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "PFESECG6YY",
+      "name_en": "Pedagojik Formasyon Eğitim Grubu 6YY",
+      "name_tr": "İsteğe Bağlı-2 Seçmeli Ders) (PEDAGOGICAL FORMATION TRAINING GROUP-2 ELECTIVE COURSES",
+      "theory": 0.0,
+      "practice": 0.0,
+      "credit": 0.0,
+      "ects": 0.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    ],
+    "total_ects": 30
+   },
+   "7": {
+    "rows": [
+     {
+      "code": "COM4063",
+      "name_en": "GRADUATION PROJECT I",
+      "name_tr": "Mezuniyet Projesi I",
+      "theory": 2.0,
+      "practice": 2.0,
+      "credit": 3.0,
+      "ects": 7.0,
+      "prereq_flag": null,
+      "intibak": "COM4061"
+     },
+     {
+      "code": "COM4097",
+      "name_en": "SUMMER PRACTICE",
+      "name_tr": "Staj",
+      "theory": 0.0,
+      "practice": 0.0,
+      "credit": 0.0,
+      "ects": 7.0,
+      "prereq_flag": null,
+      "intibak": "COM4099"
+     },
+     {
+      "code": "COMTE04",
+      "name_en": "COMPUTER ENGINEERING TECHNICAL ELECTIVES 4’TH YEAR",
+      "name_tr": "Bilgisayar Müh. Alan Seçmeli 4. Yıl) (4 ELECTIVE COURSES",
+      "theory": 12.0,
+      "practice": 0.0,
+      "credit": 12.0,
+      "ects": 16.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "PFESECG7YY",
+      "name_en": "Pedagojik Formasyon Eğitim Grubu 7YY",
+      "name_tr": "İsteğe Bağlı 2 Seçmeli Ders) (PEDAGOGICAL FORMATION TRAINING GROUP-2 ELECTIVE COURSES",
+      "theory": 0.0,
+      "practice": 0.0,
+      "credit": 0.0,
+      "ects": 0.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    ],
+    "total_ects": 30
+   },
+   "8": {
+    "rows": [
+     {
+      "code": "COM4064",
+      "name_en": "GRADUATION PROJECT II",
+      "name_tr": "Mezuniyet Projesi II",
+      "theory": 2.0,
+      "practice": 2.0,
+      "credit": 3.0,
+      "ects": 7.0,
+      "prereq_flag": null,
+      "intibak": "COM4062"
+     },
+     {
+      "code": "COM4080",
+      "name_en": "DIGITAL IMAGE PROCESSING",
+      "name_tr": "Sayısal Görüntü İşleme",
+      "theory": 3.0,
+      "practice": 2.0,
+      "credit": 4.0,
+      "ects": 7.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     {
+      "code": "COMTE04",
+      "name_en": "COMPUTER ENGINEERING TECHNICAL ELECTIVES 4’TH YEAR",
+      "name_tr": "Bilgisayar Müh. Alan Seçmeli 4. Yıl) (4 ELECTIVE COURSES",
+      "theory": 12.0,
+      "practice": 0.0,
+      "credit": 12.0,
+      "ects": 16.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    ],
+    "total_ects": 30
+   }
+  },
+  "groups": {
+   "COMTE02": {
+    "name": "2. SINIF Alan Seçmeli Dersler",
+    "courses": {
+     "COM2501": {
+      "code": "COM2501",
+      "name_en": "SCIENTIFIC PROGRAMMING",
+      "name_tr": "Bilimsel Programlama",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM2537": {
+      "code": "COM2537",
+      "name_en": "INTRODUCTION TO WEB BASED PROGRAMMING",
+      "name_tr": "Ağ Tabanlı Programlamaya Giriş",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM2553": {
+      "code": "COM2553",
+      "name_en": "FILE ORGANIZATION",
+      "name_tr": "Dosya Organizasyonu",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM2502": {
+      "code": "COM2502",
+      "name_en": "INTRODUCTION TO DATA SCIENCE",
+      "name_tr": "Veri Bilimine Giriş",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM2534": {
+      "code": "COM2534",
+      "name_en": "ELECTRONICS",
+      "name_tr": "Elektronik",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM2536": {
+      "code": "COM2536",
+      "name_en": "FUZZY LOGIC",
+      "name_tr": "Bulanık Mantık",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "PEN218": {
+      "code": "PEN218",
+      "name_en": "INTRODUCTION TO MEASUREMENT METHODS",
+      "name_tr": "Ölçme Yöntemlerine Giriş",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    }
+   },
+   "UNVGOFECG": {
+    "name": "UNIVERSITY GENERAL OUT OF FIELD",
+    "courses": {}
+   },
+   "PFESECG3YY": {
+    "name": "Pedagojik Formasyon Eğitim Grubu 3YY",
+    "courses": {
+     "PFE001": {
+      "code": "PFE001",
+      "name_en": "INTRODUCTION TO EDUCATION",
+      "name_tr": "Eğitime Giriş",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "PFE002": {
+      "code": "PFE002",
+      "name_en": "INSTRUCTIONAL PRINCIPLES AND METHODS",
+      "name_tr": "Öğretim İlke ve Yöntemleri",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    }
+   },
+   "PFESECG4YY": {
+    "name": "Pedagojik Formasyon Eğitim Grubu 4YY",
+    "courses": {
+     "PFE003": {
+      "code": "PFE003",
+      "name_en": "CLASSROOM MANAGEMENT",
+      "name_tr": "Sınıf Yönetimi",
+      "theory": 2.0,
+      "practice": 0.0,
+      "credit": 2.0,
+      "ects": 3.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "PFE004": {
+      "code": "PFE004",
+      "name_en": "SPECIAL TEACHING METHODS",
+      "name_tr": "Özel Öğretim Yöntemleri",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    }
+   },
+   "COMTE03": {
+    "name": "3. SINIF Alan Seçmeli Dersler",
+    "courses": {
+     "COM3537": {
+      "code": "COM3537",
+      "name_en": "COMPUTER GRAPHICS",
+      "name_tr": "Bilgisayar Grafikleri",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM3533": {
+      "code": "COM3533",
+      "name_en": "NUMERICAL ANALYSIS METHODS",
+      "name_tr": "Sayısal Analiz Teknikleri",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM3549": {
+      "code": "COM3549",
+      "name_en": "PARALLEL DATA PROCESSING",
+      "name_tr": "Paralel Veri İşleme",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM3551": {
+      "code": "COM3551",
+      "name_en": "ARTIFICIAL INTELLIGENCE",
+      "name_tr": "Yapay Zeka",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM3557": {
+      "code": "COM3557",
+      "name_en": "DATA COMMUNICATION",
+      "name_tr": "Veri İletişimi",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM3536": {
+      "code": "COM3536",
+      "name_en": "SIGNALS AND SYSTEMS",
+      "name_tr": "Sinyaller ve Sistemler",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM3542": {
+      "code": "COM3542",
+      "name_en": "ADVANCED ALGORITHMS",
+      "name_tr": "İleri Algoritmalar",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM3548": {
+      "code": "COM3548",
+      "name_en": "PATTERN RECOGNITION",
+      "name_tr": "Örüntü Tanıma",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM3576": {
+      "code": "COM3576",
+      "name_en": "EXPERT SYSTEMS",
+      "name_tr": "Uzman Sistemler",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM3596": {
+      "code": "COM3596",
+      "name_en": "COMPUTER SIMULATION AND MODELING",
+      "name_tr": "Bilgisayar Simülasyonu ve Modelleme",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "BME3346": {
+      "code": "BME3346",
+      "name_en": "NANOMEDICINE",
+      "name_tr": "Nanotıp",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "BME3336": {
+      "code": "BME3336",
+      "name_en": "INTRODUCTION TO POLYMER ENGINEERING",
+      "name_tr": "Polimer Mühendisliğine Giriş",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "CEN3338": {
+      "code": "CEN3338",
+      "name_en": "INTRODUCTION TO DYNAMIC SIMULATION",
+      "name_tr": "Dinamik Benzetime Giriş",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    }
+   },
+   "PFESECG5YY": {
+    "name": "Pedagojik Formasyon Eğitim Grubu 5YY",
+    "courses": {
+     "PFE005": {
+      "code": "PFE005",
+      "name_en": "GUIDANCE AND SPECIAL EDUCATION",
+      "name_tr": "Rehberlik ve Özel Eğitim",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "PFE006": {
+      "code": "PFE006",
+      "name_en": "MEASUREMENT AND EVALUATION IN EDUCATION",
+      "name_tr": "Eğitimde Ölçme ve Değerlendirme",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    }
+   },
+   "PFESECG6YY": {
+    "name": "Pedagojik Formasyon Eğitim Grubu 6YY",
+    "courses": {
+     "PFE007": {
+      "code": "PFE007",
+      "name_en": "PSYCHOLOGY OF EDUCATION",
+      "name_tr": "Eğitim Psikolojisi",
+      "theory": 2.0,
+      "practice": 0.0,
+      "credit": 2.0,
+      "ects": 3.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "PFE008": {
+      "code": "PFE008",
+      "name_en": "INSTRUCTIONAL TECHNOLOGIES",
+      "name_tr": "Öğretim Teknolojileri",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    }
+   },
+   "COMTE04": {
+    "name": "4. SINIF Alan Seçmeli Dersler",
+    "courses": {
+     "COM4541": {
+      "code": "COM4541",
+      "name_en": "AI-ASSISTED SOFTWARE ENGINEERING",
+      "name_tr": "Yapay Zeka Destekli Yazılım Mühendisliği",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4551": {
+      "code": "COM4551",
+      "name_en": "ANDROID OPERATING SYSTEM FOR MOBILE DEVICES",
+      "name_tr": "Mobil Cihazlar İçin Android İşletim Sistemi",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4553": {
+      "code": "COM4553",
+      "name_en": "ADVANCED MICROPROCESSORS",
+      "name_tr": "İleri Mikroişlemciler",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4555": {
+      "code": "COM4555",
+      "name_en": "RFID AND COMPUTER APPLICATIONS",
+      "name_tr": "RFID ve Bilgisayar Uygulamaları",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4557": {
+      "code": "COM4557",
+      "name_en": "ROBOTICS",
+      "name_tr": "Robotik",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4559": {
+      "code": "COM4559",
+      "name_en": "REMOTE SENSING",
+      "name_tr": "Uzaktan Algılama",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4561": {
+      "code": "COM4561",
+      "name_en": "INFORMATION TECHNOLOGIES MANAGEMENT",
+      "name_tr": "Bilgi Teknolojileri Yönetimi",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4565": {
+      "code": "COM4565",
+      "name_en": "ADVANCED OPERATING SYSTEMS",
+      "name_tr": "İleri İşletim Sistemleri",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4567": {
+      "code": "COM4567",
+      "name_en": "INFORMATION SYSTEMS",
+      "name_tr": "Bilgi Sistemleri",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4569": {
+      "code": "COM4569",
+      "name_en": "DATA MINING",
+      "name_tr": "Veri Madenciliği",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4573": {
+      "code": "COM4573",
+      "name_en": "ARTIFICIAL NEURAL NETWORKS",
+      "name_tr": "Yapay Sinir Ağları",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4575": {
+      "code": "COM4575",
+      "name_en": "EMBEDDED SYSTEM PROGRAMMING",
+      "name_tr": "Gömülü Sistem Programlama",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4577": {
+      "code": "COM4577",
+      "name_en": "SYSTEM MANAGEMENT",
+      "name_tr": "Sistem Yönetimi",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4579": {
+      "code": "COM4579",
+      "name_en": "REAL-TIME SYSTEMS",
+      "name_tr": "Gerçek Zamanlı Sistemler",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4581": {
+      "code": "COM4581",
+      "name_en": "WEB BASED TECHNOLOGIES AND APPLICATIONS",
+      "name_tr": "Ağ Tabanlı Teknolojiler ve Uygulamaları",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4583": {
+      "code": "COM4583",
+      "name_en": "OBJECT ORIENTED SOFTWARE MODELING",
+      "name_tr": "Nesne Yönelimli Yazılım Modelleme",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4585": {
+      "code": "COM4585",
+      "name_en": "APPLIED CRYPTOGRAPHY",
+      "name_tr": "Uygulamalı Kriptografi",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4587": {
+      "code": "COM4587",
+      "name_en": "IOS MOBILE APPLICATION DEVELOPMENT I",
+      "name_tr": "IOS ile Mobil Uygulama Geliştirme I",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4552": {
+      "code": "COM4552",
+      "name_en": "APPLICATIONS DEVELOPMENT WITH ANDROID OPERATING SYSTEM",
+      "name_tr": "Android İşletim Sistemi ile Uygulamalar Geliştirme",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4556": {
+      "code": "COM4556",
+      "name_en": "HARDWARE DESIGN LANGUAGES",
+      "name_tr": "Donanım Tasarım Dilleri",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4558": {
+      "code": "COM4558",
+      "name_en": "ADVANCED ELECTRONICS",
+      "name_tr": "İleri Elektronik",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4560": {
+      "code": "COM4560",
+      "name_en": "INFORMATION TECHNOLOGY AND SECURITY GOVERNANCE",
+      "name_tr": "Bilgi Teknolojileri ve Güvenlik Yönetimi",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4562": {
+      "code": "COM4562",
+      "name_en": "WIRELESS COMMUNICATION AND COMPUTER NETWORKS",
+      "name_tr": "Kablosuz İletişim ve Bilgisayar Ağları",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4566": {
+      "code": "COM4566",
+      "name_en": "PARALLEL PROGRAMMING",
+      "name_tr": "Paralel Programlama",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4568": {
+      "code": "COM4568",
+      "name_en": "ADVANCED COMPUTER NETWORKS",
+      "name_tr": "İleri Bilgisayar Ağları",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4572": {
+      "code": "COM4572",
+      "name_en": "WEB BASED PARALLEL DISTRIBUTED SYSTEMS",
+      "name_tr": "Ağ Tabanlı Paralel Dağıtım Sistemleri",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4574": {
+      "code": "COM4574",
+      "name_en": "INTRODUCTION TO COMPLEX NETWORKS",
+      "name_tr": "Karmaşık Ağlara Giriş",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4576": {
+      "code": "COM4576",
+      "name_en": "EMBEDDED SYSTEM DESIGN",
+      "name_tr": "Gömülü Sistem Tasarımı",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4578": {
+      "code": "COM4578",
+      "name_en": "MICROPROCESSOR INTERFACES",
+      "name_tr": "Mikroişlemci Arayüzleri",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4580": {
+      "code": "COM4580",
+      "name_en": "INFORMATION SECURITY",
+      "name_tr": "Bilgi Güvenliği",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4582": {
+      "code": "COM4582",
+      "name_en": "BLOCKCHAIN TECHNOLOGY AND PUBLIC LEDGERS",
+      "name_tr": "Blokzinciri Teknolojisi ve Açık Defterler",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4584": {
+      "code": "COM4584",
+      "name_en": "KNOWLEDGE ENGINEERING AND MANAGEMENT",
+      "name_tr": "Bilgi Mühendisliği ve Yönetimi",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4588": {
+      "code": "COM4588",
+      "name_en": "IOS MOBILE APPLICATION DEVELOPMENT II",
+      "name_tr": "IOS ile Mobil Uygulama Geliştirme II",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4590": {
+      "code": "COM4590",
+      "name_en": "DEEP LEARNING",
+      "name_tr": "Derin Öğrenme",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     },
+     "COM4594": {
+      "code": "COM4594",
+      "name_en": "NATURAL LANGUAGE PROCESSING",
+      "name_tr": "Doğal Dil İşleme",
+      "theory": 3.0,
+      "practice": 0.0,
+      "credit": 3.0,
+      "ects": 4.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    }
+   },
+   "PFESECG7YY": {
+    "name": "Pedagojik Formasyon Eğitim Grubu 7YY",
+    "courses": {
+     "PFE009": {
+      "code": "PFE009",
+      "name_en": "TEACHING PRACTICE",
+      "name_tr": "Öğretmenlik Uygulaması",
+      "theory": 1.0,
+      "practice": 8.0,
+      "credit": 5.0,
+      "ects": 10.0,
+      "prereq_flag": null,
+      "intibak": null
+     }
+    }
+   }
+  },
+  "totals": {
+   "credit": 173,
+   "ects": 240
+  }
+ }
+]
