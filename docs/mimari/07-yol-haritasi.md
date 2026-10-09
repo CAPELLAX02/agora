@@ -202,8 +202,8 @@ flowchart LR
 
 | Durum | Madde |
 | --- | --- |
-| ⬜ | Playwright e2e: giriş, ilk girişte parola değiştirme, şifre sıfırlama, MFA kurulumu ve iki adımlı giriş, rol atamasının anında etkisi |
-| ⬜ | Sözleşme ve dokümanlar güncel, CI yeşil |
+| ✅ | Playwright e2e: giriş, ilk girişte parola değiştirme, şifre sıfırlama, MFA kurulumu ve iki adımlı giriş, rol atamasının anında etkisi, hesap aktivasyonu (gerçek yığınla, CI'da da) |
+| 🔄 | Sözleşme ve dokümanlar güncel, CI yeşil | Sözleşme ve dokümanlar güncel. Backend CI'da govulncheck, Go 1.27.1 standart kütüphanesindeki HTTP/2 açıklarını (GO-2026-6611/6612/6613/6617) bildiriyor: düzeltme Go 1.27.2'de (8 Ekim 2026), sürüm politikası gereği karar bekliyor |
 
 ### Faz 2 ve sonrası
 
