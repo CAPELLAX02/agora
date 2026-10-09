@@ -21,7 +21,8 @@ import (
 )
 
 type fixture struct {
-	bil, fiz string // bilgisayar mühendisliği ve fizik bölümleri (farklı fakülteler)
+	bil, fiz         string // bilgisayar mühendisliği ve fizik bölümleri (farklı fakülteler)
+	bilProg, fizProg string // bölümlerin 8 yarıyıllık lisans programları
 }
 
 func seedOrg(t *testing.T, pool *pgxpool.Pool) fixture {
@@ -36,8 +37,18 @@ func seedOrg(t *testing.T, pool *pgxpool.Pool) fixture {
 			INSERT INTO org.departments (faculty_id, code, name_tr, name_en) SELECT id, 'BIL', 'Bilgisayar Mühendisliği', 'Computer Engineering' FROM m RETURNING id
 		), z AS (
 			INSERT INTO org.departments (faculty_id, code, name_tr, name_en) SELECT id, 'FIZ', 'Fizik', 'Physics' FROM s RETURNING id
+		), bp AS (
+			INSERT INTO org.programs (department_id, code, name_tr, name_en, degree_level, language, education_type,
+			                          duration_semesters, max_duration_years, total_ects_required, has_prep_class)
+			SELECT id, 'BIL-EN', 'Bilgisayar Mühendisliği (İngilizce)', 'Computer Engineering', 'BACHELOR', 'EN', 'DAYTIME', 8, 7, 240, true FROM b
+			RETURNING id
+		), zp AS (
+			INSERT INTO org.programs (department_id, code, name_tr, name_en, degree_level, language, education_type,
+			                          duration_semesters, max_duration_years, total_ects_required, has_prep_class)
+			SELECT id, 'FIZ-TR', 'Fizik', 'Physics', 'BACHELOR', 'TR', 'DAYTIME', 8, 7, 240, false FROM z
+			RETURNING id
 		)
-		SELECT (SELECT id FROM b), (SELECT id FROM z)`).Scan(&f.bil, &f.fiz)
+		SELECT (SELECT id FROM b), (SELECT id FROM z), (SELECT id FROM bp), (SELECT id FROM zp)`).Scan(&f.bil, &f.fiz, &f.bilProg, &f.fizProg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -327,16 +338,19 @@ const (
 )
 
 type server struct {
-	t  *testing.T
-	h  http.Handler
-	fx fixture
+	t      *testing.T
+	h      http.Handler
+	fx     fixture
+	pool   *pgxpool.Pool
+	repo   *curriculum.Repository
+	grants grants
 }
 
 func newServer(t *testing.T) *server {
 	t.Helper()
 	pool := dbtest.New(t)
 	fx := seedOrg(t, pool)
-	s := &server{t: t, fx: fx}
+	s := &server{t: t, fx: fx, pool: pool, repo: curriculum.NewRepository(pool)}
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	authenticate := func(next http.Handler) http.Handler {
@@ -364,8 +378,9 @@ func newServer(t *testing.T) *server {
 		}, read...),
 		student: read,
 	}
+	s.grants = resolver
 	mux := http.NewServeMux()
-	curriculum.NewHandler(curriculum.NewRepository(pool), org.NewTargets(pool), logger).
+	curriculum.NewHandler(s.repo, org.NewTargets(pool), logger).
 		Register(authz.NewRouter(mux, authenticate, resolver, logger))
 	s.h = mux
 	return s

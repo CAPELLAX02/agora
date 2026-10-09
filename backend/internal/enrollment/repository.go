@@ -27,7 +27,8 @@ const studentProgramSelect = `
 	       p.id, p.code, p.name_tr, d.id, d.name_tr, f.id, f.name_tr,
 	       sp.enrollment_kind, sp.admission_type, sp.admission_year, sp.admitted_on, sp.status,
 	       sp.class_level, sp.current_semester, sp.gpa_cache::float8, sp.earned_ects_cache::float8, sp.version,
-	       aa.id, st.id, st.staff_no, t.name_tr, ape.first_name, ape.last_name, aa.valid_from
+	       aa.id, st.id, st.staff_no, t.name_tr, ape.first_name, ape.last_name, aa.valid_from,
+	       cu.id, cu.name_tr, cu.name_en
 	FROM enrollment.student_programs sp
 	JOIN people.students s     ON s.id = sp.student_id
 	JOIN people.persons pe     ON pe.id = s.person_id
@@ -37,7 +38,8 @@ const studentProgramSelect = `
 	LEFT JOIN enrollment.advisor_assignments aa ON aa.student_program_id = sp.id AND aa.valid_until IS NULL
 	LEFT JOIN people.staff st  ON st.id = aa.advisor_staff_id
 	LEFT JOIN people.persons ape ON ape.id = st.person_id
-	LEFT JOIN people.academic_titles t ON t.code = st.academic_title_code`
+	LEFT JOIN people.academic_titles t ON t.code = st.academic_title_code
+	LEFT JOIN curriculum.curricula cu ON cu.id = sp.curriculum_id`
 
 func scanStudentProgram(row pgx.CollectableRow) (StudentProgram, error) {
 	var (
@@ -46,15 +48,20 @@ func scanStudentProgram(row pgx.CollectableRow) (StudentProgram, error) {
 		assignmentID, staffID, staffNo *string
 		title, advFirst, advLast       *string
 		since                          *time.Time
+		curID, curTR, curEN            *string
 	)
 	err := row.Scan(&sp.ID, &sp.StudentID, &sp.StudentNo, &sp.FirstName, &sp.LastName,
 		&sp.Program.ID, &sp.Program.Code, &sp.Program.NameTR, &sp.Program.DepartmentID, &sp.Program.DepartmentName,
 		&sp.Program.FacultyID, &sp.Program.FacultyName,
 		&kind, &admission, &sp.AdmissionYear, &sp.AdmittedOn, &status,
 		&sp.ClassLevel, &sp.CurrentSemester, &sp.GPA, &sp.EarnedECTS, &sp.Version,
-		&assignmentID, &staffID, &staffNo, &title, &advFirst, &advLast, &since)
+		&assignmentID, &staffID, &staffNo, &title, &advFirst, &advLast, &since,
+		&curID, &curTR, &curEN)
 	if err != nil {
 		return StudentProgram{}, err
+	}
+	if curID != nil {
+		sp.Curriculum = &CurriculumRef{ID: *curID, NameTR: *curTR, NameEN: *curEN}
 	}
 	sp.Kind, sp.AdmissionType, sp.Status = Kind(kind), AdmissionType(admission), Status(status)
 	if assignmentID != nil {

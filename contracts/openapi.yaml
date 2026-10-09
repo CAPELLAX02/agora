@@ -59,6 +59,8 @@ tags:
     description: Akademik yıllar, dönemler ve işlem pencereleri (ders seçme, not girişi ...)
   - name: Ders kataloğu
     description: Dersler, ön koşullar, eşdeğerlikler (intibak) ve seçmeli ders grupları
+  - name: Müfredat
+    description: Programların versiyonlu ders planları (müfredat sürümleri) ve öğrencinin izlediği plan
 
 paths:
   /healthz:
@@ -2030,6 +2032,343 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/v1/programs/{id}/curricula:
+    get:
+      tags: [Müfredat]
+      summary: Programın müfredat sürümlerini listeler
+      description: En yeni giriş yılından eskiye. Taslak sürümleri sadece programın müfredatını yönetebilenler görür.
+      operationId: listProgramCurricula
+      x-agora-permission: curriculum:read
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Sürümler
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/Curriculum" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [Müfredat]
+      summary: Taslak müfredat sürümü oluşturur
+      description: >-
+        `copy_from_id` verilirse o sürümün satırları kopyalanır (yeni sürüm genellikle bir
+        öncekinden türetilir). Programı kapsayan müfredat yetkisi gerekir.
+      operationId: createCurriculum
+      x-agora-permission: curriculum:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/CurriculumRequest"
+                - type: object
+                  properties:
+                    copy_from_id: { type: string, format: uuid, description: Satırları kopyalanacak sürüm }
+      responses:
+        "201":
+          description: Oluşturulan taslak
+          headers:
+            ETag: { schema: { type: string } }
+            Location: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CurriculumDetail" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/curricula/{id}:
+    get:
+      tags: [Müfredat]
+      summary: Müfredat sürümünü satırları ve özetiyle döndürür
+      description: Taslak sürüm, programın müfredatını yönetemeyen kullanıcıya 404 döner.
+      operationId: getCurriculum
+      x-agora-permission: curriculum:read
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Sürüm
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CurriculumDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Müfredat]
+      summary: Sürümün bilgilerini günceller
+      description: >-
+        Taslakta her alan değişir. Yürürlükteki sürümde giriş yılı başlangıcı ve AKTS toplamı
+        donmuştur; adlar, karar bilgisi ve yeni girişlere kapanış yılı değişebilir. İyimser
+        kilit, `If-Match` zorunlu.
+      operationId: updateCurriculum
+      x-agora-permission: curriculum:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CurriculumRequest" }
+      responses:
+        "200":
+          description: Güncel sürüm
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CurriculumDetail" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`CURRICULUM_NOT_DRAFT`: yürürlükteki sürümde donmuş alan değişti, `CURRICULUM_OVERLAP`: giriş yılları çakışıyor, `CURRICULUM_IN_USE`: bağlı öğrenciler aralık dışında kalıyor"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "412": { $ref: "#/components/responses/VersionMismatch" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
+    delete:
+      tags: [Müfredat]
+      summary: Taslak sürümü siler
+      operationId: deleteCurriculum
+      x-agora-permission: curriculum:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "204": { description: Silindi }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`CURRICULUM_NOT_DRAFT`: sürüm taslak değil"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/curricula/{id}/activate:
+    post:
+      tags: [Müfredat]
+      summary: Taslak sürümü yürürlüğe koyar
+      description: >-
+        Satırların AKTS toplamı `total_ects_required` ile tutmalı, yarıyıllar programın süresini
+        aşmamalı, giriş yılları yürürlükteki başka bir sürümle çakışmamalı. Giriş yılı
+        aralığındaki, henüz bir sürüme bağlı olmayan öğrenci kayıtları bu sürüme bağlanır.
+      operationId: activateCurriculum
+      x-agora-permission: curriculum:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Yürürlükteki sürüm (`student_count` bağlanan kayıtları içerir)
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CurriculumDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`CURRICULUM_NOT_DRAFT`, `CURRICULUM_EMPTY`, `ECTS_TOTAL_MISMATCH`, `SEMESTER_OUT_OF_RANGE` ya da `CURRICULUM_OVERLAP`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/curricula/{id}/archive:
+    post:
+      tags: [Müfredat]
+      summary: Yürürlükteki sürümü arşivler
+      description: Sürümü izleyen ve öğrenimi süren öğrenci varsa 409 döner.
+      operationId: archiveCurriculum
+      x-agora-permission: curriculum:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Arşivlenen sürüm
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CurriculumDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`CURRICULUM_NOT_ACTIVE`: sürüm yürürlükte değil, `CURRICULUM_IN_USE`: öğrenimi süren öğrenciler var"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/curricula/{id}/items:
+    post:
+      tags: [Müfredat]
+      summary: Taslak sürüme satır ekler
+      description: Ders satırı ya da bir seçmeli havuzdan ders alınacak yuva. Sadece taslakta.
+      operationId: addCurriculumItem
+      x-agora-permission: curriculum:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CurriculumItemRequest" }
+      responses:
+        "201":
+          description: Güncel sürüm
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CurriculumDetail" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`CURRICULUM_NOT_DRAFT`: sürüm taslak değil, `COURSE_ALREADY_IN_CURRICULUM`: ders müfredatta zaten var"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/curricula/{id}/items/{itemId}:
+    put:
+      tags: [Müfredat]
+      summary: Taslak sürümün satırını değiştirir
+      operationId: updateCurriculumItem
+      x-agora-permission: curriculum:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - name: itemId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CurriculumItemRequest" }
+      responses:
+        "200":
+          description: Güncel sürüm
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CurriculumDetail" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`CURRICULUM_NOT_DRAFT`: sürüm taslak değil, `COURSE_ALREADY_IN_CURRICULUM`: ders müfredatta zaten var"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+    delete:
+      tags: [Müfredat]
+      summary: Taslak sürümden satırı kaldırır
+      operationId: deleteCurriculumItem
+      x-agora-permission: curriculum:manage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - name: itemId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Güncel sürüm
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CurriculumDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`CURRICULUM_NOT_DRAFT`: sürüm taslak değil"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/me/curricula:
+    get:
+      tags: [Müfredat]
+      summary: Öğrencinin izlediği ders planları
+      description: >-
+        Her program kaydı için bir satır (çift anadal ve yandal öğrencisinin birden fazla planı
+        olur). Kayıt henüz bir sürüme bağlı değilse `curriculum` null. Öğrenci olmayan
+        kullanıcı için liste boştur.
+      operationId: myCurricula
+      x-agora-permission: curriculum:read
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Ders planları
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [student_program_id, enrollment_kind, admission_year, program, curriculum]
+                      properties:
+                        student_program_id: { type: string, format: uuid }
+                        enrollment_kind: { type: string, enum: [MAJOR, DOUBLE_MAJOR, MINOR] }
+                        admission_year: { type: integer }
+                        program: { $ref: "#/components/schemas/ProgramRef" }
+                        curriculum:
+                          oneOf:
+                            - type: "null"
+                            - $ref: "#/components/schemas/CurriculumDetail"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /api/v1/buildings:
     get:
       tags: [Organizasyon]
@@ -3241,7 +3580,7 @@ components:
 
     StudentProgram:
       type: object
-      required: [id, student, program, kind, admission_type, admission_year, admitted_on, status, class_level, current_semester, gpa, earned_ects, advisor]
+      required: [id, student, program, kind, admission_type, admission_year, admitted_on, status, class_level, current_semester, gpa, earned_ects, advisor, curriculum]
       properties:
         id: { type: string, format: uuid }
         student:
@@ -3284,6 +3623,16 @@ components:
           oneOf:
             - type: "null"
             - $ref: "#/components/schemas/Advisor"
+        curriculum:
+          description: İzlenen müfredat sürümü; henüz bağlanmamışsa null
+          oneOf:
+            - type: "null"
+            - type: object
+              required: [id, name_tr, name_en]
+              properties:
+                id: { type: string, format: uuid }
+                name_tr: { type: string }
+                name_en: { type: string }
 
     Student:
       type: object
@@ -3680,3 +4029,135 @@ components:
         owner_department_id: { type: string, format: uuid, description: Boşsa üniversite geneli havuz }
         kind: { $ref: "#/components/schemas/ElectiveGroupKind" }
         is_active: { type: boolean, description: "Oluşturmada varsayılan true, güncellemede gönderilmezse değişmez" }
+
+    ProgramRef:
+      type: object
+      required: [id, code, name_tr, name_en]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, examples: ["BIL-EN"] }
+        name_tr: { type: string }
+        name_en: { type: string }
+
+    CurriculumStatus:
+      type: string
+      description: "DRAFT: hazırlanıyor, ACTIVE: yürürlükte (giriş yılı aralığındaki öğrenciler izler), ARCHIVED: izleyen öğrencisi kalmadı"
+      enum: [DRAFT, ACTIVE, ARCHIVED]
+
+    Curriculum:
+      type: object
+      required: [id, program, name_tr, name_en, effective_from_year, effective_to_year, total_ects_required, status,
+                 decision_ref, copied_from_id, activated_at, archived_at, student_count, version]
+      properties:
+        id: { type: string, format: uuid }
+        program: { $ref: "#/components/schemas/ProgramRef" }
+        name_tr: { type: string, examples: ["2026-2027 Müfredatı"] }
+        name_en: { type: string }
+        effective_from_year: { type: integer, description: Bu yıl ve sonrası girişliler, examples: [2026] }
+        effective_to_year: { type: [integer, "null"], description: Boşsa yeni girişlere açık }
+        total_ects_required: { type: number, examples: [240] }
+        status: { $ref: "#/components/schemas/CurriculumStatus" }
+        decision_ref: { type: [string, "null"], description: Senato kararı vb. }
+        copied_from_id: { type: [string, "null"], format: uuid }
+        activated_at: { type: [string, "null"], format: date-time }
+        archived_at: { type: [string, "null"], format: date-time }
+        student_count: { type: integer, description: Bu sürümü izleyen program kayıtları }
+        version: { type: integer }
+
+    CurriculumRequest:
+      type: object
+      required: [name_tr, name_en, effective_from_year, total_ects_required]
+      properties:
+        name_tr: { type: string, minLength: 1, maxLength: 200 }
+        name_en: { type: string, minLength: 1, maxLength: 200 }
+        effective_from_year: { type: integer, minimum: 1946, maximum: 2100 }
+        effective_to_year: { type: [integer, "null"], minimum: 1946, maximum: 2100 }
+        total_ects_required: { type: number, exclusiveMinimum: 0, maximum: 999, multipleOf: 0.1 }
+        decision_ref: { type: string, maxLength: 200 }
+
+    CurriculumItemType:
+      type: string
+      description: "COURSE: yarıyıla yerleşmiş ders, ELECTIVE_SLOT: seçmeli havuzdan alınacak bir dersin yeri"
+      enum: [COURSE, ELECTIVE_SLOT]
+
+    CurriculumItem:
+      type: object
+      required: [id, semester_no, item_type, code, name_tr, name_en, course, course_kind, has_prerequisites, elective_group,
+                 theory_hours, practice_hours, national_credit, ects, is_compulsory, position]
+      properties:
+        id: { type: string, format: uuid }
+        semester_no: { type: integer, minimum: 1, maximum: 12 }
+        item_type: { $ref: "#/components/schemas/CurriculumItemType" }
+        code: { type: string, description: Dersin ya da havuzun kodu, examples: ["COM1001", "COMTE02"] }
+        name_tr: { type: string }
+        name_en: { type: string }
+        course:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/CourseRef"
+        course_kind:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/CourseKind"
+        has_prerequisites: { type: boolean }
+        elective_group:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/ElectiveGroupRef"
+        theory_hours: { type: integer }
+        practice_hours: { type: integer }
+        national_credit: { type: number }
+        ects: { type: number, description: "Ders satırında dersin, yuvada yuvanın AKTS'si" }
+        is_compulsory: { type: boolean }
+        position: { type: integer, description: Yarıyıl içindeki sıra }
+
+    CurriculumItemRequest:
+      type: object
+      additionalProperties: false
+      required: [semester_no, item_type]
+      properties:
+        semester_no: { type: integer, minimum: 1, maximum: 12 }
+        item_type: { $ref: "#/components/schemas/CurriculumItemType" }
+        course_id: { type: string, format: uuid, description: Ders satırında zorunlu }
+        elective_group_id: { type: string, format: uuid, description: Yuvada zorunlu }
+        theory_hours: { type: integer, minimum: 0, maximum: 40, description: Sadece yuvada }
+        practice_hours: { type: integer, minimum: 0, maximum: 40, description: Sadece yuvada }
+        national_credit: { type: number, minimum: 0, maximum: 60, multipleOf: 0.1, description: Sadece yuvada }
+        ects: { type: number, minimum: 0, maximum: 60, multipleOf: 0.1, description: Sadece yuvada }
+        is_compulsory: { type: boolean, default: true, description: "Ders satırında varsayılan true, yuva zorunlu olamaz" }
+        position: { type: integer, minimum: 0, maximum: 999, default: 0 }
+
+    CurriculumDetail:
+      allOf:
+        - $ref: "#/components/schemas/Curriculum"
+        - type: object
+          required: [items, summary]
+          properties:
+            items: { type: array, items: { $ref: "#/components/schemas/CurriculumItem" } }
+            summary:
+              type: object
+              required: [total_ects, total_credit, compulsory_ects, elective_ects, semesters, elective_kinds]
+              properties:
+                total_ects: { type: number }
+                total_credit: { type: number }
+                compulsory_ects: { type: number }
+                elective_ects: { type: number }
+                semesters:
+                  type: array
+                  items:
+                    type: object
+                    required: [semester_no, ects, national_credit, item_count]
+                    properties:
+                      semester_no: { type: integer }
+                      ects: { type: number }
+                      national_credit: { type: number }
+                      item_count: { type: integer }
+                elective_kinds:
+                  type: array
+                  description: Seçmeli grup türüne göre AKTS (teknik seçmeli, alan dışı ...)
+                  items:
+                    type: object
+                    required: [kind, ects]
+                    properties:
+                      kind: { $ref: "#/components/schemas/ElectiveGroupKind" }
+                      ects: { type: number }

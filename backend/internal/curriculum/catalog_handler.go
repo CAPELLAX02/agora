@@ -41,11 +41,25 @@ type Store interface {
 	UpdateGroup(ctx context.Context, actorID, id string, version int, in GroupInput) error
 	AddGroupCourse(ctx context.Context, actorID, groupID, courseID string) error
 	RemoveGroupCourse(ctx context.Context, actorID, groupID, courseID string) error
+
+	ProgramCurricula(ctx context.Context, programID string, includeDrafts bool) ([]Curriculum, error)
+	Curriculum(ctx context.Context, id string) (Curriculum, error)
+	CurriculumItems(ctx context.Context, curriculumID string) ([]CurriculumItem, error)
+	StudentCurricula(ctx context.Context, userID string) ([]ProgramCurriculumRef, error)
+	CreateCurriculum(ctx context.Context, actorID, programID string, in CurriculumInput, copyFromID string) (string, error)
+	UpdateCurriculum(ctx context.Context, actorID, id string, version int, in CurriculumInput) error
+	DeleteCurriculum(ctx context.Context, actorID, id string) error
+	Activate(ctx context.Context, actorID, id string) (int, error)
+	Archive(ctx context.Context, actorID, id string) error
+	AddItem(ctx context.Context, actorID, curriculumID string, in ItemInput) (string, error)
+	UpdateItem(ctx context.Context, actorID, curriculumID, itemID string, in ItemInput) error
+	DeleteItem(ctx context.Context, actorID, curriculumID, itemID string) error
 }
 
 // TargetResolver, birimlerin yetki hedeflerini çözer. *org.Targets bunu sağlar.
 type TargetResolver interface {
 	Department(ctx context.Context, id string) (authz.Target, error)
+	Program(ctx context.Context, id string) (authz.Target, error)
 }
 
 // Handler, ders kataloğu ve müfredat uçlarını sunar.
@@ -76,6 +90,8 @@ func (h *Handler) Register(rt *authz.Router) {
 	rt.HandleFunc("PUT /api/v1/elective-groups/{id}", authz.Permission(permCurriculumManage), h.updateGroup)
 	rt.HandleFunc("PUT /api/v1/elective-groups/{id}/courses/{courseId}", authz.Permission(permCurriculumManage), h.addGroupCourse)
 	rt.HandleFunc("DELETE /api/v1/elective-groups/{id}/courses/{courseId}", authz.Permission(permCurriculumManage), h.removeGroupCourse)
+
+	h.registerCurricula(rt)
 }
 
 // --- Yanıt tipleri -------------------------------------------------------------
@@ -872,12 +888,21 @@ func (h *Handler) allowed(w http.ResponseWriter, r *http.Request, perm, departme
 		}
 		target = t
 	}
-	perms, ok := authz.PermissionsFrom(r.Context())
-	if ok && perms.Allows(perm, target) {
+	return h.allowedTarget(w, r, perm, target)
+}
+
+// allowedTarget, yetkinin hedefi kapsayıp kapsamadığına bakar; kapsamıyorsa 403 yazar.
+func (h *Handler) allowedTarget(w http.ResponseWriter, r *http.Request, perm string, target authz.Target) bool {
+	if mayAccess(r, perm, target) {
 		return true
 	}
-	h.problem(w, r, http.StatusForbidden, "FORBIDDEN", "Bu bölümün kaydını yönetme yetkiniz yok.")
+	h.problem(w, r, http.StatusForbidden, "FORBIDDEN", "Bu birimin kaydını yönetme yetkiniz yok.")
 	return false
+}
+
+func mayAccess(r *http.Request, perm string, target authz.Target) bool {
+	perms, ok := authz.PermissionsFrom(r.Context())
+	return ok && perms.Allows(perm, target)
 }
 
 func ownerID(d *DepartmentRef) string {

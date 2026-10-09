@@ -133,8 +133,16 @@ type StudentProgram struct {
 	CurrentSemester int
 	GPA             *float64
 	EarnedECTS      float64
-	Advisor         *AdvisorRef // danışman atanmamışsa nil
+	Advisor         *AdvisorRef    // danışman atanmamışsa nil
+	Curriculum      *CurriculumRef // izlediği müfredat sürümü; bağlanmamışsa nil
 	Version         int
+}
+
+// CurriculumRef, program kaydının izlediği müfredat sürümünün özetidir.
+type CurriculumRef struct {
+	ID     string
+	NameTR string
+	NameEN string
 }
 
 // Student, bir öğrenci ve bütün program kayıtlarıdır.

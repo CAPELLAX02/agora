@@ -80,6 +80,13 @@ type studentProgramResponse struct {
 	GPA             *float64           `json:"gpa"`
 	EarnedECTS      float64            `json:"earned_ects"`
 	Advisor         *advisorResponse   `json:"advisor"`
+	Curriculum      *curriculumRefRes  `json:"curriculum"`
+}
+
+type curriculumRefRes struct {
+	ID     string `json:"id"`
+	NameTR string `json:"name_tr"`
+	NameEN string `json:"name_en"`
 }
 
 type studentRefResponse struct {
@@ -130,6 +137,9 @@ func toStudentProgramResponse(sp StudentProgram) studentProgramResponse {
 	if sp.Advisor != nil {
 		a := toAdvisorResponse(*sp.Advisor)
 		res.Advisor = &a
+	}
+	if sp.Curriculum != nil {
+		res.Curriculum = &curriculumRefRes{ID: sp.Curriculum.ID, NameTR: sp.Curriculum.NameTR, NameEN: sp.Curriculum.NameEN}
 	}
 	return res
 }

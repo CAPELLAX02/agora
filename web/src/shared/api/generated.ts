@@ -7,6 +7,7 @@ export const addTagTypes = [
   'Denetim',
   'Akademik takvim',
   'Ders katalo\u011Fu',
+  'M\u00FCfredat',
   'Organizasyon',
   '\u00D6\u011Frenciler',
 ] as const
@@ -509,6 +510,83 @@ const injectedRtkApi = api
           method: 'DELETE',
         }),
         invalidatesTags: ['Ders katalo\u011Fu'],
+      }),
+      listProgramCurricula: build.query<ListProgramCurriculaApiResponse, ListProgramCurriculaApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/programs/${queryArg.id}/curricula`,
+        }),
+        providesTags: ['M\u00FCfredat'],
+      }),
+      createCurriculum: build.mutation<CreateCurriculumApiResponse, CreateCurriculumApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/programs/${queryArg.id}/curricula`,
+          method: 'POST',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['M\u00FCfredat'],
+      }),
+      getCurriculum: build.query<GetCurriculumApiResponse, GetCurriculumApiArg>({
+        query: (queryArg) => ({ url: `/api/v1/curricula/${queryArg.id}` }),
+        providesTags: ['M\u00FCfredat'],
+      }),
+      updateCurriculum: build.mutation<UpdateCurriculumApiResponse, UpdateCurriculumApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/curricula/${queryArg.id}`,
+          method: 'PUT',
+          body: queryArg.curriculumRequest,
+          headers: {
+            'If-Match': queryArg['If-Match'],
+          },
+        }),
+        invalidatesTags: ['M\u00FCfredat'],
+      }),
+      deleteCurriculum: build.mutation<DeleteCurriculumApiResponse, DeleteCurriculumApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/curricula/${queryArg.id}`,
+          method: 'DELETE',
+        }),
+        invalidatesTags: ['M\u00FCfredat'],
+      }),
+      activateCurriculum: build.mutation<ActivateCurriculumApiResponse, ActivateCurriculumApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/curricula/${queryArg.id}/activate`,
+          method: 'POST',
+        }),
+        invalidatesTags: ['M\u00FCfredat'],
+      }),
+      archiveCurriculum: build.mutation<ArchiveCurriculumApiResponse, ArchiveCurriculumApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/curricula/${queryArg.id}/archive`,
+          method: 'POST',
+        }),
+        invalidatesTags: ['M\u00FCfredat'],
+      }),
+      addCurriculumItem: build.mutation<AddCurriculumItemApiResponse, AddCurriculumItemApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/curricula/${queryArg.id}/items`,
+          method: 'POST',
+          body: queryArg.curriculumItemRequest,
+        }),
+        invalidatesTags: ['M\u00FCfredat'],
+      }),
+      updateCurriculumItem: build.mutation<UpdateCurriculumItemApiResponse, UpdateCurriculumItemApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/curricula/${queryArg.id}/items/${queryArg.itemId}`,
+          method: 'PUT',
+          body: queryArg.curriculumItemRequest,
+        }),
+        invalidatesTags: ['M\u00FCfredat'],
+      }),
+      deleteCurriculumItem: build.mutation<DeleteCurriculumItemApiResponse, DeleteCurriculumItemApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/curricula/${queryArg.id}/items/${queryArg.itemId}`,
+          method: 'DELETE',
+        }),
+        invalidatesTags: ['M\u00FCfredat'],
+      }),
+      myCurricula: build.query<MyCurriculaApiResponse, MyCurriculaApiArg>({
+        query: () => ({ url: `/api/v1/me/curricula` }),
+        providesTags: ['M\u00FCfredat'],
       }),
       listBuildings: build.query<ListBuildingsApiResponse, ListBuildingsApiArg>({
         query: (queryArg) => ({
@@ -1128,6 +1206,80 @@ export type RemoveElectiveGroupCourseApiArg = {
   id: string
   courseId: string
 }
+export type ListProgramCurriculaApiResponse = /** status 200 Sürümler */ {
+  items: Curriculum[]
+}
+export type ListProgramCurriculaApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type CreateCurriculumApiResponse = /** status 201 Oluşturulan taslak */ CurriculumDetail
+export type CreateCurriculumApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: CurriculumRequest & {
+    /** Satırları kopyalanacak sürüm */
+    copy_from_id?: string
+  }
+}
+export type GetCurriculumApiResponse = /** status 200 Sürüm */ CurriculumDetail
+export type GetCurriculumApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type UpdateCurriculumApiResponse = /** status 200 Güncel sürüm */ CurriculumDetail
+export type UpdateCurriculumApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
+  'If-Match': string
+  curriculumRequest: CurriculumRequest
+}
+export type DeleteCurriculumApiResponse = unknown
+export type DeleteCurriculumApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type ActivateCurriculumApiResponse =
+  /** status 200 Yürürlükteki sürüm (`student_count` bağlanan kayıtları içerir) */ CurriculumDetail
+export type ActivateCurriculumApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type ArchiveCurriculumApiResponse = /** status 200 Arşivlenen sürüm */ CurriculumDetail
+export type ArchiveCurriculumApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type AddCurriculumItemApiResponse = /** status 201 Güncel sürüm */ CurriculumDetail
+export type AddCurriculumItemApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  curriculumItemRequest: CurriculumItemRequest
+}
+export type UpdateCurriculumItemApiResponse = /** status 200 Güncel sürüm */ CurriculumDetail
+export type UpdateCurriculumItemApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  itemId: string
+  curriculumItemRequest: CurriculumItemRequest
+}
+export type DeleteCurriculumItemApiResponse = /** status 200 Güncel sürüm */ CurriculumDetail
+export type DeleteCurriculumItemApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  itemId: string
+}
+export type MyCurriculaApiResponse = /** status 200 Ders planları */ {
+  items: {
+    student_program_id: string
+    enrollment_kind: 'MAJOR' | 'DOUBLE_MAJOR' | 'MINOR'
+    admission_year: number
+    program: ProgramRef
+    curriculum: null | CurriculumDetail
+  }[]
+}
+export type MyCurriculaApiArg = void
 export type ListBuildingsApiResponse = /** status 200 Binalar */ {
   items: Building[]
 }
@@ -1728,6 +1880,102 @@ export type ElectiveGroupRequest = {
   /** Oluşturmada varsayılan true, güncellemede gönderilmezse değişmez */
   is_active?: boolean
 }
+export type ProgramRef = {
+  id: string
+  code: string
+  name_tr: string
+  name_en: string
+}
+export type CurriculumStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED'
+export type Curriculum = {
+  id: string
+  program: ProgramRef
+  name_tr: string
+  name_en: string
+  /** Bu yıl ve sonrası girişliler */
+  effective_from_year: number
+  /** Boşsa yeni girişlere açık */
+  effective_to_year: number | null
+  total_ects_required: number
+  status: CurriculumStatus
+  /** Senato kararı vb. */
+  decision_ref: string | null
+  copied_from_id: string | null
+  activated_at: string | null
+  archived_at: string | null
+  /** Bu sürümü izleyen program kayıtları */
+  student_count: number
+  version: number
+}
+export type CurriculumItemType = 'COURSE' | 'ELECTIVE_SLOT'
+export type CurriculumItem = {
+  id: string
+  semester_no: number
+  item_type: CurriculumItemType
+  /** Dersin ya da havuzun kodu */
+  code: string
+  name_tr: string
+  name_en: string
+  course: null | CourseRef
+  course_kind: null | CourseKind
+  has_prerequisites: boolean
+  elective_group: null | ElectiveGroupRef
+  theory_hours: number
+  practice_hours: number
+  national_credit: number
+  /** Ders satırında dersin, yuvada yuvanın AKTS'si */
+  ects: number
+  is_compulsory: boolean
+  /** Yarıyıl içindeki sıra */
+  position: number
+}
+export type CurriculumDetail = Curriculum & {
+  items: CurriculumItem[]
+  summary: {
+    total_ects: number
+    total_credit: number
+    compulsory_ects: number
+    elective_ects: number
+    semesters: {
+      semester_no: number
+      ects: number
+      national_credit: number
+      item_count: number
+    }[]
+    /** Seçmeli grup türüne göre AKTS (teknik seçmeli, alan dışı ...) */
+    elective_kinds: {
+      kind: ElectiveGroupKind
+      ects: number
+    }[]
+  }
+}
+export type CurriculumRequest = {
+  name_tr: string
+  name_en: string
+  effective_from_year: number
+  effective_to_year?: number | null
+  total_ects_required: number
+  decision_ref?: string
+}
+export type CurriculumItemRequest = {
+  semester_no: number
+  item_type: CurriculumItemType
+  /** Ders satırında zorunlu */
+  course_id?: string
+  /** Yuvada zorunlu */
+  elective_group_id?: string
+  /** Sadece yuvada */
+  theory_hours?: number
+  /** Sadece yuvada */
+  practice_hours?: number
+  /** Sadece yuvada */
+  national_credit?: number
+  /** Sadece yuvada */
+  ects?: number
+  /** Ders satırında varsayılan true, yuva zorunlu olamaz */
+  is_compulsory?: boolean
+  position?: number
+}
 export type Ref = {
   id: string
   code: string
@@ -1826,6 +2074,12 @@ export type StudentProgram = {
   gpa: number | null
   earned_ects: number
   advisor: null | Advisor
+  /** İzlenen müfredat sürümü; henüz bağlanmamışsa null */
+  curriculum: null | {
+    id: string
+    name_tr: string
+    name_en: string
+  }
 }
 export type Student = {
   id: string
@@ -1980,6 +2234,20 @@ export const {
   useUpdateElectiveGroupMutation,
   useAddElectiveGroupCourseMutation,
   useRemoveElectiveGroupCourseMutation,
+  useListProgramCurriculaQuery,
+  useLazyListProgramCurriculaQuery,
+  useCreateCurriculumMutation,
+  useGetCurriculumQuery,
+  useLazyGetCurriculumQuery,
+  useUpdateCurriculumMutation,
+  useDeleteCurriculumMutation,
+  useActivateCurriculumMutation,
+  useArchiveCurriculumMutation,
+  useAddCurriculumItemMutation,
+  useUpdateCurriculumItemMutation,
+  useDeleteCurriculumItemMutation,
+  useMyCurriculaQuery,
+  useLazyMyCurriculaQuery,
   useListBuildingsQuery,
   useLazyListBuildingsQuery,
   useCreateBuildingMutation,
