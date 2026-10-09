@@ -82,7 +82,8 @@
     "logout": "Sign out",
     "skipToContent": "Skip to content",
     "academic": "Academic",
-    "calendar": "Academic calendar"
+    "calendar": "Academic calendar",
+    "catalog": "Course catalog"
   },
   "auth": {
     "restoring": "Signing you in…",
@@ -565,6 +566,79 @@
         "EVENT_OVERLAP": "An event of the same type already overlaps in this scope.",
         "VERSION_MISMATCH": "The event changed while you were editing. Close and reopen the dialog."
       }
+    }
+  },
+  "catalog": {
+    "title": "Course catalog",
+    "description": "All courses of the university: hours, credits, prerequisites and equivalences.",
+    "searchPlaceholder": "Course code or name",
+    "faculty": "Unit",
+    "department": "Department",
+    "kind": "Course type",
+    "allFaculties": "All units",
+    "allDepartments": "All departments",
+    "allKinds": "All types",
+    "code": "Code",
+    "name": "Course",
+    "hours": "T-P",
+    "credit": "Credit",
+    "ects": "ECTS",
+    "owner": "Owner",
+    "universityCommon": "University common course",
+    "empty": "No courses match the search.",
+    "inactive": "Inactive",
+    "kinds": {
+      "REGULAR": "Regular",
+      "NON_CREDIT": "Non-credit",
+      "INTERNSHIP": "Internship",
+      "PROJECT": "Project",
+      "PREP": "Preparatory",
+      "ACTIVITY": "Activity"
+    },
+    "languages": {
+      "TR": "Turkish",
+      "EN": "English"
+    },
+    "grading": {
+      "LETTER": "Letter grade",
+      "PASS_FAIL": "Pass / fail"
+    },
+    "requirements": {
+      "PASSED": "passed",
+      "ATTENDED": "taken with attendance met"
+    },
+    "relations": {
+      "REPLACES": "This course replaces (old code):",
+      "REPLACED_BY": "This course was replaced by (new code):"
+    },
+    "groupKinds": {
+      "TECHNICAL": "Technical elective",
+      "UNIVERSITY_GENERAL": "University out-of-field",
+      "PEDAGOGICAL": "Pedagogical formation",
+      "SOCIAL": "Social elective",
+      "FREE": "Free elective"
+    },
+    "detail": {
+      "info": "Course information",
+      "hours": "Weekly hours",
+      "hoursHint": "theory-practice",
+      "language": "Language of instruction",
+      "grading": "Grading",
+      "outcomes": "Learning outcomes",
+      "prerequisites": "Prerequisites",
+      "prerequisitesHint": "At least one course from each box must be satisfied.",
+      "noPrerequisites": "No prerequisites.",
+      "and": "and",
+      "or": "or",
+      "requiredBy": "Courses requiring this course",
+      "noRequiredBy": "This course is not a prerequisite of another course.",
+      "equivalences": "Equivalences",
+      "equivalencesHint": "Courses whose code changed count for each other under their old and new codes.",
+      "noEquivalences": "No equivalent courses.",
+      "validFrom": "for entrants from {{year}}",
+      "groups": "Elective pools",
+      "groupsHint": "Elective slots in curricula can be filled from these pools.",
+      "noGroups": "Not in an elective pool."
     }
   }
 }

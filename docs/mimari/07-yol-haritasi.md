@@ -227,7 +227,7 @@ flowchart LR
 | Durum | Madde |
 | --- | --- |
 | ✅ | Akademik takvim: dönem seçici, açık/kapalı pencereler, olay yönetimi |
-| ⬜ | Ders kataloğu ve ders detayı (ön koşul, eşdeğerlik, havuzlar) |
+| ✅ | Ders kataloğu ve ders detayı (ön koşul, eşdeğerlik, havuzlar) |
 | ⬜ | Ders planı (müfredat): öğrenci için kendi programı (program bağlamı seçici), personel için program ve sürüm gezgini, taslak düzenleme |
 | ⬜ | Haftalık program görünümü (öğretim elemanı, bölüm, derslik) |
 | ⬜ | Ders açma ekranları (bölüm başkanı): ders açma, şube, kontenjan, öğretim elemanı, program yerleşimi ve çakışma geri bildirimi |

@@ -82,7 +82,8 @@
     "logout": "Çıkış yap",
     "skipToContent": "İçeriğe geç",
     "academic": "Akademik",
-    "calendar": "Akademik takvim"
+    "calendar": "Akademik takvim",
+    "catalog": "Ders kataloğu"
   },
   "auth": {
     "restoring": "Oturum açılıyor…",
@@ -565,6 +566,79 @@
         "EVENT_OVERLAP": "Bu kapsamda aynı türden, zaman olarak çakışan bir olay var.",
         "VERSION_MISMATCH": "Olay siz düzenlerken değişti. Pencereyi kapatıp yeniden açın."
       }
+    }
+  },
+  "catalog": {
+    "title": "Ders kataloğu",
+    "description": "Üniversitenin bütün dersleri: saatleri, kredileri, ön koşulları ve eşdeğerlikleri.",
+    "searchPlaceholder": "Ders kodu ya da adı",
+    "faculty": "Birim",
+    "department": "Bölüm",
+    "kind": "Ders türü",
+    "allFaculties": "Bütün birimler",
+    "allDepartments": "Bütün bölümler",
+    "allKinds": "Bütün türler",
+    "code": "Kod",
+    "name": "Ders",
+    "hours": "T-U",
+    "credit": "Kredi",
+    "ects": "AKTS",
+    "owner": "Sahibi",
+    "universityCommon": "Üniversite ortak dersi",
+    "empty": "Aramaya uyan ders yok.",
+    "inactive": "Pasif",
+    "kinds": {
+      "REGULAR": "Olağan",
+      "NON_CREDIT": "Kredisiz",
+      "INTERNSHIP": "Staj",
+      "PROJECT": "Proje",
+      "PREP": "Hazırlık",
+      "ACTIVITY": "Etkinlik"
+    },
+    "languages": {
+      "TR": "Türkçe",
+      "EN": "İngilizce"
+    },
+    "grading": {
+      "LETTER": "Harf notu",
+      "PASS_FAIL": "Başarılı / başarısız"
+    },
+    "requirements": {
+      "PASSED": "geçmiş olmak",
+      "ATTENDED": "almış ve devam şartını sağlamış olmak"
+    },
+    "relations": {
+      "REPLACES": "Bu ders şu dersin (eski kod) yerini alır:",
+      "REPLACED_BY": "Bu dersin yerini şu ders (yeni kod) almıştır:"
+    },
+    "groupKinds": {
+      "TECHNICAL": "Teknik seçmeli",
+      "UNIVERSITY_GENERAL": "Üniversite alan dışı",
+      "PEDAGOGICAL": "Pedagojik formasyon",
+      "SOCIAL": "Sosyal seçmeli",
+      "FREE": "Serbest seçmeli"
+    },
+    "detail": {
+      "info": "Ders bilgileri",
+      "hours": "Haftalık saat",
+      "hoursHint": "teorik-uygulama",
+      "language": "Öğretim dili",
+      "grading": "Notlandırma",
+      "outcomes": "Öğrenme çıktıları",
+      "prerequisites": "Ön koşullar",
+      "prerequisitesHint": "Her kutudan en az bir ders koşulu sağlanmalı.",
+      "noPrerequisites": "Ön koşulu yok.",
+      "and": "ve",
+      "or": "veya",
+      "requiredBy": "Bu dersi isteyen dersler",
+      "noRequiredBy": "Bu ders başka bir dersin ön koşulu değil.",
+      "equivalences": "Eşdeğerlikler",
+      "equivalencesHint": "Kodu değişen dersler eski ve yeni kodlarıyla birbirinin yerine sayılır (intibak).",
+      "noEquivalences": "Eşdeğer dersi yok.",
+      "validFrom": "{{year}} girişlilerden itibaren",
+      "groups": "Seçmeli havuzlar",
+      "groupsHint": "Ders planlarındaki seçmeli yuvalardan bu havuzlar aracılığıyla alınabilir.",
+      "noGroups": "Bir seçmeli havuzda değil."
     }
   }
 }
