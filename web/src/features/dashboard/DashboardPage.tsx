@@ -13,7 +13,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/sha
 import { Skeleton } from '@/shared/ui/skeleton'
 import { ErrorState } from '@/shared/ui/states'
 
-/** DashboardPage, oturum açan kullanıcının ana sayfasıdır. Akademik modüller sonraki fazlarda eklenir. */
+import { WindowsCard } from './WindowsCard'
+
+/** DashboardPage, oturum açan kullanıcının ana sayfasıdır: rolleri, hesap güvenliği, açık işlem pencereleri ve kısayollar. */
 export function DashboardPage() {
   const { t } = useTranslation()
   const { data: me, error, refetch } = useGetMeQuery()
@@ -103,6 +105,8 @@ export function DashboardPage() {
             </Button>
           </CardContent>
         </Card>
+
+        {has('calendar:read') && <WindowsCard />}
 
         <Card>
           <CardHeader>

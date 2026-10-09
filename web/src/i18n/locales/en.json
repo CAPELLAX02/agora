@@ -209,6 +209,15 @@
     "upcoming": {
       "title": "Academic modules",
       "description": "Course registration, grades and transcripts, attendance and the learning environment will appear here in turn."
+    },
+    "windows": {
+      "title": "Action windows",
+      "term": "Term {{term}}",
+      "none": "No action window is open right now.",
+      "open": "Open windows",
+      "upcoming": "Upcoming windows",
+      "until": "until {{time}}",
+      "calendar": "Academic calendar"
     }
   },
   "profile": {

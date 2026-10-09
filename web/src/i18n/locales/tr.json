@@ -209,6 +209,15 @@
     "upcoming": {
       "title": "Akademik modüller",
       "description": "Ders seçimi, not ve transkript, devamsızlık ve öğrenme ortamı modülleri sırayla burada yer alacak."
+    },
+    "windows": {
+      "title": "İşlem pencereleri",
+      "term": "{{term}} dönemi",
+      "none": "Şu an açık bir işlem penceresi yok.",
+      "open": "Açık pencereler",
+      "upcoming": "Yaklaşan pencereler",
+      "until": "{{time}} tarihine kadar",
+      "calendar": "Akademik takvim"
     }
   },
   "profile": {
