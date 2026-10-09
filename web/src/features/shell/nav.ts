@@ -5,6 +5,7 @@ import {
   CalendarDaysIcon,
   CalendarRangeIcon,
   ClipboardListIcon,
+  GaugeIcon,
   HomeIcon,
   PresentationIcon,
   LibraryIcon,
@@ -43,6 +44,7 @@ export const navGroups: NavGroup[] = [
       { to: '/dersler', label: 'nav.catalog', icon: BookOpenIcon, permission: 'course:read' },
       { to: '/ders-planlari', label: 'nav.curricula', icon: LibraryIcon, permission: 'curriculum:read' },
       { to: '/program', label: 'nav.schedule', icon: CalendarRangeIcon, permission: 'course:read' },
+      { to: '/not-olcegi', label: 'nav.gradeScale', icon: GaugeIcon, permission: 'curriculum:read' },
       {
         to: '/verdigim-dersler',
         label: 'nav.teaching',

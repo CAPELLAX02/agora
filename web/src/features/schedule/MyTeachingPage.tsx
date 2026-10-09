@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router'
 
 import { TermSelect } from '@/features/calendar/TermSelect'
 import { useTermParam } from '@/features/calendar/useTermParam'
@@ -15,6 +16,7 @@ import { WeeklyGrid } from './WeeklyGrid'
 
 /**
  * MyTeachingPage, öğretim elemanının dönemdeki haftalık programı ve verdiği şubelerdir.
+ * Şubeden değerlendirme planına geçilir.
  */
 export function MyTeachingPage() {
   const { t } = useTranslation()
@@ -79,6 +81,12 @@ export function MyTeachingPage() {
                         </div>
                         <div className="flex items-center gap-2">
                           {mine && <Badge variant="outline">{t(`teaching.roles.${mine.role}`)}</Badge>}
+                          <Link
+                            to={`/subeler/${e.section_id}/degerlendirme`}
+                            className="text-sm font-medium text-primary hover:underline"
+                          >
+                            {t('teaching.plan')}
+                          </Link>
                         </div>
                       </li>
                     )

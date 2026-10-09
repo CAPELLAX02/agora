@@ -173,6 +173,32 @@ export const routes: RouteObject[] = [
                     },
                   },
                   {
+                    path: 'subeler/:id/degerlendirme',
+                    lazy: async () => {
+                      const { AssessmentPlanPage } = await import('@/features/grading/AssessmentPlanPage')
+                      return {
+                        element: (
+                          <RequirePermission permission="course:read">
+                            <AssessmentPlanPage />
+                          </RequirePermission>
+                        ),
+                      }
+                    },
+                  },
+                  {
+                    path: 'not-olcegi',
+                    lazy: async () => {
+                      const { GradeScalePage } = await import('@/features/grading/GradeScalePage')
+                      return {
+                        element: (
+                          <RequirePermission permission="curriculum:read">
+                            <GradeScalePage />
+                          </RequirePermission>
+                        ),
+                      }
+                    },
+                  },
+                  {
                     path: 'yonetim/kullanicilar',
                     lazy: async () => {
                       const { UsersPage } = await import('@/features/admin/UsersPage')

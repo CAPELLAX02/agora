@@ -88,7 +88,8 @@
     "curricula": "Ders planları",
     "schedule": "Haftalık program",
     "teaching": "Verdiğim dersler",
-    "offerings": "Ders açma"
+    "offerings": "Ders açma",
+    "gradeScale": "Not ölçeği"
   },
   "auth": {
     "restoring": "Oturum açılıyor…",
@@ -946,5 +947,55 @@
       "COURSE_ALREADY_OFFERED": "Bu ders bu dönem zaten açılmış; yeni öğrenci grubu için şube ekleyin.",
       "SECTION_CODE_TAKEN": "Bu kodla bir şube zaten var."
     }
+  },
+  "plan": {
+    "title": "Değerlendirme planı",
+    "components": "Bileşenler",
+    "rule": "Dönem içi bileşenlerle finalin ağırlıkları toplamı %100 olmalı ve tek final bulunmalı. Bütünleme finalin yerine geçer ve ağırlığı finalinkiyle aynıdır.",
+    "empty": "Plan henüz girilmedi.",
+    "component": "Bileşen",
+    "date": "Tarih",
+    "weight": "Ağırlık",
+    "total": "Toplam (bütünleme hariç)",
+    "replacesFinal": "finalin yerine",
+    "edit": "Planı düzenle",
+    "lock": "Planı kilitle",
+    "unlock": "Kilidi aç",
+    "lockedInfo": "Plan {{time}} tarihinde {{name}} tarafından kilitlendi; notlar bu plana göre girilir.",
+    "someone": "bir kullanıcı",
+    "lockTitle": "Plan kilitlensin mi?",
+    "lockDescription": "Kilitlenen plan değiştirilemez; değişiklik için bölümün kilidi açması gerekir.",
+    "locked": "Plan kilitlendi.",
+    "unlockTitle": "Plan kilidi açılsın mı?",
+    "unlockDescription": "Öğretim elemanı planı yeniden düzenleyebilir. Gerekçe denetim kaydına yazılır.",
+    "unlocked": "Plan kilidi açıldı.",
+    "reasonTooShort": "En az 5 karakterlik bir gerekçe yazın.",
+    "type": "Tür",
+    "name": "Ad",
+    "namePlaceholder": "İsteğe bağlı (ör. Vize)",
+    "addRow": "Bileşen ekle",
+    "removeRow": "{{n}}. bileşeni kaldır",
+    "check": "Toplam %{{total}} · {{finals}} final",
+    "saved": "Plan kaydedildi."
+  },
+  "gradeScale": {
+    "title": "Not ölçeği",
+    "description": "Harf notları, katsayıları, puan aralıkları ve yönetmelik parametreleri.",
+    "default": "Varsayılan",
+    "since": "{{year}} yılından itibaren · {{code}}",
+    "letter": "Harf",
+    "coefficient": "Katsayı",
+    "range": "Puan aralığı",
+    "passing": "Geçer",
+    "gpa": "Ortalamaya girer",
+    "ects": "AKTS kazandırır",
+    "attendance": "Devamsızlık",
+    "noScore": "Puanla verilmez",
+    "regulations": "Yönetmelik parametreleri",
+    "regulationsHint": "Bugün geçerli değerler. Kurallar tarihli veri olarak tutulur; değer değişince eskisi kapanır.",
+    "rule": "Kural",
+    "value": "Değer",
+    "effective": "Geçerlilik",
+    "from": "{{date}} tarihinden itibaren"
   }
 }

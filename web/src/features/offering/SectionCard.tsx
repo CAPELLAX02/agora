@@ -1,6 +1,7 @@
 import { PencilIcon, PlusIcon, Trash2Icon, UsersIcon } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router'
 import { toast } from 'sonner'
 
 import { usePermissions } from '@/features/auth/usePermissions'
@@ -64,24 +65,29 @@ export function SectionCard({ section: s, editable }: { section: Section; editab
             })}
           </p>
         </div>
-        {canSection && (
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setDialog('edit')}>
-              <PencilIcon />
-              {t('offering.section.edit')}
-            </Button>
-            {s.enrolled_count === 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setDeleting('section')}
-                aria-label={t('offering.section.delete', { code: s.section_code })}
-              >
-                <Trash2Icon />
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild variant="ghost" size="sm">
+            <Link to={`/subeler/${s.id}/degerlendirme`}>{t('teaching.plan')}</Link>
+          </Button>
+          {canSection && (
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setDialog('edit')}>
+                <PencilIcon />
+                {t('offering.section.edit')}
               </Button>
-            )}
-          </div>
-        )}
+              {s.enrolled_count === 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setDeleting('section')}
+                  aria-label={t('offering.section.delete', { code: s.section_code })}
+                >
+                  <Trash2Icon />
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="grid gap-6 py-4 lg:grid-cols-2">
         <div className="space-y-2">

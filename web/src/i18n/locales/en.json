@@ -88,7 +88,8 @@
     "curricula": "Curricula",
     "schedule": "Weekly schedule",
     "teaching": "My teaching",
-    "offerings": "Course offering"
+    "offerings": "Course offering",
+    "gradeScale": "Grading scale"
   },
   "auth": {
     "restoring": "Signing you in…",
@@ -946,5 +947,55 @@
       "COURSE_ALREADY_OFFERED": "This course is already offered this term; add a section for a new student group.",
       "SECTION_CODE_TAKEN": "A section with this code already exists."
     }
+  },
+  "plan": {
+    "title": "Assessment plan",
+    "components": "Components",
+    "rule": "In-term components and the final must add up to 100% with exactly one final. The make-up exam replaces the final with the same weight.",
+    "empty": "No plan has been entered yet.",
+    "component": "Component",
+    "date": "Date",
+    "weight": "Weight",
+    "total": "Total (excluding make-up)",
+    "replacesFinal": "replaces final",
+    "edit": "Edit plan",
+    "lock": "Lock plan",
+    "unlock": "Unlock",
+    "lockedInfo": "Locked by {{name}} on {{time}}; grades are entered according to this plan.",
+    "someone": "a user",
+    "lockTitle": "Lock the plan?",
+    "lockDescription": "A locked plan cannot change; the department must unlock it for changes.",
+    "locked": "Plan locked.",
+    "unlockTitle": "Unlock the plan?",
+    "unlockDescription": "The instructor can edit the plan again. The reason is recorded in the audit log.",
+    "unlocked": "Plan unlocked.",
+    "reasonTooShort": "Write a reason of at least 5 characters.",
+    "type": "Type",
+    "name": "Name",
+    "namePlaceholder": "Optional (e.g. Midterm)",
+    "addRow": "Add component",
+    "removeRow": "Remove component {{n}}",
+    "check": "Total {{total}}% · {{finals}} final",
+    "saved": "Plan saved."
+  },
+  "gradeScale": {
+    "title": "Grading scale",
+    "description": "Letter grades, coefficients, score ranges and regulation parameters.",
+    "default": "Default",
+    "since": "Since {{year}} · {{code}}",
+    "letter": "Letter",
+    "coefficient": "Coefficient",
+    "range": "Score range",
+    "passing": "Passing",
+    "gpa": "Counts in GPA",
+    "ects": "Earns ECTS",
+    "attendance": "Attendance",
+    "noScore": "Not score-based",
+    "regulations": "Regulation parameters",
+    "regulationsHint": "Values in force today. Rules are kept as dated data; a new value closes the old one.",
+    "rule": "Rule",
+    "value": "Value",
+    "effective": "In force",
+    "from": "From {{date}}"
   }
 }
