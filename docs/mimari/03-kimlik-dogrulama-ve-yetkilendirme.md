@@ -260,6 +260,18 @@ canReadTranscript(actor, studentProgram):
           inScope(actor, studentProgram.program.department)         # kapsam
           OR isCurrentAdvisorOf(actor, studentProgram)))            # ilişki
 
+canEditAssessmentPlan(actor, section):                           # uygulandı (Faz 2)
+    ( has(actor, "assessment_plan:manage")
+      AND roleIn(actor, section) IN ('PRIMARY', 'CO_INSTRUCTOR') )   # ilişki: section_instructors
+    OR inScope(actor, "section:manage", section.offering.department) # bölüm yönetimi
+    AND section.assessment_plan_locked_at IS NULL                    # bağlam: kilitli değil
+    # Kilidi sadece section:manage kapsamındaki bölüm, gerekçeyle açar.
+
+canManageOffering(actor, offering, perm):                        # uygulandı (Faz 2)
+    inScope(actor, perm, offering.department)   # perm: offering|section|quota|schedule:manage
+    # Ders kataloğu ve seçmeli havuzlar sahibi bölüme (yoksa üniversiteye), müfredat
+    # programa, takvim olayı kapsamına (üniversite/birim/program) göre aynı biçimde denetlenir.
+
 canApproveGradeChange(actor, request):
     has(actor, "grade_change:approve")
     AND inScope(actor, request.section.department)
@@ -290,6 +302,7 @@ HTTP isteği
   - Süreli atamalar zamanla değiştiği halde `perm_version`'ı artırmaz. Bu yüzden önbellek kaydının ömrü, bir sonraki atama başlangıcı ya da bitişiyle sınırlanır (en çok 1 saat).
   - Yetki önbelleği bir güvenlik kontrolü değil, hızlandırıcıdır: Redis'e ulaşılamazsa yetkiler veritabanından çözülür.
   - **İlişkiye dayalı roller** (`iam.roles.relationship_scoped`, şimdilik ADVISOR): bu rollerin yetkileri route guard'ı için sayılır ama hiçbir birimi kapsamaz (kapsam NONE). Danışman bölümdeki bütün öğrencileri değil, sadece danışmanı olduğu öğrencileri görür; erişime politika fonksiyonu (`CanReadStudent`) ilişkiyle karar verir.
+  - Öğretim elemanı rolü bölüm kapsamlıdır (bölümdeki dersleri ve programı görür) ama şubeye özgü işlemlerde (değerlendirme planı; Faz 5'te not girişi ve yoklama) yetki şubeyle ilişkiden gelir: bölümdeki bir öğretim elemanı meslektaşının şubesinin planına dokunamaz. Bu uçlar route'ta sadece kimlik ister, kararı handler'daki politika verir; yanıt (`editable`, `can_unlock`) arayüzün hangi düğmeyi göstereceğini söyler.
   - Liste uçları yetkili kümeden getirir (`Permissions.ScopesOf`): sorgu sadece kapsanan birimlerin kayıtlarını okur. Tekil kayıtta erişim yoksa 404 döner.
 
 ### 4.7 Özel durumlar

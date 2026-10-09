@@ -124,13 +124,13 @@
 | Tablo | Sütunlar | Not |
 | --- | --- | --- |
 | `academic_years` | id, start_year smallint UQ (2026 → "2026-2027"), starts_on, ends_on | |
-| `terms` | id, academic_year_id FK, term_type CK(`FALL, SPRING, SUMMER`), code UQ (`2026-FALL`), starts_on, ends_on, status CK(`PLANNED, ACTIVE, CLOSED`), is_current bool | Kısmi UQ: `WHERE is_current` → tek aktif dönem |
-| `calendar_event_types` | code PK, name_tr, name_en, is_action_window bool, category | lookup (aşağıda) |
-| `calendar_events` | id, term_id FK null, event_type_code FK, title_tr, title_en, **period tstzrange NN**, scope_type CK(`UNIVERSITY, FACULTY, PROGRAM`), scope_id uuid null, is_published, created_by, created_at | GiST index (period). `EXCLUDE USING gist (event_type_code WITH =, scope_type WITH =, coalesce(scope_id, '00000000-…') WITH =, period WITH &&)` → aynı kapsamda çakışan pencere yok |
+| `terms` | id, academic_year_id FK, term_type CK(`FALL, SPRING, SUMMER`), code UQ (`2026-FALL`), starts_on, ends_on, status CK(`PLANNED, ACTIVE, CLOSED`), is_current bool, version | UQ(year, term_type). Kısmi UQ: `WHERE is_current` → tek aktif dönem. CK: kapanmış dönem aktif olamaz |
+| `calendar_event_types` | code PK, name_tr, name_en, category CK(`REGISTRATION, INSTRUCTION, EXAM, GRADING, ADMISSION, OTHER`), is_action_window bool, sort_order | lookup (aşağıda), migration'la gelir |
+| `calendar_events` | id, term_id FK, event_type_code FK, title_tr null, title_en null, **period tstzrange NN**, scope_type CK(`UNIVERSITY, FACULTY, PROGRAM`), scope_id uuid null, is_published, note, version | GiST index (period). `EXCLUDE USING gist (event_type_code WITH =, scope_type WITH =, coalesce(scope_id, '00000000-…') WITH =, period WITH &&)` → aynı kapsamda çakışan pencere yok. Oluşturan denetim izinde (created_by sütunu yok) |
 
-**Olay türleri** (`calendar_event_types.code`, seed): `COURSE_REGISTRATION`, `ADVISOR_APPROVAL`, `DEPT_HEAD_APPROVAL`, `ADD_DROP_STUDENT`, `ADD_DROP_ADVISOR`, `ADD_DROP_DEPT_HEAD`, `ADVISOR_MEETING`, `CLASSES`, `MIDTERM_GRADE_ENTRY`, `FINAL_EXAMS`, `FINAL_GRADE_ENTRY`, `MANUAL_LETTER_GRADE`, `MAKEUP_EXAMS`, `MAKEUP_GRADE_ENTRY`, `THREE_COURSE_EXAMS`, `SURVEY_PERIOD`, `DOUBLE_MAJOR_APPLICATION`, `DOUBLE_MAJOR_PLACEMENT`, `DOUBLE_MAJOR_CONFIRMATION`, `PREP_REGISTRATION`, `PRE_REGISTRATION_OSYS`, `PRE_REGISTRATION_DGS`, `ORIENTATION`, `HOLIDAY`.
+**Olay türleri** (`calendar_event_types.code`): `COURSE_REGISTRATION`, `ADVISOR_APPROVAL`, `DEPT_HEAD_APPROVAL`, `ADD_DROP_STUDENT`, `ADD_DROP_ADVISOR`, `ADD_DROP_DEPT_HEAD`, `ADVISOR_MEETING`, `CLASSES`, `MIDTERM_EXAMS`, `MIDTERM_GRADE_ENTRY`, `FINAL_EXAMS`, `FINAL_GRADE_ENTRY`, `MANUAL_LETTER_GRADE`, `MAKEUP_EXAMS`, `MAKEUP_GRADE_ENTRY`, `THREE_COURSE_EXAMS`, `SURVEY_PERIOD`, `DOUBLE_MAJOR_APPLICATION`, `DOUBLE_MAJOR_PLACEMENT`, `DOUBLE_MAJOR_CONFIRMATION`, `PREP_REGISTRATION`, `PRE_REGISTRATION_OSYS`, `PRE_REGISTRATION_DGS`, `ORIENTATION`, `HOLIDAY`.
 
-**Pencere çözümleme kuralı:** `calendarWindowOpen(type, faculty, now)` önce `scope=FACULTY` olan olayı arar, yoksa `UNIVERSITY` olanı kullanır (fakülte geçersiz kılma). Sorgu: `period @> now()`.
+**Pencere çözümleme kuralı:** hedef (program → birim → üniversite) için bir türün olayları en dar kapsamdan başlanarak aranır: programın kendi olayı varsa o, yoksa birimin, o da yoksa üniversitenin olayları uygulanır (dar kapsam geniş kapsamı geçersiz kılar). Pencere, uygulanan olaylardan biri `period @> now()` ise açıktır. Taslak (yayımlanmamış) olaylar sayılmaz. `GET /calendar/windows` her işlem penceresi için açık mı, şimdiki ve sıradaki olayı ve uygulanan kapsamı döndürür.
 
 ---
 
@@ -139,28 +139,30 @@
 ### Ders kataloğu
 | Tablo | Sütunlar | Not |
 | --- | --- | --- |
-| `courses` | id, code UQ (`COM4573`), owner_department_id FK, name_tr, name_en, theory_hours smallint, practice_hours smallint, national_credit numeric(4,1), ects numeric(4,1), language CK(`TR, EN`), course_kind CK(`REGULAR, NON_CREDIT, INTERNSHIP, PROJECT, PREP`), grading_mode CK(`LETTER, PASS_FAIL`), description_tr, description_en, learning_outcomes jsonb, is_active, created_at, updated_at | OUL101 → `NON_CREDIT` + `PASS_FAIL` (BŞR/BŞZ). COM4097 → `INTERNSHIP` |
-| `course_prerequisites` | id, course_id FK, prerequisite_course_id FK, requirement CK(`PASSED, ATTENDED`), group_no smallint | Aynı `group_no` = **VEYA**, farklı grup = **VE** |
-| `course_equivalences` | id, course_id, equivalent_course_id, is_bidirectional, valid_from_year, approved_by, note | Eski↔yeni kod (COM4519 ↔ COM4569), tekrar alınan dersin bağlanması |
+| `courses` | id, code UQ CK(`^[A-Z]{2,6}[0-9]{3,4}$`), owner_department_id FK null, name_tr, name_en, theory_hours smallint, practice_hours smallint, national_credit numeric(4,1), ects numeric(4,1), language CK(`TR, EN`), course_kind CK(`REGULAR, NON_CREDIT, INTERNSHIP, PROJECT, PREP, ACTIVITY`), grading_mode CK(`LETTER, PASS_FAIL`), description_tr, description_en, learning_outcomes jsonb (dizi), is_active, version | Sahibi boşsa üniversite ortak dersi (TUR, HIS, ENG ...). OUL101 → `NON_CREDIT` + `PASS_FAIL` (BŞR/BŞZ), staj → `INTERNSHIP`. **Kod değişmez**: saati, kredisi ya da AKTS'si değişen ders yeni kodla açılır, eskiyle eşdeğerlik kurulur. Kod/ad araması trigram index'iyle |
+| `course_prerequisites` | id, course_id FK, prerequisite_course_id FK, requirement CK(`PASSED, ATTENDED`), group_no smallint | Aynı `group_no` = **VEYA**, farklı grup = **VE**. UQ(çift), CK(kendisi olamaz). Küme tek seferde değişir; döngü (doğrudan ya da dolaylı) özyinelemeli sorguyla engellenir, eşzamanlı değişiklikler advisory lock ile sıraya girer |
+| `course_equivalences` | id, course_id (yeni kod), equivalent_course_id (eski kod), is_bidirectional, valid_from_year, note | Eski↔yeni kod (COM4519 ↔ COM4569). Aynı çift ters yönde de olsa bir kez. Onaylayan denetim izinde |
 
 ### Seçmeli gruplar
 | Tablo | Sütunlar | Not |
 | --- | --- | --- |
-| `elective_groups` | id, code UQ (`COMTE02`, `UNVGOFECG`, `PFESECG3YY`), name_tr, name_en, owner_department_id null, group_kind CK(`TECHNICAL, UNIVERSITY_GENERAL, PEDAGOGICAL, FREE`) | |
-| `elective_group_courses` | elective_group_id, course_id — PK(ikisi) | Havuz |
+| `elective_groups` | id, code UQ (`COMTE02`, `UNVGOFECG`, `PFESECG3YY`), name_tr, name_en, owner_department_id null, group_kind CK(`TECHNICAL, UNIVERSITY_GENERAL, PEDAGOGICAL, SOCIAL, FREE`), is_active, version | Sahibi boşsa üniversite geneli havuz |
+| `elective_group_courses` | elective_group_id, course_id — PK(ikisi) | Havuz. Üyelik idempotent `PUT` |
 
 ### Müfredat (versiyonlu)
 | Tablo | Sütunlar | Not |
 | --- | --- | --- |
-| `curricula` | id, program_id FK, name, effective_from_year smallint, effective_to_year smallint null, total_ects_required, status CK(`DRAFT, ACTIVE, ARCHIVED`), approved_at, approved_by | Öğrenci giriş yılına göre müfredat seçilir (2023+ alan dışı kuralı burada doğal çözülür) |
-| `curriculum_items` | id, curriculum_id FK, semester_no smallint CK(1–12), item_type CK(`COURSE, ELECTIVE_SLOT`), course_id null, elective_group_id null, slot_ects numeric(4,1) null, slot_course_count smallint null, is_compulsory bool, position | CK: `COURSE` ise course_id dolu, group boş. `ELECTIVE_SLOT` ise tersi. Kısmi UQ(curriculum_id, course_id) |
+| `curricula` | id, program_id FK, name_tr, name_en, effective_from_year smallint, effective_to_year smallint null, total_ects_required, status CK(`DRAFT, ACTIVE, ARCHIVED`), decision_ref, copied_from_id, activated_at, archived_at, version | Öğrenci giriş yılına göre müfredata bağlanır (2023+ alan dışı kuralı burada doğal çözülür). Yürürlükteki sürümlerin giriş yılları çakışamaz: `EXCLUDE USING gist (program_id WITH =, int4range(from, to, '[]') WITH &&) WHERE (status = 'ACTIVE')`. Yürürlüğe girerken satırların AKTS toplamı gerekenle tutmalı, yarıyıllar program süresini aşmamalı; aralıktaki bağlantısız öğrenci kayıtları bağlanır. Yürürlükteki sürümde satırlar, giriş yılı başlangıcı ve AKTS toplamı donar |
+| `curriculum_items` | id, curriculum_id FK, semester_no smallint CK(1–12), item_type CK(`COURSE, ELECTIVE_SLOT`), course_id null, elective_group_id null, slot_theory_hours, slot_practice_hours, slot_national_credit, slot_ects, slot_course_count, is_compulsory bool, position | CK: `COURSE` ise course_id dolu ve yuva alanları boş; `ELECTIVE_SLOT` ise tersi ve zorunlu değil. UQ(curriculum_id, course_id) (NULL'lar ayrı: yuvalar tekrarlanabilir). Bir yuva birden fazla dersi kapsayabilir ("4. sınıf teknik seçmeli, 4 ders, 16 AKTS"); saat, kredi ve AKTS bu derslerin toplamıdır |
+
+`enrollment.student_programs.curriculum_id` öğrencinin izlediği sürümdür.
 
 ### Not ölçeği
 | Tablo | Sütunlar | Not |
 | --- | --- | --- |
-| `grade_scales` | id, code UQ, name, effective_from_year, is_default | Yönetmelik değişikliği → yeni ölçek |
-| `grade_scale_items` | id, grade_scale_id FK, letter, coefficient numeric(3,2) null, min_score numeric(5,2) null, max_score numeric(5,2) null, is_passing, counts_in_gpa, counts_in_ects, is_attendance_fail, sort_order | UQ(scale, letter). Satırlar: A … F2, F1 (`is_attendance_fail`), BŞR/BŞZ (`counts_in_gpa = false`), `MUAF` (muafiyet) |
-| `regulation_parameters` | key, value jsonb, effective_from date, effective_to date null, note — PK(key, effective_from) | **Kural parametreleri veri olarak**: `ects_limit_by_gpa` = `[{"max_gpa":1.99,"ects":30},{"max_gpa":2.99,"ects":40},{"max_gpa":4,"ects":45}]`, `max_courses_after_max_duration` = 5, `attendance_max_absence_pct` = `{"THEORY":30,"PRACTICE":20}`, `final_min_score` = 50 … |
+| `grade_scales` | id, code UQ, name_tr, name_en, effective_from_year, is_default, version | Yönetmelik değişikliği → yeni ölçek. Kısmi UQ: tek varsayılan ölçek; varsayılan doğrudan kaldırılamaz, başka ölçek varsayılan yapılır |
+| `grade_scale_items` | id, grade_scale_id FK, letter, coefficient numeric(3,2) null, min_score numeric(5,2) null, max_score numeric(5,2) null, is_passing, counts_in_gpa, earns_ects, is_attendance_fail, sort_order | UQ(scale, letter). Puan aralıkları çakışamaz (`EXCLUDE ... numrange WITH &&`) ve 0-100'ü tam sayılarla boşluksuz kapsamalı (doğrulama). Satırlar: A … C3, F2 (puanla), F1 (`is_attendance_fail`), BŞR/BŞZ (`counts_in_gpa = false`), `MUAF` (muafiyet). Ankara Üniversitesi lisans ölçeği migration'la gelir |
+| `regulation_parameters` | key, value jsonb, effective_from date, effective_to date null (hariç), description_tr, note — PK(key, effective_from) | **Kural parametreleri veri olarak**: `ects_limit_by_gpa` = `[{"max_gpa":1.99,"ects":30},{"max_gpa":2.99,"ects":40},{"max_gpa":4,"ects":45}]`, `semester_ects_load`, `final_min_score` = 50, `pass_min_score` = 50, `attendance_max_absence_pct` = `{"THEORY":30,"PRACTICE":20}`, `max_courses_after_max_duration` = 5, `honor_gpa`. Aynı anahtarın dönemleri çakışamaz (`EXCLUDE ... daterange`); yeni değer eskisini o gün kapatır, JSON türü korunur. Yeni anahtar API'den değil, onu okuyan kodla birlikte migration'la eklenir |
 
 ---
 
@@ -168,13 +170,13 @@
 
 | Tablo | Sütunlar | Not |
 | --- | --- | --- |
-| `course_offerings` | id, term_id FK, course_id FK, offering_department_id FK, external_ref (`760535`), status CK(`PLANNED, OPEN, CLOSED, CANCELLED`), created_at | UQ(term_id, course_id) |
-| `sections` | id, offering_id FK, section_code (`A`, `B`, `S`), capacity int, enrolled_count int default 0, quota_mode CK(`OPEN, RESERVED`), instruction_mode CK(`IN_PERSON, ONLINE, HYBRID`), language, assessment_plan_locked_at, grades_finalized_at, grades_published_at, status, version | UQ(offering_id, section_code). **CK(enrolled_count BETWEEN 0 AND capacity)** |
-| `section_quotas` | id, section_id FK, program_id FK, quota int, enrolled int default 0 | `RESERVED` modda program bazlı kontenjan. CK(enrolled ≤ quota). UQ(section_id, program_id) |
-| `section_instructors` | section_id, staff_id, role CK(`PRIMARY, CO_INSTRUCTOR, ASSISTANT`) — PK(section_id, staff_id) | **İlişki tabanlı yetkinin kaynağı** |
-| `schedule_slots` | id, section_id FK, term_id (denormalize), day_of_week smallint, **time_span timerange**, classroom_id null, session_type CK(`THEORY, PRACTICE, LAB`), effective_from date, effective_to date | `timerange` özel range tipi (`CREATE TYPE timerange AS RANGE (subtype = time)`). **Derslik çakışması**: `EXCLUDE USING gist (term_id WITH =, classroom_id WITH =, day_of_week WITH =, time_span WITH &&)` |
+| `course_offerings` | id, term_id FK, course_id FK, department_id FK (açan bölüm, yetki kapsamı), external_ref (`760535`), status CK(`PLANNED, OPEN, CLOSED, CANCELLED`), note, version | UQ(term_id, course_id): ders dönemde bir kez açılır, öğrenci grupları şubelerle. Geçişler: PLANNED → OPEN → CLOSED, OPEN → PLANNED, PLANNED/OPEN → CANCELLED (kayıtlı öğrenci varken iptal ve planlamaya dönüş olmaz; iptal şubeleri iptal eder, derslikleri boşaltır) |
+| `sections` | id, offering_id FK, section_code (`1`, `2`, `A`), capacity int, enrolled_count int default 0, quota_mode CK(`OPEN, RESERVED`), instruction_mode CK(`IN_PERSON, ONLINE, HYBRID`), language, status CK(`ACTIVE, CANCELLED`), version, assessment_plan_version, assessment_plan_locked_at, assessment_plan_locked_by | UQ(offering_id, section_code). **CK(enrolled_count BETWEEN 0 AND capacity)**. Kontenjan program kontenjanları toplamının altına inemez; teorik oturumların derslikleri kontenjanı almalı. Not kesinleşme ve yayımlama sütunları Faz 5'te |
+| `section_quotas` | id, section_id FK, program_id FK, quota int, enrolled int default 0 | `RESERVED` modda program bazlı kontenjan. CK(enrolled ≤ quota). UQ(section_id, program_id). Toplam ≤ şube kontenjanı; öğrencisi olan programın kontenjanı kaldırılamaz |
+| `section_instructors` | section_id, staff_id, role CK(`PRIMARY, CO_INSTRUCTOR, ASSISTANT`) — PK(section_id, staff_id) | Kısmi UQ: tek sorumlu (`WHERE role = 'PRIMARY'`). Sadece görevdeki akademik personel. **İlişki tabanlı yetkinin kaynağı** (değerlendirme planı, not girişi, yoklama) |
+| `schedule_slots` | id, section_id FK, term_id (denormalize), day_of_week smallint (ISO 1–7), **time_span offering.timerange**, classroom_id null, session_type CK(`THEORY, PRACTICE, LAB`) | `CREATE TYPE offering.timerange AS RANGE (subtype = time)`; `[başlangıç, bitiş)`, 07:00–23:00. **Derslik çakışması**: `EXCLUDE USING gist (term_id WITH =, classroom_id WITH =, day_of_week WITH =, time_span WITH &&) WHERE (classroom_id IS NOT NULL)`. **Şube içi çakışma**: `EXCLUDE (section_id WITH =, day_of_week WITH =, time_span WITH &&)` |
 
-> **Eğitmen çakışması** (aynı eğitmen aynı saatte iki şubede) birden fazla tabloyu kapsadığı için EXCLUDE ile ifade edilemez. Servis katmanında kontrol edilir. Bu, "kural nerede yaşamalı: DB mi uygulama mı?" tartışması için güzel bir örnek.
+> **Eğitmen çakışması** (aynı eğitmen aynı saatte iki şubede) birden fazla tabloyu kapsadığı için EXCLUDE ile ifade edilemez. Servis katmanında kontrol edilir; dönem başına bir advisory lock (`pg_advisory_xact_lock`) program değişikliklerini sıraya sokar, böylece eşzamanlı iki atama ayrı ayrı denetimden geçip birlikte çakışma oluşturamaz. Bu, "kural nerede yaşamalı: DB mi uygulama mı?" tartışması için güzel bir örnek. Çakışma hataları çakışan dersi ve saati söyler ("Derslik bu saatte dolu: COM3035-1 (Salı 09:00-11:50)"). Teorik oturumun dersliği şube kontenjanını almalı (uygulama ve laboratuvar oturumları grup grup yapılabildiği için onlarda aranmaz).
 
 ---
 
@@ -225,8 +227,8 @@ stateDiagram-v2
 
 | Tablo | Sütunlar | Not |
 | --- | --- | --- |
-| `assessment_subtypes` | code PK (`VIZE, ODEV, PROJE, LAB, LAB_EXAM, LAB_ATTENDANCE, QUIZ, PRESENTATION, FINAL, BUTUNLEME`), category, name_tr, name_en | lookup |
-| `assessment_components` | id, section_id FK, category CK(`IN_TERM, FINAL, MAKEUP`), subtype_code FK, name, weight_pct numeric(5,2), max_score numeric(5,2) default 100, scheduled_at, position, published_at | Plan kilitlenirken doğrulama: Σ(IN_TERM + FINAL) = 100, MAKEUP.weight = FINAL.weight |
+| `assessment_types` | code PK (`MIDTERM, QUIZ, HOMEWORK, PROJECT, LAB, PRESENTATION, PARTICIPATION, FINAL, MAKEUP`), name_tr, name_en, category CK(`IN_TERM, FINAL, MAKEUP`), sort_order | lookup, migration'la gelir |
+| `assessment_components` | id, section_id FK, type_code FK, sequence_no (Ara sınav 1, 2), name_tr null, name_en null, weight numeric(5,2), scheduled_on date, position | UQ(section, type, sequence_no); kısmi UQ'larla tek final ve tek bütünleme. Yazarken doğrulama: Σ(IN_TERM + FINAL) = 100, tek final; bütünleme istemciden gelmez, finalin ağırlığıyla türetilir. Yeniden yazmada aynı tür+sıra numaralı bileşenin kimliği korunur (notlar bileşene bağlanacak). Planı şubenin sorumlu/ortak öğretim elemanı (ilişki) ya da bölüm düzenler; öğretim elemanı kilitler (`sections.assessment_plan_locked_at`), kilidi gerekçeyle bölüm açar. `max_score`, `published_at` Faz 5'te |
 | `assessment_scores` | id, component_id FK, enrollment_id FK, score numeric(5,2) null, status CK(`NOT_ENTERED, SCORED, ABSENT, EXCUSED`), source CK(`MANUAL, LMS, IMPORT`), entered_by, entered_at, version | UQ(component_id, enrollment_id) |
 | `grade_change_requests` | id, enrollment_id, component_id null, old_value jsonb, new_value jsonb, reason, requested_by, requested_at, status CK(`PENDING, APPROVED, REJECTED, APPLIED`), reviewed_by, reviewed_at, review_note | Görevler ayrılığı: reviewed_by ≠ requested_by (CK) |
 | `section_grade_stats` | section_id PK, student_count, mean, median, stddev, letter_distribution jsonb, computed_at | "Sınıfın Ortalaması" için önbellek |
@@ -467,7 +469,7 @@ erDiagram
 - `lms.activities (space_id, topic_id, position)`
 - `lms.assignments (due_at)` (zaman çizelgesi)
 - `communication.notifications (user_id, created_at DESC) WHERE read_at IS NULL`
-- `curriculum.courses USING gin (name_tr gin_trgm_ops)`, `(name_en …)` (ders arama)
+- `curriculum.courses USING gin ((code || ' ' || name_tr || ' ' || name_en) gin_trgm_ops)` (ders kodu ve adıyla arama)
 - `iam.role_assignments (user_id) WHERE valid_until IS NULL OR valid_until > now()` → dikkat: `now()` index'te kullanılamaz. Bunun yerine `(user_id, valid_until)`
 
 > Her index `EXPLAIN (ANALYZE, BUFFERS)` ile gerçek seed verisi üzerinde doğrulanacak. Yük testinde yavaş sorgular `pg_stat_statements` ile izlenecek.

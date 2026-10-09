@@ -73,6 +73,16 @@ make web-dev       # web: http://localhost:5173
 - **Not ölçeği ve yönetmelik:** Ankara Üniversitesi lisans not ölçeği ve tarihli yönetmelik parametreleri (AKTS üst sınırları, final barajı ...) migration'la gelir.
 - **2026 güz ders açma:** Bilgisayar Mühendisliği'nin 38 dersi (her sınıfın zorunluları ve teknik seçmelileri), şubeleri, haftalık programı (derslik, şube ve öğretim elemanı çakışması olmadan), öğretim elemanları ve değerlendirme planları. `COM2501`'in kontenjanının bir kısmı Yapay Zekâ ve Veri Mühendisliğine ayrılmıştır; birkaç dersin değerlendirme planı kilitlidir.
 
+**Hangi ekranı hangi hesapla denerim?**
+
+| Ekran | Hesap | Not |
+| ----- | ----- | --- |
+| Akademik takvim | herkes | Birim olarak Mühendislik seçilince uzatılmış ekle-bırak penceresi uygulanır. Olay yönetimi `P20002` ile, MFA kurulduktan sonra |
+| Ders planım | `22290002` | 2022 girişli: 2022 ders planı, seçmeli yuvaların havuzları açılır |
+| Ders kataloğu, ders planları, haftalık program, not ölçeği | herkes | Ders planı taslağı açma ve yürürlüğe koyma `P20002` (merkezi öğrenci işleri) ya da `P20001` (fakülte) ile |
+| Ders açma | `P10002` (bölüm başkanı) | Şube, kontenjan, öğretim elemanı ve oturum ekleme; çakışmada sunucunun mesajı gösterilir |
+| Verdiğim dersler, değerlendirme planı | `P10001` … `P10007`, `P10010`, `P10011` | Planı öğretim elemanı düzenler ve kilitler; kilidi bölüm başkanı (`P10002`) gerekçeyle açar |
+
 ### Büyük veri seti
 
 ```bash
