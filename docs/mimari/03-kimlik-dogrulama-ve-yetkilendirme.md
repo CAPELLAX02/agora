@@ -211,6 +211,7 @@ helpdesk       ticket:create_own  ticket:handle
 | `registration:approve` | | | ✅ | | | | | | |
 | `registration:approve_add_drop` | | | | ✅ | | | | | |
 | `registration:override` | | | | | ✅ | | ✅ | | |
+| `student_program:manage` | | | | | ✅ | | ✅ | | |
 | `offering:manage` / `quota:manage` | | | | ✅ | ✅ | | | | |
 | `assessment_plan:manage` | | ✅ | | | | | | | |
 | `score:enter` / `grade:finalize` | | ✅ | | | | | | | |
@@ -241,18 +242,44 @@ canEnterScore(actor, assessment, now):
                            scope = assessment.section.faculty, now)
     AND assessment.section.grades_finalized_at IS NULL              # bağlam: kesinleşmemiş
 
-canApproveRegistration(actor, registration, now):
-    has(actor, "registration:approve")
-    AND isCurrentAdvisorOf(actor, registration.student_program)     # ilişki
-    AND registration.status = 'SUBMITTED'                           # durum makinesi
-    AND calendarWindowOpen('ADVISOR_APPROVAL', scope = faculty, now)
-
-canEditRegistration(actor, registration, now):
+canEditRegistration(actor, registration, now):                   # uygulandı (Faz 3)
     has(actor, "registration:manage_own")
-    AND registration.student_program.student.user_id = actor.id      # sahiplik
-    AND registration.status IN ('DRAFT', 'REJECTED')
-    AND calendarWindowOpen('COURSE_REGISTRATION' | 'ADD_DROP', ...)
-    AND NOT hasActiveHold(student_program, blocks = 'REGISTRATION')
+    AND registration.student_program.student.user_id = actor.id      # sahiplik: öğrenci işleri bile
+                                                                     # öğrenci adına sepet düzenlemez
+    AND registration.status IN ('DRAFT', 'REJECTED')                 # SUBMITTED önce geri çekilir
+    AND (calendarWindowOpen('COURSE_REGISTRATION', scope = program, now)
+         OR now < registration.extension_until)                      # kayda özel ek süre
+    # Engel, program durumu ve diğer yönetmelik kuralları politika değil kural motorudur
+    # (09 · Ders Seçme): yetkisi olan öğrenci de kural ihlalinde 422 RULE_VIOLATION alır.
+
+canDecideRegistration(actor, registration, now):                 # uygulandı (Faz 3)
+    # onay ve geri gönderme SUBMITTED, onayı geri alma APPROVED kayıtta
+    ( has(actor, "registration:approve")
+      AND isCurrentAdvisorOf(actor, registration.student_program)    # ilişki (ADVISOR kapsamsız)
+      AND (calendarWindowOpen('ADVISOR_APPROVAL', scope = program, now)
+           OR now < registration.extension_until) )
+    OR ( inScope(actor, "registration:override", program)            # öğrenci işleri müdahalesi
+         AND reason IS NOT NULL AND mfa(actor) )                     # gerekçe, MFA, denetimde override
+    # Geri gönderme ve onayı geri almada gerekçe her zaman zorunludur.
+
+canGrantExtension(actor, registration):                          # uygulandı (Faz 3)
+    inScope(actor, "registration:override", program) AND reason IS NOT NULL
+    AND now < until <= now + 30 gün
+
+canDecideAddDrop(actor, request, now):                           # uygulandı (Faz 3)
+    CASE request.status
+      WHEN 'PENDING_ADVISOR'   THEN isCurrentAdvisorOf(actor, request.student_program)
+                                    AND calendarWindowOpen('ADD_DROP_ADVISOR', program, now)
+      WHEN 'PENDING_DEPT_HEAD' THEN inScope(actor, "registration:approve_add_drop", program)
+                                    AND calendarWindowOpen('ADD_DROP_DEPT_HEAD', program, now)
+    OR inScope(actor, "registration:override", program) AND reason IS NOT NULL
+    # Redde gerekçe zorunlu. Danışman aynı zamanda bölüm başkanıysa iki aşamayı ayrı ayrı
+    # onaylar (iki karar kaydı).
+
+canManageHold(actor, studentProgram):                            # uygulandı (Faz 3)
+    inScope(actor, "hold:manage", studentProgram.program)            # mali işler üniversite,
+                                                                     # fakülte öğrenci işleri fakülte kapsamı
+    # Kaldırmada gerekçe zorunlu; öğrenci kendi engellerini görür, danışman danışmanlığındakileri.
 
 canReadTranscript(actor, studentProgram):
     (has(actor, "transcript:read_own") AND owns(actor, studentProgram))
