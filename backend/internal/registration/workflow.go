@@ -201,7 +201,7 @@ func (s *Service) Decide(ctx context.Context, d Decider, sp enrollment.StudentPr
 			if ev := rules.Evaluate(b.input); ev.Blocking() {
 				return &RuleError{Violations: ev.Violations}
 			}
-			if err := createEnrollments(ctx, tx, sp, termID, items, b); err != nil {
+			if err := createEnrollments(ctx, tx, sp, termID, items, b, "REGISTRATION"); err != nil {
 				return err
 			}
 			next, eventType = StatusApproved, "APPROVED"
@@ -249,9 +249,10 @@ func (s *Service) Decide(ctx context.Context, d Decider, sp enrollment.StudentPr
 
 var decisionAction = map[Decision]string{Approve: "approve", Reject: "reject", Revoke: "revoke"}
 
-// createEnrollments, onaylanan sepetin her dersi için kesin kayıt oluşturur. Deneme
-// numarası dersin (ve onun yerine sayılan derslerin) önceki alınışlarından hesaplanır.
-func createEnrollments(ctx context.Context, tx pgx.Tx, sp enrollment.StudentProgram, termID string, items []Item, b *bundle) error {
+// createEnrollments, onaylanan sepetin (ya da ekle-bırakta eklenen) her dersi için kesin
+// kayıt oluşturur. Deneme numarası dersin (ve onun yerine sayılan derslerin) önceki
+// alınışlarından hesaplanır. source: REGISTRATION ya da ADD_DROP.
+func createEnrollments(ctx context.Context, tx pgx.Tx, sp enrollment.StudentProgram, termID string, items []Item, b *bundle, source string) error {
 	var scaleID string
 	if err := tx.QueryRow(ctx, `SELECT id FROM curriculum.grade_scales WHERE is_default`).Scan(&scaleID); err != nil {
 		return fmt.Errorf("registration: varsayılan not ölçeği okunamadı: %w", err)
@@ -270,8 +271,9 @@ func createEnrollments(ctx context.Context, tx pgx.Tx, sp enrollment.StudentProg
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO enrollment.enrollments (student_program_id, section_id, term_id, course_id, attempt_no,
 				grade_scale_id, ects_snapshot, credit_snapshot, source, registration_item_id)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'REGISTRATION', $9)`,
-			sp.ID, it.Section.ID, termID, it.Section.CourseID, min(attempt, 20), scaleID, it.ECTS, it.Section.Credit, it.ID); err != nil {
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+			sp.ID, it.Section.ID, termID, it.Section.CourseID, min(attempt, 20), scaleID, it.ECTS, it.Section.Credit,
+			source, it.ID); err != nil {
 			return fmt.Errorf("registration: kesin kayıt oluşturulamadı: %w", err)
 		}
 	}

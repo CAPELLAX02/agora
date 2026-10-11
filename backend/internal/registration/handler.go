@@ -48,6 +48,7 @@ func NewHandler(pool *pgxpool.Pool, logger *slog.Logger, now func() time.Time, m
 func (h *Handler) Register(rt *authz.Router) {
 	rt.HandleFunc("GET /api/v1/student-programs/{id}/progress", authz.Authenticated, h.progress)
 	h.registerRegistration(rt)
+	h.registerAddDrop(rt)
 }
 
 // readableProgram, program kaydını okur ve kullanıcının görebildiğini doğrular. Erişim

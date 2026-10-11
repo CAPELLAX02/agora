@@ -144,11 +144,15 @@ func newWorld(t *testing.T) *world {
 	w.exec(`UPDATE offering.sections SET quota_mode = 'RESERVED' WHERE id = '` + w.sections["SEC302"] + `';
 		INSERT INTO offering.section_quotas (section_id, program_id, quota) VALUES ('` + w.sections["SEC302"] + `', '` + w.otherProgram + `', 40);`)
 
-	// Pencereler: ders seçme 7-20 Eylül, danışman onayı 7-22 Eylül.
+	// Pencereler: ders seçme 7-20 Eylül, danışman onayı 7-22 Eylül; ekle-bırak öğrenci 21-26,
+	// danışman 21-28, bölüm başkanı 26-30 Eylül.
 	w.exec(`
 		INSERT INTO academic.calendar_events (term_id, event_type_code, period, scope_type)
 		VALUES ('` + w.term + `', 'COURSE_REGISTRATION', tstzrange('2026-09-07 07:00+00', '2026-09-20 21:00+00'), 'UNIVERSITY'),
-		       ('` + w.term + `', 'ADVISOR_APPROVAL', tstzrange('2026-09-07 07:00+00', '2026-09-22 21:00+00'), 'UNIVERSITY');`)
+		       ('` + w.term + `', 'ADVISOR_APPROVAL', tstzrange('2026-09-07 07:00+00', '2026-09-22 21:00+00'), 'UNIVERSITY'),
+		       ('` + w.term + `', 'ADD_DROP_STUDENT', tstzrange('2026-09-21 07:00+00', '2026-09-27 00:00+00'), 'UNIVERSITY'),
+		       ('` + w.term + `', 'ADD_DROP_ADVISOR', tstzrange('2026-09-21 07:00+00', '2026-09-29 00:00+00'), 'UNIVERSITY'),
+		       ('` + w.term + `', 'ADD_DROP_DEPT_HEAD', tstzrange('2026-09-26 07:00+00', '2026-10-01 00:00+00'), 'UNIVERSITY');`)
 
 	var bil, muh string
 	_ = w.pool.QueryRow(ctx, `SELECT id, faculty_id FROM org.departments`).Scan(&bil, &muh)

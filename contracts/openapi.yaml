@@ -4627,6 +4627,257 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
+  /api/v1/student-programs/{id}/registration/add-drop:
+    get:
+      tags: [Ders seçme]
+      summary: Kaydın ekle-bırak talepleri
+      description: En yeni önce. `actions` isteği yapanın her talepte yapabileceklerini söyler.
+      operationId: listAddDropRequests
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - name: term_id
+          in: query
+          description: Dönem; verilmezse içinde bulunulan dönem
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Talepler
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/AddDropRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [Ders seçme]
+      summary: Ekle-bırak talebi açar
+      description: |
+        Onaylanmış kayıtta, ekle-bırak (öğrenci) penceresinde. Kayıtta aynı anda tek açık talep
+        olur. Talep sonrası oluşacak ders listesi bütün kurallarla denetlenir (1. sınıf ve alttan
+        derslerini bırakmak, çakışma, AKTS sınırı...). Eklenecek şubelerin kontenjanı talepte
+        ayrılır; red ya da geri çekmede iade edilir. Şube değiştirmek için aynı dersin şubesi
+        bırakılıp diğeri eklenir. Talep önce danışmana, sonra bölüm başkanına gider.
+      operationId: requestAddDrop
+      x-agora-permission: registration:manage_own
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                term_id: { type: string, format: uuid }
+                adds:
+                  type: array
+                  maxItems: 10
+                  description: Eklenecek şubeler
+                  items: { type: string, format: uuid }
+                drops:
+                  type: array
+                  maxItems: 10
+                  description: Bırakılacak sepet satırları (kayıttaki `items[].id`)
+                  items: { type: string, format: uuid }
+                note: { type: string, maxLength: 1000 }
+      responses:
+        "201":
+          description: Talep açıldı
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AddDropRequest" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`ADD_DROP_OPEN` · `REGISTRATION_NOT_APPROVED` · `WINDOW_CLOSED` · `SECTION_FULL` · `QUOTA_FULL` · `SECTION_NOT_FOR_PROGRAM` · `SECTION_NOT_OPEN`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "422":
+          description: "`RULE_VIOLATION`: talep sonrası ders listesi kurallara uymuyor"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/RuleProblem" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /api/v1/add-drop-requests/{id}/withdraw:
+    post:
+      tags: [Ders seçme]
+      summary: Ekle-bırak talebini geri çeker
+      description: Karar bekleyen talep; ayrılan kontenjan iade edilir. Sadece öğrencinin kendisi. İyimser kilit, `If-Match` zorunlu.
+      operationId: withdrawAddDrop
+      x-agora-permission: registration:manage_own
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/IfMatch"
+      responses:
+        "200":
+          description: Talebin güncel hali
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AddDropRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`INVALID_ADD_DROP_STATE`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "412": { $ref: "#/components/responses/VersionMismatch" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /api/v1/add-drop-requests/{id}/approve:
+    post:
+      tags: [Ders seçme]
+      summary: Ekle-bırak talebini onaylar
+      description: |
+        Danışman aşamasında onay talebi bölüm başkanına iletir; bölüm başkanı aşamasında talep uygulanır: bırakılan dersler kayıttan ve kesin kayıtlardan düşer (yerleri açılır), eklenen dersler kayda ve kesin kayıtlara girer. Uygulamada ders listesi kurallarla yeniden denetlenir. Karar, talebin aşamasına göre öğrencinin danışmanının (ekle-bırak danışman
+        penceresinde) ya da programın bölüm başkanının (`registration:approve_add_drop`, bölüm
+        başkanı penceresinde) kararıdır. Pencere dışında öğrenci işleri (`registration:override`)
+        gerekçeyle müdahale eder. İyimser kilit, `If-Match` zorunlu.
+      operationId: approveAddDrop
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                note: { type: string, maxLength: 1000 }
+      responses:
+        "200":
+          description: Talebin güncel hali
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AddDropRequest" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`WINDOW_CLOSED` · `INVALID_ADD_DROP_STATE`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "412": { $ref: "#/components/responses/VersionMismatch" }
+        "422":
+          description: "`RULE_VIOLATION`: talep sonrası ders listesi kurallara uymuyor"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/RuleProblem" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /api/v1/add-drop-requests/{id}/reject:
+    post:
+      tags: [Ders seçme]
+      summary: Ekle-bırak talebini reddeder
+      description: |
+        Gerekçe (`note`) zorunlu; ayrılan kontenjan iade edilir. Karar, talebin aşamasına göre öğrencinin danışmanının (ekle-bırak danışman
+        penceresinde) ya da programın bölüm başkanının (`registration:approve_add_drop`, bölüm
+        başkanı penceresinde) kararıdır. Pencere dışında öğrenci işleri (`registration:override`)
+        gerekçeyle müdahale eder. İyimser kilit, `If-Match` zorunlu.
+      operationId: rejectAddDrop
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [note]
+              properties:
+                note: { type: string, maxLength: 1000 }
+      responses:
+        "200":
+          description: Talebin güncel hali
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AddDropRequest" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`WINDOW_CLOSED` · `INVALID_ADD_DROP_STATE`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "412": { $ref: "#/components/responses/VersionMismatch" }
+        "422":
+          description: "`RULE_VIOLATION`: talep sonrası ders listesi kurallara uymuyor"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/RuleProblem" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /api/v1/me/add-drop-queue:
+    get:
+      tags: [Ders seçme]
+      summary: Karar bekleyen ekle-bırak talepleri
+      description: Danışmanı olduğum öğrencilerin danışman aşamasındaki ve kapsamımdaki programların bölüm başkanı aşamasındaki talepleri; en eski önce.
+      operationId: listAddDropQueue
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: term_id
+          in: query
+          description: Dönem; verilmezse içinde bulunulan dönem
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Talepler
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/AddDropRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
   /api/v1/departments/{id}/advisors:
     get:
       tags: [Öğrenciler]
@@ -6730,3 +6981,60 @@ components:
           type: array
           items: { $ref: "#/components/schemas/RegistrationSummary" }
         next_cursor: { type: [string, "null"] }
+
+    AddDropDecision:
+      type: object
+      required: [by, at, note]
+      properties:
+        by: { type: [string, "null"], description: Karar verenin adı }
+        at: { type: [string, "null"], format: date-time }
+        note: { type: [string, "null"] }
+
+    AddDropRequest:
+      type: object
+      required: [id, registration_id, student_program_id, student, term_id, status, stage, student_note, advisor, dept_head, items, ects_delta, actions, version, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        registration_id: { type: string, format: uuid }
+        student_program_id: { type: string, format: uuid }
+        student:
+          type: object
+          required: [id, student_no, first_name, last_name, program_code]
+          properties:
+            id: { type: string, format: uuid }
+            student_no: { type: string }
+            first_name: { type: string }
+            last_name: { type: string }
+            program_code: { type: string }
+        term_id: { type: string, format: uuid }
+        status: { type: string, enum: [PENDING_ADVISOR, PENDING_DEPT_HEAD, APPROVED, REJECTED, WITHDRAWN] }
+        stage: { type: [string, "null"], enum: [ADVISOR, DEPT_HEAD, null], description: Karar bekleyen aşama }
+        student_note: { type: [string, "null"] }
+        advisor:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/AddDropDecision"
+        dept_head:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/AddDropDecision"
+        items:
+          type: array
+          items:
+            type: object
+            required: [id, action, ects, section]
+            properties:
+              id: { type: string, format: uuid }
+              action: { type: string, enum: [ADD, DROP] }
+              ects: { type: number }
+              section: { $ref: "#/components/schemas/RegistrationSection" }
+        ects_delta: { type: number, description: Talebin AKTS'ye etkisi (eklenen − bırakılan) }
+        actions:
+          type: object
+          required: [can_withdraw, can_approve, can_reject]
+          properties:
+            can_withdraw: { type: boolean }
+            can_approve: { type: boolean }
+            can_reject: { type: boolean }
+        version: { type: integer }
+        created_at: { type: string, format: date-time }

@@ -1207,6 +1207,70 @@ const injectedRtkApi = api
         }),
         providesTags: ['Ders se\u00E7me'],
       }),
+      listAddDropRequests: build.query<ListAddDropRequestsApiResponse, ListAddDropRequestsApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/student-programs/${queryArg.id}/registration/add-drop`,
+          params: {
+            term_id: queryArg.termId,
+          },
+        }),
+        providesTags: ['Ders se\u00E7me'],
+      }),
+      requestAddDrop: build.mutation<RequestAddDropApiResponse, RequestAddDropApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/student-programs/${queryArg.id}/registration/add-drop`,
+          method: 'POST',
+          body: queryArg.body,
+          headers: {
+            'Idempotency-Key': queryArg['Idempotency-Key'],
+          },
+        }),
+        invalidatesTags: ['Ders se\u00E7me'],
+      }),
+      withdrawAddDrop: build.mutation<WithdrawAddDropApiResponse, WithdrawAddDropApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/add-drop-requests/${queryArg.id}/withdraw`,
+          method: 'POST',
+          headers: {
+            'Idempotency-Key': queryArg['Idempotency-Key'],
+            'If-Match': queryArg['If-Match'],
+          },
+        }),
+        invalidatesTags: ['Ders se\u00E7me'],
+      }),
+      approveAddDrop: build.mutation<ApproveAddDropApiResponse, ApproveAddDropApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/add-drop-requests/${queryArg.id}/approve`,
+          method: 'POST',
+          body: queryArg.body,
+          headers: {
+            'Idempotency-Key': queryArg['Idempotency-Key'],
+            'If-Match': queryArg['If-Match'],
+          },
+        }),
+        invalidatesTags: ['Ders se\u00E7me'],
+      }),
+      rejectAddDrop: build.mutation<RejectAddDropApiResponse, RejectAddDropApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/add-drop-requests/${queryArg.id}/reject`,
+          method: 'POST',
+          body: queryArg.body,
+          headers: {
+            'Idempotency-Key': queryArg['Idempotency-Key'],
+            'If-Match': queryArg['If-Match'],
+          },
+        }),
+        invalidatesTags: ['Ders se\u00E7me'],
+      }),
+      listAddDropQueue: build.query<ListAddDropQueueApiResponse, ListAddDropQueueApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/me/add-drop-queue`,
+          params: {
+            term_id: queryArg.termId,
+          },
+        }),
+        providesTags: ['Ders se\u00E7me'],
+      }),
       listEligibleAdvisors: build.query<ListEligibleAdvisorsApiResponse, ListEligibleAdvisorsApiArg>({
         query: (queryArg) => ({
           url: `/api/v1/departments/${queryArg.id}/advisors`,
@@ -2429,6 +2493,86 @@ export type ListAdviseeRegistrationsApiArg = {
   /** Dönem; verilmezse içinde bulunulan dönem */
   termId?: string
   status?: RegistrationStatus
+}
+export type ListAddDropRequestsApiResponse = /** status 200 Talepler */ {
+  items: AddDropRequest[]
+}
+export type ListAddDropRequestsApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Dönem; verilmezse içinde bulunulan dönem */
+  termId?: string
+}
+export type RequestAddDropApiResponse = /** status 201 Talep açıldı */ AddDropRequest
+export type RequestAddDropApiArg = {
+  /** İstemcinin her değiştirici istek için ürettiği anahtar (8-255 karakter). Aynı anahtarla
+    tekrarlanan istek işlemi yeniden yapmaz, ilk yanıt `Idempotent-Replayed: true` başlığıyla
+    döner. İlk istek sürerken gelen tekrar 409 (`IDEMPOTENCY_IN_PROGRESS`), başka bir gövdeyle
+    kullanılan anahtar 422 (`IDEMPOTENCY_KEY_REUSED`) alır. Anahtarlar bir gün saklanır.
+     */
+  'Idempotency-Key'?: string
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: {
+    term_id?: string
+    /** Eklenecek şubeler */
+    adds?: string[]
+    /** Bırakılacak sepet satırları (kayıttaki `items[].id`) */
+    drops?: string[]
+    note?: string
+  }
+}
+export type WithdrawAddDropApiResponse = /** status 200 Talebin güncel hali */ AddDropRequest
+export type WithdrawAddDropApiArg = {
+  /** İstemcinin her değiştirici istek için ürettiği anahtar (8-255 karakter). Aynı anahtarla
+    tekrarlanan istek işlemi yeniden yapmaz, ilk yanıt `Idempotent-Replayed: true` başlığıyla
+    döner. İlk istek sürerken gelen tekrar 409 (`IDEMPOTENCY_IN_PROGRESS`), başka bir gövdeyle
+    kullanılan anahtar 422 (`IDEMPOTENCY_KEY_REUSED`) alır. Anahtarlar bir gün saklanır.
+     */
+  'Idempotency-Key'?: string
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
+  'If-Match': string
+}
+export type ApproveAddDropApiResponse = /** status 200 Talebin güncel hali */ AddDropRequest
+export type ApproveAddDropApiArg = {
+  /** İstemcinin her değiştirici istek için ürettiği anahtar (8-255 karakter). Aynı anahtarla
+    tekrarlanan istek işlemi yeniden yapmaz, ilk yanıt `Idempotent-Replayed: true` başlığıyla
+    döner. İlk istek sürerken gelen tekrar 409 (`IDEMPOTENCY_IN_PROGRESS`), başka bir gövdeyle
+    kullanılan anahtar 422 (`IDEMPOTENCY_KEY_REUSED`) alır. Anahtarlar bir gün saklanır.
+     */
+  'Idempotency-Key'?: string
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
+  'If-Match': string
+  body: {
+    note?: string
+  }
+}
+export type RejectAddDropApiResponse = /** status 200 Talebin güncel hali */ AddDropRequest
+export type RejectAddDropApiArg = {
+  /** İstemcinin her değiştirici istek için ürettiği anahtar (8-255 karakter). Aynı anahtarla
+    tekrarlanan istek işlemi yeniden yapmaz, ilk yanıt `Idempotent-Replayed: true` başlığıyla
+    döner. İlk istek sürerken gelen tekrar 409 (`IDEMPOTENCY_IN_PROGRESS`), başka bir gövdeyle
+    kullanılan anahtar 422 (`IDEMPOTENCY_KEY_REUSED`) alır. Anahtarlar bir gün saklanır.
+     */
+  'Idempotency-Key'?: string
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
+  'If-Match': string
+  body: {
+    note: string
+  }
+}
+export type ListAddDropQueueApiResponse = /** status 200 Talepler */ {
+  items: AddDropRequest[]
+}
+export type ListAddDropQueueApiArg = {
+  /** Dönem; verilmezse içinde bulunulan dönem */
+  termId?: string
 }
 export type ListEligibleAdvisorsApiResponse = /** status 200 Danışmanlar (soyada göre sıralı) */ {
   items: EligibleAdvisor[]
@@ -3685,6 +3829,46 @@ export type RegistrationSummaryList = {
   items: RegistrationSummary[]
   next_cursor: string | null
 }
+export type AddDropDecision = {
+  /** Karar verenin adı */
+  by: string | null
+  at: string | null
+  note: string | null
+}
+export type AddDropRequest = {
+  id: string
+  registration_id: string
+  student_program_id: string
+  student: {
+    id: string
+    student_no: string
+    first_name: string
+    last_name: string
+    program_code: string
+  }
+  term_id: string
+  status: 'PENDING_ADVISOR' | 'PENDING_DEPT_HEAD' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN'
+  /** Karar bekleyen aşama */
+  stage: ('ADVISOR' | 'DEPT_HEAD' | null) | ('ADVISOR' | 'DEPT_HEAD' | null)
+  student_note: string | null
+  advisor: null | AddDropDecision
+  dept_head: null | AddDropDecision
+  items: {
+    id: string
+    action: 'ADD' | 'DROP'
+    ects: number
+    section: RegistrationSection
+  }[]
+  /** Talebin AKTS'ye etkisi (eklenen − bırakılan) */
+  ects_delta: number
+  actions: {
+    can_withdraw: boolean
+    can_approve: boolean
+    can_reject: boolean
+  }
+  version: number
+  created_at: string
+}
 export type EligibleAdvisor = {
   staff_id: string
   staff_no: string
@@ -3934,6 +4118,14 @@ export const {
   useRevokeRegistrationMutation,
   useListAdviseeRegistrationsQuery,
   useLazyListAdviseeRegistrationsQuery,
+  useListAddDropRequestsQuery,
+  useLazyListAddDropRequestsQuery,
+  useRequestAddDropMutation,
+  useWithdrawAddDropMutation,
+  useApproveAddDropMutation,
+  useRejectAddDropMutation,
+  useListAddDropQueueQuery,
+  useLazyListAddDropQueueQuery,
   useListEligibleAdvisorsQuery,
   useLazyListEligibleAdvisorsQuery,
   useListMyProgramsQuery,
