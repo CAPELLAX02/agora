@@ -1,12 +1,16 @@
 import '@testing-library/jest-dom/vitest'
 import '@/i18n'
 
-import { cleanup } from '@testing-library/react'
+import { cleanup, configure } from '@testing-library/react'
 import { afterAll, afterEach, beforeAll, beforeEach } from 'vitest'
 
 import i18n from '@/i18n'
 
 import { server } from './server'
+
+// Bütün test dosyaları paralel koşarken (CI, pnpm check) ilk çizim 1 saniyeyi aşabiliyor:
+// findBy*/waitFor varsayılan 1 sn yerine 3 sn bekler.
+configure({ asyncUtilTimeout: 3000 })
 
 // jsdom matchMedia'yı uygulamaz: tema sağlayıcısı sistem temasını buradan okur.
 // Testlerde sistem teması her zaman açıktır.
