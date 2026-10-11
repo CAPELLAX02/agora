@@ -23,7 +23,7 @@ make up            # PostgreSQL, Redis, Mailpit, Prometheus, Grafana
 make migrate-up    # şema
 make seed          # organizasyon, takvim, ders planları, ders açma ve demo hesaplar (tekrar çalıştırılabilir)
 make api           # API: http://localhost:8080
-make worker        # e-postalar (parola sıfırlama, aktivasyon) için
+make worker        # e-postalar ve olaylar (parola sıfırlama, ders kaydı kararları, taslak süresi)
 make web-install   # ilk seferde
 make web-dev       # web: http://localhost:5173
 ```
@@ -37,7 +37,7 @@ make web-dev       # web: http://localhost:5173
 | Web          | http://localhost:5173                                     | `/api` isteklerini API'ye aktarır (aynı origin, production'daki gibi) |
 | API          | http://localhost:8080                                     | `/healthz`, `/readyz`, `/api/v1/...`                                |
 | API metrikleri | http://localhost:9091/metrics                           | Aynı adreste `/debug/pprof/`                                        |
-| Worker metrikleri | http://localhost:9092/metrics                        | E-posta outbox'ı                                                    |
+| Worker metrikleri | http://localhost:9092/metrics                        | E-posta ve olay outbox'ı                                            |
 | Mailpit      | http://localhost:8025                                     | Gönderilen bütün e-postalar burada görünür, dışarı çıkmaz           |
 | Grafana      | http://localhost:3000                                     | Giriş gerekmez (salt okuma). Yönetici: `admin` / `agora_dev_password` |
 | Prometheus   | http://localhost:9090                                     |                                                                     |
@@ -52,6 +52,7 @@ make web-dev       # web: http://localhost:5173
 | ------------- | ----------------- | ----------------------------------------------------------------------- |
 | `22290001`    | Deniz Aksoy       | Öğrenci, Bilgisayar Mühendisliği (danışmanı `P10001`)                   |
 | `22290002`    | Ece Kaya          | Öğrenci, Bilgisayar Mühendisliği (danışmanı `P10001`)                   |
+| `26290004` … `26290017` | 8 öğrenci | Ders seçme demo grubu, danışmanı `P10001` (bkz. [Ders seçme demosu](#ders-seçme-demosu)) |
 | `22290003`    | Can Polat         | Öğrenci, **geçici parola**: ilk girişte parolasını değiştirmek zorunda  |
 | `P10001`      | Ayşe Demir        | Öğretim elemanı ve danışman (Bilgisayar Mühendisliği)                   |
 | `P10002`      | Mehmet Yıldız     | Öğretim elemanı ve bölüm başkanı (Bilgisayar Mühendisliği)              |
@@ -64,12 +65,13 @@ make web-dev       # web: http://localhost:5173
 
 **İki adımlı doğrulama:** hesap ve rol yönetimi, denetim kayıtları gibi hassas yetkiler sadece MFA ile açılmış oturumlarda kullanılabilir. `P90001` ile ilk girişte üstte çıkan banttan MFA kurun (Google/Microsoft Authenticator ya da benzeri bir uygulama). Telefon kaybolursa kurtarma kodları ya da başka bir yöneticinin "MFA'yı sıfırla" işlemi kullanılır. Geliştirme veritabanını sıfırlamak her şeyi başa döndürür.
 
-**E-postalar:** parola sıfırlama ve aktivasyon bağlantıları worker çalışırken (`make worker`) Mailpit'e düşer.
+**E-postalar:** parola sıfırlama ve aktivasyon bağlantıları ile danışman kararları (onay, geri gönderme, onayı geri alma) worker çalışırken (`make worker`) Mailpit'e düşer.
 
 ### Akademik veri
 
 - **Takvim:** 2026-2027 akademik yılı; güz dönemi içinde bulunulan dönemdir. Ders seçme, ekle-bırak, sınav ve not girişi pencereleri temsilî tarihlerle tanımlıdır. Mühendislik Fakültesi'nin ekle-bırak süresi fakülte düzeyinde uzatılmıştır: kapsam önceliği (program → fakülte → üniversite) `GET /api/v1/calendar/windows?faculty_id=...` ile görülebilir.
 - **Ders planları:** Bilgisayar Mühendisliği (İngilizce) programının bölümün yayımladığı **gerçek** ders planları: 2022 (2018-2022 girişliler), 2023 (2023-2025) ve 2026 (2026 ve sonrası) sürümleri, 170 ders, teknik seçmeli havuzları, pedagojik formasyon grubu, eski ↔ yeni kod eşdeğerlikleri ve ön koşullar. Planlarda listelenmeyen üniversite alan dışı seçmeli havuzu için birkaç sentetik ders (`UNVG...`) eklenmiştir. Öğrenci kayıtları giriş yılına göre doğru sürüme bağlanır. Üretici: `infra/seed/dev/005_bm_curriculum.sql` başlığına bakın.
+- **Geçmiş dönemler:** 2020-2025 akademik yılları. Bilgisayar Mühendisliği öğrencilerine giriş yılına ve ders planlarına göre deterministik bir not geçmişi üretilir (eski sistemden aktarılmış gibi, `source = IMPORT`): başarısız ve tekrar alınan dersler, GANO ve kazanılan AKTS dahil.
 - **Not ölçeği ve yönetmelik:** Ankara Üniversitesi lisans not ölçeği ve tarihli yönetmelik parametreleri (AKTS üst sınırları, final barajı ...) migration'la gelir.
 - **2026 güz ders açma:** Bilgisayar Mühendisliği'nin 38 dersi (her sınıfın zorunluları ve teknik seçmelileri), şubeleri, haftalık programı (derslik, şube ve öğretim elemanı çakışması olmadan), öğretim elemanları ve değerlendirme planları. `COM2501`'in kontenjanının bir kısmı Yapay Zekâ ve Veri Mühendisliğine ayrılmıştır; birkaç dersin değerlendirme planı kilitlidir.
 
@@ -82,6 +84,32 @@ make web-dev       # web: http://localhost:5173
 | Ders kataloğu, ders planları, haftalık program, not ölçeği | herkes | Ders planı taslağı açma ve yürürlüğe koyma `P20002` (merkezi öğrenci işleri) ya da `P20001` (fakülte) ile |
 | Ders açma | `P10002` (bölüm başkanı) | Şube, kontenjan, öğretim elemanı ve oturum ekleme; çakışmada sunucunun mesajı gösterilir |
 | Verdiğim dersler, değerlendirme planı | `P10001` … `P10007`, `P10010`, `P10011` | Planı öğretim elemanı düzenler ve kilitler; kilidi bölüm başkanı (`P10002`) gerekçeyle açar |
+
+### Ders seçme demosu
+
+Gerçek takvimde 2026 güz ders seçmesi Eylül'de biter. Ekranlar her gün denenebilsin diye `make seed`, Bilgisayar Mühendisliği programına **seed'in çalıştığı andan itibaren üç hafta** açık kalan program kapsamlı pencereler açar: ders seçme, danışman onayı ve ekle-bırak (öğrenci, danışman, bölüm başkanı). Süre azalınca `make seed` pencereleri yeniler; takvim ekranında "(demo)" diye görünürler. Kurallar ve akış: [09 · Ders Seçme](docs/mimari/09-ders-secme-kurallari.md).
+
+| Hesap | Öğrenci | Durum | Ne denenir |
+| ----- | ------- | ----- | ---------- |
+| `22290002` | Ece Kaya, 7. yarıyıl | Kayıt yok | Alttan ders ve eşdeğerlik (Fizik I'in yeni kodu PHY0105), devam şartı sağlanmış derste çakışma uyarısı, şubeler arası çakışma hatası, AKTS sayacı, danışmana gönderme |
+| `25290011` | Zeynep Arslan, 3. yarıyıl | Kayıt yok | Ön koşul: devamsızlıktan kaldığı dersin devamı alınamaz |
+| `24290012` | Emre Yılmaz, 5. yarıyıl | Taslak | Düşük GANO: 30 AKTS sınırı, alttan ders önceliği |
+| `24290014` | Onur Kılıç, 5. yarıyıl | Kayıt yok | Katkı payı borcu: ders seçemez, nedeni sepette yazar |
+| `26290004` | Mert Şimşek, 1. yarıyıl | Kayıt yok | 1. sınıf: dönemin bütün zorunlu dersleri alınmalı |
+| `23290013`, `25290016`, `26290017` | Buse Demirtaş, Kaan Tekin, İrem Çakır | Onay bekliyor | `P10001`'in kuyruğu: inceleme, onay, gerekçeyle geri gönderme, toplu onay |
+| `23290015` | Derya Uçar, 7. yarıyıl | Onaylı | Ekle-bırak talebi, kayıt onay belgesi |
+
+| Ekran | Hesap | Not |
+| ----- | ----- | --- |
+| Ders seçimi, kayıt onay belgesi | yukarıdaki öğrenciler | Alınabilir dersler kategorilerle (alttan, dönem, seçmeli, üst yarıyıl, not yükseltme), sepet, haftalık program önizlemesi, kural geri bildirimi |
+| Danışmanlık | `P10001` | Danışmanlığındaki öğrencilerin kayıtları; kayıt incelemede ders geçmişi, kurallar ve program; onay, geri gönderme, onayı geri alma |
+| Ekle-bırak onayları | `P10001` (danışman), sonra `P10002` (bölüm başkanı) | Talep iki onaydan sonra kayda uygulanır |
+| Öğrenciler, kayıt engelleri | `P20001` (fakülte öğrenci işleri) | Öğrenci detayında program durumu ve ders geçmişi; engel koyma ve gerekçeyle kaldırma |
+| Pencere dışı müdahale, ek süre | `P20001`, `P20002` | `registration:override` MFA ister: önce iki adımlı doğrulamayı kurun |
+
+`make seed` kaydı olan öğrenciye dokunmaz. Demo kayıtlarını baştan kurmak için geliştirme veritabanını sıfırlayın (`docker compose down -v`, ardından hızlı başlangıç adımları).
+
+**Yük testi:** `make loadtest-registration` ders seçme açılışında eşzamanlı giriş yapıp popüler şubelere ders ekleyen sentetik öğrencileri k6 ile canlandırır ve ardından kontenjan aşımının 0 olduğunu SQL ile doğrular (`make seed-synthetic` gerekir). Sonuçlar ve darboğaz analizi: [08 · Yük Testleri](docs/mimari/08-yuk-testleri.md).
 
 ### Büyük veri seti
 
