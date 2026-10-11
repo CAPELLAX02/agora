@@ -18,7 +18,8 @@ export function App() {
       <ThemeProvider>
         <TooltipProvider delayDuration={300}>
           <RouterProvider router={router} />
-          <Toaster position="top-right" richColors closeButton />
+          {/* Sağ altta: üst çubuktaki hesap menüsünün ve dil/tema düğmelerinin üstünü örtmez. */}
+          <Toaster position="bottom-right" richColors closeButton />
         </TooltipProvider>
       </ThemeProvider>
     </Provider>
