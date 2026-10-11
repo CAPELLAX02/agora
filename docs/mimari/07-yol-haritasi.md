@@ -141,6 +141,8 @@ flowchart LR
 | 9 | Seed müfredatı | Bilgisayar Mühendisliği'nin halka açık gerçek ders planı kullanılacak |
 | 10 | Kodu kim yazar (2026-10-08) | Ders 17'ye kadar backend'i Ahmet yazdı. Bundan sonra bütün kodu Claude yazar, Ahmet dilim sonlarında inceler |
 | 11 | Faz kapanışı (2026-10-08) | Bir faz, §6'daki bütün maddeleri (backend + web + e2e + doküman) bitmeden kapanmaz. Backend'i bitmemiş bir fazın web'ine geçilmez |
+| 12 | Geçmiş ders sonuçları (2026-10-11) | Kural motoru (GANO, alttan ders, ön koşul) geçmiş dönem sonuçlarına dayanır. Bu sonuçlar Faz 3'te eski sistemden aktarılmış kayıtlar olarak (`source = IMPORT`) seed'lenir; not girişi, harf notu hesabı ve resmî YANO/GANO Faz 4'te gelir |
+| 13 | Ders seçmenin demosu (2026-10-11) | Gerçek takvimde 2026 güz ders seçmesi geçmişte kalır. Geliştirme seed'i, Bilgisayar Mühendisliği programı için kayıt pencerelerini seed'in çalıştığı ana göre açan **program kapsamlı** takvim olayları ekler (açıklamasında demo olduğu yazar). Üniversite takvimi değişmez; pencere motoru en dar kapsamı uyguladığı için sadece bu program etkilenir |
 
 ## 6. İlerleme ve "Bitti" Kontrol Listesi
 
@@ -240,6 +242,45 @@ flowchart LR
 | ✅ | Playwright e2e: takvim penceresi, müfredat görüntüleme, ders açma ve çakışma senaryoları (seed'in gerçek BM verisiyle, tarihten bağımsız; derslik ve öğretim elemanı çakışma mesajları) |
 | ✅ | Sözleşme ve dokümanlar güncel (veri modeli, yetkilendirme politikaları, README'de akademik veri ve demo hesap rehberi), CI yeşil (backend, web kontrolü ve Playwright) |
 
-### Faz 2 ve sonrası
+### Faz 3 — Ders Seçme ★
+
+**Backend**
+
+| Durum | Madde | Not |
+| --- | --- | --- |
+| ⬜ | Kayıt engelleri | `enrollment.holds`: katkı payı borcu, disiplin, eksik belge, kütüphane borcu; engelin neyi kapattığı (ders seçme, belge, mezuniyet); koyma ve gerekçeyle kaldırma (`hold:manage`, mali işler üniversite, fakülte öğrenci işleri fakülte kapsamı); öğrenci kendi engellerini görür |
+| ⬜ | Program kaydı durumu ve süreler | Durum geçişleri (dondurma, uzaklaştırma, ilişik kesme, mezuniyet) gerekçe ve karar numarasıyla, geçmişiyle; yarıyıl, normal süre ve azami süre (programın `max_duration_years` değeri) hesabı |
+| ⬜ | Ders geçmişi (kesinleşmiş kayıtlar) | `enrollment.enrollments`: deneme numarası, tekrar alınan derste son not geçerli (`superseded_by`), harf notu not ölçeğinden; eski sistemden aktarılan geçmiş (`source = IMPORT`); müfredata göre ders durumu (geçti, kaldı, devam ediyor, alınmadı) eşdeğerlikler ve seçmeli havuzlarla |
+| ⬜ | Alınabilir dersler | Öğrencinin müfredatı ve dönemin açılan dersleri: alttan, dönem, seçmeli yuva, üst yarıyıl ve not yükseltme kategorileri; eski koddan kalan ders yeni eşdeğeriyle alınır; şubeler, programa göre kalan kontenjan, haftalık program, ön koşul durumu |
+| ⬜ | Kural motoru | Saf Go paketi, tablo güdümlü testler. Engel, program kaydı durumu, AKTS üst sınırı (GANO'ya göre, yönetmelik parametresi), 1. sınıf zorunlu dersleri, alttan ders önceliği, ön koşul (VE/VEYA, geçti/devam etti), haftalık program çakışması (devam şartını önceden sağlamış tekrar derste uyarı), müfredat dışı ders, azami süre (en çok 5 ders), not yükseltme ve seçmeli yuva aşımı uyarıları. Hata ve uyarı ayrımı; ekleme anında ve gönderimde ayrı kural kümeleri |
+| ⬜ | Sepet ve yarışa dayanıklı kontenjan | `registrations` (dönem başına tek), `registration_items`, `registration_events`; ekle, çıkar, şube değiştir. Öğrenci başına advisory lock; kontenjan sepete eklerken koşullu atomik `UPDATE` ile düşer (program alt kontenjanı dahil), çıkarınca serbest kalır; aynı dersin iki şubesi kısmi benzersiz index'le engellenir. Eşzamanlılık testi: yüzlerce goroutine aynı şubeye, kontenjan aşımı 0 (race detector açık) |
+| ⬜ | Danışman onayı | Gönder, geri çek, onayla, gerekçeyle reddet, onayı geri al (durum makinesi, `If-Match`); ders seçme ve danışman onayı pencereleri; onayda kesin kayıtlar oluşur; danışman için dönem ve durum filtreli öğrenci listesi, toplu onay; öğrenci işleri pencere dışında gerekçeyle müdahale eder (`registration:override`, denetime işaretli) |
+| ⬜ | Outbox | `platform.outbox_events` aynı transaction'da yazılır, worker `SKIP LOCKED` ile dağıtır, tüketiciler idempotent. İlk tüketici: öğrenciye onay ve red e-postası (LMS üyeliği Faz 5'te aynı olaya bağlanacak) |
+| ⬜ | Süresi dolan taslaklar | Ders seçme penceresi kapanınca gönderilmemiş taslakların ayırdığı kontenjan worker işiyle serbest bırakılır, olay günlüğüne yazılır |
+| ⬜ | İdempotentlik, hız sınırı ve iş metrikleri | `Idempotency-Key` başlığı (`platform.idempotency_keys`); ders seçme uçları için kullanıcı başına ayrı hız sınırı; `agora_registration_items_added_total`, `agora_registration_submitted_total`, `agora_section_full_rejections_total` ve Grafana panosu |
+| ⬜ | Ekle-bırak | Onaylı kayıtta öğrenci talebi (ekle-bırak penceresi) → danışman → bölüm başkanı onayı → uygulama; eklenecek şubenin kontenjanı talepte ayrılır, red ya da geri çekmede serbest kalır |
+| ⬜ | Seed: geçmiş dönemler ve demo senaryoları | 2020-2026 akademik yılları; BM öğrencilerine giriş yılına ve müfredatlarına göre deterministik ders geçmişi (başarısız ve tekrar alınan dersler dahil), GANO ve AKTS önbellekleri; demo öğrencileri (alttan ve eşdeğer ders, 1. sınıf), P10001'in danışmanlığında onay bekleyen kayıtlarıyla bir demo grubu, bir kayıt engeli; güz kayıtları servis üzerinden (kurallar ve kontenjan denetimli); BM için program kapsamlı demo pencereleri (§5 #13) |
+| ⬜ | k6 `registration-rush` | Eşzamanlı giriş ve popüler şubelere ders ekleme; kontenjan aşımı = 0 kanıtı (SQL doğrulaması), gecikme ve hata oranı sonuçları dokümanda; `make loadtest-registration` |
+
+**Web**
+
+| Durum | Madde |
+| --- | --- |
+| ⬜ | Ders seçme (öğrenci): alınabilir dersler ve kategoriler, şube ve kontenjan, sepet ve AKTS sayacı, anlık kural geri bildirimi, haftalık program önizlemesi ve çakışma, danışmana gönder ve geri çek, durum ve danışman notu |
+| ⬜ | Danışman: danışmanlığımdaki öğrencilerin kayıt durumları, kayıt inceleme (ders geçmişi, kurallar, program), onay, red, onayı geri alma, toplu onay |
+| ⬜ | Kayıt onay belgesi (yazdırılabilir; imzalı PDF ve doğrulama kodu Faz 7'nin belge altyapısıyla) |
+| ⬜ | Ekle-bırak: öğrenci talebi, danışman ve bölüm başkanı onay ekranları |
+| ⬜ | Kayıt engelleri yönetimi; öğrenci detayında program durumu ve ders geçmişi |
+| ⬜ | Ders planım: derslerin durumu (geçti, kaldı, devam ediyor) ve mezuniyet ilerlemesi |
+| ⬜ | Ana sayfa: öğrenci için kayıt durumu, danışman için onay bekleyenler |
+
+**Kapanış**
+
+| Durum | Madde |
+| --- | --- |
+| ⬜ | Playwright e2e: ders seçme (kural ihlali, kontenjan, çakışma), gönder → red → düzelt → onay, toplu onay, ekle-bırak, onay belgesi |
+| ⬜ | Sözleşme ve dokümanlar güncel (veri modeli, kural kataloğu, yetkilendirme politikaları, yük testi sonuçları, README'de demo rehberi), CI yeşil |
+
+### Faz 4 ve sonrası
 
 Her faz başlarken §2'deki kapsamdan aynı biçimde ayrıntılı bir liste çıkarılır.
