@@ -14,6 +14,11 @@ Thumbs.db
 
 # Go
 backend/bin/
+# backend/ içinde `go build ./cmd/...` ile üretilen ikililer
+/backend/api
+/backend/worker
+/backend/seed
+/backend/migrate
 *.test
 *.out
 coverage.html
