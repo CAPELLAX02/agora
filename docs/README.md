@@ -10,5 +10,6 @@
 | 06 | [Sistem Mimarisi ve Teknoloji](mimari/06-sistem-mimarisi-ve-teknoloji.md) | Modüler monolit, Spring → Go eşlemesi, API kuralları, web/mobil yığını, gözlemlenebilirlik, k6 |
 | 07 | [Yol Haritası](mimari/07-yol-haritasi.md) | Geliştirme sırası kararı, fazlar, Go öğrenme konuları, açık sorular |
 | 08 | [Yük Testleri](mimari/08-yuk-testleri.md) | k6 senaryoları, ölçüm ortamı, sonuçlar, darboğaz analizi ve iyileştirmeler |
+| 09 | [Ders Seçme](mimari/09-ders-secme-kurallari.md) | Kural kataloğu (hata ve uyarılar), alınabilir ders kategorileri, yönetmelik parametreleri, akış, pencereler, ekle-bırak |
 
 > Tüm dokümanlar **Taslak v0.1** durumundadır ve kararlarla birlikte güncellenecektir.
