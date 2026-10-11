@@ -6,6 +6,13 @@
       "oneplace": "Ders seçimi, notlar ve öğrenme ortamı tek yerde",
       "secure": "İki adımlı doğrulamayla korunan hesap",
       "anywhere": "Web ve mobilde, Türkçe ve İngilizce"
+    },
+    "showcase": {
+      "approved": "Ders kaydınız onaylandı",
+      "approvedHint": "5 ders · 30 AKTS",
+      "gpa": "GANO",
+      "today": "Bugün 2 dersiniz var",
+      "todayHint": "İlki 09:00'da, A104'te"
     }
   },
   "common": {
@@ -100,6 +107,7 @@
   "auth": {
     "restoring": "Oturum açılıyor…",
     "login": {
+      "welcome": "Tekrar hoş geldiniz",
       "title": "Giriş yap",
       "description": "Öğrenci ya da personel numaranız ve parolanızla giriş yapın.",
       "username": "Öğrenci / personel numarası",

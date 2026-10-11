@@ -69,7 +69,7 @@ export function ResetPasswordPage() {
           <span className="flex size-11 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
             <LinkIcon className="size-5" aria-hidden />
           </span>
-          <h1 className="text-2xl font-semibold tracking-tight">{t('auth.reset.invalidTitle')}</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight">{t('auth.reset.invalidTitle')}</h1>
           <p className="text-sm text-muted-foreground">{t('auth.reset.invalidDescription')}</p>
           <Button asChild>
             <Link to="/sifremi-unuttum">{t('auth.reset.requestNew')}</Link>
@@ -116,7 +116,7 @@ export function ResetPasswordPage() {
     <AuthLayout>
       <div className="space-y-6">
         <div className="space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className="text-3xl font-extrabold tracking-tight">
             {t(activation ? 'auth.reset.activationTitle' : 'auth.reset.resetTitle')}
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -141,7 +141,7 @@ export function ResetPasswordPage() {
               confirm: form.formState.errors.confirm?.message,
             }}
           />
-          <Button type="submit" className="w-full" loading={resetState.isLoading}>
+          <Button type="submit" variant="brand" size="lg" className="w-full" loading={resetState.isLoading}>
             {t('auth.reset.submit')}
           </Button>
         </form>

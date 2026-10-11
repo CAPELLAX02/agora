@@ -6,6 +6,13 @@
       "oneplace": "Course registration, grades and learning in one place",
       "secure": "Accounts protected with two-step verification",
       "anywhere": "On the web and mobile, in Turkish and English"
+    },
+    "showcase": {
+      "approved": "Your registration is approved",
+      "approvedHint": "5 courses · 30 ECTS",
+      "gpa": "GPA",
+      "today": "You have 2 classes today",
+      "todayHint": "First one at 09:00 in A104"
     }
   },
   "common": {
@@ -100,6 +107,7 @@
   "auth": {
     "restoring": "Signing you in…",
     "login": {
+      "welcome": "Welcome back",
       "title": "Sign in",
       "description": "Sign in with your student or staff number and password.",
       "username": "Student / staff number",

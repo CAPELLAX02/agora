@@ -1,5 +1,13 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { AlertCircleIcon, InfoIcon, KeyRoundIcon, ShieldCheckIcon, SmartphoneIcon } from 'lucide-react'
+import {
+  AlertCircleIcon,
+  ArrowRightIcon,
+  InfoIcon,
+  KeyRoundIcon,
+  ShieldCheckIcon,
+  SmartphoneIcon,
+  SparklesIcon,
+} from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -19,6 +27,7 @@ import { useErrorMessage, type Messages } from '@/shared/api/useErrorMessage'
 import { Alert, AlertDescription } from '@/shared/ui/alert'
 import { Button } from '@/shared/ui/button'
 import { Field } from '@/shared/ui/field'
+import { IconChip } from '@/shared/ui/icon-chip'
 import { Input } from '@/shared/ui/input'
 import { OtpInput } from '@/shared/ui/otp-input'
 import { PasswordInput } from '@/shared/ui/password-input'
@@ -127,9 +136,13 @@ function PasswordStep({
             : null
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <div className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">{t('auth.login.title')}</h1>
+        <p className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+          <SparklesIcon className="size-3.5" aria-hidden />
+          {t('auth.login.welcome')}
+        </p>
+        <h1 className="text-3xl font-extrabold tracking-tight">{t('auth.login.title')}</h1>
         <p className="text-sm text-muted-foreground">{t('auth.login.description')}</p>
       </div>
 
@@ -173,12 +186,13 @@ function PasswordStep({
           )}
         </Field>
         <div className="-mt-2 flex justify-end">
-          <Link to="/sifremi-unuttum" className="text-sm text-primary hover:underline">
+          <Link to="/sifremi-unuttum" className="text-sm font-semibold text-primary hover:underline">
             {t('auth.login.forgot')}
           </Link>
         </div>
-        <Button type="submit" className="w-full" loading={isLoading}>
+        <Button type="submit" variant="brand" size="lg" className="w-full" loading={isLoading}>
           {t('auth.login.submit')}
+          {!isLoading && <ArrowRightIcon aria-hidden />}
         </Button>
       </form>
     </div>
@@ -244,10 +258,8 @@ function MfaStep({
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <span className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          <ShieldCheckIcon className="size-5" aria-hidden />
-        </span>
-        <h1 className="text-2xl font-semibold tracking-tight">{t('auth.mfa.title')}</h1>
+        <IconChip icon={ShieldCheckIcon} tone="emerald" size="lg" solid />
+        <h1 className="text-3xl font-extrabold tracking-tight">{t('auth.mfa.title')}</h1>
         <p className="text-sm text-muted-foreground">
           {t(useRecovery ? 'auth.mfa.recoveryDescription' : 'auth.mfa.description')}
         </p>
@@ -300,7 +312,7 @@ function MfaStep({
             )
           }
         </Field>
-        <Button type="submit" className="w-full" loading={isLoading}>
+        <Button type="submit" variant="brand" size="lg" className="w-full" loading={isLoading}>
           {t('auth.mfa.submit')}
         </Button>
       </form>
