@@ -557,6 +557,7 @@
     "description": "Dönemin işlem pencereleri ve önemli tarihleri.",
     "term": "Dönem",
     "scope": "Birim",
+    "myProgram": "Programım: {{name}}",
     "wholeUniversity": "Bütün üniversite",
     "current": "içinde bulunulan",
     "newEvent": "Yeni olay",

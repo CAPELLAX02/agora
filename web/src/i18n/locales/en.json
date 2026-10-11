@@ -557,6 +557,7 @@
     "description": "Action windows and key dates of the term.",
     "term": "Term",
     "scope": "Unit",
+    "myProgram": "My programme: {{name}}",
     "wholeUniversity": "Whole university",
     "current": "current",
     "newEvent": "New event",

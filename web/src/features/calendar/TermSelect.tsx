@@ -11,7 +11,7 @@ export function TermSelect({ value, onChange }: { value: string; onChange: (id: 
   const terms = useListTermsQuery()
   return (
     <Select value={value} onValueChange={onChange} disabled={!terms.data}>
-      <SelectTrigger className="sm:w-64" aria-label={t('calendar.term')}>
+      <SelectTrigger className="sm:min-w-72" aria-label={t('calendar.term')}>
         <SelectValue placeholder={t('common.loading')} />
       </SelectTrigger>
       <SelectContent>
