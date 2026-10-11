@@ -188,6 +188,33 @@ describe('oturum', () => {
     expect(await screen.findByText('Çıkış yaptınız.')).toBeInTheDocument()
   })
 
+  it('çıkıştan sonra giren kullanıcı önceki kullanıcının sayfasına değil ana sayfaya gider', async () => {
+    let signedIn = true
+    server.use(
+      http.post('/api/v1/auth/refresh', () =>
+        signedIn
+          ? HttpResponse.json(tokens())
+          : HttpResponse.json(problem(401, 'INVALID_REFRESH_TOKEN'), { status: 401 }),
+      ),
+      http.post('/api/v1/auth/logout', () => {
+        signedIn = false
+        return new HttpResponse(null, { status: 204 })
+      }),
+      http.post('/api/v1/auth/login', () => HttpResponse.json(tokens())),
+    )
+    const { user, router } = renderApp('/profil')
+    expect(await screen.findByRole('heading', { name: 'Profilim' })).toBeInTheDocument()
+
+    await user.click(await screen.findByRole('button', { name: 'Hesap menüsü' }))
+    await user.click(await screen.findByRole('menuitem', { name: 'Çıkış yap' }))
+    expect(await screen.findByText('Çıkış yaptınız.')).toBeInTheDocument()
+    expect(router.state.location.state).toBeNull()
+
+    await fillLogin(user)
+    expect(await screen.findByRole('heading', { name: /Hoş geldiniz/ })).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/')
+  })
+
   it('MFA gerektiren yetkisi olan kullanıcıya MFA kurulumunu önerir', async () => {
     server.use(
       http.post('/api/v1/auth/refresh', () => HttpResponse.json(tokens())),

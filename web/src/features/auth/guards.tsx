@@ -20,11 +20,19 @@ export function GuestOnly() {
   return <Outlet />
 }
 
-/** RequireAuth, oturumu olmayan kullanıcıyı giriş ekranına yönlendirir ve geri dönülecek yeri hatırlar. */
+/**
+ * RequireAuth, oturumu olmayan kullanıcıyı giriş ekranına yönlendirir ve geri dönülecek yeri
+ * hatırlar. Kullanıcı kendisi çıkış yaptıysa hatırlamaz: sonraki giren başkası olabilir (ör.
+ * öğrencinin çıkışından sonra danışman, öğrencinin sayfasına gönderilmemeli).
+ */
 export function RequireAuth() {
   const status = useAppSelector((s) => s.auth.status)
+  const reason = useAppSelector((s) => s.auth.reason)
   const location = useLocation()
   if (status !== 'authenticated') {
+    if (reason === 'loggedOut') {
+      return <Navigate to="/giris" replace />
+    }
     return <Navigate to="/giris" replace state={{ from: location } satisfies FromState} />
   }
   return <Outlet />
