@@ -3297,6 +3297,11 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`GRADES_PUBLISHED`: harf notları ilan edilmiş şubenin planı açılamaz"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
 
   /api/v1/sections/{id}/gradebook:
     get:
@@ -3374,7 +3379,8 @@ paths:
         "409":
           description: >-
             `ASSESSMENT_PLAN_NOT_LOCKED`, `GRADE_ENTRY_WINDOW_CLOSED`, `MAKEUP_NOT_AVAILABLE`
-            (bütünleme notları harf notları ilan edildikten sonra girilir)
+            (bütünleme notları harf notları ilan edildikten sonra girilir), `GRADES_PUBLISHED`
+            (harf notları ilan edildi)
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Problem" }
@@ -3454,6 +3460,122 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`GRADES_PUBLISHED`: harf notları ilan edildi"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/sections/{id}/letter-grades:
+    get:
+      tags: [Değerlendirme]
+      summary: Harf notlarının önizlemesini döndürür
+      description: >-
+        Her öğrenci için bileşen notlarından hesaplanan ders başarı puanı ve harf notu (eksik
+        not varsa hangi bileşenlerin eksik olduğu), elle verilmiş harf notu, harf dağılımı ve
+        ilan bilgisi. İlandan sonra ilan edilmiş notlar döner. Not tablosunu görebilenler görür;
+        `can_publish` ve `can_override` isteği yapana göredir.
+      operationId: getLetterGrades
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Harf notları
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LetterGrades" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/sections/{id}/letter-overrides:
+    put:
+      tags: [Değerlendirme]
+      summary: Elle harf notu verir ya da kaldırır
+      description: >-
+        Sorumlu öğretim elemanı (`grade:finalize`, MFA), elle harf notu atama penceresi açıkken
+        ve notlar ilan edilmeden önce, hesaplanan harf notunun yerine geçecek harfi gerekçesiyle
+        verir. `letter: null` elle verilen notu kaldırır. Harf, öğrencinin not ölçeğinde
+        olmalı; harf notlu derste BŞR/BŞZ, başarılı/başarısız notlu derste harf notu verilemez;
+        muafiyet notu verilemez. Denetim izine yazılır.
+      operationId: setLetterOverrides
+      x-agora-permission: grade:finalize
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  minItems: 1
+                  maxItems: 1000
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [enrollment_id, letter]
+                    properties:
+                      enrollment_id: { type: string, format: uuid }
+                      letter: { type: [string, "null"], examples: ["C3"] }
+                      reason: { type: string, maxLength: 500, description: "Harf verilirken zorunlu, en az 5 karakter" }
+      responses:
+        "200":
+          description: Güncel harf notları
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LetterGrades" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`MANUAL_LETTER_WINDOW_CLOSED`, `GRADES_PUBLISHED`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/sections/{id}/letter-grades/publish:
+    post:
+      tags: [Değerlendirme]
+      summary: Harf notlarını ilan eder
+      description: >-
+        Sorumlu öğretim elemanı (`grade:finalize`, MFA), final not girişi ya da elle harf notu
+        atama penceresi açıkken ilan eder. Bütün öğrencilerin notu hesaplanabilir olmalı (eksik
+        bileşen yok) ya da elle harf notu verilmiş olmalı. İlanda kesin kayıtlar tamamlanır
+        (harf notu, ders başarı puanı, ilan tarihi), dersi tekrar alan öğrencinin önceki
+        denemesi "son not geçerli" kuralıyla kapanır ve `grades.published` olayı yayımlanır.
+        İlandan sonra notlar sadece not düzeltme talebiyle değişir.
+      operationId: publishLetterGrades
+      x-agora-permission: grade:finalize
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: İlan edilmiş harf notları
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LetterGrades" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: >-
+            `GRADES_INCOMPLETE` (notu eksik öğrenciler; `errors` alanında), `GRADES_PUBLISHED`,
+            `PUBLISH_WINDOW_CLOSED`, `ASSESSMENT_PLAN_NOT_LOCKED`
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
 
   /api/v1/buildings:
     get:
@@ -6734,7 +6856,7 @@ components:
       properties:
         section:
           type: object
-          required: [id, section_code, course, term, plan_locked, instructor_role]
+          required: [id, section_code, course, term, plan_locked, instructor_role, grades_published_at]
           properties:
             id: { type: string, format: uuid }
             section_code: { type: string }
@@ -6754,6 +6876,7 @@ components:
                 id: { type: string, format: uuid }
                 code: { type: string, examples: ["2026-FALL"] }
             plan_locked: { type: boolean, description: Notlar sadece kilitli plana girilir }
+            grades_published_at: { type: [string, "null"], format: date-time, description: "Harf notları ilan edildiyse: notlar artık değişmez" }
             instructor_role:
               type: [string, "null"]
               enum: [PRIMARY, CO_INSTRUCTOR, ASSISTANT, null]
@@ -6802,6 +6925,92 @@ components:
                 additionalProperties: { $ref: "#/components/schemas/ComponentScore" }
         can_enter: { type: boolean, description: "İsteği yapan bu şubeye not girebilir: sorumlu ya da ortak öğretim elemanı, MFA'lı oturum" }
         mfa_required: { type: boolean, description: Not girebilecek ama oturum iki adımlı doğrulamayla açılmamış }
+
+    LetterReason:
+      type: string
+      enum: [RANGE, ATTENDANCE_FAIL, FINAL_ABSENT, FINAL_BELOW_MIN, PASS_FAIL, MANUAL]
+      description: >-
+        Harf notunun hangi kuralla verildiği: puan aralığı, devamsızlık (F1), finale girmedi,
+        final barajı altı, başarılı/başarısız notlu ders, elle verildi
+
+    LetterGrades:
+      type: object
+      required: [section_id, grading_mode, published_at, published_by, can_publish, can_override, publish_window,
+                 override_window, final_min_score, scale, students, distribution, summary]
+      properties:
+        section_id: { type: string, format: uuid }
+        grading_mode: { type: string, enum: [LETTER, PASS_FAIL] }
+        published_at: { type: [string, "null"], format: date-time }
+        published_by: { type: [string, "null"], description: İlan edenin adı }
+        can_publish: { type: boolean, description: "İsteği yapan şimdi ilan edebilir: sorumlu öğretim elemanı, pencere açık, eksik not yok" }
+        can_override: { type: boolean, description: İsteği yapan şimdi elle harf notu verebilir }
+        publish_window: { $ref: "#/components/schemas/GradeEntryWindow" }
+        override_window: { $ref: "#/components/schemas/GradeEntryWindow" }
+        final_min_score: { type: number, description: "Final ya da bütünlemede en az alınması gereken puan (yönetmelik parametresi)" }
+        scale:
+          type: array
+          description: Elle verilebilecek harfler, başarıdan başarısızlığa
+          items:
+            type: object
+            required: [letter, min_score, max_score, passing]
+            properties:
+              letter: { type: string }
+              min_score: { type: [number, "null"] }
+              max_score: { type: [number, "null"] }
+              passing: { type: boolean }
+        students:
+          type: array
+          description: Soyadı ve adına göre sıralı
+          items:
+            type: object
+            required: [enrollment_id, student, attendance_status, complete, missing_components, weighted_score, rounded_score,
+                       computed_letter, reason, used_makeup, override, letter, passing]
+            properties:
+              enrollment_id: { type: string, format: uuid }
+              student: { $ref: "#/components/schemas/StudentRef" }
+              attendance_status: { $ref: "#/components/schemas/AttendanceStatus" }
+              complete: { type: boolean, description: Bütün bileşenlerin notu girilmiş (ya da devamsız) }
+              missing_components:
+                type: array
+                items: { type: string, format: uuid }
+              weighted_score: { type: [number, "null"], description: "Ders başarı puanı (iki ondalık)" }
+              rounded_score: { type: [integer, "null"], description: Harfin bakıldığı tam sayı puan }
+              computed_letter: { type: [string, "null"] }
+              reason:
+                oneOf:
+                  - $ref: "#/components/schemas/LetterReason"
+                  - type: "null"
+              used_makeup: { type: boolean, description: Bütünleme notu finalin yerine geçti }
+              override:
+                oneOf:
+                  - type: "null"
+                  - type: object
+                    required: [letter, reason, set_by, set_at]
+                    properties:
+                      letter: { type: string }
+                      reason: { type: string }
+                      set_by: { type: string }
+                      set_at: { type: string, format: date-time }
+              letter: { type: [string, "null"], description: "Geçerli harf: ilan edilmişse ilan edilen, yoksa elle verilen ya da hesaplanan" }
+              passing: { type: [boolean, "null"] }
+        distribution:
+          type: array
+          description: Geçerli harflerin dağılımı (ölçek sırasıyla, sıfır olanlar dahil)
+          items:
+            type: object
+            required: [letter, count]
+            properties:
+              letter: { type: string }
+              count: { type: integer }
+        summary:
+          type: object
+          required: [students, complete, mean, median, pass_rate]
+          properties:
+            students: { type: integer }
+            complete: { type: integer, description: Harfi belli olan öğrenci sayısı }
+            mean: { type: [number, "null"], description: Ders başarı puanlarının ortalaması }
+            median: { type: [number, "null"] }
+            pass_rate: { type: [number, "null"], description: "Geçenlerin oranı (0-1)" }
 
     HoldType:
       type: string

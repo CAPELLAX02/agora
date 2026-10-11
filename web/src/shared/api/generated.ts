@@ -863,6 +863,27 @@ const injectedRtkApi = api
         }),
         invalidatesTags: ['De\u011Ferlendirme'],
       }),
+      getLetterGrades: build.query<GetLetterGradesApiResponse, GetLetterGradesApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/sections/${queryArg.id}/letter-grades`,
+        }),
+        providesTags: ['De\u011Ferlendirme'],
+      }),
+      setLetterOverrides: build.mutation<SetLetterOverridesApiResponse, SetLetterOverridesApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/sections/${queryArg.id}/letter-overrides`,
+          method: 'PUT',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['De\u011Ferlendirme'],
+      }),
+      publishLetterGrades: build.mutation<PublishLetterGradesApiResponse, PublishLetterGradesApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/sections/${queryArg.id}/letter-grades/publish`,
+          method: 'POST',
+        }),
+        invalidatesTags: ['De\u011Ferlendirme'],
+      }),
       listBuildings: build.query<ListBuildingsApiResponse, ListBuildingsApiArg>({
         query: (queryArg) => ({
           url: `/api/v1/buildings`,
@@ -2141,6 +2162,29 @@ export type SetAttendanceApiArg = {
       attendance_status: AttendanceStatus
     }[]
   }
+}
+export type GetLetterGradesApiResponse = /** status 200 Harf notları */ LetterGrades
+export type GetLetterGradesApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type SetLetterOverridesApiResponse = /** status 200 Güncel harf notları */ LetterGrades
+export type SetLetterOverridesApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: {
+    items: {
+      enrollment_id: string
+      letter: string | null
+      /** Harf verilirken zorunlu, en az 5 karakter */
+      reason?: string
+    }[]
+  }
+}
+export type PublishLetterGradesApiResponse = /** status 200 İlan edilmiş harf notları */ LetterGrades
+export type PublishLetterGradesApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
 }
 export type ListBuildingsApiResponse = /** status 200 Binalar */ {
   items: Building[]
@@ -3458,6 +3502,8 @@ export type Gradebook = {
     }
     /** Notlar sadece kilitli plana girilir */
     plan_locked: boolean
+    /** Harf notları ilan edildiyse: notlar artık değişmez */
+    grades_published_at: string | null
     /** İsteği yapanın şubedeki rolü */
     instructor_role:
       ('PRIMARY' | 'CO_INSTRUCTOR' | 'ASSISTANT' | null) | ('PRIMARY' | 'CO_INSTRUCTOR' | 'ASSISTANT' | null)
@@ -3501,6 +3547,71 @@ export type Gradebook = {
   can_enter: boolean
   /** Not girebilecek ama oturum iki adımlı doğrulamayla açılmamış */
   mfa_required: boolean
+}
+export type LetterReason =
+  'RANGE' | 'ATTENDANCE_FAIL' | 'FINAL_ABSENT' | 'FINAL_BELOW_MIN' | 'PASS_FAIL' | 'MANUAL'
+export type LetterGrades = {
+  section_id: string
+  grading_mode: 'LETTER' | 'PASS_FAIL'
+  published_at: string | null
+  /** İlan edenin adı */
+  published_by: string | null
+  /** İsteği yapan şimdi ilan edebilir: sorumlu öğretim elemanı, pencere açık, eksik not yok */
+  can_publish: boolean
+  /** İsteği yapan şimdi elle harf notu verebilir */
+  can_override: boolean
+  publish_window: GradeEntryWindow
+  override_window: GradeEntryWindow
+  /** Final ya da bütünlemede en az alınması gereken puan (yönetmelik parametresi) */
+  final_min_score: number
+  /** Elle verilebilecek harfler, başarıdan başarısızlığa */
+  scale: {
+    letter: string
+    min_score: number | null
+    max_score: number | null
+    passing: boolean
+  }[]
+  /** Soyadı ve adına göre sıralı */
+  students: {
+    enrollment_id: string
+    student: StudentRef
+    attendance_status: AttendanceStatus
+    /** Bütün bileşenlerin notu girilmiş (ya da devamsız) */
+    complete: boolean
+    missing_components: string[]
+    /** Ders başarı puanı (iki ondalık) */
+    weighted_score: number | null
+    /** Harfin bakıldığı tam sayı puan */
+    rounded_score: number | null
+    computed_letter: string | null
+    reason: LetterReason | null
+    /** Bütünleme notu finalin yerine geçti */
+    used_makeup: boolean
+    override: null | {
+      letter: string
+      reason: string
+      set_by: string
+      set_at: string
+    }
+    /** Geçerli harf: ilan edilmişse ilan edilen, yoksa elle verilen ya da hesaplanan */
+    letter: string | null
+    passing: boolean | null
+  }[]
+  /** Geçerli harflerin dağılımı (ölçek sırasıyla, sıfır olanlar dahil) */
+  distribution: {
+    letter: string
+    count: number
+  }[]
+  summary: {
+    students: number
+    /** Harfi belli olan öğrenci sayısı */
+    complete: number
+    /** Ders başarı puanlarının ortalaması */
+    mean: number | null
+    median: number | null
+    /** Geçenlerin oranı (0-1) */
+    pass_rate: number | null
+  }
 }
 export type Ref = {
   id: string
@@ -4213,6 +4324,10 @@ export const {
   useSetComponentScoresMutation,
   usePublishComponentScoresMutation,
   useSetAttendanceMutation,
+  useGetLetterGradesQuery,
+  useLazyGetLetterGradesQuery,
+  useSetLetterOverridesMutation,
+  usePublishLetterGradesMutation,
   useListBuildingsQuery,
   useLazyListBuildingsQuery,
   useCreateBuildingMutation,
