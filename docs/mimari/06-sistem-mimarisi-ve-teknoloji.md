@@ -151,7 +151,7 @@ Katmanlar: **handler** (HTTP ↔ DTO, doğrulama) → **service** (iş kurallar�
 | Test | **Vitest** + Testing Library (bileşen) · **Playwright** (e2e, rol senaryoları) |
 | Kalite | ESLint + Prettier + `tsc --noEmit` · erişilebilirlik için axe denetimi |
 | Yapı | Özellik bazlı klasörler: `src/features/registration/…`, `src/app/` (store, router), `src/shared/ui` |
-| Tema | Açık/koyu/sistem, Ankara Üniversitesi renklerinden esinlenmiş ama özgün kimlik |
+| Tema | Açık/koyu/sistem; canlı, renkli ve öğrenci dostu özgün bir kimlik (indigo → mor → pembe marka geçişi, kategori renk tonları, Plus Jakarta Sans), ayrıntısı `web/README.md`'de |
 
 ## 5. Mobil
 
