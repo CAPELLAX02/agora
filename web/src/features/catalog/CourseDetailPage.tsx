@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, ArrowRightLeftIcon } from 'lucide-react'
+import { ArrowLeftIcon, ArrowRightLeftIcon, AwardIcon, ClockIcon, GaugeIcon } from 'lucide-react'
 import { Fragment } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/sha
 import { DescriptionList } from '@/shared/ui/description-list'
 import { PageHeader } from '@/shared/ui/page-header'
 import { Skeleton } from '@/shared/ui/skeleton'
+import { StatTile } from '@/shared/ui/stat-tile'
 import { ErrorState } from '@/shared/ui/states'
 
 import { CourseKindBadge } from './course'
@@ -73,11 +74,23 @@ export function CourseDetailPage() {
               <CardTitle>{t('catalog.detail.info')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
+              <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <StatTile
+                  label={`${t('catalog.detail.hours')} (${t('catalog.detail.hoursHint')})`}
+                  value={hours(course)}
+                  icon={ClockIcon}
+                  tone="sky"
+                />
+                <StatTile
+                  label={t('catalog.credit')}
+                  value={course.national_credit}
+                  icon={AwardIcon}
+                  tone="violet"
+                />
+                <StatTile label={t('catalog.ects')} value={course.ects} icon={GaugeIcon} tone="amber" />
+              </dl>
               <DescriptionList
                 items={[
-                  [t('catalog.detail.hours'), `${hours(course)} (${t('catalog.detail.hoursHint')})`],
-                  [t('catalog.credit'), course.national_credit],
-                  [t('catalog.ects'), course.ects],
                   [t('catalog.detail.language'), t(`catalog.languages.${course.language}`)],
                   [t('catalog.detail.grading'), t(`catalog.grading.${course.grading_mode}`)],
                   [

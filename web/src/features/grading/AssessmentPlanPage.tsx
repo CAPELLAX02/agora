@@ -21,6 +21,7 @@ import {
 import { useErrorMessage } from '@/shared/api/useErrorMessage'
 import { useLocalized } from '@/shared/lib/localized'
 import { Alert, AlertDescription } from '@/shared/ui/alert'
+import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
@@ -35,6 +36,25 @@ import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, Table
 import { Textarea } from '@/shared/ui/textarea'
 
 type Row = { type: string; name: string; weight: string; date: string }
+
+const inTermColors = [
+  'bg-sky-500',
+  'bg-violet-500',
+  'bg-teal-500',
+  'bg-amber-500',
+  'bg-pink-500',
+  'bg-indigo-500',
+]
+
+/** componentColors, bileşenlerin rengidir: dönem içi bileşenler sırayla, final ve bütünleme gül rengi. */
+function componentColors(components: { id: string; type: { category: string } }[]) {
+  const colors = new Map(
+    components
+      .filter((c) => c.type.category === 'IN_TERM')
+      .map((c, i) => [c.id, inTermColors[i % inTermColors.length]!]),
+  )
+  return (c: { id: string }) => colors.get(c.id) ?? 'bg-rose-500'
+}
 
 /**
  * AssessmentPlanPage, bir şubenin değerlendirme planıdır. Şubenin öğretim elemanı (ya da
@@ -64,6 +84,7 @@ export function AssessmentPlanPage() {
   }
   const en = i18n.language === 'en'
 
+  const colorOf = componentColors(plan.components)
   return (
     <>
       <PageHeader
@@ -115,45 +136,62 @@ export function AssessmentPlanPage() {
           {plan.components.length === 0 ? (
             <CardContent className="py-6 text-sm text-muted-foreground">{t('plan.empty')}</CardContent>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('plan.component')}</TableHead>
-                  <TableHead className="hidden sm:table-cell">{t('plan.date')}</TableHead>
-                  <TableHead className="w-24 text-right">{t('plan.weight')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {plan.components.map((c) => (
-                  <TableRow
-                    key={c.id}
-                    className={c.type.category === 'MAKEUP' ? 'text-muted-foreground' : undefined}
-                  >
-                    <TableCell>
-                      {en ? c.label_en : c.label_tr}
-                      {c.type.category === 'MAKEUP' && (
-                        <Badge variant="muted" className="ml-2">
-                          {t('plan.replacesFinal')}
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      {c.scheduled_on ? formatDate(c.scheduled_on) : '—'}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">%{c.weight}</TableCell>
+            <>
+              {/* Ağırlıkların payı: tablodaki her bileşenin rengi çubuktakiyle aynı. */}
+              <div
+                aria-hidden
+                className="mx-6 mt-5 mb-1 flex h-3 gap-0.5 overflow-hidden rounded-full bg-muted"
+              >
+                {plan.components
+                  .filter((c) => c.type.category !== 'MAKEUP')
+                  .map((c) => (
+                    <span key={c.id} className={cn('h-full', colorOf(c))} style={{ width: `${c.weight}%` }} />
+                  ))}
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('plan.component')}</TableHead>
+                    <TableHead className="hidden sm:table-cell">{t('plan.date')}</TableHead>
+                    <TableHead className="w-24 text-right">{t('plan.weight')}</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-              <TableFooter>
-                <TableRow>
-                  <TableCell>{t('plan.total')}</TableCell>
-                  <TableCell className="hidden sm:table-cell" />
-                  <TableCell className="text-right tabular-nums">
-                    %{plan.in_term_weight + plan.final_weight}
-                  </TableCell>
-                </TableRow>
-              </TableFooter>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {plan.components.map((c) => (
+                    <TableRow
+                      key={c.id}
+                      className={c.type.category === 'MAKEUP' ? 'text-muted-foreground' : undefined}
+                    >
+                      <TableCell>
+                        <span
+                          aria-hidden
+                          className={cn('mr-2 inline-block size-2.5 rounded-full', colorOf(c))}
+                        />
+                        {en ? c.label_en : c.label_tr}
+                        {c.type.category === 'MAKEUP' && (
+                          <Badge variant="muted" className="ml-2">
+                            {t('plan.replacesFinal')}
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        {c.scheduled_on ? formatDate(c.scheduled_on) : '—'}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">%{c.weight}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+                <TableFooter>
+                  <TableRow>
+                    <TableCell>{t('plan.total')}</TableCell>
+                    <TableCell className="hidden sm:table-cell" />
+                    <TableCell className="text-right tabular-nums">
+                      %{plan.in_term_weight + plan.final_weight}
+                    </TableCell>
+                  </TableRow>
+                </TableFooter>
+              </Table>
+            </>
           )}
         </Card>
       )}
