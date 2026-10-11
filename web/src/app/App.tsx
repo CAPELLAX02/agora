@@ -18,8 +18,15 @@ export function App() {
       <ThemeProvider>
         <TooltipProvider delayDuration={300}>
           <RouterProvider router={router} />
-          {/* Sağ altta: üst çubuktaki hesap menüsünün ve dil/tema düğmelerinin üstünü örtmez. */}
-          <Toaster position="bottom-right" richColors closeButton />
+          {/* Üst ortada, başlık çubuğunun altında: hesap menüsünü, dil/tema düğmelerini ve sağdaki
+              yapışkan panelleri (ders seçimindeki sepet) örtmez. */}
+          <Toaster
+            position="top-center"
+            offset={{ top: 76 }}
+            mobileOffset={{ top: 72 }}
+            richColors
+            closeButton
+          />
         </TooltipProvider>
       </ThemeProvider>
     </Provider>

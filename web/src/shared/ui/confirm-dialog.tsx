@@ -1,3 +1,4 @@
+import { TriangleAlertIcon, type LucideIcon } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -11,6 +12,7 @@ import {
   AlertDialogTitle,
 } from './alert-dialog'
 import { Button } from './button'
+import type { Tone } from './tone'
 
 /**
  * ConfirmDialog, geri alınamayan bir işlem öncesi onay ister. Onay düğmesi işlem bitene
@@ -21,6 +23,8 @@ export function ConfirmDialog({
   description,
   confirm,
   destructive = false,
+  icon,
+  tone,
   onClose,
   onConfirm,
   children,
@@ -29,6 +33,9 @@ export function ConfirmDialog({
   description: ReactNode
   confirm: string
   destructive?: boolean
+  /** icon, başlığın yanındaki ikondur; tehlikeli işlemde verilmezse uyarı ikonu çıkar. */
+  icon?: LucideIcon
+  tone?: Tone
   onClose: () => void
   onConfirm: () => Promise<void> | void
   children?: ReactNode
@@ -38,7 +45,10 @@ export function ConfirmDialog({
   return (
     <AlertDialog open onOpenChange={(open) => !open && !busy && onClose()}>
       <AlertDialogContent>
-        <AlertDialogHeader>
+        <AlertDialogHeader
+          icon={icon ?? (destructive ? TriangleAlertIcon : undefined)}
+          tone={tone ?? (destructive ? 'rose' : 'indigo')}
+        >
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>

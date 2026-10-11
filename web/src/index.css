@@ -1,106 +1,134 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
-@import '@fontsource-variable/inter';
+@import '@fontsource-variable/plus-jakarta-sans';
 
-/* Koyu tema, kök elemandaki .dark sınıfıyla açılır (bkz. app/theme.tsx). */
+/* Koyu tema, kök elemandaki .dark sınıfıyla açılır (bkz. app/ThemeProvider.tsx). */
 @custom-variant dark (&:is(.dark *));
 
 /*
  * Tasarım belirteçleri (design tokens). Bileşenler renkleri doğrudan değil bu
  * değişkenler üzerinden kullanır: tema değişince sadece burası değişir.
  *
- * Kimlik: Ankara Üniversitesi'nin lacivertinden esinlenen derin bir mavi (birincil)
- * ve vurgu için sıcak bir altın sarısı. Nötrler hafif mavi tonludur.
+ * Kimlik: canlı bir indigo (birincil), mora ve pembeye akan bir marka geçişi, vurgu için
+ * sıcak bir amber. Nötrler hafif mor tonludur. Kategoriler (alttan ders, seçmeli,
+ * sınav ...) bileşen düzeyinde Tailwind renk tonlarıyla ayrılır (shared/ui/tone.ts).
  */
 :root {
-  /* Köşeler bilinçli olarak keskine yakın: kurumsal, sade bir görünüm. */
-  --radius: 0.25rem;
+  /* Köşeler yumuşak: samimi, öğrenci dostu bir görünüm. */
+  --radius: 0.75rem;
 
-  --background: oklch(0.99 0.003 260);
-  --foreground: oklch(0.2 0.03 262);
+  --background: oklch(0.985 0.006 275);
+  --foreground: oklch(0.22 0.035 275);
   --card: oklch(1 0 0);
   --card-foreground: var(--foreground);
   --popover: oklch(1 0 0);
   --popover-foreground: var(--foreground);
 
-  --primary: oklch(0.42 0.14 263);
-  --primary-foreground: oklch(0.98 0.01 260);
-  --secondary: oklch(0.95 0.012 262);
-  --secondary-foreground: oklch(0.28 0.06 263);
-  --muted: oklch(0.96 0.008 262);
-  --muted-foreground: oklch(0.5 0.03 262);
-  --accent: oklch(0.94 0.02 262);
-  --accent-foreground: oklch(0.28 0.06 263);
-  --highlight: oklch(0.82 0.14 80);
-  --highlight-foreground: oklch(0.3 0.06 60);
-  --brand: oklch(0.36 0.13 263);
-  --brand-foreground: oklch(0.98 0.01 260);
+  --primary: oklch(0.53 0.22 272);
+  --primary-foreground: oklch(0.99 0.005 275);
+  --secondary: oklch(0.955 0.018 275);
+  --secondary-foreground: oklch(0.32 0.09 272);
+  --muted: oklch(0.962 0.012 275);
+  --muted-foreground: oklch(0.52 0.03 275);
+  --accent: oklch(0.95 0.025 275);
+  --accent-foreground: oklch(0.3 0.1 272);
+  --highlight: oklch(0.8 0.16 75);
+  --highlight-foreground: oklch(0.3 0.07 55);
+  --brand: oklch(0.45 0.2 272);
+  --brand-foreground: oklch(0.99 0.005 275);
 
-  --destructive: oklch(0.55 0.21 27);
-  --destructive-foreground: oklch(0.98 0.01 27);
-  --success: oklch(0.55 0.13 155);
-  --success-foreground: oklch(0.98 0.02 155);
-  --warning: oklch(0.75 0.15 70);
-  --warning-foreground: oklch(0.28 0.06 60);
+  --destructive: oklch(0.58 0.22 20);
+  --destructive-foreground: oklch(0.99 0.01 20);
+  --success: oklch(0.58 0.15 160);
+  --success-foreground: oklch(0.99 0.02 160);
+  --warning: oklch(0.76 0.16 70);
+  --warning-foreground: oklch(0.32 0.08 55);
+  --info: oklch(0.6 0.15 235);
+  --info-foreground: oklch(0.99 0.01 235);
 
-  --border: oklch(0.9 0.012 262);
-  --input: oklch(0.88 0.014 262);
-  --ring: oklch(0.55 0.14 263);
+  --border: oklch(0.915 0.014 275);
+  --input: oklch(0.885 0.018 275);
+  --ring: oklch(0.6 0.2 272);
 
-  --sidebar: oklch(0.975 0.006 262);
+  --sidebar: oklch(0.995 0.003 275);
   --sidebar-foreground: var(--foreground);
-  --sidebar-accent: oklch(0.93 0.02 262);
-  --sidebar-accent-foreground: oklch(0.25 0.07 263);
-  --sidebar-border: var(--border);
+  --sidebar-accent: oklch(0.95 0.03 275);
+  --sidebar-accent-foreground: oklch(0.38 0.17 272);
+  --sidebar-border: oklch(0.925 0.012 275);
+
+  /* Marka geçişi: indigo → mor → pembe. */
+  --gradient-brand: linear-gradient(
+    135deg,
+    oklch(0.5 0.22 268) 0%,
+    oklch(0.56 0.24 295) 55%,
+    oklch(0.66 0.21 345) 100%
+  );
+  --shadow-soft: 0 1px 2px oklch(0.25 0.05 275 / 0.04), 0 6px 20px -10px oklch(0.3 0.12 275 / 0.18);
+  --shadow-lift: 0 2px 4px oklch(0.25 0.05 275 / 0.05), 0 16px 40px -16px oklch(0.35 0.16 275 / 0.3);
 }
 
 .dark {
-  --background: oklch(0.17 0.02 265);
-  --foreground: oklch(0.95 0.01 262);
-  --card: oklch(0.21 0.025 265);
+  --background: oklch(0.16 0.025 278);
+  --foreground: oklch(0.95 0.012 275);
+  --card: oklch(0.205 0.03 278);
   --card-foreground: var(--foreground);
-  --popover: oklch(0.22 0.025 265);
+  --popover: oklch(0.22 0.032 278);
   --popover-foreground: var(--foreground);
 
-  --primary: oklch(0.72 0.13 262);
-  --primary-foreground: oklch(0.18 0.04 265);
-  --secondary: oklch(0.27 0.03 265);
-  --secondary-foreground: oklch(0.92 0.02 262);
-  --muted: oklch(0.25 0.025 265);
-  --muted-foreground: oklch(0.7 0.025 262);
-  --accent: oklch(0.29 0.035 265);
-  --accent-foreground: oklch(0.95 0.01 262);
-  --highlight: oklch(0.8 0.13 80);
+  --primary: oklch(0.7 0.16 275);
+  --primary-foreground: oklch(0.17 0.05 278);
+  --secondary: oklch(0.27 0.04 278);
+  --secondary-foreground: oklch(0.92 0.03 275);
+  --muted: oklch(0.245 0.03 278);
+  --muted-foreground: oklch(0.72 0.03 275);
+  --accent: oklch(0.29 0.05 278);
+  --accent-foreground: oklch(0.95 0.015 275);
+  --highlight: oklch(0.8 0.15 78);
   --highlight-foreground: oklch(0.22 0.05 60);
-  --brand: oklch(0.3 0.11 263);
-  --brand-foreground: oklch(0.97 0.01 260);
+  --brand: oklch(0.42 0.18 272);
+  --brand-foreground: oklch(0.98 0.01 275);
 
-  --destructive: oklch(0.65 0.2 25);
-  --destructive-foreground: oklch(0.98 0.01 25);
-  --success: oklch(0.68 0.14 155);
-  --success-foreground: oklch(0.17 0.03 155);
-  --warning: oklch(0.78 0.14 75);
-  --warning-foreground: oklch(0.2 0.05 60);
+  --destructive: oklch(0.68 0.19 20);
+  --destructive-foreground: oklch(0.99 0.01 20);
+  --success: oklch(0.72 0.15 160);
+  --success-foreground: oklch(0.17 0.04 160);
+  --warning: oklch(0.8 0.14 75);
+  --warning-foreground: oklch(0.22 0.05 60);
+  --info: oklch(0.72 0.13 235);
+  --info-foreground: oklch(0.17 0.04 235);
 
-  --border: oklch(0.3 0.025 265);
-  --input: oklch(0.34 0.03 265);
-  --ring: oklch(0.65 0.13 262);
+  --border: oklch(0.29 0.03 278);
+  --input: oklch(0.34 0.035 278);
+  --ring: oklch(0.68 0.16 275);
 
-  --sidebar: oklch(0.19 0.022 265);
+  --sidebar: oklch(0.185 0.028 278);
   --sidebar-foreground: var(--foreground);
-  --sidebar-accent: oklch(0.27 0.035 265);
-  --sidebar-accent-foreground: oklch(0.95 0.01 262);
-  --sidebar-border: oklch(0.27 0.025 265);
+  --sidebar-accent: oklch(0.27 0.05 278);
+  --sidebar-accent-foreground: oklch(0.92 0.06 275);
+  --sidebar-border: oklch(0.26 0.03 278);
+
+  --gradient-brand: linear-gradient(
+    135deg,
+    oklch(0.45 0.2 268) 0%,
+    oklch(0.5 0.22 295) 55%,
+    oklch(0.58 0.2 345) 100%
+  );
+  --shadow-soft: 0 1px 2px oklch(0 0 0 / 0.3), 0 8px 24px -12px oklch(0 0 0 / 0.5);
+  --shadow-lift: 0 2px 4px oklch(0 0 0 / 0.3), 0 18px 44px -16px oklch(0 0 0 / 0.6);
 }
 
 @theme inline {
-  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Plus Jakarta Sans Variable', ui-sans-serif, system-ui, sans-serif;
 
   --radius-xs: calc(var(--radius) * 0.25);
   --radius-sm: calc(var(--radius) * 0.5);
   --radius-md: calc(var(--radius) * 0.75);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.5);
+  --radius-xl: calc(var(--radius) * 1.33);
+  --radius-2xl: calc(var(--radius) * 1.66);
+
+  --shadow-soft: var(--shadow-soft);
+  --shadow-lift: var(--shadow-lift);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -126,6 +154,8 @@
   --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -145,8 +175,35 @@
   }
   body {
     @apply min-h-svh bg-background font-sans text-foreground antialiased;
-    font-feature-settings:
-      'cv11' 1,
-      'ss01' 1;
+    /* Jakarta'nın normal kalınlığı ekranda ince kalıyor: okunabilirlik için biraz artır. */
+    font-weight: 450;
   }
+  h1,
+  h2,
+  h3 {
+    @apply tracking-tight;
+  }
+  /* Sayılar (AKTS, GANO, saatler) hizalı dursun. */
+  table,
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@utility bg-brand-gradient {
+  background-image: var(--gradient-brand);
+}
+
+@utility text-brand-gradient {
+  background-image: var(--gradient-brand);
+  background-clip: text;
+  color: transparent;
+}
+
+/* Sayfa içeriğinin üstünde yumuşak, renkli bir ışıma. */
+@utility app-glow {
+  background-image:
+    radial-gradient(1100px 280px at 15% -60px, oklch(0.72 0.16 280 / 0.12), transparent 70%),
+    radial-gradient(800px 240px at 95% -80px, oklch(0.78 0.15 340 / 0.1), transparent 70%);
+  background-repeat: no-repeat;
 }

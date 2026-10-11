@@ -4,7 +4,7 @@ import type { ComponentProps } from 'react'
 import { cn } from '@/shared/lib/utils'
 
 const alertVariants = cva(
-  'relative grid w-full grid-cols-[0_1fr] items-start gap-y-0.5 rounded-lg border px-4 py-3 text-sm has-[>svg]:grid-cols-[calc(var(--spacing)*4)_1fr] has-[>svg]:gap-x-3 [&>svg]:size-4 [&>svg]:translate-y-0.5 [&>svg]:text-current',
+  'relative grid w-full grid-cols-[0_1fr] items-start gap-y-0.5 rounded-xl border px-4 py-3.5 text-sm has-[>svg]:grid-cols-[calc(var(--spacing)*4)_1fr] has-[>svg]:gap-x-3 [&>svg]:size-4 [&>svg]:translate-y-0.5 [&>svg]:text-current',
   {
     variants: {
       variant: {
@@ -14,7 +14,7 @@ const alertVariants = cva(
         warning:
           'border-warning/50 bg-warning/10 text-foreground [&>svg]:text-warning-foreground dark:[&>svg]:text-warning',
         success: 'border-success/40 bg-success/10 text-foreground [&>svg]:text-success',
-        info: 'border-primary/30 bg-primary/5 text-foreground [&>svg]:text-primary',
+        info: 'border-sky-500/25 bg-sky-500/8 text-foreground [&>svg]:text-sky-600 dark:[&>svg]:text-sky-400',
       },
     },
     defaultVariants: { variant: 'default' },
@@ -35,7 +35,7 @@ export function AlertTitle({ className, ...props }: ComponentProps<'div'>) {
   return (
     <div
       data-slot="alert-title"
-      className={cn('col-start-2 line-clamp-1 min-h-4 font-medium tracking-tight', className)}
+      className={cn('col-start-2 line-clamp-1 min-h-4 font-semibold tracking-tight', className)}
       {...props}
     />
   )

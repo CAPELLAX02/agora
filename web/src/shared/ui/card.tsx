@@ -7,7 +7,7 @@ export function Card({ className, ...props }: ComponentProps<'div'>) {
     <div
       data-slot="card"
       className={cn(
-        'flex flex-col gap-6 rounded-xl border bg-card py-6 text-card-foreground shadow-xs',
+        'flex flex-col gap-6 rounded-xl border border-border/70 bg-card py-6 text-card-foreground shadow-soft',
         className,
       )}
       {...props}
@@ -29,7 +29,7 @@ export function CardHeader({ className, ...props }: ComponentProps<'div'>) {
 }
 
 export function CardTitle({ className, ...props }: ComponentProps<'h2'>) {
-  return <h2 data-slot="card-title" className={cn('leading-none font-semibold', className)} {...props} />
+  return <h2 data-slot="card-title" className={cn('leading-tight font-bold', className)} {...props} />
 }
 
 export function CardDescription({ className, ...props }: ComponentProps<'p'>) {

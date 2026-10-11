@@ -1,14 +1,18 @@
+import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Alert, AlertDescription } from './alert'
 import { Button } from './button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './dialog'
+import type { Tone } from './tone'
 
 /** FormDialog, başlık, hata ve gönder/vazgeç düğmeleri olan küçük bir form penceresidir. */
 export function FormDialog({
   title,
   description,
+  icon,
+  tone,
   error,
   onClose,
   onSubmit,
@@ -17,6 +21,8 @@ export function FormDialog({
 }: {
   title: string
   description?: string
+  icon?: LucideIcon
+  tone?: Tone
   error: string | null
   onClose: () => void
   onSubmit: () => void
@@ -27,7 +33,7 @@ export function FormDialog({
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent closeLabel={t('common.close')}>
-        <DialogHeader>
+        <DialogHeader icon={icon} tone={tone}>
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>

@@ -1,4 +1,4 @@
-import { AlertCircleIcon, InboxIcon, LockIcon } from 'lucide-react'
+import { AlertCircleIcon, InboxIcon, LockIcon, type LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -8,18 +8,34 @@ import { cn } from '@/shared/lib/utils'
 
 import { Alert, AlertDescription } from './alert'
 import { Button } from './button'
+import { IconChip } from './icon-chip'
+import type { Tone } from './tone'
 
-/** EmptyState, listenin boş olduğunu gösterir. */
-export function EmptyState({ children, className }: { children: ReactNode; className?: string }) {
+/** EmptyState, listenin boş olduğunu renkli bir ikonla, sakin bir dille gösterir. */
+export function EmptyState({
+  children,
+  icon = InboxIcon,
+  tone = 'violet',
+  action,
+  className,
+}: {
+  children: ReactNode
+  icon?: LucideIcon
+  tone?: Tone
+  /** action, boş durumdan çıkışı sağlayan isteğe bağlı bir düğmedir. */
+  action?: ReactNode
+  className?: string
+}) {
   return (
     <div
       className={cn(
-        'flex flex-col items-center gap-2 py-10 text-center text-sm text-muted-foreground',
+        'flex flex-col items-center gap-3 px-4 py-12 text-center text-sm text-muted-foreground',
         className,
       )}
     >
-      <InboxIcon className="size-8 opacity-40" aria-hidden />
-      {children}
+      <IconChip icon={icon} tone={tone} size="xl" className="mb-1 rounded-full" />
+      <div className="max-w-sm leading-relaxed">{children}</div>
+      {action}
     </div>
   )
 }
@@ -51,9 +67,8 @@ export function ErrorState({ error, onRetry }: { error: AnyError; onRetry?: () =
 export function ForbiddenState() {
   const { t } = useTranslation()
   return (
-    <Alert variant="warning">
-      <LockIcon />
-      <AlertDescription>{t('errors.forbidden')}</AlertDescription>
-    </Alert>
+    <EmptyState icon={LockIcon} tone="amber">
+      <span role="alert">{t('errors.forbidden')}</span>
+    </EmptyState>
   )
 }

@@ -1,6 +1,11 @@
 import { cn } from '@/shared/lib/utils'
 
-/** Avatar, kişinin baş harflerini gösterir. Fotoğraf altyapısı (MinIO) Faz 5'te. */
+import { toneFor, toneSolid } from './tone'
+
+/**
+ * Avatar, kişinin baş harflerini adına göre seçilen renkli bir zeminde gösterir: aynı kişi
+ * her yerde aynı renktedir. Fotoğraf altyapısı (MinIO) Faz 5'te.
+ */
 export function Avatar({
   firstName,
   lastName,
@@ -15,7 +20,8 @@ export function Avatar({
     <span
       aria-hidden
       className={cn(
-        'inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-semibold text-primary',
+        'inline-flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold tracking-wide shadow-sm ring-2 ring-card',
+        toneSolid[toneFor(`${firstName} ${lastName}`)],
         className,
       )}
     >
