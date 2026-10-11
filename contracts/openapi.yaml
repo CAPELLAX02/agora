@@ -6916,7 +6916,7 @@ components:
               line:
                 type: object
                 description: Dersin karşıladığı müfredat satırı
-                required: [item_id, semester_no, item_type, code, name_tr, name_en, is_compulsory]
+                required: [item_id, semester_no, item_type, code, name_tr, name_en, is_compulsory, remaining]
                 properties:
                   item_id: { type: string, format: uuid }
                   semester_no: { type: integer }
@@ -6925,6 +6925,7 @@ components:
                   name_tr: { type: string }
                   name_en: { type: string }
                   is_compulsory: { type: boolean }
+                  remaining: { type: integer, description: Seçmeli yuvasında kalan ders sayısı (ders satırında 0 ya da 1) }
               status: { $ref: "#/components/schemas/ProgressStatus" }
               last_letter: { type: [string, "null"] }
               prerequisite:

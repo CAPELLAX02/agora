@@ -48,7 +48,7 @@ func (s *Service) Offers(ctx context.Context, sp enrollment.StudentProgram, term
 	if err != nil {
 		return nil, rules.Evaluation{}, err
 	}
-	b, err := s.load(ctx, s.pool, sp, termID, reg.Items)
+	b, err := s.loadWith(ctx, s.pool, sp, termID, reg.Items, true)
 	if err != nil {
 		return nil, rules.Evaluation{}, err
 	}
@@ -116,9 +116,10 @@ func (s *Service) Offers(ctx context.Context, sp enrollment.StudentProgram, term
 			add(id, l, lp, CategoryElective)
 		}
 	}
+	// Not yükseltme: katsayılı harf notuyla geçilen dersler (başarılı/başarısız notlu ders yükseltilmez).
 	for i, lp := range progress.Lines {
 		l := b.lines[i]
-		if !l.IsSlot() && lp.Status == rules.Passed {
+		if !l.IsSlot() && lp.Status == rules.Passed && lp.Last != nil && lp.Last.Graded {
 			for _, id := range b.input.Catalog.Satisfiers(l.CourseID) {
 				add(id, l, lp, CategoryUpgrade)
 			}

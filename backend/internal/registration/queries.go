@@ -150,11 +150,27 @@ func (r *Repository) TermCode(ctx context.Context, termID string) (string, error
 	return code, nil
 }
 
-// Prerequisites, derslerin ön koşullarını döndürür.
-func (r *Repository) Prerequisites(ctx context.Context, courseIDs []string) (map[string][]rules.Prerequisite, error) {
+// OfferedCourses, verilen derslerden dönemde ders seçmeye açık (aktif şubesi olan) olanları döndürür.
+func (r *Repository) OfferedCourses(ctx context.Context, termID string, courseIDs []string) (map[string]bool, error) {
 	rows, err := r.db.Query(ctx, `
-		SELECT course_id, prerequisite_course_id, requirement, group_no
-		FROM curriculum.course_prerequisites WHERE course_id = ANY($1)`, courseIDs)
+		SELECT DISTINCT o.course_id FROM offering.course_offerings o
+		JOIN offering.sections s ON s.offering_id = o.id AND s.status = 'ACTIVE'
+		WHERE o.term_id = $1 AND o.status = 'OPEN' AND o.course_id = ANY($2)`, termID, courseIDs)
+	if err != nil {
+		return nil, fmt.Errorf("registration: açık dersler okunamadı: %w", err)
+	}
+	out := map[string]bool{}
+	var id string
+	if _, err := pgx.ForEachRow(rows, []any{&id}, func() error { out[id] = true; return nil }); err != nil {
+		return nil, fmt.Errorf("registration: açık dersler okunamadı: %w", err)
+	}
+	return out, nil
+}
+
+// AllPrerequisites, bütün ön koşulları ders başına döndürür (küçük bir tablo; önbelleğe alınır).
+func (r *Repository) AllPrerequisites(ctx context.Context) (map[string][]rules.Prerequisite, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT course_id, prerequisite_course_id, requirement, group_no FROM curriculum.course_prerequisites`)
 	if err != nil {
 		return nil, fmt.Errorf("registration: ön koşullar okunamadı: %w", err)
 	}
@@ -173,9 +189,9 @@ func (r *Repository) Prerequisites(ctx context.Context, courseIDs []string) (map
 	return out, nil
 }
 
-// CourseCodes, derslerin kodlarını döndürür.
-func (r *Repository) CourseCodes(ctx context.Context, ids []string) (map[string]string, error) {
-	rows, err := r.db.Query(ctx, `SELECT id, code FROM curriculum.courses WHERE id = ANY($1)`, ids)
+// AllCourseCodes, bütün derslerin kodlarını döndürür (kural mesajları için; önbelleğe alınır).
+func (r *Repository) AllCourseCodes(ctx context.Context) (map[string]string, error) {
+	rows, err := r.db.Query(ctx, `SELECT id, code FROM curriculum.courses`)
 	if err != nil {
 		return nil, fmt.Errorf("registration: ders kodları okunamadı: %w", err)
 	}

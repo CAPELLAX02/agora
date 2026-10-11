@@ -118,6 +118,7 @@ func Attempts(history []enrollment.CourseAttempt) []rules.Attempt {
 			Completed:      h.Status == enrollment.EnrollmentCompleted,
 			Passing:        h.Status == enrollment.EnrollmentCompleted && h.Passing,
 			AttendanceFail: h.AbsenceFail,
+			Graded:         h.Status == enrollment.EnrollmentCompleted && h.CountsInGPA,
 			Letter:         h.Letter,
 			ECTS:           h.ECTS,
 		})

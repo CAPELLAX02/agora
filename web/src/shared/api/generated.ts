@@ -3766,6 +3766,8 @@ export type RegistrationOffer = {
       name_tr: string
       name_en: string
       is_compulsory: boolean
+      /** Seçmeli yuvasında kalan ders sayısı (ders satırında 0 ya da 1) */
+      remaining: number
     }
     status: ProgressStatus
     last_letter: string | null

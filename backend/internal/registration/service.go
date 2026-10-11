@@ -31,11 +31,26 @@ type Service struct {
 	calendar *academic.Repository
 	now      func() time.Time
 	metrics  Metrics
+
+	// Seyrek değişen kural girdileri (bkz. ttlCache).
+	lines   *ttlCache[[]Line]         // müfredat → satırlar
+	catalog *ttlCache[*rules.Catalog] // müfredat → eşdeğerlikler ve havuzlar
+	prereqs *ttlCache[map[string][]rules.Prerequisite]
+	codes   *ttlCache[map[string]string]
+	params  *ttlCache[rules.Params] // gün → yönetmelik parametreleri
 }
+
+// cacheTTL, kural girdilerinin önbellekte kalma süresidir.
+const cacheTTL = 5 * time.Minute
 
 // NewService, bir Service oluşturur. now, pencere kontrolleri için saattir.
 func NewService(pool *pgxpool.Pool, now func() time.Time, metrics Metrics) *Service {
-	return &Service{pool: pool, calendar: academic.NewRepository(pool), now: now, metrics: metrics}
+	return &Service{
+		pool: pool, calendar: academic.NewRepository(pool), now: now, metrics: metrics,
+		lines: newTTLCache[[]Line](cacheTTL), catalog: newTTLCache[*rules.Catalog](cacheTTL),
+		prereqs: newTTLCache[map[string][]rules.Prerequisite](cacheTTL),
+		codes:   newTTLCache[map[string]string](cacheTTL), params: newTTLCache[rules.Params](cacheTTL),
+	}
 }
 
 // Pencere türleri.
@@ -123,8 +138,14 @@ var statusLabels = map[enrollment.Status]string{
 }
 
 // load, kural girdilerini toplar. basket, sepetteki şubelerdir; dönemin kendi kayıtları
-// (onaylanmış sepetin kesin kayıtları) geçmişten çıkarılır: onlar zaten sepettir.
+// (onaylanmış sepetin kesin kayıtları) geçmişten çıkarılır: onlar zaten sepettir. Şube
+// ayrıntıları (öğretim elemanı, program) sadece alınabilir dersler listesinde gerekir; diğer
+// işlemler için hangi derslerin açık olduğunu bilmek yeter.
 func (s *Service) load(ctx context.Context, q db.Querier, sp enrollment.StudentProgram, termID string, basket []Item) (*bundle, error) {
+	return s.loadWith(ctx, q, sp, termID, basket, false)
+}
+
+func (s *Service) loadWith(ctx context.Context, q db.Querier, sp enrollment.StudentProgram, termID string, basket []Item, withSections bool) (*bundle, error) {
 	repo, students := NewRepository(q), enrollment.NewRepository(q)
 	b := &bundle{sp: sp, termID: termID, sections: map[string][]Section{}}
 
@@ -141,17 +162,19 @@ func (s *Service) load(ctx context.Context, q db.Querier, sp enrollment.StudentP
 	if err != nil {
 		return nil, err
 	}
-	params, err := repo.Params(ctx, s.now())
+	day := s.now().Format(time.DateOnly)
+	params, err := s.params.get(day, func() (rules.Params, error) { return repo.Params(ctx, s.now()) })
 	if err != nil {
 		return nil, err
 	}
 
 	catalog := rules.NewCatalog(nil, nil)
 	if sp.Curriculum != nil {
-		if b.lines, err = repo.Lines(ctx, sp.Curriculum.ID); err != nil {
+		id := sp.Curriculum.ID
+		if b.lines, err = s.lines.get(id, func() ([]Line, error) { return repo.Lines(ctx, id) }); err != nil {
 			return nil, err
 		}
-		if catalog, err = repo.Catalog(ctx, sp.Curriculum.ID); err != nil {
+		if catalog, err = s.catalog.get(id, func() (*rules.Catalog, error) { return repo.Catalog(ctx, id) }); err != nil {
 			return nil, err
 		}
 	}
@@ -173,28 +196,25 @@ func (s *Service) load(ctx context.Context, q db.Querier, sp enrollment.StudentP
 	for id := range relevant {
 		ids = append(ids, id)
 	}
-	slices.Sort(ids)
 
-	sections, err := repo.OpenSections(ctx, termID, sp.Program.ID, ids)
-	if err != nil {
-		return nil, err
-	}
 	offered := map[string]bool{}
-	for _, sec := range sections {
-		b.sections[sec.CourseID] = append(b.sections[sec.CourseID], sec)
-		offered[sec.CourseID] = true
+	if withSections {
+		sections, err := repo.OpenSections(ctx, termID, sp.Program.ID, ids)
+		if err != nil {
+			return nil, err
+		}
+		for _, sec := range sections {
+			b.sections[sec.CourseID] = append(b.sections[sec.CourseID], sec)
+			offered[sec.CourseID] = true
+		}
+	} else if offered, err = repo.OfferedCourses(ctx, termID, ids); err != nil {
+		return nil, err
 	}
-	prereqs, err := repo.Prerequisites(ctx, ids)
+	prereqs, err := s.prereqs.get("", func() (map[string][]rules.Prerequisite, error) { return repo.AllPrerequisites(ctx) })
 	if err != nil {
 		return nil, err
 	}
-	codeIDs := slices.Clone(ids)
-	for _, ps := range prereqs {
-		for _, p := range ps {
-			codeIDs = append(codeIDs, p.CourseID)
-		}
-	}
-	codes, err := repo.CourseCodes(ctx, codeIDs)
+	codes, err := s.codes.get("", func() (map[string]string, error) { return repo.AllCourseCodes(ctx) })
 	if err != nil {
 		return nil, err
 	}

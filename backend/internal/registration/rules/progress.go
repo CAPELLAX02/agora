@@ -18,6 +18,7 @@ type Attempt struct {
 	Completed      bool // notu verildi
 	Passing        bool // harf notu geçer not
 	AttendanceFail bool // devamsızlıktan kaldı (F1)
+	Graded         bool // katsayılı harf notu (not ortalamasına girer; BŞR, MUAF girmez)
 	Letter         string
 	ECTS           float64
 }

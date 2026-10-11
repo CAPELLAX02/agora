@@ -558,6 +558,7 @@ type offerLineResponse struct {
 	NameTR       string `json:"name_tr"`
 	NameEN       string `json:"name_en"`
 	IsCompulsory bool   `json:"is_compulsory"`
+	Remaining    int    `json:"remaining"`
 }
 
 type offerResponse struct {
@@ -610,7 +611,7 @@ func (h *Handler) offer(w http.ResponseWriter, r *http.Request) {
 			Category: string(o.Category), Kind: string(o.Kind), Status: string(o.Status), LastLetter: optional(o.LastLetter),
 			Line: offerLineResponse{
 				ItemID: o.Line.ID, SemesterNo: o.Line.Semester, ItemType: "COURSE", Code: o.Line.Code,
-				NameTR: o.Line.NameTR, NameEN: o.Line.NameEN, IsCompulsory: o.Line.Compulsory,
+				NameTR: o.Line.NameTR, NameEN: o.Line.NameEN, IsCompulsory: o.Line.Compulsory, Remaining: o.Remaining,
 			},
 			Sections: make([]sectionResponse, 0, len(o.Sections)), BasketItemID: optional(o.BasketItemID),
 		}
