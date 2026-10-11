@@ -147,19 +147,35 @@ func NewService(pool *pgxpool.Pool, calendar Calendar, now func() time.Time) *Se
 func (s *Service) window(ctx context.Context, sc SectionContext, c Category) (EntryWindow, error) {
 	var res EntryWindow
 	for _, code := range entryWindows(c) {
-		w, err := s.calendar.Window(ctx, sc.TermID, code, academic.WindowTarget{FacultyID: sc.FacultyID}, s.now())
-		if errors.Is(err, academic.ErrUnknownEventType) {
-			continue
-		}
+		w, err := s.windowOf(ctx, sc, code)
 		if err != nil {
-			return EntryWindow{}, fmt.Errorf("grading: not girişi penceresi okunamadı: %w", err)
+			return EntryWindow{}, err
 		}
-		if w.Open && w.Current != nil {
-			return EntryWindow{Open: true, StartsAt: &w.Current.StartsAt, EndsAt: &w.Current.EndsAt}, nil
+		if w.Open {
+			return w, nil
 		}
-		if w.Next != nil && (res.NextStartsAt == nil || w.Next.StartsAt.Before(*res.NextStartsAt)) {
-			res.NextStartsAt = &w.Next.StartsAt
+		if w.NextStartsAt != nil && (res.NextStartsAt == nil || w.NextStartsAt.Before(*res.NextStartsAt)) {
+			res.NextStartsAt = w.NextStartsAt
 		}
+	}
+	return res, nil
+}
+
+// windowOf, bir takvim penceresinin şubenin birimindeki durumudur. Tanımsız tür kapalı sayılır.
+func (s *Service) windowOf(ctx context.Context, sc SectionContext, code string) (EntryWindow, error) {
+	w, err := s.calendar.Window(ctx, sc.TermID, code, academic.WindowTarget{FacultyID: sc.FacultyID}, s.now())
+	if errors.Is(err, academic.ErrUnknownEventType) {
+		return EntryWindow{}, nil
+	}
+	if err != nil {
+		return EntryWindow{}, fmt.Errorf("grading: %s penceresi okunamadı: %w", code, err)
+	}
+	var res EntryWindow
+	if w.Open && w.Current != nil {
+		res = EntryWindow{Open: true, StartsAt: &w.Current.StartsAt, EndsAt: &w.Current.EndsAt}
+	}
+	if !w.Open && w.Next != nil {
+		res.NextStartsAt = &w.Next.StartsAt
 	}
 	return res, nil
 }
@@ -245,7 +261,11 @@ func (s *Service) gradebookComponents(ctx context.Context, sc SectionContext) ([
 }
 
 func (s *Service) gradebookStudents(ctx context.Context, sectionID string) ([]GradebookStudent, error) {
-	rows, err := s.pool.Query(ctx, `
+	return s.gradebookStudentsQ(ctx, s.pool, sectionID)
+}
+
+func (s *Service) gradebookStudentsQ(ctx context.Context, q db.Querier, sectionID string) ([]GradebookStudent, error) {
+	rows, err := q.Query(ctx, `
 		SELECT e.id, st.id, st.student_no, pe.first_name, pe.last_name, p.code, p.name_tr, p.name_en,
 		       e.attempt_no, e.attendance_status
 		FROM enrollment.enrollments e
@@ -276,7 +296,7 @@ func (s *Service) gradebookStudents(ctx context.Context, sectionID string) ([]Gr
 	for i, st := range students {
 		index[st.EnrollmentID] = i
 	}
-	rows, err = s.pool.Query(ctx, `
+	rows, err = q.Query(ctx, `
 		SELECT sc.enrollment_id, sc.component_id, sc.status, coalesce((sc.score * 100)::int8, 0)
 		FROM grading.assessment_scores sc JOIN grading.assessment_components ac ON ac.id = sc.component_id
 		WHERE ac.section_id = $1`, sectionID)
@@ -342,6 +362,9 @@ type ScoreInput struct {
 // (iyimser kilit). Değişen not yoksa sürüm artmaz: aynı isteğin tekrarı zararsızdır.
 // Değişen not sayısını döndürür.
 func (s *Service) SetScores(ctx context.Context, actorID string, ref ComponentRef, version int, items []ScoreInput) (int, error) {
+	if ref.Section.GradesPublishedAt != nil {
+		return 0, ErrGradesPublished
+	}
 	if ref.Category == CategoryMakeup {
 		return 0, ErrMakeupNotAvailable
 	}
@@ -358,6 +381,9 @@ func (s *Service) SetScores(ctx context.Context, actorID string, ref ComponentRe
 
 	changed := 0
 	err = db.InTx(ctx, s.pool, func(tx pgx.Tx) error {
+		if err := lockSection(ctx, tx, ref.Section.SectionID, false); err != nil {
+			return err
+		}
 		var (
 			current int
 			locked  *time.Time
@@ -493,8 +519,8 @@ func (s *Service) componentScores(ctx context.Context, q db.Querier, ref Compone
 	return out, rows.Err()
 }
 
-// Publish, bileşenin notlarını öğrencilere yayımlar. Zaten yayımlanmışsa bir şey değişmez.
-func (s *Service) Publish(ctx context.Context, actorID string, ref ComponentRef) error {
+// PublishComponent, bileşenin notlarını öğrencilere yayımlar. Zaten yayımlanmışsa bir şey değişmez.
+func (s *Service) PublishComponent(ctx context.Context, actorID string, ref ComponentRef) error {
 	if ref.Section.LockedAt == nil {
 		return ErrPlanNotLocked
 	}
@@ -540,6 +566,9 @@ type AttendanceInput struct {
 func (s *Service) SetAttendance(ctx context.Context, actorID string, sc SectionContext, items []AttendanceInput) (int, error) {
 	changed := 0
 	err := db.InTx(ctx, s.pool, func(tx pgx.Tx) error {
+		if err := lockSection(ctx, tx, sc.SectionID, false); err != nil {
+			return err
+		}
 		rows, err := tx.Query(ctx, `
 			SELECT id, attendance_status FROM enrollment.enrollments
 			WHERE section_id = $1 AND status <> 'DROPPED' FOR UPDATE`, sc.SectionID)

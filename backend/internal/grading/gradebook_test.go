@@ -103,7 +103,13 @@ type gradebookServer struct {
 	*server
 	pool     *pgxpool.Pool
 	calendar *fakeCalendar
+	grants   grants
 	fx       gradebookFixture
+}
+
+// addGrant, kullanıcıya test sırasında bir yetki daha verir.
+func (s *gradebookServer) addGrant(userID string, g authz.Grant) {
+	s.grants[userID] = append(s.grants[userID], g)
 }
 
 func newGradebookServer(t *testing.T) *gradebookServer {
@@ -139,7 +145,7 @@ func newGradebookServer(t *testing.T) *gradebookServer {
 	rt := authz.NewRouter(mux, authenticate, resolver, logger)
 	grading.NewHandler(grading.NewRepository(pool), logger).Register(rt)
 	grading.NewGradebookHandler(grading.NewService(pool, calendar, time.Now), logger).Register(rt)
-	return &gradebookServer{server: &server{t: t, h: mux, fx: fx.fixture}, pool: pool, calendar: calendar, fx: fx}
+	return &gradebookServer{server: &server{t: t, h: mux, fx: fx.fixture}, pool: pool, calendar: calendar, grants: resolver, fx: fx}
 }
 
 var mfa = map[string]string{"X-Test-MFA": "1"}

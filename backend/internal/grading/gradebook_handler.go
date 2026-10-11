@@ -36,6 +36,7 @@ func (h *GradebookHandler) Register(rt *authz.Router) {
 	rt.HandleFunc("PUT /api/v1/assessment-components/{id}/scores", authz.Permission(permScore), h.setScores)
 	rt.HandleFunc("POST /api/v1/assessment-components/{id}/publish", authz.Permission(permScore), h.publish)
 	rt.HandleFunc("PUT /api/v1/sections/{id}/attendance", authz.Permission(permScore), h.setAttendance)
+	h.registerLetters(rt)
 }
 
 // --- Yetki ---------------------------------------------------------------------
@@ -128,12 +129,13 @@ type termRefResponse struct {
 }
 
 type gradebookSectionResponse struct {
-	ID             string            `json:"id"`
-	SectionCode    string            `json:"section_code"`
-	Course         courseRefResponse `json:"course"`
-	Term           termRefResponse   `json:"term"`
-	PlanLocked     bool              `json:"plan_locked"`
-	InstructorRole *string           `json:"instructor_role"`
+	ID                string            `json:"id"`
+	SectionCode       string            `json:"section_code"`
+	Course            courseRefResponse `json:"course"`
+	Term              termRefResponse   `json:"term"`
+	PlanLocked        bool              `json:"plan_locked"`
+	InstructorRole    *string           `json:"instructor_role"`
+	GradesPublishedAt *time.Time        `json:"grades_published_at"`
 }
 
 type gradebookResponse struct {
@@ -153,6 +155,7 @@ func toGradebookResponse(r *http.Request, g Gradebook) gradebookResponse {
 			ID: sc.SectionID, SectionCode: sc.SectionCode,
 			Course: courseRefResponse{ID: sc.CourseID, Code: sc.CourseCode, NameTR: sc.CourseNameTR, NameEN: sc.CourseNameEN, GradingMode: sc.GradingMode},
 			Term:   termRefResponse{ID: sc.TermID, Code: sc.TermCode}, PlanLocked: sc.LockedAt != nil, InstructorRole: optional(sc.InstructorRole),
+			GradesPublishedAt: sc.GradesPublishedAt,
 		},
 		Components:  make([]gradebookComponentResponse, 0, len(g.Components)),
 		Students:    make([]gradebookStudentResponse, 0, len(g.Students)),
@@ -169,8 +172,8 @@ func toGradebookResponse(r *http.Request, g Gradebook) gradebookResponse {
 			ID: c.ID, Type: toTypeResponse(c.Type), SequenceNo: c.SequenceNo,
 			LabelTR: c.Label(false, numbered), LabelEN: c.Label(true, numbered), Weight: c.Weight,
 			Version: c.Version, PublishedAt: c.PublishedAt,
-			EntryWindow: entryWindowResponse{Open: c.Window.Open, StartsAt: c.Window.StartsAt, EndsAt: c.Window.EndsAt, NextStartsAt: c.Window.NextStartsAt},
-			Editable:    canEnter && sc.LockedAt != nil && c.Window.Open && c.Type.Category != CategoryMakeup,
+			EntryWindow: toWindowResponse(c.Window),
+			Editable:    canEnter && sc.LockedAt != nil && sc.GradesPublishedAt == nil && c.Window.Open && c.Type.Category != CategoryMakeup,
 			ScoredCount: c.Scored, AbsentCount: c.Absent,
 		}
 		if c.Average != nil {
@@ -320,7 +323,7 @@ func (h *GradebookHandler) publish(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if h.gradebookFailed(w, r, h.svc.Publish(r.Context(), actorID(r), ref)) {
+	if h.gradebookFailed(w, r, h.svc.PublishComponent(r.Context(), actorID(r), ref)) {
 		return
 	}
 	h.writeGradebook(w, r, ref.Section.SectionID)
@@ -380,7 +383,10 @@ func (h *GradebookHandler) setAttendance(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *GradebookHandler) gradebookFailed(w http.ResponseWriter, r *http.Request, err error) bool {
-	var unknown *UnknownEnrollmentsError
+	var (
+		unknown    *UnknownEnrollmentsError
+		incomplete *IncompleteError
+	)
 	switch {
 	case err == nil:
 		return false
@@ -396,6 +402,23 @@ func (h *GradebookHandler) gradebookFailed(w http.ResponseWriter, r *http.Reques
 		h.problem(w, r, http.StatusConflict, "MAKEUP_NOT_AVAILABLE", "Bütünleme notları harf notları ilan edildikten sonra girilir.")
 	case errors.Is(err, ErrNoScores):
 		h.problem(w, r, http.StatusConflict, "NO_SCORES", "Bu bileşende yayımlanacak not yok.")
+	case errors.Is(err, ErrGradesPublished):
+		h.problem(w, r, http.StatusConflict, "GRADES_PUBLISHED", "Harf notları ilan edildi; notlar artık sadece not düzeltme talebiyle değişir.")
+	case errors.Is(err, ErrPublishWindowClosed):
+		h.problem(w, r, http.StatusConflict, "PUBLISH_WINDOW_CLOSED", "Harf notları final not girişi ya da elle harf notu atama penceresinde ilan edilir.")
+	case errors.Is(err, ErrOverrideWindowClosed):
+		h.problem(w, r, http.StatusConflict, "MANUAL_LETTER_WINDOW_CLOSED", "Elle harf notu atama penceresi kapalı.")
+	case errors.Is(err, ErrLetterNotAllowed):
+		httpx.ValidationFailed(w, r, []httpx.FieldError{{Field: "items.letter", Message: "Bu harf bu derse elle verilemez."}})
+	case errors.As(err, &incomplete):
+		fields := make([]httpx.FieldError, 0, len(incomplete.Students))
+		for _, s := range incomplete.Students {
+			fields = append(fields, httpx.FieldError{Field: "students", Message: s})
+		}
+		_ = httpx.WriteProblem(w, r, httpx.Problem{
+			Status: http.StatusConflict, Code: "GRADES_INCOMPLETE", Errors: fields,
+			Detail: "Notu eksik öğrenciler var: eksik bileşenleri girin ya da elle harf notu verin.",
+		})
 	default:
 		return h.failed(w, r, err)
 	}
