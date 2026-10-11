@@ -1018,6 +1018,175 @@ const injectedRtkApi = api
         }),
         providesTags: ['Ders se\u00E7me'],
       }),
+      getRegistration: build.query<GetRegistrationApiResponse, GetRegistrationApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/student-programs/${queryArg.id}/registration`,
+          params: {
+            term_id: queryArg.termId,
+          },
+        }),
+        providesTags: ['Ders se\u00E7me'],
+      }),
+      listRegistrationOffer: build.query<ListRegistrationOfferApiResponse, ListRegistrationOfferApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/student-programs/${queryArg.id}/registration/offer`,
+          params: {
+            term_id: queryArg.termId,
+          },
+        }),
+        providesTags: ['Ders se\u00E7me'],
+      }),
+      listRegistrationEvents: build.query<ListRegistrationEventsApiResponse, ListRegistrationEventsApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/student-programs/${queryArg.id}/registration/events`,
+          params: {
+            term_id: queryArg.termId,
+          },
+        }),
+        providesTags: ['Ders se\u00E7me'],
+      }),
+      addRegistrationItem: build.mutation<AddRegistrationItemApiResponse, AddRegistrationItemApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/student-programs/${queryArg.id}/registration/items`,
+          method: 'POST',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['Ders se\u00E7me'],
+      }),
+      changeRegistrationSection: build.mutation<
+        ChangeRegistrationSectionApiResponse,
+        ChangeRegistrationSectionApiArg
+      >({
+        query: (queryArg) => ({
+          url: `/api/v1/student-programs/${queryArg.id}/registration/items/${queryArg.itemId}`,
+          method: 'PUT',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['Ders se\u00E7me'],
+      }),
+      removeRegistrationItem: build.mutation<RemoveRegistrationItemApiResponse, RemoveRegistrationItemApiArg>(
+        {
+          query: (queryArg) => ({
+            url: `/api/v1/student-programs/${queryArg.id}/registration/items/${queryArg.itemId}`,
+            method: 'DELETE',
+          }),
+          invalidatesTags: ['Ders se\u00E7me'],
+        },
+      ),
+      submitRegistration: build.mutation<SubmitRegistrationApiResponse, SubmitRegistrationApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/student-programs/${queryArg.id}/registration/submit`,
+          method: 'POST',
+          headers: {
+            'If-Match': queryArg['If-Match'],
+          },
+          params: {
+            term_id: queryArg.termId,
+          },
+        }),
+        invalidatesTags: ['Ders se\u00E7me'],
+      }),
+      withdrawRegistration: build.mutation<WithdrawRegistrationApiResponse, WithdrawRegistrationApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/student-programs/${queryArg.id}/registration/withdraw`,
+          method: 'POST',
+          headers: {
+            'If-Match': queryArg['If-Match'],
+          },
+          params: {
+            term_id: queryArg.termId,
+          },
+        }),
+        invalidatesTags: ['Ders se\u00E7me'],
+      }),
+      grantRegistrationExtension: build.mutation<
+        GrantRegistrationExtensionApiResponse,
+        GrantRegistrationExtensionApiArg
+      >({
+        query: (queryArg) => ({
+          url: `/api/v1/student-programs/${queryArg.id}/registration/extension`,
+          method: 'POST',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['Ders se\u00E7me'],
+      }),
+      listRegistrations: build.query<ListRegistrationsApiResponse, ListRegistrationsApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/registrations`,
+          params: {
+            term_id: queryArg.termId,
+            status: queryArg.status,
+            faculty_id: queryArg.facultyId,
+            department_id: queryArg.departmentId,
+            program_id: queryArg.programId,
+            q: queryArg.q,
+            cursor: queryArg.cursor,
+            limit: queryArg.limit,
+          },
+        }),
+        providesTags: ['Ders se\u00E7me'],
+      }),
+      bulkApproveRegistrations: build.mutation<
+        BulkApproveRegistrationsApiResponse,
+        BulkApproveRegistrationsApiArg
+      >({
+        query: (queryArg) => ({
+          url: `/api/v1/registrations/bulk-approve`,
+          method: 'POST',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['Ders se\u00E7me'],
+      }),
+      getRegistrationById: build.query<GetRegistrationByIdApiResponse, GetRegistrationByIdApiArg>({
+        query: (queryArg) => ({ url: `/api/v1/registrations/${queryArg.id}` }),
+        providesTags: ['Ders se\u00E7me'],
+      }),
+      approveRegistration: build.mutation<ApproveRegistrationApiResponse, ApproveRegistrationApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/registrations/${queryArg.id}/approve`,
+          method: 'POST',
+          body: queryArg.body,
+          headers: {
+            'If-Match': queryArg['If-Match'],
+          },
+        }),
+        invalidatesTags: ['Ders se\u00E7me'],
+      }),
+      rejectRegistration: build.mutation<RejectRegistrationApiResponse, RejectRegistrationApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/registrations/${queryArg.id}/reject`,
+          method: 'POST',
+          body: queryArg.body,
+          headers: {
+            'If-Match': queryArg['If-Match'],
+          },
+        }),
+        invalidatesTags: ['Ders se\u00E7me'],
+      }),
+      revokeRegistration: build.mutation<RevokeRegistrationApiResponse, RevokeRegistrationApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/registrations/${queryArg.id}/revoke`,
+          method: 'POST',
+          body: queryArg.body,
+          headers: {
+            'If-Match': queryArg['If-Match'],
+          },
+        }),
+        invalidatesTags: ['Ders se\u00E7me'],
+      }),
+      listAdviseeRegistrations: build.query<
+        ListAdviseeRegistrationsApiResponse,
+        ListAdviseeRegistrationsApiArg
+      >({
+        query: (queryArg) => ({
+          url: `/api/v1/me/advisee-registrations`,
+          params: {
+            term_id: queryArg.termId,
+            status: queryArg.status,
+          },
+        }),
+        providesTags: ['Ders se\u00E7me'],
+      }),
       listEligibleAdvisors: build.query<ListEligibleAdvisorsApiResponse, ListEligibleAdvisorsApiArg>({
         query: (queryArg) => ({
           url: `/api/v1/departments/${queryArg.id}/advisors`,
@@ -2024,6 +2193,162 @@ export type GetStudentProgressApiResponse = /** status 200 Ders durumu */ Studen
 export type GetStudentProgressApiArg = {
   /** Geçerli bir UUID değilse 404 döner. */
   id: string
+}
+export type GetRegistrationApiResponse = /** status 200 Kaydın güncel hali */ Registration
+export type GetRegistrationApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Dönem; verilmezse içinde bulunulan dönem */
+  termId?: string
+}
+export type ListRegistrationOfferApiResponse =
+  /** status 200 Alınabilir dersler (kategori sırasıyla) */ RegistrationOffer
+export type ListRegistrationOfferApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Dönem; verilmezse içinde bulunulan dönem */
+  termId?: string
+}
+export type ListRegistrationEventsApiResponse = /** status 200 Olaylar */ {
+  items: RegistrationEvent[]
+}
+export type ListRegistrationEventsApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Dönem; verilmezse içinde bulunulan dönem */
+  termId?: string
+}
+export type AddRegistrationItemApiResponse = /** status 201 Şube sepete eklendi */ Registration
+export type AddRegistrationItemApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: {
+    section_id: string
+  }
+}
+export type ChangeRegistrationSectionApiResponse = /** status 200 Kaydın güncel hali */ Registration
+export type ChangeRegistrationSectionApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  itemId: string
+  body: {
+    /** Aynı dersin başka bir şubesi */
+    section_id: string
+  }
+}
+export type RemoveRegistrationItemApiResponse = /** status 200 Kaydın güncel hali */ Registration
+export type RemoveRegistrationItemApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  itemId: string
+}
+export type SubmitRegistrationApiResponse = /** status 200 Kaydın güncel hali */ Registration
+export type SubmitRegistrationApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
+  'If-Match': string
+  /** Dönem; verilmezse içinde bulunulan dönem */
+  termId?: string
+}
+export type WithdrawRegistrationApiResponse = /** status 200 Kaydın güncel hali */ Registration
+export type WithdrawRegistrationApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
+  'If-Match': string
+  /** Dönem; verilmezse içinde bulunulan dönem */
+  termId?: string
+}
+export type GrantRegistrationExtensionApiResponse = /** status 200 Kaydın güncel hali */ Registration
+export type GrantRegistrationExtensionApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: {
+    /** Verilmezse içinde bulunulan dönem */
+    term_id?: string
+    until: string
+    reason: string
+  }
+}
+export type ListRegistrationsApiResponse = /** status 200 Özetler */ RegistrationSummaryList
+export type ListRegistrationsApiArg = {
+  /** Dönem; verilmezse içinde bulunulan dönem */
+  termId?: string
+  status?: RegistrationStatus
+  facultyId?: string
+  departmentId?: string
+  programId?: string
+  /** Öğrenci numarası ya da ad */
+  q?: string
+  /** Önceki yanıtın `next_cursor` değeri (opak) */
+  cursor?: string
+  limit?: number
+}
+export type BulkApproveRegistrationsApiResponse = /** status 200 Sonuçlar */ {
+  approved: number
+  failed: number
+  results: {
+    id: string
+    ok: boolean
+    /** `RULE_VIOLATION` · `VERSION_MISMATCH` · `INVALID_REGISTRATION_STATE` · `WINDOW_CLOSED` · `FORBIDDEN` · `NOT_FOUND` */
+    code: string | null
+    message: string | null
+  }[]
+}
+export type BulkApproveRegistrationsApiArg = {
+  body: {
+    items: {
+      id: string
+      /** Danışmanın incelediği sürüm */
+      version: number
+    }[]
+    note?: string
+  }
+}
+export type GetRegistrationByIdApiResponse = /** status 200 Kaydın güncel hali */ Registration
+export type GetRegistrationByIdApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type ApproveRegistrationApiResponse = /** status 200 Kaydın güncel hali */ Registration
+export type ApproveRegistrationApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
+  'If-Match': string
+  body: {
+    /** Danışman notu ya da gerekçe (red, geri alma ve müdahalede en az 5 karakter) */
+    note?: string
+  }
+}
+export type RejectRegistrationApiResponse = /** status 200 Kaydın güncel hali */ Registration
+export type RejectRegistrationApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
+  'If-Match': string
+  body: {
+    /** Danışman notu ya da gerekçe (red, geri alma ve müdahalede en az 5 karakter) */
+    note: string
+  }
+}
+export type RevokeRegistrationApiResponse = /** status 200 Kaydın güncel hali */ Registration
+export type RevokeRegistrationApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
+  'If-Match': string
+  body: {
+    /** Danışman notu ya da gerekçe (red, geri alma ve müdahalede en az 5 karakter) */
+    note: string
+  }
+}
+export type ListAdviseeRegistrationsApiResponse = /** status 200 Özetler */ RegistrationSummaryList
+export type ListAdviseeRegistrationsApiArg = {
+  /** Dönem; verilmezse içinde bulunulan dönem */
+  termId?: string
+  status?: RegistrationStatus
 }
 export type ListEligibleAdvisorsApiResponse = /** status 200 Danışmanlar (soyada göre sıralı) */ {
   items: EligibleAdvisor[]
@@ -3048,6 +3373,238 @@ export type StudentProgress = {
   /** Müfredatla eşleşmeyen derslerin son denemeleri */
   extra: AttemptRef[]
 }
+export type RegistrationStatus = 'NOT_STARTED' | 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED'
+export type RegistrationSlot = {
+  day: number
+  start: string
+  end: string
+  kind: 'THEORY' | 'PRACTICE' | 'LAB'
+  classroom: string | null
+}
+export type RegistrationSection = {
+  id: string
+  offering_id: string
+  course: {
+    id: string
+    code: string
+    name_tr: string
+    name_en: string
+    ects: number
+    credit: number
+  }
+  section_code: string
+  label: string
+  capacity: number
+  /** Ayrılmış yer (sepetlerdeki şube sayısı) */
+  enrolled: number
+  /** Öğrenci bu şubede yer bulabilir mi */
+  available: boolean
+  quota_mode: 'OPEN' | 'RESERVED'
+  /** Ayrılmış kontenjanlı şubede öğrencinin programına kalan yer (ayrılmamışsa 0) */
+  quota_left: number | null
+  language: 'TR' | 'EN'
+  /** Unvanlı adlar, sorumlu önce */
+  instructors: string[]
+  slots: RegistrationSlot[]
+}
+export type RegistrationItem = {
+  id: string
+  /** Kalınan dersin tekrarı, not yükseltme, kalınan seçmelinin yerine başka seçmeli */
+  kind: 'NEW' | 'REPEAT_FAILED' | 'REPEAT_UPGRADE' | 'ELECTIVE_REPLACEMENT'
+  /** Karşıladığı müfredat satırı */
+  curriculum_item_id: string | null
+  ects: number
+  source: 'REGISTRATION' | 'ADD_DROP'
+  added_at: string
+  section: RegistrationSection
+}
+export type RuleViolation = {
+  /** Kural kodu */
+  code:
+    | 'HOLD'
+    | 'PROGRAM_NOT_ACTIVE'
+    | 'NO_CURRICULUM'
+    | 'EMPTY_BASKET'
+    | 'DUPLICATE_COURSE'
+    | 'NOT_IN_CURRICULUM'
+    | 'PREREQUISITE'
+    | 'SCHEDULE_CONFLICT'
+    | 'ECTS_LIMIT'
+    | 'FIRST_YEAR_COMPULSORY'
+    | 'REPEAT_PRIORITY'
+    | 'MAX_DURATION'
+    | 'REPEAT_UPGRADE'
+    | 'ELECTIVE_SLOT_EXCEEDED'
+  /** ERROR işlemi engeller, WARNING bilgi verir */
+  severity: 'ERROR' | 'WARNING'
+  course_ids: string[]
+  /** Ör. limit, total, courses, missing */
+  params: {
+    [key: string]: any
+  }
+  /** Türkçe açıklama */
+  message: string
+}
+export type RegistrationWindow = {
+  /** Takvim penceresi açık */
+  open: boolean
+  /** Pencere kapalı ama kayda tanınan ek süre sürüyor */
+  extended: boolean
+  starts_at: string | null
+  /** Bitiş anı hariç: [starts_at, ends_at) */
+  ends_at: string | null
+  next_starts_at: string | null
+}
+export type Registration = {
+  /** Henüz sepet yoksa null */
+  id: string | null
+  student_program_id: string
+  student: {
+    id: string
+    student_no: string
+    first_name: string
+    last_name: string
+    program_code: string
+    semester: number
+    class_level: number
+    gpa: number | null
+    /** Danışmanın unvanlı adı */
+    advisor: string | null
+  }
+  term: {
+    id: string
+    code: string
+  }
+  status: RegistrationStatus
+  items: RegistrationItem[]
+  total_ects: number
+  /** GANO'ya göre bu dönemki AKTS üst sınırı */
+  ects_limit: number
+  /** Gönderim anındaki sınır */
+  max_ects_allowed: number | null
+  /** Gönderim anındaki GANO */
+  gpa_snapshot: number | null
+  submitted_at: string | null
+  decided_at: string | null
+  /** Karar verenin adı */
+  decided_by: string | null
+  decision_note: string | null
+  extension_until: string | null
+  extension_reason: string | null
+  evaluation: {
+    /** Gönderimi (ve onayı) engelleyen hata var */
+    blocking: boolean
+    violations: RuleViolation[]
+  }
+  registration_window: RegistrationWindow
+  approval_window: RegistrationWindow
+  /** İsteği yapanın bu kayıtta şu an yapabilecekleri */
+  actions: {
+    can_edit: boolean
+    can_submit: boolean
+    can_withdraw: boolean
+    can_approve: boolean
+    can_reject: boolean
+    can_revoke: boolean
+    can_extend: boolean
+  }
+  /** Son işlemin (ekleme, şube değiştirme) hata olmayan kural sonuçları */
+  warnings: RuleViolation[]
+  version: number
+}
+export type RegistrationOffer = {
+  term: {
+    id: string
+    code: string
+  }
+  semester: number
+  ects_limit: number
+  /** Sepetteki AKTS */
+  total_ects: number
+  items: {
+    course: {
+      id: string
+      code: string
+      name_tr: string
+      name_en: string
+      ects: number
+      credit: number
+    }
+    /** Alttan, dönem dersi, seçmeli, üst yarıyıl, not yükseltme */
+    category: 'REPEAT' | 'CURRENT' | 'ELECTIVE' | 'UPPER' | 'UPGRADE'
+    kind: 'NEW' | 'REPEAT_FAILED' | 'REPEAT_UPGRADE' | 'ELECTIVE_REPLACEMENT'
+    /** Dersin karşıladığı müfredat satırı */
+    line: {
+      item_id: string
+      semester_no: number
+      item_type: 'COURSE' | 'ELECTIVE_SLOT'
+      code: string
+      name_tr: string
+      name_en: string
+      is_compulsory: boolean
+    }
+    status: ProgressStatus
+    last_letter: string | null
+    prerequisite: null | RuleViolation
+    sections: RegistrationSection[]
+    /** Ders sepetteyse sepet satırı */
+    basket_item_id: string | null
+  }[]
+}
+export type RegistrationEvent = {
+  id: number
+  type:
+    | 'CREATED'
+    | 'ITEM_ADDED'
+    | 'ITEM_REMOVED'
+    | 'SECTION_CHANGED'
+    | 'RETURNED_TO_DRAFT'
+    | 'SUBMITTED'
+    | 'WITHDRAWN'
+    | 'APPROVED'
+    | 'REJECTED'
+    | 'APPROVAL_REVOKED'
+    | 'EXTENSION_GRANTED'
+    | 'EXPIRED'
+    | 'ADD_DROP_REQUESTED'
+    | 'ADD_DROP_APPROVED'
+    | 'ADD_DROP_REJECTED'
+    | 'ADD_DROP_APPLIED'
+    | 'ADD_DROP_WITHDRAWN'
+  /** Yapanın adı; sistem işinde null */
+  actor: string | null
+  payload: {
+    [key: string]: any
+  }
+  occurred_at: string
+}
+export type RuleProblem = Problem & {
+  violations: RuleViolation[]
+}
+export type RegistrationSummary = {
+  student_program_id: string
+  student: StudentRef
+  program_code: string
+  semester: number
+  gpa: number | null
+  registration_id: string | null
+  status: RegistrationStatus
+  total_ects: number
+  item_count: number
+  submitted_at: string | null
+  /** Toplu onayda gönderilecek sürüm */
+  version: number
+  /** Ders seçmeyi kapatan aktif engeli var */
+  blocked: boolean
+}
+export type RegistrationSummaryList = {
+  term: {
+    id: string
+    code: string
+  }
+  items: RegistrationSummary[]
+  next_cursor: string | null
+}
 export type EligibleAdvisor = {
   staff_id: string
   staff_no: string
@@ -3275,6 +3832,28 @@ export const {
   useLazyListCourseHistoryQuery,
   useGetStudentProgressQuery,
   useLazyGetStudentProgressQuery,
+  useGetRegistrationQuery,
+  useLazyGetRegistrationQuery,
+  useListRegistrationOfferQuery,
+  useLazyListRegistrationOfferQuery,
+  useListRegistrationEventsQuery,
+  useLazyListRegistrationEventsQuery,
+  useAddRegistrationItemMutation,
+  useChangeRegistrationSectionMutation,
+  useRemoveRegistrationItemMutation,
+  useSubmitRegistrationMutation,
+  useWithdrawRegistrationMutation,
+  useGrantRegistrationExtensionMutation,
+  useListRegistrationsQuery,
+  useLazyListRegistrationsQuery,
+  useBulkApproveRegistrationsMutation,
+  useGetRegistrationByIdQuery,
+  useLazyGetRegistrationByIdQuery,
+  useApproveRegistrationMutation,
+  useRejectRegistrationMutation,
+  useRevokeRegistrationMutation,
+  useListAdviseeRegistrationsQuery,
+  useLazyListAdviseeRegistrationsQuery,
   useListEligibleAdvisorsQuery,
   useLazyListEligibleAdvisorsQuery,
   useListMyProgramsQuery,

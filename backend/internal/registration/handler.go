@@ -18,18 +18,19 @@ import (
 type Handler struct {
 	pool       *pgxpool.Pool
 	repo       *Repository
+	service    *Service
 	students   *enrollment.Repository
 	studentSvc *enrollment.Service
 	logger     *slog.Logger
-	now        func() time.Time
 }
 
-// NewHandler, bir Handler oluşturur. now, pencere kontrolleri için saattir (testlerde sabitlenir).
-func NewHandler(pool *pgxpool.Pool, logger *slog.Logger, now func() time.Time) *Handler {
+// NewHandler, bir Handler oluşturur. now, pencere kontrolleri için saattir (testlerde
+// sabitlenir); metrics nil olabilir.
+func NewHandler(pool *pgxpool.Pool, logger *slog.Logger, now func() time.Time, metrics Metrics) *Handler {
 	return &Handler{
-		pool: pool, repo: NewRepository(pool),
+		pool: pool, repo: NewRepository(pool), service: NewService(pool, now, metrics),
 		students: enrollment.NewRepository(pool), studentSvc: enrollment.NewService(pool),
-		logger: logger, now: now,
+		logger: logger,
 	}
 }
 
@@ -38,6 +39,7 @@ func NewHandler(pool *pgxpool.Pool, logger *slog.Logger, now func() time.Time) *
 // kapsamındaki kayıtları görür (politika fonksiyonu karar verir).
 func (h *Handler) Register(rt *authz.Router) {
 	rt.HandleFunc("GET /api/v1/student-programs/{id}/progress", authz.Authenticated, h.progress)
+	h.registerRegistration(rt)
 }
 
 // readableProgram, program kaydını okur ve kullanıcının görebildiğini doğrular. Erişim

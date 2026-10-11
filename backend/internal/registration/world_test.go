@@ -110,7 +110,8 @@ func newWorld(t *testing.T) *world {
 	_ = w.pool.QueryRow(ctx, `SELECT id FROM org.programs WHERE code = 'YZV-L'`).Scan(&w.otherProgram)
 	_ = w.pool.QueryRow(ctx, `SELECT id FROM academic.terms WHERE code = '2026-FALL'`).Scan(&w.term)
 
-	// 2026 güz şubeleri (gün, başlangıç, bitiş saati, kontenjan). DB201, MAT111 ile pazartesi çakışır.
+	// 2026 güz şubeleri (gün, başlangıç, bitiş saati, kontenjan). DB201, MAT111 ile pazartesi;
+	// SEC303, ALG201 ile salı çakışır. SEC301'in tek kişilik kontenjanı var.
 	for _, s := range []struct {
 		code       string
 		day        int
@@ -119,7 +120,7 @@ func newWorld(t *testing.T) *world {
 	}{
 		{"MAT111", 1, "09:00", "10:50", 40}, {"DB201", 1, "10:00", "11:50", 40}, {"ALG201", 2, "09:00", "10:50", 40},
 		{"VY201", 3, "09:00", "10:50", 40}, {"SEC301", 4, "09:00", "10:50", 1}, {"SEC302", 4, "13:00", "14:50", 40},
-		{"SEC303", 5, "13:00", "14:50", 40}, {"OS301", 5, "09:00", "10:50", 40},
+		{"SEC303", 2, "10:00", "11:50", 40}, {"OS301", 5, "09:00", "10:50", 40},
 	} {
 		var id string
 		err := w.pool.QueryRow(ctx, `
@@ -166,12 +167,16 @@ func newWorld(t *testing.T) *world {
 	resolver := iam.NewPermissionResolver(w.pool, redistest.New(t), time.Hour, logger)
 	authenticate := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-			next.ServeHTTP(rw, r.WithContext(authn.WithPrincipal(r.Context(), authn.Principal{UserID: r.Header.Get("X-Test-User")})))
+			p := authn.Principal{UserID: r.Header.Get("X-Test-User"), AMR: []string{"pwd"}}
+			if r.Header.Get("X-Test-MFA") != "" { // iki adımlı doğrulamayla açılmış oturum
+				p.AMR = append(p.AMR, authn.MethodOTP)
+			}
+			next.ServeHTTP(rw, r.WithContext(authn.WithPrincipal(r.Context(), p)))
 		})
 	}
 	mux := http.NewServeMux()
 	rt := authz.NewRouter(mux, authenticate, resolver, logger)
-	registration.NewHandler(w.pool, logger, func() time.Time { return w.now }).Register(rt)
+	registration.NewHandler(w.pool, logger, func() time.Time { return w.now }, nil).Register(rt)
 	enrollment.NewHandler(enrollment.NewRepository(w.pool), enrollment.NewService(w.pool), logger).Register(rt)
 	w.h = mux
 	return w

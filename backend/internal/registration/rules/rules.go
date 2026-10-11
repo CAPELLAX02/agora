@@ -600,3 +600,60 @@ func num(v float64) string {
 	}
 	return fmt.Sprintf("%.1f", v)
 }
+
+// Kind, bir dersin öğrencinin geçmişine göre alınış türüdür.
+type Kind string
+
+// Alınış türleri.
+const (
+	KindNew                 Kind = "NEW"                  // ilk kez
+	KindRepeatFailed        Kind = "REPEAT_FAILED"        // kalınan dersin (ya da eşdeğerinin) tekrarı
+	KindRepeatUpgrade       Kind = "REPEAT_UPGRADE"       // geçilen dersi not yükseltmek için
+	KindElectiveReplacement Kind = "ELECTIVE_REPLACEMENT" // kalınan seçmelinin yerine havuzdan başka ders
+)
+
+// Classify, dersin karşıladığı müfredat satırını ve alınış türünü döndürür. Ders hiçbir
+// satırı karşılamıyorsa ok false döner.
+func Classify(in *Input, courseID string) (line Line, kind Kind, ok bool) {
+	lp, ok := lineFor(in, courseID)
+	if !ok {
+		return Line{}, "", false
+	}
+	if !lp.Line.IsSlot() {
+		switch {
+		case lp.Last == nil || lp.Status == InProgress:
+			return lp.Line, KindNew, true
+		case lp.Status == Passed:
+			return lp.Line, KindRepeatUpgrade, true
+		default:
+			return lp.Line, KindRepeatFailed, true
+		}
+	}
+	var own *Attempt
+	groupFailed := false
+	for _, a := range in.Attempts {
+		if !a.Completed || !in.Catalog.InGroup(lp.Line.GroupID, a.CourseID) {
+			continue
+		}
+		if a.CourseID == courseID && (own == nil || newer(a, *own)) {
+			own = &a
+		}
+		if !a.Passing {
+			groupFailed = true
+		}
+	}
+	switch {
+	case own != nil && own.Passing:
+		return lp.Line, KindRepeatUpgrade, true
+	case own != nil:
+		return lp.Line, KindRepeatFailed, true
+	case groupFailed:
+		return lp.Line, KindElectiveReplacement, true
+	}
+	return lp.Line, KindNew, true
+}
+
+// UnmetPrerequisite, dersin ön koşulu sağlanmıyorsa ihlali döndürür.
+func UnmetPrerequisite(in *Input, it Item) (Violation, bool) {
+	return prerequisite(in, it)
+}

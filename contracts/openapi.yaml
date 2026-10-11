@@ -3992,6 +3992,620 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/v1/student-programs/{id}/registration:
+    get:
+      tags: [Ders seçme]
+      summary: Dönemin ders seçme kaydı (sepet)
+      description: |
+        Sepet, kurallara göre değerlendirmesi (hata ve uyarılar), AKTS sınırı, ders seçme ve
+        danışman onayı pencereleri ve isteği yapanın bu kayıtta yapabileceği işlemler
+        (`actions`). Öğrencinin henüz sepeti yoksa `id` null, durum `NOT_STARTED` döner.
+        Öğrenciyi görebilen herkes (öğrenci, danışmanı, kapsamlı personel) görebilir.
+      operationId: getRegistration
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - name: term_id
+          in: query
+          description: Dönem; verilmezse içinde bulunulan dönem
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Kaydın güncel hali
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Registration" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`NO_ACTIVE_TERM`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/student-programs/{id}/registration/offer:
+    get:
+      tags: [Ders seçme]
+      summary: Alınabilir dersler
+      description: |
+        Öğrencinin müfredatına ve geçmişine göre dönemin ders seçmeye açık dersleri, şubeleriyle:
+        alttan dersler (alt yarıyıldan kalınan ya da alınmamış zorunlu), dönem dersleri,
+        seçmeliler (dolmamış yuvalar için havuzdan), üst yarıyıl dersleri ve not yükseltme.
+        Eski koddan kalınan ders açılan yeni eşdeğeriyle görünür. Ön koşulu sağlanmayan derste
+        `prerequisite` ihlali döner.
+      operationId: listRegistrationOffer
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - name: term_id
+          in: query
+          description: Dönem; verilmezse içinde bulunulan dönem
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Alınabilir dersler (kategori sırasıyla)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RegistrationOffer" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/student-programs/{id}/registration/events:
+    get:
+      tags: [Ders seçme]
+      summary: Kaydın olay günlüğü
+      description: Sepete ekleme ve çıkarmalar, gönderim, kararlar, ek süre; eskiden yeniye.
+      operationId: listRegistrationEvents
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - name: term_id
+          in: query
+          description: Dönem; verilmezse içinde bulunulan dönem
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Olaylar
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/RegistrationEvent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/student-programs/{id}/registration/items:
+    post:
+      tags: [Ders seçme]
+      summary: Sepete şube ekler
+      description: |
+        Ders seçme penceresi (ya da kayda tanınan ek süre) açık olmalı, kayıt taslak ya da
+        reddedilmiş olmalıdır (reddedilen kayıt düzenlenince taslağa döner). Ekleme anı
+        kuralları denetlenir: engel, program kaydı durumu, müfredatta olma, ön koşul,
+        haftalık program çakışması, AKTS üst sınırı, azami süre. Kontenjan sepete eklerken
+        koşullu atomik güncellemeyle ayrılır (ayrılmış kontenjanlı şubede öğrencinin
+        programının kontenjanından). Hata olmayan kural sonuçları yanıtın `warnings`
+        alanındadır. Sadece öğrencinin kendisi.
+      operationId: addRegistrationItem
+      x-agora-permission: registration:manage_own
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [section_id]
+              properties:
+                section_id: { type: string, format: uuid }
+      responses:
+        "201":
+          description: Şube sepete eklendi
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Registration" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`SECTION_FULL` · `QUOTA_FULL` · `SECTION_NOT_FOR_PROGRAM` · `SECTION_NOT_OPEN` · `WINDOW_CLOSED` · `REGISTRATION_LOCKED`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "422":
+          description: "`RULE_VIOLATION`: ders seçme kuralı ihlali; `violations` hata ve uyarıları içerir"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/RuleProblem" }
+
+  /api/v1/student-programs/{id}/registration/items/{itemId}:
+    put:
+      tags: [Ders seçme]
+      summary: Sepetteki dersin şubesini değiştirir
+      description: Yeni şubede yer ayrılır, eskisi iade edilir; yeni şubenin programı sepetin geri kalanıyla denetlenir.
+      operationId: changeRegistrationSection
+      x-agora-permission: registration:manage_own
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/ItemID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [section_id]
+              properties:
+                section_id: { type: string, format: uuid, description: Aynı dersin başka bir şubesi }
+      responses:
+        "200":
+          description: Kaydın güncel hali
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Registration" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`SECTION_FULL` · `QUOTA_FULL` · `SECTION_NOT_FOR_PROGRAM` · `SAME_SECTION` · `WINDOW_CLOSED` · `REGISTRATION_LOCKED`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "422":
+          description: "`RULE_VIOLATION`: ders seçme kuralı ihlali; `violations` hata ve uyarıları içerir"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/RuleProblem" }
+    delete:
+      tags: [Ders seçme]
+      summary: Dersi sepetten çıkarır
+      description: Ayrılan kontenjan iade edilir.
+      operationId: removeRegistrationItem
+      x-agora-permission: registration:manage_own
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/ItemID"
+      responses:
+        "200":
+          description: Kaydın güncel hali
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Registration" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`WINDOW_CLOSED` · `REGISTRATION_LOCKED`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/student-programs/{id}/registration/submit:
+    post:
+      tags: [Ders seçme]
+      summary: Sepeti danışman onayına gönderir
+      description: |
+        Bütün kurallar (gönderim anı kuralları dahil: 1. sınıf zorunlu dersleri, alttan ders
+        önceliği) yeniden denetlenir; hata varsa gönderilmez. Gönderim anındaki AKTS sınırı
+        ve GANO kayda yazılır. İyimser kilit, `If-Match` zorunlu.
+      operationId: submitRegistration
+      x-agora-permission: registration:manage_own
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/IfMatch"
+        - name: term_id
+          in: query
+          description: Dönem; verilmezse içinde bulunulan dönem
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Kaydın güncel hali
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Registration" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`WINDOW_CLOSED` · `INVALID_REGISTRATION_STATE`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "412": { $ref: "#/components/responses/VersionMismatch" }
+        "422":
+          description: "`RULE_VIOLATION`: ders seçme kuralı ihlali; `violations` hata ve uyarıları içerir"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/RuleProblem" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
+
+  /api/v1/student-programs/{id}/registration/withdraw:
+    post:
+      tags: [Ders seçme]
+      summary: Gönderimi geri çeker
+      description: Danışman karar vermeden önce; sepet yeniden taslak olur. İyimser kilit, `If-Match` zorunlu.
+      operationId: withdrawRegistration
+      x-agora-permission: registration:manage_own
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/IfMatch"
+        - name: term_id
+          in: query
+          description: Dönem; verilmezse içinde bulunulan dönem
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Kaydın güncel hali
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Registration" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`WINDOW_CLOSED` · `INVALID_REGISTRATION_STATE`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "412": { $ref: "#/components/responses/VersionMismatch" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
+
+  /api/v1/student-programs/{id}/registration/extension:
+    post:
+      tags: [Ders seçme]
+      summary: Kayda özel ek süre tanır
+      description: |
+        Öğrenci işlerinin pencere dışı müdahalesi (break-glass): öğrenci `until` anına kadar
+        sepetini düzenleyip gönderebilir, danışman da onaylayabilir. En çok 30 gün; gerekçe
+        zorunlu ve denetime işaretli. Kayıt yoksa taslak olarak açılır.
+      operationId: grantRegistrationExtension
+      x-agora-permission: registration:override
+      x-agora-mfa: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [until, reason]
+              properties:
+                term_id: { type: string, format: uuid, description: Verilmezse içinde bulunulan dönem }
+                until: { type: string, format: date-time }
+                reason: { type: string, minLength: 5, maxLength: 500 }
+      responses:
+        "200":
+          description: Kaydın güncel hali
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Registration" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/registrations:
+    get:
+      tags: [Ders seçme]
+      summary: Kapsamdaki öğrencilerin ders seçme durumları
+      description: Öğrenci işleri için; aktif öğrenciler, öğrenci numarasına göre. Sepeti olmayanlar `NOT_STARTED`.
+      operationId: listRegistrations
+      x-agora-permission: registration:override
+      x-agora-mfa: true
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: term_id
+          in: query
+          description: Dönem; verilmezse içinde bulunulan dönem
+          schema: { type: string, format: uuid }
+        - { name: status, in: query, schema: { $ref: "#/components/schemas/RegistrationStatus" } }
+        - { name: faculty_id, in: query, schema: { type: string, format: uuid } }
+        - { name: department_id, in: query, schema: { type: string, format: uuid } }
+        - { name: program_id, in: query, schema: { type: string, format: uuid } }
+        - { name: q, in: query, description: Öğrenci numarası ya da ad, schema: { type: string, maxLength: 100 } }
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Özetler
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RegistrationSummaryList" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/v1/registrations/bulk-approve:
+    post:
+      tags: [Ders seçme]
+      summary: Seçilen kayıtları toplu onaylar
+      description: |
+        Danışman ekranı: her kayıt kendi transaction'ında onaylanır, biri başarısız olunca
+        diğerleri etkilenmez; her kaydın sonucu döner. Pencere dışı müdahale toplu yapılmaz.
+      operationId: bulkApproveRegistrations
+      x-agora-permission: registration:approve
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [id, version]
+                    properties:
+                      id: { type: string, format: uuid }
+                      version: { type: integer, description: Danışmanın incelediği sürüm }
+                note: { type: string, maxLength: 1000 }
+      responses:
+        "200":
+          description: Sonuçlar
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [approved, failed, results]
+                properties:
+                  approved: { type: integer }
+                  failed: { type: integer }
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, ok, code, message]
+                      properties:
+                        id: { type: string }
+                        ok: { type: boolean }
+                        code: { type: [string, "null"], description: "`RULE_VIOLATION` · `VERSION_MISMATCH` · `INVALID_REGISTRATION_STATE` · `WINDOW_CLOSED` · `FORBIDDEN` · `NOT_FOUND`" }
+                        message: { type: [string, "null"] }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/v1/registrations/{id}:
+    get:
+      tags: [Ders seçme]
+      summary: Ders seçme kaydı (danışman incelemesi)
+      description: Öğrenciyi görebilen herkes; `actions` danışmanın ya da öğrenci işlerinin yapabileceklerini söyler.
+      operationId: getRegistrationById
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Kaydın güncel hali
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Registration" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/registrations/{id}/approve:
+    post:
+      tags: [Ders seçme]
+      summary: Kaydı onaylar
+      description: |
+        Gönderilmiş kayıt. Sepet kurallara göre yeniden değerlendirilir (gönderimden sonra engel konmuş olabilir); her ders için kesin kayıt oluşur. Karar, öğrencinin şu anki danışmanının (`registration:approve`) danışman onayı
+        penceresi açıkken verdiği karardır. Pencere dışında ya da danışman yerine öğrenci işleri
+        (`registration:override`, iki adımlı doğrulama) gerekçeyle müdahale eder; müdahale olay
+        günlüğünde işaretlenir. İyimser kilit, `If-Match` zorunlu.
+      operationId: approveRegistration
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                note: { type: string, maxLength: 1000, description: "Danışman notu ya da gerekçe (red, geri alma ve müdahalede en az 5 karakter)" }
+      responses:
+        "200":
+          description: Kaydın güncel hali
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Registration" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`WINDOW_CLOSED` · `INVALID_REGISTRATION_STATE`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "412": { $ref: "#/components/responses/VersionMismatch" }
+        "422":
+          description: "`RULE_VIOLATION`: ders seçme kuralı ihlali; `violations` hata ve uyarıları içerir"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/RuleProblem" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
+
+  /api/v1/registrations/{id}/reject:
+    post:
+      tags: [Ders seçme]
+      summary: Kaydı reddeder
+      description: |
+        Gönderilmiş kayıt; gerekçe (`note`) zorunlu. Öğrenci sepeti düzenleyince taslağa döner. Karar, öğrencinin şu anki danışmanının (`registration:approve`) danışman onayı
+        penceresi açıkken verdiği karardır. Pencere dışında ya da danışman yerine öğrenci işleri
+        (`registration:override`, iki adımlı doğrulama) gerekçeyle müdahale eder; müdahale olay
+        günlüğünde işaretlenir. İyimser kilit, `If-Match` zorunlu.
+      operationId: rejectRegistration
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [note]
+              properties:
+                note: { type: string, maxLength: 1000, description: "Danışman notu ya da gerekçe (red, geri alma ve müdahalede en az 5 karakter)" }
+      responses:
+        "200":
+          description: Kaydın güncel hali
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Registration" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`WINDOW_CLOSED` · `INVALID_REGISTRATION_STATE`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "412": { $ref: "#/components/responses/VersionMismatch" }
+        "422":
+          description: "`RULE_VIOLATION`: ders seçme kuralı ihlali; `violations` hata ve uyarıları içerir"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/RuleProblem" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
+
+  /api/v1/registrations/{id}/revoke:
+    post:
+      tags: [Ders seçme]
+      summary: Onayı geri alır
+      description: |
+        Onaylanmış kayıt reddedilmiş olur ve kesin kayıtları silinir; gerekçe zorunlu. Karar, öğrencinin şu anki danışmanının (`registration:approve`) danışman onayı
+        penceresi açıkken verdiği karardır. Pencere dışında ya da danışman yerine öğrenci işleri
+        (`registration:override`, iki adımlı doğrulama) gerekçeyle müdahale eder; müdahale olay
+        günlüğünde işaretlenir. İyimser kilit, `If-Match` zorunlu.
+      operationId: revokeRegistration
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [note]
+              properties:
+                note: { type: string, maxLength: 1000, description: "Danışman notu ya da gerekçe (red, geri alma ve müdahalede en az 5 karakter)" }
+      responses:
+        "200":
+          description: Kaydın güncel hali
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Registration" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`WINDOW_CLOSED` · `INVALID_REGISTRATION_STATE`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "412": { $ref: "#/components/responses/VersionMismatch" }
+        "422":
+          description: "`RULE_VIOLATION`: ders seçme kuralı ihlali; `violations` hata ve uyarıları içerir"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/RuleProblem" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
+
+  /api/v1/me/advisee-registrations:
+    get:
+      tags: [Ders seçme]
+      summary: Danışmanlığımdaki öğrencilerin ders seçme durumları
+      description: Onay bekleyenler önce, sonra öğrenci numarası sırasıyla. Danışman olmayanlar için boş liste.
+      operationId: listAdviseeRegistrations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: term_id
+          in: query
+          description: Dönem; verilmezse içinde bulunulan dönem
+          schema: { type: string, format: uuid }
+        - { name: status, in: query, schema: { $ref: "#/components/schemas/RegistrationStatus" } }
+      responses:
+        "200":
+          description: Özetler
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RegistrationSummaryList" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
   /api/v1/departments/{id}/advisors:
     get:
       tags: [Öğrenciler]
@@ -4222,6 +4836,11 @@ components:
       bearerFormat: JWT (EdDSA)
 
   parameters:
+    ItemID:
+      name: itemId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
     ClientHeader:
       name: X-Agora-Client
       in: header
@@ -5814,3 +6433,269 @@ components:
           type: array
           description: Müfredatla eşleşmeyen derslerin son denemeleri
           items: { $ref: "#/components/schemas/AttemptRef" }
+
+    RegistrationStatus:
+      type: string
+      enum: [NOT_STARTED, DRAFT, SUBMITTED, APPROVED, REJECTED]
+      description: "NOT_STARTED: öğrencinin henüz sepeti yok"
+
+    RuleViolation:
+      type: object
+      required: [code, severity, course_ids, params, message]
+      properties:
+        code:
+          type: string
+          description: Kural kodu
+          enum: [HOLD, PROGRAM_NOT_ACTIVE, NO_CURRICULUM, EMPTY_BASKET, DUPLICATE_COURSE, NOT_IN_CURRICULUM, PREREQUISITE,
+                 SCHEDULE_CONFLICT, ECTS_LIMIT, FIRST_YEAR_COMPULSORY, REPEAT_PRIORITY, MAX_DURATION, REPEAT_UPGRADE,
+                 ELECTIVE_SLOT_EXCEEDED]
+        severity: { type: string, enum: [ERROR, WARNING], description: "ERROR işlemi engeller, WARNING bilgi verir" }
+        course_ids: { type: array, items: { type: string, format: uuid } }
+        params: { type: object, additionalProperties: true, description: "Ör. limit, total, courses, missing" }
+        message: { type: string, description: Türkçe açıklama }
+
+    RuleProblem:
+      allOf:
+        - $ref: "#/components/schemas/Problem"
+        - type: object
+          required: [violations]
+          properties:
+            violations:
+              type: array
+              items: { $ref: "#/components/schemas/RuleViolation" }
+
+    RegistrationSlot:
+      type: object
+      required: [day, start, end, kind, classroom]
+      properties:
+        day: { type: integer, minimum: 1, maximum: 7 }
+        start: { type: string, examples: ["09:00"] }
+        end: { type: string, examples: ["10:50"] }
+        kind: { type: string, enum: [THEORY, PRACTICE, LAB] }
+        classroom: { type: [string, "null"], examples: ["MUH-A/A104"] }
+
+    RegistrationSection:
+      type: object
+      required: [id, offering_id, course, section_code, label, capacity, enrolled, available, quota_mode, quota_left, language, instructors, slots]
+      properties:
+        id: { type: string, format: uuid }
+        offering_id: { type: string, format: uuid }
+        course:
+          type: object
+          required: [id, code, name_tr, name_en, ects, credit]
+          properties:
+            id: { type: string, format: uuid }
+            code: { type: string }
+            name_tr: { type: string }
+            name_en: { type: string }
+            ects: { type: number }
+            credit: { type: number }
+        section_code: { type: string }
+        label: { type: string, examples: ["COM3035-1"] }
+        capacity: { type: integer }
+        enrolled: { type: integer, description: Ayrılmış yer (sepetlerdeki şube sayısı) }
+        available: { type: boolean, description: Öğrenci bu şubede yer bulabilir mi }
+        quota_mode: { type: string, enum: [OPEN, RESERVED] }
+        quota_left: { type: [integer, "null"], description: "Ayrılmış kontenjanlı şubede öğrencinin programına kalan yer (ayrılmamışsa 0)" }
+        language: { type: string, enum: [TR, EN] }
+        instructors: { type: array, items: { type: string }, description: "Unvanlı adlar, sorumlu önce" }
+        slots:
+          type: array
+          items: { $ref: "#/components/schemas/RegistrationSlot" }
+
+    RegistrationItem:
+      type: object
+      required: [id, kind, curriculum_item_id, ects, source, added_at, section]
+      properties:
+        id: { type: string, format: uuid }
+        kind:
+          type: string
+          enum: [NEW, REPEAT_FAILED, REPEAT_UPGRADE, ELECTIVE_REPLACEMENT]
+          description: "Kalınan dersin tekrarı, not yükseltme, kalınan seçmelinin yerine başka seçmeli"
+        curriculum_item_id: { type: [string, "null"], format: uuid, description: Karşıladığı müfredat satırı }
+        ects: { type: number }
+        source: { type: string, enum: [REGISTRATION, ADD_DROP] }
+        added_at: { type: string, format: date-time }
+        section: { $ref: "#/components/schemas/RegistrationSection" }
+
+    RegistrationWindow:
+      type: object
+      required: [open, extended, starts_at, ends_at, next_starts_at]
+      properties:
+        open: { type: boolean, description: Takvim penceresi açık }
+        extended: { type: boolean, description: Pencere kapalı ama kayda tanınan ek süre sürüyor }
+        starts_at: { type: [string, "null"], format: date-time }
+        ends_at: { type: [string, "null"], format: date-time, description: "Bitiş anı hariç: [starts_at, ends_at)" }
+        next_starts_at: { type: [string, "null"], format: date-time }
+
+    Registration:
+      type: object
+      required: [id, student_program_id, student, term, status, items, total_ects, ects_limit, max_ects_allowed, gpa_snapshot,
+                 submitted_at, decided_at, decided_by, decision_note, extension_until, extension_reason, evaluation,
+                 registration_window, approval_window, actions, warnings, version]
+      properties:
+        id: { type: [string, "null"], format: uuid, description: Henüz sepet yoksa null }
+        student_program_id: { type: string, format: uuid }
+        student:
+          type: object
+          required: [id, student_no, first_name, last_name, program_code, semester, class_level, gpa, advisor]
+          properties:
+            id: { type: string, format: uuid }
+            student_no: { type: string }
+            first_name: { type: string }
+            last_name: { type: string }
+            program_code: { type: string }
+            semester: { type: integer }
+            class_level: { type: integer }
+            gpa: { type: [number, "null"] }
+            advisor: { type: [string, "null"], description: Danışmanın unvanlı adı }
+        term:
+          type: object
+          required: [id, code]
+          properties:
+            id: { type: string, format: uuid }
+            code: { type: string }
+        status: { $ref: "#/components/schemas/RegistrationStatus" }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/RegistrationItem" }
+        total_ects: { type: number }
+        ects_limit: { type: number, description: GANO'ya göre bu dönemki AKTS üst sınırı }
+        max_ects_allowed: { type: [number, "null"], description: Gönderim anındaki sınır }
+        gpa_snapshot: { type: [number, "null"], description: Gönderim anındaki GANO }
+        submitted_at: { type: [string, "null"], format: date-time }
+        decided_at: { type: [string, "null"], format: date-time }
+        decided_by: { type: [string, "null"], description: Karar verenin adı }
+        decision_note: { type: [string, "null"] }
+        extension_until: { type: [string, "null"], format: date-time }
+        extension_reason: { type: [string, "null"] }
+        evaluation:
+          type: object
+          required: [blocking, violations]
+          properties:
+            blocking: { type: boolean, description: Gönderimi (ve onayı) engelleyen hata var }
+            violations:
+              type: array
+              items: { $ref: "#/components/schemas/RuleViolation" }
+        registration_window: { $ref: "#/components/schemas/RegistrationWindow" }
+        approval_window: { $ref: "#/components/schemas/RegistrationWindow" }
+        actions:
+          type: object
+          description: İsteği yapanın bu kayıtta şu an yapabilecekleri
+          required: [can_edit, can_submit, can_withdraw, can_approve, can_reject, can_revoke, can_extend]
+          properties:
+            can_edit: { type: boolean }
+            can_submit: { type: boolean }
+            can_withdraw: { type: boolean }
+            can_approve: { type: boolean }
+            can_reject: { type: boolean }
+            can_revoke: { type: boolean }
+            can_extend: { type: boolean }
+        warnings:
+          type: array
+          description: Son işlemin (ekleme, şube değiştirme) hata olmayan kural sonuçları
+          items: { $ref: "#/components/schemas/RuleViolation" }
+        version: { type: integer }
+
+    RegistrationOffer:
+      type: object
+      required: [term, semester, ects_limit, total_ects, items]
+      properties:
+        term:
+          type: object
+          required: [id, code]
+          properties:
+            id: { type: string, format: uuid }
+            code: { type: string }
+        semester: { type: integer }
+        ects_limit: { type: number }
+        total_ects: { type: number, description: Sepetteki AKTS }
+        items:
+          type: array
+          items:
+            type: object
+            required: [course, category, kind, line, status, last_letter, prerequisite, sections, basket_item_id]
+            properties:
+              course:
+                type: object
+                required: [id, code, name_tr, name_en, ects, credit]
+                properties:
+                  id: { type: string, format: uuid }
+                  code: { type: string }
+                  name_tr: { type: string }
+                  name_en: { type: string }
+                  ects: { type: number }
+                  credit: { type: number }
+              category:
+                type: string
+                enum: [REPEAT, CURRENT, ELECTIVE, UPPER, UPGRADE]
+                description: "Alttan, dönem dersi, seçmeli, üst yarıyıl, not yükseltme"
+              kind: { type: string, enum: [NEW, REPEAT_FAILED, REPEAT_UPGRADE, ELECTIVE_REPLACEMENT] }
+              line:
+                type: object
+                description: Dersin karşıladığı müfredat satırı
+                required: [item_id, semester_no, item_type, code, name_tr, name_en, is_compulsory]
+                properties:
+                  item_id: { type: string, format: uuid }
+                  semester_no: { type: integer }
+                  item_type: { type: string, enum: [COURSE, ELECTIVE_SLOT] }
+                  code: { type: string }
+                  name_tr: { type: string }
+                  name_en: { type: string }
+                  is_compulsory: { type: boolean }
+              status: { $ref: "#/components/schemas/ProgressStatus" }
+              last_letter: { type: [string, "null"] }
+              prerequisite:
+                oneOf:
+                  - type: "null"
+                  - $ref: "#/components/schemas/RuleViolation"
+              sections:
+                type: array
+                items: { $ref: "#/components/schemas/RegistrationSection" }
+              basket_item_id: { type: [string, "null"], format: uuid, description: Ders sepetteyse sepet satırı }
+
+    RegistrationEvent:
+      type: object
+      required: [id, type, actor, payload, occurred_at]
+      properties:
+        id: { type: integer }
+        type:
+          type: string
+          enum: [CREATED, ITEM_ADDED, ITEM_REMOVED, SECTION_CHANGED, RETURNED_TO_DRAFT, SUBMITTED, WITHDRAWN, APPROVED,
+                 REJECTED, APPROVAL_REVOKED, EXTENSION_GRANTED, EXPIRED, ADD_DROP_REQUESTED, ADD_DROP_APPROVED,
+                 ADD_DROP_REJECTED, ADD_DROP_APPLIED, ADD_DROP_WITHDRAWN]
+        actor: { type: [string, "null"], description: Yapanın adı; sistem işinde null }
+        payload: { type: object, additionalProperties: true }
+        occurred_at: { type: string, format: date-time }
+
+    RegistrationSummary:
+      type: object
+      required: [student_program_id, student, program_code, semester, gpa, registration_id, status, total_ects, item_count, submitted_at, version, blocked]
+      properties:
+        student_program_id: { type: string, format: uuid }
+        student: { $ref: "#/components/schemas/StudentRef" }
+        program_code: { type: string }
+        semester: { type: integer }
+        gpa: { type: [number, "null"] }
+        registration_id: { type: [string, "null"], format: uuid }
+        status: { $ref: "#/components/schemas/RegistrationStatus" }
+        total_ects: { type: number }
+        item_count: { type: integer }
+        submitted_at: { type: [string, "null"], format: date-time }
+        version: { type: integer, description: Toplu onayda gönderilecek sürüm }
+        blocked: { type: boolean, description: Ders seçmeyi kapatan aktif engeli var }
+
+    RegistrationSummaryList:
+      type: object
+      required: [term, items, next_cursor]
+      properties:
+        term:
+          type: object
+          required: [id, code]
+          properties:
+            id: { type: string, format: uuid }
+            code: { type: string }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/RegistrationSummary" }
+        next_cursor: { type: [string, "null"] }

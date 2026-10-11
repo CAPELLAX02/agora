@@ -330,3 +330,25 @@ func TestMessages(t *testing.T) {
 		t.Errorf("mesaj = %q", vs[0].Message)
 	}
 }
+
+func TestClassify(t *testing.T) {
+	in := fixture()
+	in.Attempts = append(in.Attempts, failed("E5", 3), passed("E1", 3, "B1"))
+	for course, want := range map[string]Kind{
+		"MAT1N": KindRepeatUpgrade, // MAT1'i geçti; eşdeğerini almak not yükseltmedir
+		"PRG1":  KindRepeatFailed,  // devamsızlıktan kaldı
+		"OS":    KindRepeatFailed,
+		"VY":    KindNew,
+		"E1":    KindRepeatUpgrade,
+		"E5":    KindRepeatFailed,
+		"E2":    KindElectiveReplacement, // E5'ten kaldı, havuzdan başka ders
+	} {
+		_, kind, ok := Classify(in, course)
+		if !ok || kind != want {
+			t.Errorf("%s = %s (%v), want %s", course, kind, ok, want)
+		}
+	}
+	if _, _, ok := Classify(in, "X9"); ok {
+		t.Error("müfredat dışı ders sınıflanmamalı")
+	}
+}
