@@ -188,35 +188,45 @@
 | `student_programs` | id, student_id FK, program_id FK, curriculum_id FK, enrollment_kind CK(`MAJOR, DOUBLE_MAJOR, MINOR`), admission_type CK(`OSYS, DGS, YOS, TRANSFER_INTERNAL, TRANSFER_EXTERNAL, SPECIAL_TALENT, EXCHANGE`), admission_year smallint, admission_term_id, admitted_on, status CK(`PREP, ACTIVE, FROZEN, SUSPENDED, GRADUATED, WITHDRAWN, DISMISSED`), status_changed_at, class_level smallint, current_semester smallint, max_duration_term_id FK, continuation_right bool, graduated_on, gpa_cache numeric(3,2), earned_ects_cache numeric(5,1), version | UQ(student_id, program_id). "Aktif Bölüm" seçici bu tablodaki satırlar arasında geçiş yapar |
 | `student_program_status_history` | id, student_program_id, from_status, to_status, reason, decision_ref, changed_by, changed_at | Kayıt dondurma, uzaklaştırma, mezuniyet geçmişi |
 | `advisor_assignments` | id, student_program_id FK, advisor_staff_id FK, valid_from, valid_until null, assigned_by | Kısmi UQ(student_program_id) `WHERE valid_until IS NULL` → tek aktif danışman |
-| `holds` | id, student_program_id FK, hold_type CK(`TUITION_DEBT, DISCIPLINE_SUSPENSION, MISSING_DOCUMENT, LIBRARY_DEBT`), blocks text[] (`REGISTRATION, DOCUMENT, GRADUATION`), reason, placed_by, placed_at, released_by, released_at | Aktif engel = `released_at IS NULL` |
+| `holds` | id, student_program_id FK, hold_type CK(`TUITION_DEBT, DISCIPLINE_SUSPENSION, MISSING_DOCUMENT, LIBRARY_DEBT`), blocks text[] CK(boş değil, ⊆ `REGISTRATION, DOCUMENT, GRADUATION`), reason, placed_by, placed_at, released_by, released_at, release_reason | Aktif engel = `released_at IS NULL`; kaldırmada gerekçe zorunlu (CK). Kısmi UQ(student_program_id, hold_type) `WHERE released_at IS NULL`: aynı türden tek aktif engel |
+| `semester_advances` | term_id PK, advanced_at, advanced | Dönem aktif yapılınca (`term.made_current` olayı) aktif öğrencilerin yarıyılı **bir kez** ilerler; satır, aynı dönem yeniden aktif yapılsa da tekrar ilerletilmemesini sağlar |
 
 ### Ders seçme (registration)
+
+> Faz 3'te uygulandı. Kurallar, akış ve hata kodları: [09 · Ders Seçme](09-ders-secme-kurallari.md).
+
 | Tablo | Sütunlar | Not |
 | --- | --- | --- |
-| `registrations` | id, student_program_id FK, term_id FK, status CK(`DRAFT, SUBMITTED, APPROVED, REJECTED`), total_ects numeric(4,1), max_ects_allowed numeric(4,1), gpa_snapshot numeric(3,2), submitted_at, decided_at, decided_by, decision_note, version | UQ(student_program_id, term_id) |
-| `registration_items` | id, registration_id FK, section_id FK, course_id (denormalize), item_kind CK(`NEW, REPEAT_FAILED, REPEAT_UPGRADE, ELECTIVE_REPLACEMENT`), curriculum_item_id null, elective_group_id null, source CK(`REGISTRATION, ADD_DROP`), status CK(`ACTIVE, DROPPED`), added_at, dropped_at | Kısmi UQ(registration_id, course_id) `WHERE status='ACTIVE'` → aynı dersin iki şubesi seçilemez |
-| `registration_events` | id bigint identity, registration_id, event_type (`CREATED, ITEM_ADDED, ITEM_REMOVED, SUBMITTED, APPROVED, REJECTED, ADD_DROP_REQUESTED …`), actor_user_id, payload jsonb, occurred_at | Durum geçmişi + **kayıt hunisi** analitiğinin kaynağı |
-| `add_drop_requests` | id, registration_id, status CK(`PENDING_ADVISOR, PENDING_DEPT_HEAD, APPROVED, REJECTED`), advisor_decided_by/at, head_decided_by/at, note | P1 |
-| `add_drop_items` | id, request_id, section_id, action CK(`ADD, DROP`) | |
+| `registrations` | id, student_program_id FK, term_id FK, status CK(`DRAFT, SUBMITTED, APPROVED, REJECTED`), total_ects numeric(4,1), max_ects_allowed numeric(4,1), gpa_snapshot numeric(3,2), submitted_at, decided_at, decided_by, decision_note, extension_until, extension_reason, extension_by, version | UQ(student_program_id, term_id): dönem başına tek kayıt. Sınır ve GANO gönderim anının fotoğrafıdır. `extension_*`: öğrenci işlerinin bu kayda tanıdığı gerekçeli ek süre (CK: süre ve gerekçe birlikte). CK: gönderilmiş kayıtta `submitted_at`, kararlıda `decided_at` dolu. Index(term_id, status) |
+| `registration_items` | id, registration_id FK (CASCADE), section_id FK, course_id (kopya), item_kind CK(`NEW, REPEAT_FAILED, REPEAT_UPGRADE, ELECTIVE_REPLACEMENT`), curriculum_item_id null (karşıladığı müfredat satırı), ects, quota_program_id null, source CK(`REGISTRATION, ADD_DROP`), status CK(`ACTIVE, DROPPED`), added_at, dropped_at | Kısmi UQ(registration_id, course_id) `WHERE status = 'ACTIVE'` → aynı dersin iki şubesi seçilemez. `quota_program_id`: ayrılmış kontenjanlı şubede düşülen program kontenjanı, çıkarınca aynısı iade edilir. **`sections.enrolled_count` = dönemin aktif sepet satırları** (kontenjan sepete eklerken ayrılır) |
+| `registration_events` | id bigint identity, registration_id FK (CASCADE), event_type CK(`CREATED, ITEM_ADDED, ITEM_REMOVED, SECTION_CHANGED, RETURNED_TO_DRAFT, SUBMITTED, WITHDRAWN, APPROVED, REJECTED, APPROVAL_REVOKED, EXTENSION_GRANTED, EXPIRED, ADD_DROP_REQUESTED, ADD_DROP_APPROVED, ADD_DROP_REJECTED, ADD_DROP_APPLIED, ADD_DROP_WITHDRAWN`), actor_user_id, payload jsonb, occurred_at | Durum geçmişi (öğrenci ve danışman ekranındaki zaman çizelgesi) + **kayıt hunisi** analitiğinin kaynağı |
+| `add_drop_requests` | id, registration_id FK, status CK(`PENDING_ADVISOR, PENDING_DEPT_HEAD, APPROVED, REJECTED, WITHDRAWN`), student_note, advisor_decided_by/at, advisor_note, head_decided_by/at, head_note, version | Kısmi UQ(registration_id) açık talepler için: kayıtta aynı anda tek açık talep. CK: bölüm başkanı kararı danışman kararından sonra |
+| `add_drop_items` | id, request_id FK (CASCADE), action CK(`ADD, DROP`), section_id, course_id, registration_item_id null (bırakılan sepet satırı), ects, quota_program_id null | UQ(request_id, action, course_id). CK: sadece bırakmada sepet satırı dolu. Eklenecek şubenin kontenjanı talepte ayrılır |
 
 **Durum makinesi:**
 
 ```mermaid
 stateDiagram-v2
   [*] --> DRAFT : öğrenci ilk dersi ekler
-  DRAFT --> DRAFT : ekle / çıkar (kurallar anlık doğrulanır)
-  DRAFT --> SUBMITTED : danışman onayına gönder (engel yok, kurallar geçerli)
-  SUBMITTED --> APPROVED : danışman onaylar
-  SUBMITTED --> REJECTED : danışman reddeder
-  APPROVED --> REJECTED : danışman onayı geri alır (pencere açıkken)
-  REJECTED --> DRAFT : öğrenci düzenlemeye başlar
-  APPROVED --> [*] : enrollments oluşur, LMS üyelikleri açılır
+  DRAFT --> DRAFT : ekle / çıkar / şube değiştir (kurallar anlık doğrulanır)
+  DRAFT --> SUBMITTED : danışmana gönder (hata içeren kural yok)
+  SUBMITTED --> DRAFT : öğrenci geri çeker (ders seçme penceresi açıkken)
+  SUBMITTED --> APPROVED : danışman onaylar (kurallar yeniden değerlendirilir)
+  SUBMITTED --> REJECTED : danışman gerekçeyle geri gönderir
+  APPROVED --> REJECTED : danışman onayı gerekçeyle geri alır (onay penceresi açıkken)
+  REJECTED --> DRAFT : öğrenci sepeti düzenler
+  APPROVED --> APPROVED : ekle-bırak talebi uygulanır
 ```
+
+- Onayda her sepet satırı için `enrollments` satırı oluşur (`registration_item_id` ile); onay geri alınınca silinir. Karar olayı outbox'a aynı transaction'da yazılır.
+- Pencere dışı işlem: öğrenci işleri (`registration:override`, MFA) gerekçeyle karar verir ya da kayda ek süre tanır; denetim kaydı `override` işaretlidir.
+- Ders seçme penceresi bitince gönderilmemiş (DRAFT, REJECTED) sepetlerin kontenjanı worker tarafından serbest bırakılır (`EXPIRED` olayı).
+- Ekle-bırak: `PENDING_ADVISOR → PENDING_DEPT_HEAD → APPROVED` (kayda uygulanır), her aşamada `REJECTED`; öğrenci açık talebi geri çekebilir (`WITHDRAWN`). Red ve geri çekmede ayrılan kontenjan iade edilir.
 
 ### Kesinleşmiş ders kayıtları ve sonuçlar
 | Tablo | Sütunlar | Not |
 | --- | --- | --- |
-| `enrollments` | id, student_program_id FK, section_id FK, term_id, course_id (denormalize), registration_item_id, attempt_no smallint, is_repeat, attendance_status CK(`CONTINUING, ATTENDANCE_FAIL`), weighted_score numeric(5,2), letter_grade text, grade_points numeric(3,2), ects_snapshot numeric(4,1), credit_snapshot numeric(4,1), counts_in_gpa bool, superseded_by_id FK→enrollments, status CK(`ENROLLED, DROPPED, COMPLETED`), grade_published_at, created_at, version | UQ(student_program_id, section_id). Index(student_program_id, course_id). **Tekrar alınan derste** eski kaydın `counts_in_gpa=false`, `superseded_by_id`=yeni kayıt ("son not geçerli") |
+| `enrollments` | id, student_program_id FK, section_id FK, term_id (kopya), course_id (kopya), registration_item_id null, attempt_no smallint CK(1–20), status CK(`ENROLLED, DROPPED, COMPLETED`), attendance_status CK(`CONTINUING, ATTENDANCE_FAIL`), weighted_score numeric(5,2), grade_scale_id FK, letter_grade, ects_snapshot numeric(4,1), credit_snapshot numeric(4,1), superseded_by_id FK→enrollments, source CK(`REGISTRATION, ADD_DROP, IMPORT`), grade_published_at, version | Faz 3'te uygulandı. UQ(student_program_id, section_id); kısmi UQ(student_program_id, term_id, course_id) bırakılmayanlar için. Harf notu kaydın not ölçeğinde tanımlı olmalı (bileşik FK → `grade_scale_items`); CK: `COMPLETED` ⇔ harf notu dolu. `attempt_no`: dersin ya da eşdeğerinin kaçıncı alınışı. **Tekrar alınan derste son not geçerli**: eski denemenin `superseded_by_id`'si yeni deneme; GANO'ya katılıp katılmadığı harf notunun ölçekteki `counts_in_gpa` bayrağından gelir. `source = IMPORT`: eski sistemden aktarılan geçmiş (seed) |
 | `transfer_credits` | id, student_program_id, course_id (yerel karşılık), source_type CK(`TRANSFER, EXEMPTION, MOOC`), source_institution, source_course_name, letter_grade, ects, credited_term_id, decision_ref, decided_by, decided_at | Muafiyet/intibak, edX/Coursera |
 | `term_results` | id, student_program_id, term_id, attempted_ects, earned_ects, term_gpa (YANO), cumulative_ects, cumulative_gpa (GANO), standing CK(`NORMAL, HONOR, HIGH_HONOR`), computed_at | UQ(student_program_id, term_id). Not ilanında olayla yeniden hesaplanır |
 | `risk_scores` | student_program_id, term_id, score smallint CK(0–100), level CK(`LOW, MEDIUM, HIGH`), signals jsonb, computed_at — PK(student_program_id, term_id) | DW'deki gece işi hesaplar ve buraya geri yazar. Sadece danışman ve fakülte kapsamı okur ([05 · OLAP §8](05-analitik-olap.md)) |
@@ -383,8 +393,9 @@ stateDiagram-v2
 | Şema.Tablo | Sütunlar | Not |
 | --- | --- | --- |
 | `platform.files` | id, bucket, storage_key UQ, original_name, mime_type, size_bytes bigint, sha256 bytea, uploaded_by, uploaded_at, scan_status CK(`PENDING, CLEAN, INFECTED, SKIPPED`), deleted_at | MinIO (S3). İndirme imzalı URL ile. Erişim kontrolü sahibi olan varlık üzerinden |
-| `platform.outbox_events` | id bigint identity, aggregate_type, aggregate_id, event_type, payload jsonb, occurred_at, available_at, published_at, attempts, last_error | **Transactional outbox**: iş verisiyle aynı transaction'da yazılır. Worker okur ve yayınlar. Kısmi index `WHERE published_at IS NULL` |
-| `platform.idempotency_keys` | key, user_id, request_hash, response_status, response_body jsonb, created_at, expires_at — PK(user_id, key) | "Danışmana gönder" gibi POST'larda çift tıklama ve yeniden deneme güvenliği |
+| `platform.outbox_events` | id bigint identity, event_type CK(`modül.olay`), aggregate_type, aggregate_id, payload jsonb, occurred_at, status CK(`PENDING, PROCESSING, DONE, FAILED`), attempts, next_attempt_at, locked_until, last_error, processed_at | **Transactional outbox** (Faz 3): iş verisiyle aynı transaction'da yazılır. Worker `FOR UPDATE SKIP LOCKED` ile alır, `locked_until`'e kadar bitmezse başka worker devralır; hata üstel geri çekilmeyle yeniden denenir, 10 denemeden sonra `FAILED` olur. Kısmi index(next_attempt_at, id) bekleyenler için |
+| `platform.outbox_consumptions` | event_id FK (CASCADE), consumer, consumed_at — PK(event_id, consumer) | Tüketici kendi yazmalarını bu satırla aynı transaction'da yapar: olay yeniden dağıtılsa da aynı tüketici ikinci kez işlemez (idempotent tüketici) |
+| `platform.idempotency_keys` | user_id FK, key CK(8–255), fingerprint bytea (yöntem + yol + gövde SHA-256), status_code null, response_body bytea, content_type, etag, location, created_at, completed_at — PK(user_id, key) | Faz 3: ders seçmenin yazma uçlarında `Idempotency-Key` başlığı. Aynı anahtar aynı istekle gelirse ilk yanıt aynen döner; başka gövdeyle 422, ilk istek sürerken 409. Worker bir günden eski kayıtları siler |
 | `platform.user_preferences` | user_id PK, locale, theme CK(`LIGHT, DARK, SYSTEM`), dashboard_layout jsonb, messaging_privacy, updated_at | OBS "Ekran Ayarları" |
 | `platform.user_favorites` | id, user_id, route_path, label, position | OBS "Sık Kullanılanlar" |
 | `platform.helpdesk_tickets` | id, requester_id, category, subject, status CK(`OPEN, IN_PROGRESS, WAITING_USER, RESOLVED, CLOSED`), priority, assigned_to, created_at, resolved_at | P2 |
@@ -439,7 +450,7 @@ erDiagram
 | **AKTS limiti yarışı** (aynı öğrenci iki sekmeden iki ders ekler) | Öğrenci kaydı başına `pg_advisory_xact_lock(hashtextextended(student_program_id::text, 0))` ile serileştirme, sonra kural doğrulama | Advisory lock'lar |
 | **Kayıp güncelleme** (iki sekme, iki düzenleme) | `version` sütunu + `UPDATE … WHERE id=$1 AND version=$2`. HTTP'de `ETag`/`If-Match` → 412 | İyimser kilitleme |
 | **Çift gönderim** | `Idempotency-Key` başlığı + `platform.idempotency_keys` | İdempotentlik |
-| **Kontenjan ne zaman düşer?** | **Öneri:** sepete eklerken rezerve edilir (OBS davranışı: "kontenjan doldu" sepete eklerken çıkıyor). Sepetten çıkarınca serbest kalır. Pencere kapanınca gönderilmemiş taslaklar worker tarafından serbest bırakılır (parametre) | İş kuralı kararı |
+| **Kontenjan ne zaman düşer?** | **Karar (Faz 3):** sepete eklerken ayrılır (OBS davranışı: "kontenjan doldu" sepete eklerken çıkıyor). Sepetten çıkarınca serbest kalır. Pencere kapanınca gönderilmemiş taslakların kontenjanını worker serbest bırakır. Ekle-bırakta eklenecek şube talep anında ayrılır. Yük testinde kontenjan aşımı 0 ([08](08-yuk-testleri.md)) | İş kuralı kararı |
 | **Derslik çakışması** | `EXCLUDE USING gist` + özel `timerange` | Range tipleri, GiST |
 | **Takvim penceresi çakışması** | `EXCLUDE USING gist (… period WITH &&)` | |
 | **Tek aktif danışman / tek aktif dönem** | Kısmi benzersiz index'ler | Partial index |
