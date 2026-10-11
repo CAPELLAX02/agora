@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -22,14 +23,23 @@ func TestHistory(t *testing.T) {
 			t.Fatalf("%s: %v", u.username, err)
 		}
 	}
-	for range 2 {
+	for range 2 { // ikinci çalıştırma bir şey değiştirmemeli
 		if err := enrollDemoStudents(ctx, pool); err != nil {
+			t.Fatal(err)
+		}
+		if err := seedFall2026(ctx, pool); err != nil {
 			t.Fatal(err)
 		}
 		if err := linkCurricula(ctx, pool); err != nil {
 			t.Fatal(err)
 		}
 		if err := seedHistory(ctx, pool, 20261008); err != nil {
+			t.Fatal(err)
+		}
+		if err := openDemoWindows(ctx, pool, time.Now()); err != nil {
+			t.Fatal(err)
+		}
+		if err := seedRegistrations(ctx, pool); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -100,19 +110,70 @@ func TestHistory(t *testing.T) {
 		WHERE s.student_no IN ('26290004', '26290017')`); n != 0 {
 		t.Errorf("1. yarıyıldaki öğrencilerin %d geçmiş kaydı var", n)
 	}
-	// Son not geçerli: her dersin sadece son denemesi bir sonrakine bağlı değil.
+	// Son not geçerli: notu verilmiş denemelerden sadece sonuncusu bir sonrakine bağlı değil.
 	if n := count(t, pool, `
 		SELECT count(*) FROM (
 			SELECT student_program_id, course_id FROM enrollment.enrollments
-			WHERE superseded_by_id IS NULL GROUP BY 1, 2 HAVING count(*) <> 1) x`); n != 0 {
+			WHERE superseded_by_id IS NULL AND status = 'COMPLETED' GROUP BY 1, 2 HAVING count(*) <> 1) x`); n != 0 {
 		t.Errorf("%d derste birden fazla geçerli deneme var", n)
 	}
+	// Geçmiş dönem şubelerinin mevcudu aktarılan kayıtlar kadardır (içinde bulunulan dönemde sepetler).
 	if n := count(t, pool, `
-		SELECT count(*) FROM offering.sections s
-		WHERE s.enrolled_count <> (SELECT count(*) FROM enrollment.enrollments e WHERE e.section_id = s.id AND e.status <> 'DROPPED')`); n != 0 {
+		SELECT count(*) FROM offering.sections s JOIN offering.course_offerings o ON o.id = s.offering_id
+		JOIN academic.terms t ON t.id = o.term_id
+		WHERE NOT t.is_current
+		  AND s.enrolled_count <> (SELECT count(*) FROM enrollment.enrollments e WHERE e.section_id = s.id AND e.status <> 'DROPPED')`); n != 0 {
 		t.Errorf("%d şubenin mevcudu kayıtlarla tutmuyor", n)
 	}
 	if n := count(t, pool, `SELECT count(*) FROM enrollment.student_programs WHERE current_semester = 7 AND class_level = 4`); n != 4 {
 		t.Errorf("7. yarıyıldaki demo öğrencisi sayısı = %d, 4 olmalı", n)
+	}
+
+	// Demo pencereleri ve P10001'in kuyruğu.
+	if n := count(t, pool, `SELECT count(*) FROM academic.calendar_events WHERE scope_type = 'PROGRAM' AND note LIKE 'Geliştirme ortamı demo%'`); n != 5 {
+		t.Errorf("%d demo penceresi, 5 olmalı", n)
+	}
+	for no, want := range map[string]string{
+		"23290013": "SUBMITTED", "25290016": "SUBMITTED", "26290017": "SUBMITTED", "23290015": "APPROVED", "24290012": "DRAFT",
+	} {
+		var status string
+		if err := pool.QueryRow(ctx, `
+			SELECT r.status FROM enrollment.registrations r JOIN enrollment.student_programs sp ON sp.id = r.student_program_id
+			JOIN people.students s ON s.id = sp.student_id WHERE s.student_no = $1`, no).Scan(&status); err != nil || status != want {
+			t.Errorf("%s kaydı = %q (%v), %s olmalı", no, status, err, want)
+		}
+	}
+	// 1. sınıf öğrencisi dönemin bütün zorunlu derslerini aldı; düşük GANO'lu öğrenci 30 AKTS'yi aşmadı
+	// ve alttan dersini aldı.
+	if n := count(t, pool, `
+		SELECT count(*) FROM enrollment.registration_items i JOIN enrollment.registrations r ON r.id = i.registration_id
+		JOIN enrollment.student_programs sp ON sp.id = r.student_program_id JOIN people.students s ON s.id = sp.student_id
+		WHERE s.student_no = '26290017'`); n != 9 {
+		t.Errorf("1. sınıf sepeti %d ders, 9 olmalı", n)
+	}
+	var total float64
+	var hasRepeat bool
+	if err := pool.QueryRow(ctx, `
+		SELECT r.total_ects::float8, EXISTS (SELECT 1 FROM enrollment.registration_items i JOIN curriculum.courses c ON c.id = i.course_id
+		                                    WHERE i.registration_id = r.id AND c.code = 'COM2067')
+		FROM enrollment.registrations r JOIN enrollment.student_programs sp ON sp.id = r.student_program_id
+		JOIN people.students s ON s.id = sp.student_id WHERE s.student_no = '24290012'`).Scan(&total, &hasRepeat); err != nil {
+		t.Fatal(err)
+	}
+	if total > 30 || !hasRepeat {
+		t.Errorf("24290012 sepeti %v AKTS, alttan ders: %v", total, hasRepeat)
+	}
+	// Onaylanan kaydın kesin kayıtları oluştu; şube mevcutları sepetlerle tutarlı.
+	if n := count(t, pool, `
+		SELECT count(*) FROM enrollment.enrollments e JOIN enrollment.student_programs sp ON sp.id = e.student_program_id
+		JOIN people.students s ON s.id = sp.student_id WHERE s.student_no = '23290015' AND e.status = 'ENROLLED'`); n == 0 {
+		t.Error("onaylanan kaydın kesin kayıtları yok")
+	}
+	if n := count(t, pool, `
+		SELECT count(*) FROM offering.sections s JOIN offering.course_offerings o ON o.id = s.offering_id
+		JOIN academic.terms t ON t.id = o.term_id
+		WHERE t.is_current AND s.enrolled_count <> (SELECT count(*) FROM enrollment.registration_items i
+		                                            WHERE i.section_id = s.id AND i.status = 'ACTIVE')`); n != 0 {
+		t.Errorf("%d şubenin mevcudu sepetlerle tutmuyor", n)
 	}
 }

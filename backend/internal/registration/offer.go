@@ -36,6 +36,7 @@ type Offer struct {
 	Prerequisite *rules.Violation // ön koşul sağlanmıyorsa
 	Sections     []Section
 	BasketItemID string // ders sepetteyse sepet satırı
+	Remaining    int    // seçmeli yuvasında kalan ders sayısı
 }
 
 // Offers, öğrencinin dönemde alabileceği dersleri müfredatına ve geçmişine göre
@@ -69,6 +70,7 @@ func (s *Service) Offers(ctx context.Context, sp enrollment.StudentProgram, term
 		o := Offer{
 			CourseID: courseID, Code: first.CourseCode, NameTR: first.NameTR, NameEN: first.NameEN, ECTS: first.ECTS,
 			Category: cat, Line: l, Status: lp.Status, Sections: secs, BasketItemID: inBasket[courseID],
+			Remaining: lp.Remaining,
 		}
 		if lp.Last != nil {
 			o.LastLetter = lp.Last.Letter

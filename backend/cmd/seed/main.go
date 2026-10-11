@@ -20,6 +20,7 @@ import (
 	"runtime"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -239,6 +240,12 @@ func run() error {
 	}
 	if err := seedHistory(ctx, pool, *seed); err != nil {
 		return fmt.Errorf("ders geçmişi: %w", err)
+	}
+	if err := openDemoWindows(ctx, pool, time.Now()); err != nil {
+		return err
+	}
+	if err := seedRegistrations(ctx, pool); err != nil {
+		return fmt.Errorf("ders seçme: %w", err)
 	}
 
 	fmt.Printf("\nTüm seed kullanıcılarının parolası: %s\n", plain)
