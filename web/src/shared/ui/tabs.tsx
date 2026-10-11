@@ -3,7 +3,10 @@ import type { ComponentProps } from 'react'
 
 import { cn } from '@/shared/lib/utils'
 
-export const Tabs = TabsPrimitive.Root
+/** Tabs, sekme şeridi ile içeriği alt alta dizer (aralık className'le değiştirilebilir). */
+export function Tabs({ className, ...props }: ComponentProps<typeof TabsPrimitive.Root>) {
+  return <TabsPrimitive.Root className={cn('flex flex-col gap-2', className)} {...props} />
+}
 
 export function TabsList({ className, ...props }: ComponentProps<typeof TabsPrimitive.List>) {
   return (
