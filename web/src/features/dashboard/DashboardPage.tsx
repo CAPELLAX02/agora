@@ -1,149 +1,234 @@
-import { ArrowRightIcon, BookOpenIcon, ShieldCheckIcon, ShieldOffIcon } from 'lucide-react'
+import {
+  ArrowRightIcon,
+  BookOpenCheckIcon,
+  CalendarCheck2Icon,
+  FileTextIcon,
+  GraduationCapIcon,
+  MonitorPlayIcon,
+  ShieldCheckIcon,
+  ShieldOffIcon,
+  SparklesIcon,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
 import { useRoleName, useScopeLabel } from '@/features/account/scope'
 import { usePermissions } from '@/features/auth/usePermissions'
 import { navGroups, visible } from '@/features/shell/nav'
-import { formatDate, formatDateTime } from '@/i18n/format'
-import { useGetMeQuery } from '@/shared/api/generated'
+import { formatDateTime } from '@/i18n/format'
+import { useGetMeQuery, useListMyProgramsQuery, type RoleAssignment } from '@/shared/api/generated'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { IconChip } from '@/shared/ui/icon-chip'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { ErrorState } from '@/shared/ui/states'
 
 import { AdvisingCard } from './AdvisingCard'
+import { DashCard } from './DashCard'
 import { RegistrationCard } from './RegistrationCard'
 import { WindowsCard } from './WindowsCard'
 
-/** DashboardPage, oturum açan kullanıcının ana sayfasıdır: rolleri, hesap güvenliği, açık işlem pencereleri ve kısayollar. */
+/**
+ * DashboardPage, oturum açan kullanıcının ana sayfasıdır: karşılama bandı (roller, öğrenci
+ * için GANO ve yarıyıl), hızlı erişim kutuları, ders kaydı, danışmanlık, işlem pencereleri
+ * ve hesap güvenliği.
+ */
 export function DashboardPage() {
   const { t } = useTranslation()
   const { data: me, error, refetch } = useGetMeQuery()
   const perms = usePermissions()
   const { has, hasAny } = perms
-  const scopeLabel = useScopeLabel()
-  const roleName = useRoleName()
 
   if (error) {
     return <ErrorState error={error} onRetry={() => void refetch()} />
   }
   if (!me) {
     return (
-      <div className="grid gap-4 md:grid-cols-2">
-        <Skeleton className="h-10 w-64 md:col-span-2" />
+      <div className="grid gap-5 md:grid-cols-2">
+        <Skeleton className="h-44 md:col-span-2" />
         <Skeleton className="h-40" />
         <Skeleton className="h-40" />
       </div>
     )
   }
 
-  const shortcuts = navGroups.flatMap((g) => g.items).filter((i) => i.to !== '/' && visible(i, perms))
+  // Hesap sayfaları yan menüde ve kullanıcı menüsünde zaten var.
+  const shortcuts = navGroups
+    .filter((g) => g.label !== 'nav.account')
+    .flatMap((g) => g.items)
+    .filter((i) => i.to !== '/' && visible(i, perms))
+    .slice(0, 8)
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {t('dashboard.greeting', { name: me.first_name })}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {new Intl.DateTimeFormat(document.documentElement.lang, { dateStyle: 'full' }).format(new Date())}
-        </p>
-      </div>
+    <div className="space-y-7">
+      <Hero firstName={me.first_name} roles={me.roles} student={has('registration:manage_own')} />
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('dashboard.roles.title')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {me.roles.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t('dashboard.roles.empty')}</p>
-            ) : (
-              <ul className="space-y-3">
-                {me.roles.map((r) => (
-                  <li
-                    key={`${r.role}-${r.scope_id ?? ''}`}
-                    className="flex items-start justify-between gap-3"
-                  >
-                    <div>
-                      <p className="text-sm font-medium">{roleName(r)}</p>
-                      <p className="text-xs text-muted-foreground">{scopeLabel(r)}</p>
-                    </div>
-                    {r.valid_until && (
-                      <Badge variant="muted">
-                        {t('dashboard.roles.until', { date: formatDate(r.valid_until) })}
-                      </Badge>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+      {shortcuts.length > 0 && (
+        <section aria-labelledby="shortcuts" className="space-y-3">
+          <h2 id="shortcuts" className="text-sm font-bold tracking-wider text-muted-foreground uppercase">
+            {t('dashboard.shortcuts.title')}
+          </h2>
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {shortcuts.map(({ to, label, icon, tone }) => (
+              <li key={to}>
+                <Link
+                  to={to}
+                  className="group flex h-full items-center gap-3 rounded-2xl border border-border/70 bg-card p-3.5 text-sm font-semibold shadow-soft transition-all outline-none hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-lift focus-visible:ring-4 focus-visible:ring-ring/30"
+                >
+                  <IconChip
+                    icon={icon}
+                    tone={tone}
+                    solid
+                    className="transition-transform group-hover:scale-110"
+                  />
+                  <span className="min-w-0 flex-1 leading-tight">{t(label)}</span>
+                  <ArrowRightIcon
+                    className="size-4 shrink-0 text-muted-foreground opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100"
+                    aria-hidden
+                  />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('dashboard.security.title')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-3">
-              {me.mfa_enabled ? (
-                <ShieldCheckIcon className="size-5 text-success" aria-hidden />
-              ) : (
-                <ShieldOffIcon className="size-5 text-warning-foreground dark:text-warning" aria-hidden />
-              )}
-              <p className="text-sm font-medium">
-                {t(me.mfa_enabled ? 'dashboard.security.mfaOn' : 'dashboard.security.mfaOff')}
-              </p>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {t('dashboard.security.lastLogin', { time: formatDateTime(me.last_login_at) })}
-            </p>
-            <Button variant="outline" size="sm" asChild>
-              <Link to="/guvenlik">{t('dashboard.security.manage')}</Link>
-            </Button>
-          </CardContent>
-        </Card>
-
+      <div className="grid gap-5 lg:grid-cols-2">
         {has('registration:manage_own') && <RegistrationCard />}
         {hasAny(['registration:approve', 'registration:approve_add_drop']) && <AdvisingCard />}
         {has('calendar:read') && <WindowsCard />}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('dashboard.shortcuts.title')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="divide-y">
-              {shortcuts.map(({ to, label, icon: Icon }) => (
-                <li key={to}>
-                  <Link
-                    to={to}
-                    className="flex items-center gap-3 py-2.5 text-sm font-medium transition-colors hover:text-primary"
-                  >
-                    <Icon className="size-4 text-muted-foreground" aria-hidden />
-                    <span className="flex-1">{t(label)}</span>
-                    <ArrowRightIcon className="size-4 text-muted-foreground" aria-hidden />
-                  </Link>
+        <DashCard
+          icon={me.mfa_enabled ? ShieldCheckIcon : ShieldOffIcon}
+          tone={me.mfa_enabled ? 'emerald' : 'amber'}
+          title={t('dashboard.security.title')}
+          description={t('dashboard.security.lastLogin', { time: formatDateTime(me.last_login_at) })}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Badge variant={me.mfa_enabled ? 'success' : 'warning'}>
+              {t(me.mfa_enabled ? 'dashboard.security.mfaOn' : 'dashboard.security.mfaOff')}
+            </Badge>
+            <Button variant="soft" size="sm" asChild>
+              <Link to="/guvenlik">
+                {t('dashboard.security.manage')}
+                <ArrowRightIcon />
+              </Link>
+            </Button>
+          </div>
+        </DashCard>
+
+        <DashCard
+          icon={SparklesIcon}
+          tone="fuchsia"
+          title={
+            <span className="flex items-center gap-2">
+              {t('dashboard.upcoming.title')}
+              <Badge variant="violet">{t('common.comingSoon')}</Badge>
+            </span>
+          }
+          description={t('dashboard.upcoming.description')}
+        >
+          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {(
+              [
+                ['grades', BookOpenCheckIcon, 'violet'],
+                ['transcript', FileTextIcon, 'sky'],
+                ['attendance', CalendarCheck2Icon, 'emerald'],
+                ['lms', MonitorPlayIcon, 'orange'],
+              ] as const
+            ).map(([key, icon, tone]) => (
+              <li
+                key={key}
+                className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 px-2 py-3 text-center text-xs font-semibold text-muted-foreground"
+              >
+                <IconChip icon={icon} tone={tone} size="sm" />
+                {t(`dashboard.upcoming.modules.${key}`)}
+              </li>
+            ))}
+          </ul>
+        </DashCard>
+      </div>
+    </div>
+  )
+}
+
+/** Hero, ana sayfanın renkli karşılama bandıdır. */
+function Hero({
+  firstName,
+  roles,
+  student,
+}: {
+  firstName: string
+  roles: RoleAssignment[]
+  student: boolean
+}) {
+  const { t } = useTranslation()
+  const roleName = useRoleName()
+  const scopeLabel = useScopeLabel()
+  const programs = useListMyProgramsQuery(undefined, { skip: !student })
+  const sp = programs.data?.items[0]
+  const today = new Intl.DateTimeFormat(document.documentElement.lang, { dateStyle: 'full' }).format(
+    new Date(),
+  )
+
+  return (
+    <section className="relative overflow-hidden rounded-2xl bg-brand-gradient p-6 text-white shadow-lift sm:p-8">
+      <div aria-hidden className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-20 right-10 size-64 rounded-full bg-amber-300/30 blur-3xl" />
+        <div className="absolute -bottom-24 -left-10 size-72 rounded-full bg-sky-300/30 blur-3xl" />
+        <GraduationCapIcon className="absolute -right-6 -bottom-8 size-48 rotate-12 text-white/10" />
+      </div>
+      <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <div className="min-w-0 space-y-3">
+          <p className="text-sm font-semibold text-white/80">{today}</p>
+          <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
+            {t('dashboard.greeting', { name: firstName })}
+          </h1>
+          {sp && (
+            <p className="text-sm font-medium text-white/90">
+              {sp.program.name_tr} ·{' '}
+              {sp.class_level === 0
+                ? t('dashboard.hero.prep')
+                : t('dashboard.hero.classLevel', { level: sp.class_level })}
+            </p>
+          )}
+          {roles.length > 0 && (
+            <ul aria-label={t('dashboard.roles.title')} className="flex flex-wrap gap-2">
+              {roles.map((r) => (
+                <li
+                  key={`${r.role}-${r.scope_id ?? ''}`}
+                  className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold ring-1 ring-white/25 backdrop-blur-md"
+                  title={scopeLabel(r)}
+                >
+                  {roleName(r)}
+                  {r.scope_type !== 'NONE' && (
+                    <span className="font-medium text-white/75"> · {scopeLabel(r)}</span>
+                  )}
                 </li>
               ))}
             </ul>
-          </CardContent>
-        </Card>
-
-        <Card className="border-dashed">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BookOpenIcon className="size-4 text-primary" aria-hidden />
-              {t('dashboard.upcoming.title')}
-              <Badge variant="secondary">{t('common.comingSoon')}</Badge>
-            </CardTitle>
-            <CardDescription>{t('dashboard.upcoming.description')}</CardDescription>
-          </CardHeader>
-        </Card>
+          )}
+        </div>
+        {sp && (
+          <dl className="grid shrink-0 grid-cols-3 gap-3">
+            {(
+              [
+                ['gpa', sp.gpa === null ? '—' : sp.gpa.toFixed(2)],
+                ['semester', String(sp.current_semester)],
+                ['ects', String(sp.earned_ects)],
+              ] as const
+            ).map(([key, value]) => (
+              <div
+                key={key}
+                className="min-w-24 rounded-2xl bg-white/15 px-4 py-3 ring-1 ring-white/25 backdrop-blur-md"
+              >
+                <dt className="text-xs font-semibold text-white/75">{t(`dashboard.hero.${key}`)}</dt>
+                <dd className="tabular text-2xl font-extrabold">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
       </div>
-    </div>
+    </section>
   )
 }

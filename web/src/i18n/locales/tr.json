@@ -222,7 +222,13 @@
     },
     "upcoming": {
       "title": "Akademik modüller",
-      "description": "Not ve transkript, devamsızlık ve öğrenme ortamı modülleri sırayla burada yer alacak."
+      "description": "Not ve transkript, devamsızlık ve öğrenme ortamı modülleri sırayla burada yer alacak.",
+      "modules": {
+        "grades": "Notlar",
+        "transcript": "Transkript",
+        "attendance": "Devamsızlık",
+        "lms": "Öğrenme ortamı"
+      }
     },
     "windows": {
       "title": "İşlem pencereleri",
@@ -238,13 +244,24 @@
       "courses_one": "{{count}} ders",
       "courses_other": "{{count}} ders",
       "go": "Ders seçimine git",
-      "view": "Ders kaydımı gör"
+      "view": "Ders kaydımı gör",
+      "coursesWord_one": "ders",
+      "coursesWord_other": "ders",
+      "more_one": "+{{count}} ders daha",
+      "more_other": "+{{count}} ders daha"
     },
     "advising": {
       "title": "Danışmanlık",
       "description": "Kararınızı bekleyen işler",
       "pending": "Onay bekleyen ders kayıtları",
       "addDrop": "Ekle-bırak talepleri"
+    },
+    "hero": {
+      "gpa": "GANO",
+      "semester": "Yarıyıl",
+      "ects": "AKTS",
+      "classLevel": "{{level}}. sınıf",
+      "prep": "Hazırlık"
     }
   },
   "profile": {

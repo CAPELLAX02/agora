@@ -5,10 +5,10 @@ import { Link } from 'react-router'
 import { formatDateTime } from '@/i18n/format'
 import { useGetCalendarWindowsQuery, useListMyProgramsQuery } from '@/shared/api/generated'
 import { useLocalized } from '@/shared/lib/localized'
-import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Skeleton } from '@/shared/ui/skeleton'
+
+import { DashCard } from './DashCard'
 
 /**
  * WindowsCard, şu an açık olan ve yaklaşan işlem pencereleridir (ders seçme, not girişi ...).
@@ -34,54 +34,58 @@ export function WindowsCard() {
     .slice(0, 3)
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <CalendarClockIcon className="size-4 text-primary" aria-hidden />
-          {t('dashboard.windows.title')}
-        </CardTitle>
-        {data && <CardDescription>{t('dashboard.windows.term', { term: data.term.code })}</CardDescription>}
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {!data ? (
-          <Skeleton className="h-24" />
-        ) : (
-          <>
-            {open.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t('dashboard.windows.none')}</p>
-            ) : (
-              <ul className="space-y-2" aria-label={t('dashboard.windows.open')}>
-                {open.map((w) => (
-                  <li key={w.type.code} className="flex items-start justify-between gap-3">
-                    <span className="text-sm font-medium">{localized(w.type)}</span>
-                    <Badge variant="success">
-                      {t('dashboard.windows.until', {
-                        time: formatDateTime(new Date(new Date(w.current?.ends_at ?? '').getTime() - 60_000)),
-                      })}
-                    </Badge>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {upcoming.length > 0 && (
-              <ul className="space-y-1 border-t pt-3" aria-label={t('dashboard.windows.upcoming')}>
-                {upcoming.map((w) => (
-                  <li key={w.type.code} className="flex justify-between gap-3 text-sm text-muted-foreground">
-                    <span>{localized(w.type)}</span>
-                    <span className="tabular-nums">{formatDateTime(w.next?.starts_at)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <Button variant="outline" size="sm" asChild>
-              <Link to="/takvim">
-                {t('dashboard.windows.calendar')}
-                <ArrowRightIcon />
-              </Link>
-            </Button>
-          </>
-        )}
-      </CardContent>
-    </Card>
+    <DashCard
+      icon={CalendarClockIcon}
+      tone="sky"
+      title={t('dashboard.windows.title')}
+      description={data ? t('dashboard.windows.term', { term: data.term.code }) : undefined}
+    >
+      {!data ? (
+        <Skeleton className="h-24" />
+      ) : (
+        <>
+          {open.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t('dashboard.windows.none')}</p>
+          ) : (
+            <ul className="space-y-1.5" aria-label={t('dashboard.windows.open')}>
+              {open.map((w) => (
+                <li
+                  key={w.type.code}
+                  className="flex items-center gap-3 rounded-xl bg-emerald-500/8 px-3 py-2 dark:bg-emerald-400/10"
+                >
+                  <span aria-hidden className="relative flex size-2.5 shrink-0">
+                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                    <span className="relative inline-flex size-2.5 rounded-full bg-emerald-500" />
+                  </span>
+                  <span className="min-w-0 flex-1 text-sm font-semibold">{localized(w.type)}</span>
+                  <span className="shrink-0 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                    {t('dashboard.windows.until', {
+                      time: formatDateTime(new Date(new Date(w.current?.ends_at ?? '').getTime() - 60_000)),
+                    })}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {upcoming.length > 0 && (
+            <ul className="space-y-1.5" aria-label={t('dashboard.windows.upcoming')}>
+              {upcoming.map((w) => (
+                <li key={w.type.code} className="flex items-center gap-3 px-3 text-sm text-muted-foreground">
+                  <span aria-hidden className="size-2 shrink-0 rounded-full bg-sky-400/70" />
+                  <span className="min-w-0 flex-1">{localized(w.type)}</span>
+                  <span className="tabular-nums">{formatDateTime(w.next?.starts_at)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <Button variant="soft" size="sm" className="mt-auto w-fit" asChild>
+            <Link to="/takvim">
+              {t('dashboard.windows.calendar')}
+              <ArrowRightIcon />
+            </Link>
+          </Button>
+        </>
+      )}
+    </DashCard>
   )
 }

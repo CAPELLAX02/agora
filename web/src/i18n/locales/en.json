@@ -222,7 +222,13 @@
     },
     "upcoming": {
       "title": "Academic modules",
-      "description": "Grades and transcripts, attendance and the learning environment will appear here in turn."
+      "description": "Grades and transcripts, attendance and the learning environment will appear here in turn.",
+      "modules": {
+        "grades": "Grades",
+        "transcript": "Transcript",
+        "attendance": "Attendance",
+        "lms": "Learning"
+      }
     },
     "windows": {
       "title": "Action windows",
@@ -238,13 +244,24 @@
       "courses_one": "{{count}} course",
       "courses_other": "{{count}} courses",
       "go": "Go to course registration",
-      "view": "View my registration"
+      "view": "View my registration",
+      "coursesWord_one": "course",
+      "coursesWord_other": "courses",
+      "more_one": "+{{count}} more course",
+      "more_other": "+{{count}} more courses"
     },
     "advising": {
       "title": "Advising",
       "description": "Items waiting for your decision",
       "pending": "Registrations waiting for approval",
       "addDrop": "Add-drop requests"
+    },
+    "hero": {
+      "gpa": "GPA",
+      "semester": "Semester",
+      "ects": "ECTS",
+      "classLevel": "Year {{level}}",
+      "prep": "Preparatory"
     }
   },
   "profile": {
