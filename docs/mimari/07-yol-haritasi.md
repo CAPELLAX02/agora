@@ -1,6 +1,6 @@
 # 07 · Yol Haritası ve Geliştirme Sırası
 
-> **Durum:** v0.3 · Kararlar §5'te · İlerleme ve "Bitti" kontrol listesi §6'da.
+> **Durum:** v0.4 · Kararlar §5'te · İlerleme ve "Bitti" kontrol listesi §6'da.
 
 ## 1. Kritik Karar: Önce Backend mi, Frontend mi?
 
@@ -143,6 +143,10 @@ flowchart LR
 | 11 | Faz kapanışı (2026-10-08) | Bir faz, §6'daki bütün maddeleri (backend + web + e2e + doküman) bitmeden kapanmaz. Backend'i bitmemiş bir fazın web'ine geçilmez |
 | 12 | Geçmiş ders sonuçları (2026-10-11) | Kural motoru (GANO, alttan ders, ön koşul) geçmiş dönem sonuçlarına dayanır. Bu sonuçlar Faz 3'te eski sistemden aktarılmış kayıtlar olarak (`source = IMPORT`) seed'lenir; not girişi, harf notu hesabı ve resmî YANO/GANO Faz 4'te gelir |
 | 13 | Ders seçmenin demosu (2026-10-11) | Gerçek takvimde 2026 güz ders seçmesi geçmişte kalır. Geliştirme seed'i, Bilgisayar Mühendisliği programı için kayıt pencerelerini seed'in çalıştığı ana göre açan **program kapsamlı** takvim olayları ekler (açıklamasında demo olduğu yazar). Üniversite takvimi değişmez; pencere motoru en dar kapsamı uyguladığı için sadece bu program etkilenir |
+| 14 | Puan aritmetiği (2026-10-11) | Puan ve ağırlıklar veritabanında `numeric`, Go'da yüzde birlik tamsayı (`int64`); kayan nokta kullanılmaz. Ders başarı puanı tam sayıya yarım yukarı yuvarlanır ve ölçeğin aralığına bakılır (yönetmelik metninden doğrulanacak) |
+| 15 | Not girişi ve ilanında MFA (2026-10-11) | Yetki kataloğunda `score:enter` ve `grade:finalize` MFA ister: öğretim elemanı not girmeden önce iki adımlı doğrulamayı kurar. Demo ve e2e bunu da gösterir |
+| 16 | Bütünleme hakkı (2026-10-11) | Hangi harf notlarının bütünleme hakkı verdiği yönetmelik parametresidir (`makeup_eligible_letters`, varsayılan `["F2"]`); devamsız (F1) öğrenci bütünlemeye giremez. Bütünleme notu, girilmişse final notunun yerine geçer |
+| 17 | Transkript belgesi (2026-10-11) | Faz 4'te ekran ve yazdırılabilir görünüm. İmzalı PDF, doğrulama kodu ve belge talebi Faz 7'nin belge altyapısıyla |
 
 ## 6. İlerleme ve "Bitti" Kontrol Listesi
 
@@ -281,6 +285,46 @@ flowchart LR
 | ✅ | Playwright e2e: ders seçme (alttan ders ve eşdeğerlik, çakışma uyarısı ve hatası, AKTS sayacı, kayıt engeli), gönder → geri gönder → düzelt → onay, toplu onay, ekle-bırak (danışman ve bölüm başkanı), onay belgesi |
 | ✅ | Sözleşme ve dokümanlar güncel (veri modeli, [kural kataloğu](09-ders-secme-kurallari.md), yetkilendirme politikaları, [yük testi sonuçları](08-yuk-testleri.md), README'de ders seçme demo rehberi), CI yeşil (backend, web kontrolü ve Playwright) |
 
-### Faz 4 ve sonrası
+### Faz 4 — Değerlendirme ve Not
+
+**Backend**
+
+| Durum | Madde | Not |
+| --- | --- | --- |
+| ⬜ | Bileşen notu girişi | `grading.assessment_scores`: puan (0-100) ya da "girmedi"; öğrencinin devam durumu (devamsız → F1). Not girişi pencereleri bileşenin türüne göre (ara sınav ve dönem içi → `MIDTERM_GRADE_ENTRY`, final → `FINAL_GRADE_ENTRY`, bütünleme → `MAKEUP_GRADE_ENTRY`), şubenin birim kapsamında. Şubenin sorumlu ve ortak öğretim elemanı girer (ilişki), plan kilitli olmalı, `score:enter` MFA ister. Bileşen bazında toplu yazma, iyimser kilit (`If-Match`), denetim izi |
+| ⬜ | Bileşen notlarının yayımlanması | Bileşen notları öğretim elemanı yayımlayınca öğrenciye görünür (`published_at`); bileşen ortalaması |
+| ⬜ | CSV ile toplu not girişi | Dışa aktarma (öğrenci listesi ve girilmiş notlar) ve içe aktarma: önce satır satır doğrulamalı önizleme, sonra tek transaction'da uygulama (`encoding/csv`) |
+| ⬜ | Harf notu motoru | Saf Go paketi, tamsayı aritmetik (§5 #14). Kurallar: devamsız → F1; final ya da bütünleme barajı (`final_min_score`) altı ya da girmedi → F2; bütünleme finalin yerine geçer; ağırlıklı ortalama yuvarlanıp ölçeğin aralığına bakılır; başarılı/başarısız (BŞR/BŞZ) notlu dersler; eksik bileşen → hesaplanamaz. Tablo güdümlü ve özellik tabanlı testler (ör. puan artınca harf notu düşmez) |
+| ⬜ | Harf notu önizleme ve ilan | Sorumlu öğretim elemanı önizler ve ilan eder (`grade:finalize`, MFA): kesin kayıt `COMPLETED`, ağırlıklı puan ve harf notu, ilan tarihi; tekrar alınan derste önceki deneme `superseded_by` ile kapanır. Elle harf notu (`MANUAL_LETTER_GRADE` penceresi, gerekçe zorunlu, denetimde). İlandan sonra değişiklik sadece not düzeltme talebiyle. `grades.published` olayı outbox'a |
+| ⬜ | Bütünleme | İlan sonrası bütünleme hakkı olanlar (§5 #16), bütünleme notu girişi ve yeniden ilan; bütünlemeye girmeyenin notu değişmez |
+| ⬜ | Sınıf istatistikleri | `grading.section_grade_stats`: öğrenci sayısı, ortalama, medyan, standart sapma, harf dağılımı; ilanla güncellenir. Öğrenci kendi notunun yanında sınıf ortalamasını görür |
+| ⬜ | YANO/GANO ve dönem sonuçları | `enrollment.term_results`: alınan ve kazanılan AKTS, YANO, GANO, onur/yüksek onur (`honor_gpa`). Son not geçerli (eşdeğer dersler dahil), AKTS ağırlıklı. `grades.published` tüketicisi idempotent yeniden hesaplar ve ders seçmenin kullandığı `gpa_cache`'i besler; aktarılan geçmiş dönemler için de üretilir |
+| ⬜ | Toplu yeniden hesap ve doğrulama | Bütün öğrencilerin dönem sonuçlarını yeniden üreten ve önbellekle farkı raporlayan iş (`errgroup` ile paralel, `make` komutu); ~92 bin öğrencide süre ölçümü dokümanda |
+| ⬜ | Transkript | `GET /student-programs/{id}/transcript`: dönem dönem dersler, AKTS, kredi, harf notu, tekrar işaretleri, dönem ve genel özet. Öğrenci kendisininkini, danışman danışmanlığındakileri, kapsamdaki birimler (`transcript:read_scoped`) görür |
+| ⬜ | Sanal transkript ("ne olur") | Varsayımsal harf notlarıyla YANO/GANO hesabı, hiçbir şey kaydedilmez; aynı hesap kodu kullanılır |
+| ⬜ | Öğrencinin notları | Dönem seçimli: dersler, yayımlanmış bileşen notları ve ağırlıkları, harf notu, ilan tarihi, sınıf ortalaması, devam durumu |
+| ⬜ | Not düzeltme talebi | İlandan sonra öğretim elemanı gerekçeyle talep eder (`grade_change:request`) → bölüm başkanı ya da fakülte öğrenci işleri onaylar (`grade_change:approve`, MFA; talep eden onaylayamaz) → uygulanır, dönem sonuçları yeniden hesaplanır, denetim izi |
+| ⬜ | İş metrikleri | `agora_scores_entered_total`, `agora_grades_published_total`, `agora_grade_changes_total` ve Grafana paneli |
+| ⬜ | Seed: not girişi demosu | 2026 güz için kesin kayıtlı demo sınıfları, P10001'in şubelerinde girilmiş ara sınav notları, Mühendislik Fakültesi için seed anına göre açılan not girişi pencereleri (§5 #13 gibi, açıklamasında demo yazar) |
+
+**Web**
+
+| Durum | Madde |
+| --- | --- |
+| ⬜ | Öğretim elemanı: not girişi tablosu (öğrenciler × bileşenler, klavyeyle gezinme, girmedi ve devamsız işaretleri, kaydedilmemiş değişiklik uyarısı, pencere durumu), bileşen yayımlama, CSV içe ve dışa aktarma |
+| ⬜ | Harf notu önizleme (istatistikler ve dağılım grafiği), elle harf notu, ilan; bütünleme listesi ve girişi |
+| ⬜ | Öğrenci: notlarım (dönem dönem, bileşenler, sınıf ortalaması), transkript (yazdırılabilir), sanal transkript |
+| ⬜ | Danışman ve öğrenci işleri: öğrenci detayında transkript ve dönem sonuçları |
+| ⬜ | Not düzeltme talepleri: öğretim elemanının talebi, onay ekranı |
+| ⬜ | Ana sayfa: öğrenci için son ilan edilen notlar, öğretim elemanı için not girişi bekleyen şubeler |
+
+**Kapanış**
+
+| Durum | Madde |
+| --- | --- |
+| ⬜ | Playwright e2e: öğretim elemanı MFA kurup not girer ve yayımlar → harf notlarını ilan eder → öğrenci notunu, sınıf ortalamasını ve transkriptini görür; bütünleme; not düzeltme talebi ve onayı; sanal transkript |
+| ⬜ | Sözleşme ve dokümanlar güncel (veri modeli, harf notu ve GANO kuralları, yetkilendirme politikaları, README'de demo rehberi), CI yeşil |
+
+### Faz 5 ve sonrası
 
 Her faz başlarken §2'deki kapsamdan aynı biçimde ayrıntılı bir liste çıkarılır.
