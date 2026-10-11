@@ -266,13 +266,13 @@ flowchart LR
 
 | Durum | Madde |
 | --- | --- |
-| ⬜ | Ders seçme (öğrenci): alınabilir dersler ve kategoriler, şube ve kontenjan, sepet ve AKTS sayacı, anlık kural geri bildirimi, haftalık program önizlemesi ve çakışma, danışmana gönder ve geri çek, durum ve danışman notu |
-| ⬜ | Danışman: danışmanlığımdaki öğrencilerin kayıt durumları, kayıt inceleme (ders geçmişi, kurallar, program), onay, red, onayı geri alma, toplu onay |
-| ⬜ | Kayıt onay belgesi (yazdırılabilir; imzalı PDF ve doğrulama kodu Faz 7'nin belge altyapısıyla) |
-| ⬜ | Ekle-bırak: öğrenci talebi, danışman ve bölüm başkanı onay ekranları |
-| ⬜ | Kayıt engelleri yönetimi; öğrenci detayında program durumu ve ders geçmişi |
-| ⬜ | Ders planım: derslerin durumu (geçti, kaldı, devam ediyor) ve mezuniyet ilerlemesi |
-| ⬜ | Ana sayfa: öğrenci için kayıt durumu, danışman için onay bekleyenler |
+| ✅ | Ders seçme (öğrenci): alınabilir dersler ve kategoriler, şube ve kontenjan, sepet ve AKTS sayacı, anlık kural geri bildirimi, haftalık program önizlemesi ve çakışma, danışmana gönder ve geri çek, durum ve danışman notu |
+| ✅ | Danışman: danışmanlığımdaki öğrencilerin kayıt durumları, kayıt inceleme (ders geçmişi, kurallar, program), onay, red, onayı geri alma, toplu onay |
+| ✅ | Kayıt onay belgesi (yazdırılabilir; imzalı PDF ve doğrulama kodu Faz 7'nin belge altyapısıyla) |
+| ✅ | Ekle-bırak: öğrenci talebi, danışman ve bölüm başkanı onay ekranları |
+| ✅ | Kayıt engelleri yönetimi; öğrenci detayında program durumu ve ders geçmişi |
+| ✅ | Ders planım: derslerin durumu (geçti, kaldı, devam ediyor) ve mezuniyet ilerlemesi |
+| ✅ | Ana sayfa: öğrenci için kayıt durumu, danışman için onay bekleyenler |
 
 **Kapanış**
 
