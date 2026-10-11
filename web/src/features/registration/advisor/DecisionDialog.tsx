@@ -1,3 +1,4 @@
+import { CircleCheckBigIcon, Undo2Icon, type LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -5,6 +6,7 @@ import { Button } from '@/shared/ui/button'
 import { FormDialog } from '@/shared/ui/form-dialog'
 import { Label } from '@/shared/ui/label'
 import { Textarea } from '@/shared/ui/textarea'
+import type { Tone } from '@/shared/ui/tone'
 
 /**
  * DecisionDialog, danışman (ya da bölüm başkanı, öğrenci işleri) kararını notla alır. Red ve
@@ -17,6 +19,8 @@ export function DecisionDialog({
   confirm,
   required,
   destructive = false,
+  icon,
+  tone,
   onClose,
   onConfirm,
 }: {
@@ -25,6 +29,9 @@ export function DecisionDialog({
   confirm: string
   required: boolean
   destructive?: boolean
+  /** icon, başlığın yanındaki ikondur; verilmezse onayda onay, reddederken geri gönderme ikonu. */
+  icon?: LucideIcon
+  tone?: Tone
   onClose: () => void
   onConfirm: (note: string) => Promise<boolean>
 }) {
@@ -36,6 +43,8 @@ export function DecisionDialog({
     <FormDialog
       title={title}
       description={description}
+      icon={icon ?? (destructive ? Undo2Icon : CircleCheckBigIcon)}
+      tone={tone ?? (destructive ? 'rose' : 'emerald')}
       error={error}
       onClose={onClose}
       onSubmit={() => {

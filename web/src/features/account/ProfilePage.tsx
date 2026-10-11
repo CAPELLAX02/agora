@@ -1,8 +1,10 @@
+import { AtSignIcon, ClockIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import { useRoleName, useScopeLabel } from './scope'
+import { navTheme } from '@/features/shell/nav'
 import { formatDate, formatDateTime } from '@/i18n/format'
 import { useGetMeQuery } from '@/shared/api/generated'
+import { Avatar } from '@/shared/ui/avatar'
 import { Badge } from '@/shared/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
 import { DescriptionList } from '@/shared/ui/description-list'
@@ -12,6 +14,8 @@ import { ErrorState } from '@/shared/ui/states'
 import { StatusBadge } from '@/shared/ui/status-badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
 
+import { useRoleName, useScopeLabel } from './scope'
+
 export function ProfilePage() {
   const { t } = useTranslation()
   const { data: me, error, refetch } = useGetMeQuery()
@@ -20,13 +24,53 @@ export function ProfilePage() {
 
   return (
     <>
-      <PageHeader title={t('profile.title')} description={t('profile.description')} />
+      <PageHeader
+        {...navTheme('/profil')}
+        title={t('profile.title')}
+        description={t('profile.description')}
+      />
       {error ? (
         <ErrorState error={error} onRetry={() => void refetch()} />
       ) : !me ? (
         <Skeleton className="h-64" />
       ) : (
         <div className="grid gap-6">
+          <Card className="overflow-hidden pt-0">
+            <div aria-hidden className="relative h-24 bg-brand-gradient">
+              <div className="absolute -top-10 right-16 size-40 rounded-full bg-amber-300/30 blur-2xl" />
+              <div className="absolute -bottom-12 left-1/3 size-40 rounded-full bg-sky-300/30 blur-2xl" />
+            </div>
+            <CardContent className="-mt-12 flex flex-col gap-4 sm:flex-row sm:items-end">
+              <Avatar
+                firstName={me.first_name}
+                lastName={me.last_name}
+                className="size-24 text-3xl ring-4 ring-card"
+              />
+              <div className="min-w-0 flex-1 space-y-1.5 pb-1">
+                <p className="text-2xl font-extrabold tracking-tight">
+                  {me.first_name} {me.last_name}
+                </p>
+                <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                  <span className="font-mono font-semibold text-foreground">{me.username}</span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <AtSignIcon className="size-3.5" aria-hidden />
+                    {me.email}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <ClockIcon className="size-3.5" aria-hidden />
+                    {formatDateTime(me.last_login_at)}
+                  </span>
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2 pb-1">
+                {me.roles.map((r) => (
+                  <Badge key={`${r.role}-${r.scope_id ?? ''}`} variant="violet">
+                    {roleName(r)}
+                  </Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader>
               <CardTitle>{t('profile.info')}</CardTitle>

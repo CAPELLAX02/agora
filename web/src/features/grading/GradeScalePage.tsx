@@ -2,6 +2,7 @@ import { CheckIcon, MinusIcon } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { navTheme } from '@/features/shell/nav'
 import { formatDate } from '@/i18n/format'
 import {
   useListGradeScalesQuery,
@@ -12,6 +13,7 @@ import {
 import { useLocalized } from '@/shared/lib/localized'
 import { Badge } from '@/shared/ui/badge'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { LetterGrade } from '@/shared/ui/letter-grade'
 import { PageHeader } from '@/shared/ui/page-header'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { ErrorState } from '@/shared/ui/states'
@@ -36,7 +38,11 @@ export function GradeScalePage() {
 
   return (
     <>
-      <PageHeader title={t('gradeScale.title')} description={t('gradeScale.description')} />
+      <PageHeader
+        {...navTheme('/not-olcegi')}
+        title={t('gradeScale.title')}
+        description={t('gradeScale.description')}
+      />
       <div className="space-y-6">
         {!scales.data ? (
           <Skeleton className="h-96" />
@@ -79,7 +85,9 @@ export function GradeScalePage() {
                 <TableBody>
                   {scale.items.map((it) => (
                     <TableRow key={it.letter}>
-                      <TableCell className="font-mono font-medium">{it.letter}</TableCell>
+                      <TableCell>
+                        <LetterGrade letter={it.letter} />
+                      </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {it.coefficient?.toFixed(2) ?? '—'}
                       </TableCell>

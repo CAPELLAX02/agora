@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
+import { navTheme } from '@/features/shell/nav'
 import { useListStudentsQuery, type EnrollmentStatus, type ListStudentsApiArg } from '@/shared/api/generated'
 import { useDebounced } from '@/shared/lib/useDebounced'
 import { Button } from '@/shared/ui/button'
@@ -13,6 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/shared/ui/skeleton'
 import { EmptyState, ErrorState } from '@/shared/ui/states'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
+import { Avatar } from '@/shared/ui/avatar'
+import { Gpa } from '@/shared/ui/gpa'
 
 import { EnrollmentStatusBadge } from './badges'
 
@@ -40,7 +43,11 @@ export function StudentsPage() {
 
   return (
     <>
-      <PageHeader title={t('students.title')} description={t('students.description')} />
+      <PageHeader
+        {...navTheme('/ogrenciler')}
+        title={t('students.title')}
+        description={t('students.description')}
+      />
       <div className="mb-4 flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
           <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -137,13 +144,21 @@ function Rows({
         <TableRow key={sp.id}>
           <TableCell className="font-mono text-xs">{sp.student.student_no}</TableCell>
           <TableCell>
-            <Link to={`/ogrenciler/${sp.student.id}`} className="font-medium hover:underline">
-              {sp.student.first_name} {sp.student.last_name}
-            </Link>
+            <span className="flex items-center gap-2.5">
+              <Avatar firstName={sp.student.first_name} lastName={sp.student.last_name} />
+              <Link
+                to={`/ogrenciler/${sp.student.id}`}
+                className="font-semibold hover:text-primary hover:underline"
+              >
+                {sp.student.first_name} {sp.student.last_name}
+              </Link>
+            </span>
           </TableCell>
           <TableCell className="text-sm">{sp.program.name_tr}</TableCell>
           <TableCell className="text-right tabular-nums">{sp.current_semester}</TableCell>
-          <TableCell className="text-right tabular-nums">{sp.gpa?.toFixed(2) ?? '—'}</TableCell>
+          <TableCell className="text-right">
+            <Gpa value={sp.gpa} />
+          </TableCell>
           <TableCell>
             <EnrollmentStatusBadge status={sp.status} />
           </TableCell>

@@ -10,8 +10,10 @@ import {
   type CourseKind,
   type ListCoursesApiArg,
 } from '@/shared/api/generated'
+import { navTheme } from '@/features/shell/nav'
 import { useDebounced } from '@/shared/lib/useDebounced'
 import { useLocalized } from '@/shared/lib/localized'
+import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
@@ -20,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/shared/ui/skeleton'
 import { EmptyState, ErrorState } from '@/shared/ui/states'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
+import { toneFor, toneSoft } from '@/shared/ui/tone'
 
 import { CourseKindBadge } from './course'
 import { hours } from './format'
@@ -67,7 +70,11 @@ export function CoursesPage() {
 
   return (
     <>
-      <PageHeader title={t('catalog.title')} description={t('catalog.description')} />
+      <PageHeader
+        {...navTheme('/dersler')}
+        title={t('catalog.title')}
+        description={t('catalog.description')}
+      />
       <Card className="gap-0 py-0">
         <CardContent className="flex flex-col gap-3 border-b p-4 md:flex-row md:flex-wrap">
           <div className="relative min-w-48 flex-1">
@@ -207,7 +214,16 @@ function CourseRows({
     <>
       {data.items.map((c) => (
         <TableRow key={c.id}>
-          <TableCell className="font-mono text-xs">{c.code}</TableCell>
+          <TableCell>
+            <span
+              className={cn(
+                'rounded-md px-1.5 py-0.5 font-mono text-xs font-bold',
+                toneSoft[toneFor(c.code)],
+              )}
+            >
+              {c.code}
+            </span>
+          </TableCell>
           <TableCell>
             <div className="flex flex-wrap items-center gap-2">
               <Link to={`/dersler/${c.id}`} className="font-medium hover:underline">

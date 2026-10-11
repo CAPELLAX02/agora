@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
 
+import { navTheme } from '@/features/shell/nav'
 import { formatDateTime } from '@/i18n/format'
 import {
   useBulkApproveRegistrationsMutation,
@@ -15,6 +16,8 @@ import {
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
+import { Avatar } from '@/shared/ui/avatar'
+import { Gpa } from '@/shared/ui/gpa'
 import { Checkbox } from '@/shared/ui/checkbox'
 import { ConfirmDialog } from '@/shared/ui/confirm-dialog'
 import { PageHeader } from '@/shared/ui/page-header'
@@ -66,6 +69,7 @@ export function AdviseeRegistrationsPage() {
   return (
     <>
       <PageHeader
+        {...navTheme('/danismanlik')}
         title={t('registration.advisor.title')}
         description={t('registration.advisor.description', { term: data.term.code })}
         actions={
@@ -132,33 +136,44 @@ export function AdviseeRegistrationsPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        {i.registration_id ? (
-                          <Link
-                            to={`/danismanlik/kayitlar/${i.registration_id}`}
-                            className="font-medium hover:underline"
-                          >
-                            {name}
-                          </Link>
-                        ) : (
-                          <span className="font-medium">{name}</span>
-                        )}
-                        {i.blocked && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <LockIcon
-                                className="size-3.5 text-destructive"
-                                aria-label={t('registration.advisor.blocked')}
-                              />
-                            </TooltipTrigger>
-                            <TooltipContent>{t('registration.advisor.blocked')}</TooltipContent>
-                          </Tooltip>
-                        )}
+                      <div className="flex items-center gap-3">
+                        <Avatar
+                          firstName={i.student.first_name}
+                          lastName={i.student.last_name}
+                          className="size-9"
+                        />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            {i.registration_id ? (
+                              <Link
+                                to={`/danismanlik/kayitlar/${i.registration_id}`}
+                                className="font-medium hover:underline"
+                              >
+                                {name}
+                              </Link>
+                            ) : (
+                              <span className="font-medium">{name}</span>
+                            )}
+                            {i.blocked && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <LockIcon
+                                    className="size-3.5 text-destructive"
+                                    aria-label={t('registration.advisor.blocked')}
+                                  />
+                                </TooltipTrigger>
+                                <TooltipContent>{t('registration.advisor.blocked')}</TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
+                          <p className="font-mono text-xs text-muted-foreground">{i.student.student_no}</p>
+                        </div>
                       </div>
-                      <p className="font-mono text-xs text-muted-foreground">{i.student.student_no}</p>
                     </TableCell>
                     <TableCell className="text-right tabular-nums">{i.semester}</TableCell>
-                    <TableCell className="text-right tabular-nums">{i.gpa?.toFixed(2) ?? '—'}</TableCell>
+                    <TableCell className="text-right">
+                      <Gpa value={i.gpa} />
+                    </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {i.total_ects} <span className="text-xs text-muted-foreground">({i.item_count})</span>
                     </TableCell>
