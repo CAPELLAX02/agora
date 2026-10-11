@@ -261,28 +261,36 @@ function BasketCard({ registration: r }: { registration: Registration }) {
   const warnings = r.evaluation.violations.filter((v) => v.severity === 'WARNING').length
 
   return (
-    <Card className="h-fit xl:sticky xl:top-20" role="region" aria-label={t('registration.basket.title')}>
+    // Yapışkan sepet ekrandan uzun olmasın: dersler ve kurallar kendi içinde kayar, AKTS ve
+    // gönder düğmesi hep görünür kalır.
+    <Card
+      className="h-fit xl:sticky xl:top-20 xl:max-h-[calc(100svh-6rem)]"
+      role="region"
+      aria-label={t('registration.basket.title')}
+    >
       <CardHeader className="flex items-center gap-3">
         <IconChip icon={ShoppingBasketIcon} tone="violet" solid />
         <CardTitle className="flex-1 text-lg">{t('registration.basket.title')}</CardTitle>
         <Badge variant="violet">{t('dashboard.registration.courses', { count: r.items.length })}</Badge>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <BasketItems
-          items={r.items}
-          busy={removing.isLoading}
-          onRemove={
-            r.actions.can_edit
-              ? (it) =>
-                  void run(
-                    remove({ id: r.student_program_id, itemId: it.id, 'Idempotency-Key': newKey() }),
-                    () => toast.success(t('registration.basket.removed', { label: it.section.label })),
-                  )
-              : undefined
-          }
-        />
+      <CardContent className="flex min-h-0 flex-col gap-4">
+        <div className="-mr-2 min-h-0 space-y-4 overflow-y-auto pr-2">
+          <BasketItems
+            items={r.items}
+            busy={removing.isLoading}
+            onRemove={
+              r.actions.can_edit
+                ? (it) =>
+                    void run(
+                      remove({ id: r.student_program_id, itemId: it.id, 'Idempotency-Key': newKey() }),
+                      () => toast.success(t('registration.basket.removed', { label: it.section.label })),
+                    )
+                : undefined
+            }
+          />
+          <ViolationList violations={shownViolations(r)} />
+        </div>
         <EctsMeter total={r.total_ects} limit={r.ects_limit} />
-        <ViolationList violations={shownViolations(r)} />
         <div className="flex flex-wrap gap-2">
           {(r.status === 'DRAFT' || r.status === 'REJECTED') && r.actions.can_edit && (
             <Button
