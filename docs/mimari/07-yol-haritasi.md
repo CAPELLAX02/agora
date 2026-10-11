@@ -278,7 +278,7 @@ flowchart LR
 
 | Durum | Madde |
 | --- | --- |
-| ⬜ | Playwright e2e: ders seçme (kural ihlali, kontenjan, çakışma), gönder → red → düzelt → onay, toplu onay, ekle-bırak, onay belgesi |
+| ✅ | Playwright e2e: ders seçme (alttan ders ve eşdeğerlik, çakışma uyarısı ve hatası, AKTS sayacı, kayıt engeli), gönder → geri gönder → düzelt → onay, toplu onay, ekle-bırak (danışman ve bölüm başkanı), onay belgesi |
 | ⬜ | Sözleşme ve dokümanlar güncel (veri modeli, kural kataloğu, yetkilendirme politikaları, yük testi sonuçları, README'de demo rehberi), CI yeşil |
 
 ### Faz 4 ve sonrası
