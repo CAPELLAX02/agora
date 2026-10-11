@@ -4,7 +4,14 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
 import { CourseKindBadge } from '@/features/catalog/course'
-import { useGetElectiveGroupQuery, type CurriculumDetail, type CurriculumItem } from '@/shared/api/generated'
+import { ProgressBadge, ProgressSummary } from '@/features/registration/ProgressView'
+import {
+  useGetElectiveGroupQuery,
+  type CurriculumDetail,
+  type CurriculumItem,
+  type ProgressLine,
+  type StudentProgress,
+} from '@/shared/api/generated'
 import { useLocalized } from '@/shared/lib/localized'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
@@ -16,16 +23,20 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip'
 /**
  * CurriculumView, bir müfredat sürümünü yarıyıl yarıyıl gösterir: zorunlu dersler, seçmeli
  * yuvalar (havuzun dersleri açılabilir) ve mezuniyet özeti. onRemove verilirse (taslak
- * düzenlenirken) satırlar kaldırılabilir.
+ * düzenlenirken) satırlar kaldırılabilir. progress verilirse (öğrencinin kendi planı) her
+ * satırda dersin durumu (geçti, kaldı, devam ediyor) ve mezuniyet ilerlemesi gösterilir.
  */
 export function CurriculumView({
   curriculum,
   onRemove,
+  progress,
 }: {
   curriculum: CurriculumDetail
   onRemove?: (item: CurriculumItem) => void
+  progress?: StudentProgress | undefined
 }) {
   const { t } = useTranslation()
+  const lines = new Map(progress?.lines.map((l) => [l.item_id, l]))
   const semesters = new Map<number, CurriculumItem[]>()
   for (const it of curriculum.items) {
     semesters.set(it.semester_no, [...(semesters.get(it.semester_no) ?? []), it])
@@ -34,6 +45,7 @@ export function CurriculumView({
 
   return (
     <div className="space-y-6">
+      {progress && <ProgressSummary progress={progress} />}
       <Summary curriculum={curriculum} />
       {semesters.size === 0 ? (
         <p className="text-sm text-muted-foreground">{t('curriculum.view.empty')}</p>
@@ -72,7 +84,7 @@ export function CurriculumView({
                   </TableHeader>
                   <TableBody>
                     {items.map((it) => (
-                      <ItemRow key={it.id} item={it} onRemove={onRemove} />
+                      <ItemRow key={it.id} item={it} onRemove={onRemove} line={lines.get(it.id)} />
                     ))}
                   </TableBody>
                   <TableFooter>
@@ -123,9 +135,11 @@ function Summary({ curriculum }: { curriculum: CurriculumDetail }) {
 function ItemRow({
   item,
   onRemove,
+  line,
 }: {
   item: CurriculumItem
   onRemove?: ((item: CurriculumItem) => void) | undefined
+  line?: ProgressLine | undefined
 }) {
   const { t } = useTranslation()
   const localized = useLocalized()
@@ -163,6 +177,18 @@ function ItemRow({
               </Badge>
             )}
             {item.course_kind && <CourseKindBadge kind={item.course_kind} />}
+            {line && <ProgressBadge status={line.status} />}
+            {line?.last_attempt?.letter && (
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {line.last_attempt.letter}
+                {line.last_attempt.course_code !== item.code && ` (${line.last_attempt.course_code})`}
+              </span>
+            )}
+            {line && slot && line.filled.length + line.in_progress.length > 0 && (
+              <span className="text-xs text-muted-foreground">
+                {[...line.filled, ...line.in_progress].map((a) => a.course_code).join(', ')}
+              </span>
+            )}
             {item.has_prerequisites && (
               <Tooltip>
                 <TooltipTrigger asChild>

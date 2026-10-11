@@ -4,7 +4,7 @@ import { Link } from 'react-router'
 
 import { useRoleName, useScopeLabel } from '@/features/account/scope'
 import { usePermissions } from '@/features/auth/usePermissions'
-import { navGroups } from '@/features/shell/nav'
+import { navGroups, visible } from '@/features/shell/nav'
 import { formatDate, formatDateTime } from '@/i18n/format'
 import { useGetMeQuery } from '@/shared/api/generated'
 import { Badge } from '@/shared/ui/badge'
@@ -13,13 +13,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/sha
 import { Skeleton } from '@/shared/ui/skeleton'
 import { ErrorState } from '@/shared/ui/states'
 
+import { AdvisingCard } from './AdvisingCard'
+import { RegistrationCard } from './RegistrationCard'
 import { WindowsCard } from './WindowsCard'
 
 /** DashboardPage, oturum açan kullanıcının ana sayfasıdır: rolleri, hesap güvenliği, açık işlem pencereleri ve kısayollar. */
 export function DashboardPage() {
   const { t } = useTranslation()
   const { data: me, error, refetch } = useGetMeQuery()
-  const { has } = usePermissions()
+  const perms = usePermissions()
+  const { has, hasAny } = perms
   const scopeLabel = useScopeLabel()
   const roleName = useRoleName()
 
@@ -36,9 +39,7 @@ export function DashboardPage() {
     )
   }
 
-  const shortcuts = navGroups
-    .flatMap((g) => g.items)
-    .filter((i) => i.to !== '/' && (!i.permission || has(i.permission)))
+  const shortcuts = navGroups.flatMap((g) => g.items).filter((i) => i.to !== '/' && visible(i, perms))
 
   return (
     <div className="space-y-6">
@@ -106,6 +107,8 @@ export function DashboardPage() {
           </CardContent>
         </Card>
 
+        {has('registration:manage_own') && <RegistrationCard />}
+        {hasAny(['registration:approve', 'registration:approve_add_drop']) && <AdvisingCard />}
         {has('calendar:read') && <WindowsCard />}
 
         <Card>

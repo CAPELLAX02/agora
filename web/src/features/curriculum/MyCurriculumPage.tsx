@@ -2,7 +2,11 @@ import { InfoIcon } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { useMyCurriculaQuery, type MyCurriculaApiResponse } from '@/shared/api/generated'
+import {
+  useGetStudentProgressQuery,
+  useMyCurriculaQuery,
+  type MyCurriculaApiResponse,
+} from '@/shared/api/generated'
 import { useLocalized } from '@/shared/lib/localized'
 import { Alert, AlertDescription } from '@/shared/ui/alert'
 import { PageHeader } from '@/shared/ui/page-header'
@@ -67,6 +71,7 @@ export function MyCurriculumPage() {
 function Enrollment({ enrollment: e }: { enrollment: Enrollment }) {
   const { t } = useTranslation()
   const localized = useLocalized()
+  const { data: progress } = useGetStudentProgressQuery({ id: e.student_program_id })
   if (!e.curriculum) {
     return (
       <Alert>
@@ -88,7 +93,7 @@ function Enrollment({ enrollment: e }: { enrollment: Enrollment }) {
           <YearRange from={e.curriculum.effective_from_year} to={e.curriculum.effective_to_year} />
         </p>
       </div>
-      <CurriculumView curriculum={e.curriculum} />
+      <CurriculumView curriculum={e.curriculum} progress={progress} />
     </div>
   )
 }
