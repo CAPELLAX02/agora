@@ -283,7 +283,8 @@ func (d *historyData) generate(st histStudent, seed uint64) []histRecord {
 				retakes = append(retakes, id)
 			}
 		}
-		slices.Sort(retakes) // map sırası deterministik değil
+		// Map sırası rastgeledir; kimlik (UUID) de veritabanına göre değişir: koda göre sırala.
+		slices.SortFunc(retakes, func(a, b string) int { return cmp.Compare(d.courses[a].code, d.courses[b].code) })
 		for _, id := range retakes {
 			take(id, term)
 		}
@@ -463,10 +464,15 @@ func loadHistoryData(ctx context.Context, pool *pgxpool.Pool) (*historyData, err
 		return nil, fmt.Errorf("dersler okunamadı: %w", err)
 	}
 
+	// Sıralamalar kodlara dayanır, kimliklere (UUID) değil: aynı tohum her veritabanında
+	// (geliştirme, e2e, test) aynı geçmişi üretsin.
 	rows, err = pool.Query(ctx, `
-		SELECT curriculum_id, semester_no, coalesce(course_id::text, ''), coalesce(elective_group_id::text, ''),
-		       coalesce(slot_course_count, 1)
-		FROM curriculum.curriculum_items ORDER BY curriculum_id, semester_no, position, id`)
+		SELECT i.curriculum_id, i.semester_no, coalesce(i.course_id::text, ''), coalesce(i.elective_group_id::text, ''),
+		       coalesce(i.slot_course_count, 1)
+		FROM curriculum.curriculum_items i
+		LEFT JOIN curriculum.courses c ON c.id = i.course_id
+		LEFT JOIN curriculum.elective_groups g ON g.id = i.elective_group_id
+		ORDER BY i.curriculum_id, i.semester_no, i.position, coalesce(c.code, g.code)`)
 	if err != nil {
 		return nil, fmt.Errorf("müfredatlar okunamadı: %w", err)
 	}
@@ -482,7 +488,8 @@ func loadHistoryData(ctx context.Context, pool *pgxpool.Pool) (*historyData, err
 	}
 
 	rows, err = pool.Query(ctx, `
-		SELECT elective_group_id, course_id FROM curriculum.elective_group_courses ORDER BY elective_group_id, course_id`)
+		SELECT gc.elective_group_id, gc.course_id FROM curriculum.elective_group_courses gc
+		JOIN curriculum.courses c ON c.id = gc.course_id ORDER BY gc.elective_group_id, c.code`)
 	if err != nil {
 		return nil, fmt.Errorf("seçmeli havuzları okunamadı: %w", err)
 	}
