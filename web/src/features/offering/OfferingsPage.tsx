@@ -6,6 +6,7 @@ import { Link, useSearchParams } from 'react-router'
 import { usePermissions } from '@/features/auth/usePermissions'
 import { TermSelect } from '@/features/calendar/TermSelect'
 import { useTermParam } from '@/features/calendar/useTermParam'
+import { navTheme } from '@/features/shell/nav'
 import {
   useGetDepartmentQuery,
   useListFacultiesQuery,
@@ -64,6 +65,7 @@ export function OfferingsPage() {
   return (
     <>
       <PageHeader
+        {...navTheme('/ders-acma')}
         title={t('offering.title')}
         description={t('offering.description')}
         actions={

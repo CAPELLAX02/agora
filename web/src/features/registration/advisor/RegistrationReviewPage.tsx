@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 import { toast } from 'sonner'
 
+import { navTheme } from '@/features/shell/nav'
 import { formatDateTime } from '@/i18n/format'
 import { ifMatch } from '@/shared/api/etag'
 import {
@@ -66,6 +67,7 @@ export function RegistrationReviewPage() {
         </Link>
       </Button>
       <PageHeader
+        {...navTheme('/danismanlik')}
         title={name}
         description={t('registration.review.subtitle', {
           no: r.student.student_no,

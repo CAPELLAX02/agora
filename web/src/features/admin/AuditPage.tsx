@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router'
 
 import { useEventDetail } from '@/features/account/events'
+import { navTheme } from '@/features/shell/nav'
 import { formatDateTime } from '@/i18n/format'
 import {
   useListAuditLogQuery,
@@ -50,7 +51,11 @@ export function AuditPage() {
   const tab = params.get('tab') === 'security' ? 'security' : 'log'
   return (
     <>
-      <PageHeader title={t('audit.title')} description={t('audit.description')} />
+      <PageHeader
+        {...navTheme('/yonetim/denetim')}
+        title={t('audit.title')}
+        description={t('audit.description')}
+      />
       <Tabs value={tab} onValueChange={(v) => setParams({ tab: v }, { replace: true })} className="gap-4">
         <TabsList>
           <TabsTrigger value="log">{t('audit.tabs.log')}</TabsTrigger>

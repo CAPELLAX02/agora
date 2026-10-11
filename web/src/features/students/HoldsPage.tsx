@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
+import { navTheme } from '@/features/shell/nav'
 import { formatDateTime } from '@/i18n/format'
 import {
   useListHoldsQuery,
@@ -49,6 +50,7 @@ export function HoldsPage() {
   return (
     <>
       <PageHeader
+        {...navTheme('/kayit-engelleri')}
         title={t('students.holds.pageTitle')}
         description={t('students.holds.pageDescription')}
         actions={

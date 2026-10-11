@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 
 import { usePermissions } from '@/features/auth/usePermissions'
+import { navTheme } from '@/features/shell/nav'
 import { ifMatch } from '@/shared/api/etag'
 import {
   useDeleteOfferingMutation,
@@ -68,6 +69,7 @@ export function OfferingDetailPage() {
         </Link>
       </Button>
       <PageHeader
+        {...navTheme('/ders-acma')}
         title={
           <span className="flex flex-wrap items-center gap-3">
             <span className="font-mono text-muted-foreground">{offering.course.code}</span>

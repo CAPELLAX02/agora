@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
 
+import { navTheme } from '@/features/shell/nav'
 import { formatDateTime } from '@/i18n/format'
 import { ifMatch } from '@/shared/api/etag'
 import {
@@ -42,6 +43,7 @@ export function AddDropQueuePage() {
   return (
     <>
       <PageHeader
+        {...navTheme('/ekle-birak-onaylari')}
         title={t('registration.addDropQueue.title')}
         description={t('registration.addDropQueue.description')}
       />

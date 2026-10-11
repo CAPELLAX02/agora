@@ -1,9 +1,10 @@
-import { ClipboardCheckIcon, FileTextIcon, SendIcon, ShoppingBasketIcon, Undo2Icon } from 'lucide-react'
+import { FileTextIcon, SendIcon, ShoppingBasketIcon, Undo2Icon } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
 
+import { navTheme } from '@/features/shell/nav'
 import { ifMatch } from '@/shared/api/etag'
 import {
   useAddRegistrationItemMutation,
@@ -62,8 +63,7 @@ export function RegistrationPage() {
       <PageHeader
         title={t('registration.title')}
         description={t('registration.description')}
-        icon={ClipboardCheckIcon}
-        tone="violet"
+        {...navTheme('/ders-secimi')}
       />
       {!current ? (
         <EmptyState>{t('registration.noPrograms')}</EmptyState>

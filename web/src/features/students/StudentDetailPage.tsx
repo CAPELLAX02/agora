@@ -6,6 +6,7 @@ import { Link, useParams } from 'react-router'
 import { usePermissions } from '@/features/auth/usePermissions'
 import { RegistrationStatusBadge } from '@/features/registration/badges'
 import { HistoryTable, ProgressView } from '@/features/registration/ProgressView'
+import { navTheme } from '@/features/shell/nav'
 import { formatDate, formatDateTime } from '@/i18n/format'
 import {
   useGetRegistrationQuery,
@@ -52,6 +53,7 @@ export function StudentDetailPage() {
         </Link>
       </Button>
       <PageHeader
+        {...navTheme('/ogrenciler')}
         title={`${st.first_name} ${st.last_name}`}
         description={[st.student_no, st.email].filter(Boolean).join(' · ')}
       />

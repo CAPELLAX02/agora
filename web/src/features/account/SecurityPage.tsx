@@ -2,6 +2,7 @@ import { HistoryIcon, KeyRoundIcon, MonitorSmartphoneIcon, ShieldCheckIcon } fro
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router'
 
+import { navTheme } from '@/features/shell/nav'
 import { PageHeader } from '@/shared/ui/page-header'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 
@@ -28,7 +29,11 @@ export function SecurityPage() {
 
   return (
     <>
-      <PageHeader title={t('security.title')} description={t('security.description')} />
+      <PageHeader
+        {...navTheme('/guvenlik')}
+        title={t('security.title')}
+        description={t('security.description')}
+      />
       <Tabs value={tab} onValueChange={(v) => setParams({ tab: v }, { replace: true })} className="gap-6">
         <TabsList className="h-auto w-full flex-wrap justify-start sm:w-fit">
           {tabs.map((key) => {

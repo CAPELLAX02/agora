@@ -3,6 +3,7 @@ import { Fragment } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 
+import { navTheme } from '@/features/shell/nav'
 import { useGetCourseQuery, type CourseDetail, type CourseRef } from '@/shared/api/generated'
 import { useLocalized } from '@/shared/lib/localized'
 import { Badge } from '@/shared/ui/badge'
@@ -50,6 +51,7 @@ export function CourseDetailPage() {
         </Link>
       </Button>
       <PageHeader
+        {...navTheme('/dersler')}
         title={
           <span className="flex flex-wrap items-center gap-3">
             <span className="font-mono text-muted-foreground">{course.code}</span>

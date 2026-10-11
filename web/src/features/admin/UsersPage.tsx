@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router'
 
 import { usePermissions } from '@/features/auth/usePermissions'
+import { navTheme } from '@/features/shell/nav'
 import { formatDateTime } from '@/i18n/format'
 import { useListUsersQuery, type ListUsersApiArg, type UserStatus } from '@/shared/api/generated'
 import { useDebounced } from '@/shared/lib/useDebounced'
@@ -59,6 +60,7 @@ export function UsersPage() {
   return (
     <>
       <PageHeader
+        {...navTheme('/yonetim/kullanicilar')}
         title={t('users.title')}
         description={t('users.description')}
         actions={

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router'
 import { toast } from 'sonner'
 
+import { navTheme } from '@/features/shell/nav'
 import { formatDate, formatDateTime } from '@/i18n/format'
 import { ifMatch } from '@/shared/api/etag'
 import { fieldErrors } from '@/shared/api/errors'
@@ -66,6 +67,7 @@ export function AssessmentPlanPage() {
   return (
     <>
       <PageHeader
+        {...navTheme('/verdigim-dersler')}
         title={t('plan.title')}
         description={`${offering.data.course.code}-${section.data.section_code} ${localized(offering.data.course)} · ${offering.data.term.code}`}
         actions={

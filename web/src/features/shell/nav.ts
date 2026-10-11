@@ -187,3 +187,9 @@ export function navItem(to: string): NavItem | undefined {
   }
   return undefined
 }
+
+/** navTheme, sayfa başlığının ikonu ve rengidir: yan menüdeki öğeyle aynı. */
+export function navTheme(to: string): { icon: LucideIcon; tone: Tone } {
+  const item = navItem(to)
+  return item ? { icon: item.icon, tone: item.tone } : { icon: HomeIcon, tone: 'indigo' }
+}

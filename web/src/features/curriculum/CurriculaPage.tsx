@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { usePermissions } from '@/features/auth/usePermissions'
 import { OrgPicker } from '@/features/org/OrgPicker'
 import type { OrgSelection } from '@/features/org/orgSelection'
+import { navTheme } from '@/features/shell/nav'
 import {
   useActivateCurriculumMutation,
   useArchiveCurriculumMutation,
@@ -75,6 +76,7 @@ export function CurriculaPage() {
   return (
     <>
       <PageHeader
+        {...navTheme('/ders-planlari')}
         title={t('curriculum.title')}
         description={t('curriculum.description')}
         actions={
