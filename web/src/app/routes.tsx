@@ -199,6 +199,123 @@ export const routes: RouteObject[] = [
                     },
                   },
                   {
+                    path: 'ders-secimi',
+                    lazy: async () => {
+                      const { RegistrationPage } = await import('@/features/registration/RegistrationPage')
+                      return {
+                        element: (
+                          <RequirePermission permission="registration:manage_own">
+                            <RegistrationPage />
+                          </RequirePermission>
+                        ),
+                      }
+                    },
+                  },
+                  {
+                    path: 'ders-secimi/belge',
+                    lazy: async () => {
+                      const { RegistrationReportPage } =
+                        await import('@/features/registration/RegistrationReportPage')
+                      return {
+                        element: (
+                          <RequirePermission permission="registration:manage_own">
+                            <RegistrationReportPage />
+                          </RequirePermission>
+                        ),
+                      }
+                    },
+                  },
+                  {
+                    path: 'danismanlik',
+                    lazy: async () => {
+                      const { AdviseeRegistrationsPage } =
+                        await import('@/features/registration/advisor/AdviseeRegistrationsPage')
+                      return {
+                        element: (
+                          <RequirePermission permission="registration:approve">
+                            <AdviseeRegistrationsPage />
+                          </RequirePermission>
+                        ),
+                      }
+                    },
+                  },
+                  {
+                    path: 'danismanlik/kayitlar/:id',
+                    lazy: async () => {
+                      const { RegistrationReviewPage } =
+                        await import('@/features/registration/advisor/RegistrationReviewPage')
+                      return {
+                        element: (
+                          <RequirePermission
+                            permission={[
+                              'registration:approve',
+                              'registration:override',
+                              'registration:approve_add_drop',
+                              'person:read',
+                            ]}
+                          >
+                            <RegistrationReviewPage />
+                          </RequirePermission>
+                        ),
+                      }
+                    },
+                  },
+                  {
+                    path: 'ekle-birak-onaylari',
+                    lazy: async () => {
+                      const { AddDropQueuePage } =
+                        await import('@/features/registration/advisor/AddDropQueuePage')
+                      return {
+                        element: (
+                          <RequirePermission
+                            permission={['registration:approve', 'registration:approve_add_drop']}
+                          >
+                            <AddDropQueuePage />
+                          </RequirePermission>
+                        ),
+                      }
+                    },
+                  },
+                  {
+                    path: 'ogrenciler',
+                    lazy: async () => {
+                      const { StudentsPage } = await import('@/features/students/StudentsPage')
+                      return {
+                        element: (
+                          <RequirePermission permission="person:read">
+                            <StudentsPage />
+                          </RequirePermission>
+                        ),
+                      }
+                    },
+                  },
+                  {
+                    path: 'ogrenciler/:id',
+                    lazy: async () => {
+                      const { StudentDetailPage } = await import('@/features/students/StudentDetailPage')
+                      return {
+                        element: (
+                          <RequirePermission permission="person:read">
+                            <StudentDetailPage />
+                          </RequirePermission>
+                        ),
+                      }
+                    },
+                  },
+                  {
+                    path: 'kayit-engelleri',
+                    lazy: async () => {
+                      const { HoldsPage } = await import('@/features/students/HoldsPage')
+                      return {
+                        element: (
+                          <RequirePermission permission="hold:manage">
+                            <HoldsPage />
+                          </RequirePermission>
+                        ),
+                      }
+                    },
+                  },
+                  {
                     path: 'yonetim/kullanicilar',
                     lazy: async () => {
                       const { UsersPage } = await import('@/features/admin/UsersPage')

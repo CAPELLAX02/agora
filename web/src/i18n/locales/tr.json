@@ -89,7 +89,13 @@
     "schedule": "Haftalık program",
     "teaching": "Verdiğim dersler",
     "offerings": "Ders açma",
-    "gradeScale": "Not ölçeği"
+    "gradeScale": "Not ölçeği",
+    "registration": "Ders seçimi",
+    "studentAffairs": "Öğrenci işleri",
+    "advising": "Danışmanlık",
+    "addDrop": "Ekle-bırak onayları",
+    "students": "Öğrenciler",
+    "holds": "Kayıt engelleri"
   },
   "auth": {
     "restoring": "Oturum açılıyor…",
@@ -208,7 +214,7 @@
     },
     "upcoming": {
       "title": "Akademik modüller",
-      "description": "Ders seçimi, not ve transkript, devamsızlık ve öğrenme ortamı modülleri sırayla burada yer alacak."
+      "description": "Not ve transkript, devamsızlık ve öğrenme ortamı modülleri sırayla burada yer alacak."
     },
     "windows": {
       "title": "İşlem pencereleri",
@@ -218,6 +224,19 @@
       "upcoming": "Yaklaşan pencereler",
       "until": "{{time}} tarihine kadar",
       "calendar": "Akademik takvim"
+    },
+    "registration": {
+      "title": "Ders kaydım",
+      "courses_one": "{{count}} ders",
+      "courses_other": "{{count}} ders",
+      "go": "Ders seçimine git",
+      "view": "Ders kaydımı gör"
+    },
+    "advising": {
+      "title": "Danışmanlık",
+      "description": "Kararınızı bekleyen işler",
+      "pending": "Onay bekleyen ders kayıtları",
+      "addDrop": "Ekle-bırak talepleri"
     }
   },
   "profile": {
@@ -1006,5 +1025,407 @@
     "value": "Değer",
     "effective": "Geçerlilik",
     "from": "{{date}} tarihinden itibaren"
+  },
+  "registration": {
+    "title": "Ders seçimi",
+    "description": "Alınabilir dersler, sepetiniz, kurallar ve danışman onayı",
+    "noPrograms": "Ders seçebileceğiniz bir program kaydınız yok.",
+    "programs": "Program kayıtlarım",
+    "termTitle": "{{term}} dönemi ders kaydı",
+    "lockedSubmitted": "Kaydınız danışman onayında. Değiştirmek için önce gönderimi geri çekin.",
+    "windowClosed": "Ders seçme penceresi kapalı. Takvimden tarihleri görebilirsiniz.",
+    "weekly": "Haftalık program",
+    "submit": "Danışmana gönder",
+    "submitted": "Kaydınız danışmanınıza gönderildi.",
+    "withdraw": "Gönderimi geri çek",
+    "withdrawn": "Gönderim geri çekildi; sepetiniz yeniden taslak.",
+    "blockingHint": "Kırmızı işaretli kurallar giderilmeden sepet gönderilemez.",
+    "ects": "{{ects}} AKTS",
+    "facts": {
+      "semester": "Yarıyıl",
+      "gpa": "GANO",
+      "advisor": "Danışman"
+    },
+    "status": {
+      "NOT_STARTED": "Başlanmadı",
+      "DRAFT": "Taslak",
+      "SUBMITTED": "Onay bekliyor",
+      "APPROVED": "Onaylandı",
+      "REJECTED": "Geri gönderildi"
+    },
+    "kinds": {
+      "NEW": "Yeni",
+      "REPEAT_FAILED": "Tekrar",
+      "REPEAT_UPGRADE": "Not yükseltme",
+      "ELECTIVE_REPLACEMENT": "Seçmeli değişimi"
+    },
+    "kindsShort": {
+      "NEW": "İlk kez",
+      "REPEAT_FAILED": "Tekrar",
+      "REPEAT_UPGRADE": "Yükseltme",
+      "ELECTIVE_REPLACEMENT": "Seçmeli değişimi"
+    },
+    "categories": {
+      "REPEAT": "Alttan dersler",
+      "CURRENT": "Dönem dersleri",
+      "ELECTIVE": "Seçmeli dersler",
+      "UPPER": "Üst yarıyıl dersleri",
+      "UPGRADE": "Not yükseltme"
+    },
+    "categoryHints": {
+      "REPEAT": "Alt yarıyıllardan kaldığınız ya da almadığınız zorunlu dersler: öncelikle alınmalı.",
+      "CURRENT": "İçinde bulunduğunuz yarıyılın zorunlu dersleri.",
+      "ELECTIVE": "Ders planınızdaki dolmamış seçmeli yuvaları için havuzdan dersler.",
+      "UPPER": "Üst yarıyılların açılan zorunlu dersleri (AKTS sınırınız elverirse).",
+      "UPGRADE": "Geçtiğiniz dersleri not yükseltmek için alabilirsiniz; son aldığınız not geçerli olur."
+    },
+    "offer": {
+      "search": "Ders kodu ya da adıyla ara",
+      "empty": "Bu dönem alabileceğiniz açılmış bir ders yok.",
+      "inBasket": "Sepette",
+      "slot_one": "{{code}} · {{semester}}. yarıyıl seçmelisi · {{count}} ders kaldı",
+      "slot_other": "{{code}} · {{semester}}. yarıyıl seçmelisi · {{count}} ders kaldı",
+      "line": "{{semester}}. yarıyıl dersi",
+      "replaces": "{{code}} yerine sayılır",
+      "lastLetter": "Son not: {{letter}}",
+      "add": "Sepete ekle",
+      "switch": "Bu şubeye geç",
+      "added": "{{label}} sepete eklendi.",
+      "switched": "Şube {{label}} olarak değişti."
+    },
+    "section": {
+      "noSchedule": "Haftalık programı yok",
+      "seats": "{{enrolled}}/{{capacity}} dolu",
+      "quotaLeft_one": "programınıza {{count}} yer",
+      "quotaLeft_other": "programınıza {{count}} yer",
+      "full": "Dolu",
+      "fewLeft_one": "son {{count}} yer",
+      "fewLeft_other": "son {{count}} yer"
+    },
+    "basket": {
+      "title": "Sepetim",
+      "ects": "AKTS",
+      "ectsOf": "{{total}} / {{limit}} AKTS",
+      "empty": "Sepetiniz boş. Soldaki listeden ders ekleyin.",
+      "remove": "{{code}} dersini sepetten çıkar",
+      "removed": "{{label}} sepetten çıkarıldı."
+    },
+    "window": {
+      "openUntil": "Ders seçme {{time}} tarihine kadar açık",
+      "extendedUntil": "Size tanınan ek süre: {{time}}",
+      "opensAt": "Ders seçme {{time}} tarihinde açılacak",
+      "closed": "Ders seçme penceresi kapalı"
+    },
+    "decision": {
+      "rejected": "{{by}} kaydınızı düzeltilmek üzere geri gönderdi",
+      "approved": "{{by}} kaydınızı onayladı · {{time}}",
+      "submitted": "Danışman onayı bekleniyor · {{time}} tarihinde gönderildi",
+      "noteRequired": "En az 5 karakterlik bir gerekçe yazın.",
+      "reason": "Gerekçe",
+      "noteOptional": "Öğrenciye not (isteğe bağlı; öğrenci işlerinin pencere dışı müdahalesinde gerekçe zorunlu)"
+    },
+    "confirmSubmit": {
+      "title": "Danışmana gönderilsin mi?",
+      "description": "Sepetinizdeki {{count}} ders ({{ects}} AKTS) danışmanınızın onayına gönderilecek. Uyarı sayısı: {{warnings}}. Danışmanınız karar verene kadar gönderimi geri çekebilirsiniz."
+    },
+    "rules": {
+      "title": "Kurallar",
+      "error": "Hata",
+      "warning": "Uyarı",
+      "HOLD": "Ders seçmenizi engelleyen bir kaydınız var ({{holds}}).",
+      "PROGRAM_NOT_ACTIVE": "Program kaydınız aktif değil ({{status}}).",
+      "NO_CURRICULUM": "Bir ders planına bağlı değilsiniz.",
+      "EMPTY_BASKET": "Sepetiniz boş.",
+      "DUPLICATE_COURSE": "Bu dersin bir şubesi zaten sepetinizde.",
+      "NOT_IN_CURRICULUM": "Ders planınızda olmayan ders: {{courses}}.",
+      "PREREQUISITE": "Ön koşul sağlanmıyor: {{courses}}.",
+      "SCHEDULE_CONFLICT": "Program çakışması: {{courses}} ({{slot}}).",
+      "ECTS_LIMIT": "AKTS üst sınırınız {{limit}}; toplam {{total}} olur.",
+      "FIRST_YEAR_COMPULSORY": "1. sınıfta yarıyılınızın bütün zorunlu derslerini almalısınız: {{courses}}.",
+      "REPEAT_PRIORITY": "Önce alttan derslerinizi almalısınız: {{courses}}.",
+      "MAX_DURATION": "Azami süreyi aştınız; sadece mezuniyet için kalan derslerinizi alabilirsiniz.",
+      "REPEAT_UPGRADE": "Geçtiğiniz bir dersi not yükseltmek için alıyorsunuz; son not geçerli olur.",
+      "ELECTIVE_SLOT_EXCEEDED": "Bir seçmeli havuzundan gerekenden fazla ders alıyorsunuz."
+    },
+    "errors": {
+      "SECTION_FULL": "Şubenin kontenjanı dolu.",
+      "QUOTA_FULL": "Bu şubede programınıza ayrılan kontenjan dolu.",
+      "SECTION_NOT_FOR_PROGRAM": "Bu şube programınıza kontenjan ayırmamış.",
+      "SECTION_NOT_OPEN": "Şube bu dönem ders seçmeye açık değil.",
+      "WINDOW_CLOSED": "Bu işlemin takvim penceresi kapalı.",
+      "REGISTRATION_LOCKED": "Kaydınız danışman onayında ya da onaylanmış; değiştirmek için önce gönderimi geri çekin.",
+      "INVALID_REGISTRATION_STATE": "Kayıt bu işlem için uygun durumda değil; sayfayı yenileyin.",
+      "VERSION_MISMATCH": "Kayıt siz bakarken değişmiş; sayfa yenilendi, tekrar deneyin.",
+      "SAME_SECTION": "Ders zaten bu şubede.",
+      "NO_ACTIVE_TERM": "Tanımlı bir aktif dönem yok.",
+      "ADD_DROP_OPEN": "Karar bekleyen bir ekle-bırak talebiniz var.",
+      "REGISTRATION_NOT_APPROVED": "Ekle-bırak sadece onaylanmış kayıtta yapılır.",
+      "INVALID_ADD_DROP_STATE": "Talep bu işlem için uygun durumda değil."
+    },
+    "report": {
+      "open": "Kayıt onay belgesi",
+      "print": "Yazdır / PDF",
+      "notApproved": "Kaydınız henüz onaylanmadı; belge onaydan sonra oluşur.",
+      "title": "Ders Kayıt Onay Belgesi",
+      "term": "{{term}} dönemi",
+      "student": "Öğrenci",
+      "studentNo": "Öğrenci no",
+      "faculty": "Fakülte",
+      "program": "Program",
+      "semester": "Yarıyıl",
+      "class": "{{level}}. sınıf",
+      "advisor": "Danışman",
+      "section": "Şube",
+      "kind": "Alınış",
+      "total_one": "Toplam ({{count}} ders)",
+      "total_other": "Toplam ({{count}} ders)",
+      "approvedBy": "Danışman onayı: {{by}} · {{time}}",
+      "disclaimer": "Bu çıktı {{date}} tarihinde Agora'dan alınmıştır ve bilgilendirme amaçlıdır. İmzalı ve doğrulama kodlu belge belge talebiyle alınır."
+    },
+    "addDrop": {
+      "title": "Ekle-bırak",
+      "openUntil": "Ekle-bırak {{time}} tarihine kadar açık",
+      "opensAt": "Ekle-bırak {{time}} tarihinde açılacak",
+      "closed": "Ekle-bırak penceresi kapalı",
+      "none": "Henüz bir ekle-bırak talebiniz yok.",
+      "requests": "Ekle-bırak talepleri",
+      "new": "Yeni ekle-bırak talebi",
+      "withdraw": "Geri çek",
+      "withdrawn": "Talep geri çekildi.",
+      "add": "Eklenecek",
+      "drop": "Bırakılacak",
+      "advisorDecision": "Danışman: {{by}} · {{time}}",
+      "headDecision": "Bölüm başkanı: {{by}} · {{time}}",
+      "compose": "Ekle-bırak talebi",
+      "composeHint": "Bırakacağınız dersleri işaretleyin, ekleyeceğiniz şubeleri listeden seçin. Talep önce danışmanınıza, sonra bölüm başkanına gider; eklenen şubede yeriniz talep süresince ayrılır.",
+      "dropLegend": "Bırakılacak dersler",
+      "addLegend": "Eklenecek şubeler",
+      "adds": "Seçilen şubeler",
+      "removeAdd": "{{label}} şubesini talepten çıkar",
+      "chosen": "Seçildi",
+      "addToRequest": "Talebe ekle",
+      "note": "Açıklama (isteğe bağlı)",
+      "summary": "{{adds}} ekleme, {{drops}} bırakma · AKTS değişimi: {{delta}}",
+      "send": "Talebi gönder",
+      "sent": "Ekle-bırak talebiniz danışmanınıza gönderildi.",
+      "status": {
+        "PENDING_ADVISOR": "Danışman onayında",
+        "PENDING_DEPT_HEAD": "Bölüm başkanı onayında",
+        "APPROVED": "Uygulandı",
+        "REJECTED": "Reddedildi",
+        "WITHDRAWN": "Geri çekildi"
+      },
+      "stage": {
+        "ADVISOR": "Danışman aşaması",
+        "DEPT_HEAD": "Bölüm başkanı aşaması"
+      }
+    },
+    "progress": {
+      "title": "Ders durumu",
+      "summary": "Mezuniyet ilerlemesi",
+      "completed": "Tamamlanan AKTS",
+      "inProgress": "Bu dönem alınan AKTS",
+      "remaining": "Kalan ders",
+      "gpa": "GANO",
+      "semester": "Yy",
+      "state": "Durum",
+      "detail": "Ayrıntı",
+      "slotRemaining_one": "{{count}} ders kaldı",
+      "slotRemaining_other": "{{count}} ders kaldı",
+      "via": "{{code}} ile",
+      "ongoing": "devam ediyor",
+      "extra": "Ders planıyla eşleşmeyen dersler: {{courses}}",
+      "status": {
+        "PASSED": "Geçti",
+        "FAILED": "Kaldı",
+        "IN_PROGRESS": "Devam ediyor",
+        "PARTIAL": "Kısmen",
+        "NOT_TAKEN": "Alınmadı"
+      }
+    },
+    "history": {
+      "title": "Ders geçmişi",
+      "empty": "Ders geçmişi yok.",
+      "term": "Dönem",
+      "attempt": "Deneme",
+      "letter": "Not",
+      "absence": "devamsızlık",
+      "ongoing": "Sürüyor"
+    },
+    "events": {
+      "title": "Olay günlüğü",
+      "override": "öğrenci işleri müdahalesi",
+      "types": {
+        "CREATED": "Kayıt açıldı",
+        "ITEM_ADDED": "Ders eklendi",
+        "ITEM_REMOVED": "Ders çıkarıldı",
+        "SECTION_CHANGED": "Şube değişti",
+        "RETURNED_TO_DRAFT": "Taslağa döndü",
+        "SUBMITTED": "Danışmana gönderildi",
+        "WITHDRAWN": "Gönderim geri çekildi",
+        "APPROVED": "Onaylandı",
+        "REJECTED": "Geri gönderildi",
+        "APPROVAL_REVOKED": "Onay geri alındı",
+        "EXTENSION_GRANTED": "Ek süre tanındı",
+        "EXPIRED": "Süre doldu, sepet boşaltıldı",
+        "ADD_DROP_REQUESTED": "Ekle-bırak talebi",
+        "ADD_DROP_APPROVED": "Ekle-bırak danışman onayı",
+        "ADD_DROP_REJECTED": "Ekle-bırak reddedildi",
+        "ADD_DROP_APPLIED": "Ekle-bırak uygulandı",
+        "ADD_DROP_WITHDRAWN": "Ekle-bırak geri çekildi"
+      }
+    },
+    "advisor": {
+      "title": "Danışmanlığımdaki öğrenciler",
+      "description": "{{term}} dönemi ders kayıtları: onay bekleyenler önce.",
+      "addDropQueue": "Ekle-bırak onayları",
+      "bulkApprove": "Seçilenleri onayla ({{count}})",
+      "filter": "Duruma göre süz",
+      "all": "Tümü",
+      "select": "Seç",
+      "selectStudent": "{{name}} kaydını seç",
+      "student": "Öğrenci",
+      "status": "Durum",
+      "submittedAt": "Gönderildi",
+      "empty": "Bu durumda öğrenci yok.",
+      "blocked": "Ders seçmeyi kapatan engeli var",
+      "approve": "Onayla",
+      "reject": "Geri gönder",
+      "revoke": "Onayı geri al",
+      "bulkTitle": "Seçilen kayıtlar onaylansın mı?",
+      "bulkDescription": "{{count}} öğrencinin kaydı ayrı ayrı onaylanacak; kuralları sağlamayan ya da siz bakarken değişen kayıt onaylanmaz.",
+      "bulkDone": "{{count}} kayıt onaylandı.",
+      "bulkPartial": "{{approved}} kayıt onaylandı, {{failed}} kayıt onaylanamadı."
+    },
+    "review": {
+      "subtitle": "{{no}} · {{program}} · {{term}}",
+      "basket": "Ders kaydı",
+      "snapshot": "Gönderimdeki GANO / sınır",
+      "approve": {
+        "title": "Kayıt onaylansın mı?",
+        "description": "Dersler öğrencinin kesin kaydı olur ve öğrenciye e-postayla bildirilir.",
+        "done": "Kayıt onaylandı."
+      },
+      "reject": {
+        "title": "Kayıt geri gönderilsin mi?",
+        "description": "Öğrenci gerekçenizi görür, sepetini düzenleyip yeniden gönderebilir.",
+        "done": "Kayıt öğrenciye geri gönderildi."
+      },
+      "revoke": {
+        "title": "Onay geri alınsın mı?",
+        "description": "Kesin kayıtlar silinir, kayıt öğrenciye geri gönderilir.",
+        "done": "Onay geri alındı."
+      }
+    },
+    "extension": {
+      "grant": "Ek süre tanı",
+      "title": "Kayda özel ek süre",
+      "description": "Pencere kapalıyken öğrenci bu tarihe kadar sepetini düzenleyip gönderebilir, danışman da onaylayabilir (en çok 30 gün).",
+      "until": "Bitiş",
+      "done": "Ek süre tanındı."
+    },
+    "addDropQueue": {
+      "title": "Ekle-bırak onayları",
+      "description": "Kararınızı bekleyen ekle-bırak talepleri, en eski önce.",
+      "empty": "Kararınızı bekleyen ekle-bırak talebi yok.",
+      "request": "{{name}} talebi",
+      "meta": "{{time}} · AKTS değişimi {{delta}}",
+      "openRegistration": "Ders kaydını incele",
+      "approve": {
+        "title": "Talep onaylansın mı?",
+        "description": "Danışman aşamasında talep bölüm başkanına iletilir; bölüm başkanı aşamasında kayda uygulanır.",
+        "done": "Talep onaylandı."
+      },
+      "reject": {
+        "title": "Talep reddedilsin mi?",
+        "description": "Öğrenci gerekçenizi görür; eklenecek şubede ayrılan yer iade edilir.",
+        "done": "Talep reddedildi."
+      }
+    },
+    "tabs": {
+      "offer": "Alınabilir dersler",
+      "status": "Durum"
+    }
+  },
+  "students": {
+    "title": "Öğrenciler",
+    "description": "Yetkinizin kapsadığı programların öğrenci kayıtları",
+    "search": "Öğrenci numarası ya da ad",
+    "statusFilter": "Kayıt durumu",
+    "no": "Numara",
+    "name": "Ad soyad",
+    "program": "Program",
+    "state": "Durum",
+    "empty": "Aramaya uyan öğrenci yok.",
+    "faculty": "Fakülte",
+    "admission": "Giriş",
+    "semester": "Yarıyıl",
+    "semesterOf": "{{current}}. yarıyıl (normal {{normal}}, azami {{max}})",
+    "earned": "Kazanılan",
+    "curriculum": "Ders planı",
+    "beyondMax": "Öğrenci azami öğrenim süresini aştı.",
+    "statusHistory": "Durum geçmişi",
+    "openRegistration": "Kaydı incele",
+    "status": {
+      "PREP": "Hazırlık",
+      "ACTIVE": "Aktif",
+      "FROZEN": "Dondurulmuş",
+      "SUSPENDED": "Uzaklaştırılmış",
+      "GRADUATED": "Mezun",
+      "WITHDRAWN": "Kaydı silinmiş",
+      "DISMISSED": "İlişiği kesilmiş"
+    },
+    "admissionTypes": {
+      "OSYS": "ÖSYS",
+      "DGS": "DGS",
+      "YOS": "YÖS",
+      "TRANSFER_INTERNAL": "Kurum içi yatay geçiş",
+      "TRANSFER_EXTERNAL": "Kurumlar arası yatay geçiş",
+      "SPECIAL_TALENT": "Özel yetenek",
+      "EXCHANGE": "Değişim"
+    },
+    "statusChange": {
+      "title": "Durum değiştir",
+      "description": "Şu anki durum: {{status}}. Değişiklik gerekçesiyle durum geçmişine ve denetim kaydına yazılır.",
+      "to": "Yeni durum",
+      "graduatedOn": "Mezuniyet tarihi",
+      "decisionRef": "Karar numarası (isteğe bağlı)",
+      "done": "Kayıt durumu değişti."
+    },
+    "holds": {
+      "title": "Kayıt engelleri",
+      "none": "Kayıt engeli yok.",
+      "place": "Engel koy",
+      "placeFor": "{{name}} · {{program}}",
+      "release": "Engeli kaldır",
+      "releaseFor": "{{type}} · {{name}}",
+      "required": "Zorunlu alanları doldurun.",
+      "exists": "Bu öğrencinin aynı türde aktif bir engeli var.",
+      "placed": "Engel konuldu.",
+      "released": "Engel kaldırıldı.",
+      "types": {
+        "TUITION_DEBT": "Katkı payı borcu",
+        "DISCIPLINE_SUSPENSION": "Disiplin cezası",
+        "MISSING_DOCUMENT": "Eksik belge",
+        "LIBRARY_DEBT": "Kütüphane borcu"
+      },
+      "type": "Engel türü",
+      "blocks": "Kapattığı işlemler",
+      "blockLabels": {
+        "REGISTRATION": "Ders seçme",
+        "DOCUMENT": "Belge",
+        "GRADUATION": "Mezuniyet"
+      },
+      "releasedBadge": "Kaldırıldı",
+      "placedBy": "{{by}} · {{time}}",
+      "releasedBy": "Kaldıran {{by}} · {{time}}",
+      "pageTitle": "Kayıt engelleri",
+      "pageDescription": "Katkı payı borcu, disiplin cezası, eksik belge ve kütüphane borcu engelleri",
+      "active": "Aktif",
+      "releasedTab": "Kaldırılmış",
+      "empty": "Engel yok.",
+      "pickStudent": "Engel konacak öğrenciyi numarası ya da adıyla arayın (en az 3 karakter).",
+      "date": "Tarih"
+    }
   }
 }

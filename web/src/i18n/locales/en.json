@@ -89,7 +89,13 @@
     "schedule": "Weekly schedule",
     "teaching": "My teaching",
     "offerings": "Course offering",
-    "gradeScale": "Grading scale"
+    "gradeScale": "Grading scale",
+    "registration": "Course registration",
+    "studentAffairs": "Student affairs",
+    "advising": "Advising",
+    "addDrop": "Add-drop approvals",
+    "students": "Students",
+    "holds": "Registration holds"
   },
   "auth": {
     "restoring": "Signing you in…",
@@ -208,7 +214,7 @@
     },
     "upcoming": {
       "title": "Academic modules",
-      "description": "Course registration, grades and transcripts, attendance and the learning environment will appear here in turn."
+      "description": "Grades and transcripts, attendance and the learning environment will appear here in turn."
     },
     "windows": {
       "title": "Action windows",
@@ -218,6 +224,19 @@
       "upcoming": "Upcoming windows",
       "until": "until {{time}}",
       "calendar": "Academic calendar"
+    },
+    "registration": {
+      "title": "My registration",
+      "courses_one": "{{count}} course",
+      "courses_other": "{{count}} courses",
+      "go": "Go to course registration",
+      "view": "View my registration"
+    },
+    "advising": {
+      "title": "Advising",
+      "description": "Items waiting for your decision",
+      "pending": "Registrations waiting for approval",
+      "addDrop": "Add-drop requests"
     }
   },
   "profile": {
@@ -1006,5 +1025,407 @@
     "value": "Value",
     "effective": "In force",
     "from": "From {{date}}"
+  },
+  "registration": {
+    "title": "Course registration",
+    "description": "Available courses, your basket, rules and advisor approval",
+    "noPrograms": "You have no program enrolment to register for.",
+    "programs": "My program enrolments",
+    "termTitle": "{{term}} course registration",
+    "lockedSubmitted": "Your registration is waiting for your advisor. Withdraw the submission to change it.",
+    "windowClosed": "Course registration is closed. See the calendar for the dates.",
+    "weekly": "Weekly schedule",
+    "submit": "Send to advisor",
+    "submitted": "Your registration was sent to your advisor.",
+    "withdraw": "Withdraw submission",
+    "withdrawn": "Submission withdrawn; your basket is a draft again.",
+    "blockingHint": "The basket cannot be sent until the rules marked in red are resolved.",
+    "ects": "{{ects}} ECTS",
+    "facts": {
+      "semester": "Semester",
+      "gpa": "GPA",
+      "advisor": "Advisor"
+    },
+    "status": {
+      "NOT_STARTED": "Not started",
+      "DRAFT": "Draft",
+      "SUBMITTED": "Waiting for approval",
+      "APPROVED": "Approved",
+      "REJECTED": "Sent back"
+    },
+    "kinds": {
+      "NEW": "New",
+      "REPEAT_FAILED": "Repeat",
+      "REPEAT_UPGRADE": "Grade upgrade",
+      "ELECTIVE_REPLACEMENT": "Elective replacement"
+    },
+    "kindsShort": {
+      "NEW": "First time",
+      "REPEAT_FAILED": "Repeat",
+      "REPEAT_UPGRADE": "Upgrade",
+      "ELECTIVE_REPLACEMENT": "Replacement"
+    },
+    "categories": {
+      "REPEAT": "Courses to repeat",
+      "CURRENT": "This semester",
+      "ELECTIVE": "Electives",
+      "UPPER": "Upper semesters",
+      "UPGRADE": "Grade upgrade"
+    },
+    "categoryHints": {
+      "REPEAT": "Compulsory courses from earlier semesters you failed or have not taken: these come first.",
+      "CURRENT": "Compulsory courses of your current semester.",
+      "ELECTIVE": "Courses from the pools for the open elective slots in your curriculum.",
+      "UPPER": "Open compulsory courses of upper semesters (if your ECTS limit allows).",
+      "UPGRADE": "You may retake passed courses to raise your grade; the latest grade counts."
+    },
+    "offer": {
+      "search": "Search by course code or name",
+      "empty": "No open course is available to you this term.",
+      "inBasket": "In basket",
+      "slot_one": "{{code}} · semester {{semester}} elective · {{count}} course left",
+      "slot_other": "{{code}} · semester {{semester}} elective · {{count}} courses left",
+      "line": "Semester {{semester}} course",
+      "replaces": "counts for {{code}}",
+      "lastLetter": "Last grade: {{letter}}",
+      "add": "Add to basket",
+      "switch": "Switch to this section",
+      "added": "{{label}} added to your basket.",
+      "switched": "Section changed to {{label}}."
+    },
+    "section": {
+      "noSchedule": "No weekly schedule",
+      "seats": "{{enrolled}}/{{capacity}} taken",
+      "quotaLeft_one": "{{count}} seat for your program",
+      "quotaLeft_other": "{{count}} seats for your program",
+      "full": "Full",
+      "fewLeft_one": "last {{count}} seat",
+      "fewLeft_other": "last {{count}} seats"
+    },
+    "basket": {
+      "title": "My basket",
+      "ects": "ECTS",
+      "ectsOf": "{{total}} / {{limit}} ECTS",
+      "empty": "Your basket is empty. Add courses from the list.",
+      "remove": "Remove {{code}} from the basket",
+      "removed": "{{label}} removed from your basket."
+    },
+    "window": {
+      "openUntil": "Registration open until {{time}}",
+      "extendedUntil": "Your extension: {{time}}",
+      "opensAt": "Registration opens on {{time}}",
+      "closed": "Course registration is closed"
+    },
+    "decision": {
+      "rejected": "{{by}} sent your registration back for changes",
+      "approved": "{{by}} approved your registration · {{time}}",
+      "submitted": "Waiting for advisor approval · sent on {{time}}",
+      "noteRequired": "Write a reason of at least 5 characters.",
+      "reason": "Reason",
+      "noteOptional": "Note to the student (optional; a reason is required when student affairs act outside the window)"
+    },
+    "confirmSubmit": {
+      "title": "Send to your advisor?",
+      "description": "{{count}} courses ({{ects}} ECTS) in your basket will be sent to your advisor. Warnings: {{warnings}}. You can withdraw the submission until your advisor decides."
+    },
+    "rules": {
+      "title": "Rules",
+      "error": "Error",
+      "warning": "Warning",
+      "HOLD": "You have a hold that blocks registration ({{holds}}).",
+      "PROGRAM_NOT_ACTIVE": "Your program enrolment is not active ({{status}}).",
+      "NO_CURRICULUM": "You are not assigned to a curriculum.",
+      "EMPTY_BASKET": "Your basket is empty.",
+      "DUPLICATE_COURSE": "A section of this course is already in your basket.",
+      "NOT_IN_CURRICULUM": "Not in your curriculum: {{courses}}.",
+      "PREREQUISITE": "Prerequisite not met: {{courses}}.",
+      "SCHEDULE_CONFLICT": "Schedule conflict: {{courses}} ({{slot}}).",
+      "ECTS_LIMIT": "Your ECTS limit is {{limit}}; the total would be {{total}}.",
+      "FIRST_YEAR_COMPULSORY": "First-year students must take all compulsory courses of their semester: {{courses}}.",
+      "REPEAT_PRIORITY": "Take your courses to repeat first: {{courses}}.",
+      "MAX_DURATION": "You exceeded the maximum study period; you may only take the courses left for graduation.",
+      "REPEAT_UPGRADE": "You are retaking a passed course to raise the grade; the latest grade counts.",
+      "ELECTIVE_SLOT_EXCEEDED": "You are taking more courses from an elective pool than required."
+    },
+    "errors": {
+      "SECTION_FULL": "The section is full.",
+      "QUOTA_FULL": "The seats reserved for your program in this section are full.",
+      "SECTION_NOT_FOR_PROGRAM": "This section has no seats for your program.",
+      "SECTION_NOT_OPEN": "The section is not open for registration this term.",
+      "WINDOW_CLOSED": "The calendar window for this action is closed.",
+      "REGISTRATION_LOCKED": "Your registration is waiting for approval or approved; withdraw the submission to change it.",
+      "INVALID_REGISTRATION_STATE": "The registration is not in a suitable state; refresh the page.",
+      "VERSION_MISMATCH": "The registration changed while you were viewing it; try again.",
+      "SAME_SECTION": "The course is already in this section.",
+      "NO_ACTIVE_TERM": "There is no active term.",
+      "ADD_DROP_OPEN": "You have an add-drop request waiting for a decision.",
+      "REGISTRATION_NOT_APPROVED": "Add-drop is only possible on an approved registration.",
+      "INVALID_ADD_DROP_STATE": "The request is not in a suitable state."
+    },
+    "report": {
+      "open": "Registration confirmation",
+      "print": "Print / PDF",
+      "notApproved": "Your registration is not approved yet; the document is available after approval.",
+      "title": "Course Registration Confirmation",
+      "term": "{{term}}",
+      "student": "Student",
+      "studentNo": "Student no",
+      "faculty": "Faculty",
+      "program": "Program",
+      "semester": "Semester",
+      "class": "year {{level}}",
+      "advisor": "Advisor",
+      "section": "Section",
+      "kind": "Attempt",
+      "total_one": "Total ({{count}} course)",
+      "total_other": "Total ({{count}} courses)",
+      "approvedBy": "Advisor approval: {{by}} · {{time}}",
+      "disclaimer": "This printout was taken from Agora on {{date}} and is for information only. A signed document with a verification code is issued on request."
+    },
+    "addDrop": {
+      "title": "Add-drop",
+      "openUntil": "Add-drop open until {{time}}",
+      "opensAt": "Add-drop opens on {{time}}",
+      "closed": "Add-drop is closed",
+      "none": "You have no add-drop request yet.",
+      "requests": "Add-drop requests",
+      "new": "New add-drop request",
+      "withdraw": "Withdraw",
+      "withdrawn": "Request withdrawn.",
+      "add": "Add",
+      "drop": "Drop",
+      "advisorDecision": "Advisor: {{by}} · {{time}}",
+      "headDecision": "Head of department: {{by}} · {{time}}",
+      "compose": "Add-drop request",
+      "composeHint": "Tick the courses you want to drop and choose the sections to add. The request goes to your advisor, then to the head of department; your seat in an added section is held meanwhile.",
+      "dropLegend": "Courses to drop",
+      "addLegend": "Sections to add",
+      "adds": "Chosen sections",
+      "removeAdd": "Remove {{label}} from the request",
+      "chosen": "Chosen",
+      "addToRequest": "Add to request",
+      "note": "Note (optional)",
+      "summary": "{{adds}} to add, {{drops}} to drop · ECTS change: {{delta}}",
+      "send": "Send request",
+      "sent": "Your add-drop request was sent to your advisor.",
+      "status": {
+        "PENDING_ADVISOR": "Waiting for advisor",
+        "PENDING_DEPT_HEAD": "Waiting for head of department",
+        "APPROVED": "Applied",
+        "REJECTED": "Rejected",
+        "WITHDRAWN": "Withdrawn"
+      },
+      "stage": {
+        "ADVISOR": "Advisor stage",
+        "DEPT_HEAD": "Head of department stage"
+      }
+    },
+    "progress": {
+      "title": "Course progress",
+      "summary": "Graduation progress",
+      "completed": "Completed ECTS",
+      "inProgress": "ECTS this term",
+      "remaining": "Courses left",
+      "gpa": "GPA",
+      "semester": "Sem",
+      "state": "Status",
+      "detail": "Detail",
+      "slotRemaining_one": "{{count}} course left",
+      "slotRemaining_other": "{{count}} courses left",
+      "via": "via {{code}}",
+      "ongoing": "in progress",
+      "extra": "Courses outside the curriculum: {{courses}}",
+      "status": {
+        "PASSED": "Passed",
+        "FAILED": "Failed",
+        "IN_PROGRESS": "In progress",
+        "PARTIAL": "Partial",
+        "NOT_TAKEN": "Not taken"
+      }
+    },
+    "history": {
+      "title": "Course history",
+      "empty": "No course history.",
+      "term": "Term",
+      "attempt": "Attempt",
+      "letter": "Grade",
+      "absence": "attendance",
+      "ongoing": "Ongoing"
+    },
+    "events": {
+      "title": "Event log",
+      "override": "student affairs override",
+      "types": {
+        "CREATED": "Registration opened",
+        "ITEM_ADDED": "Course added",
+        "ITEM_REMOVED": "Course removed",
+        "SECTION_CHANGED": "Section changed",
+        "RETURNED_TO_DRAFT": "Back to draft",
+        "SUBMITTED": "Sent to advisor",
+        "WITHDRAWN": "Submission withdrawn",
+        "APPROVED": "Approved",
+        "REJECTED": "Sent back",
+        "APPROVAL_REVOKED": "Approval revoked",
+        "EXTENSION_GRANTED": "Extension granted",
+        "EXPIRED": "Expired, basket emptied",
+        "ADD_DROP_REQUESTED": "Add-drop requested",
+        "ADD_DROP_APPROVED": "Add-drop advisor approval",
+        "ADD_DROP_REJECTED": "Add-drop rejected",
+        "ADD_DROP_APPLIED": "Add-drop applied",
+        "ADD_DROP_WITHDRAWN": "Add-drop withdrawn"
+      }
+    },
+    "advisor": {
+      "title": "My advisees",
+      "description": "{{term}} registrations: waiting for approval first.",
+      "addDropQueue": "Add-drop approvals",
+      "bulkApprove": "Approve selected ({{count}})",
+      "filter": "Filter by status",
+      "all": "All",
+      "select": "Select",
+      "selectStudent": "Select {{name}}",
+      "student": "Student",
+      "status": "Status",
+      "submittedAt": "Submitted",
+      "empty": "No students in this state.",
+      "blocked": "Has a hold that blocks registration",
+      "approve": "Approve",
+      "reject": "Send back",
+      "revoke": "Revoke approval",
+      "bulkTitle": "Approve the selected registrations?",
+      "bulkDescription": "{{count}} registrations will be approved one by one; a registration that breaks the rules or changed meanwhile is not approved.",
+      "bulkDone": "{{count}} registrations approved.",
+      "bulkPartial": "{{approved}} approved, {{failed}} could not be approved."
+    },
+    "review": {
+      "subtitle": "{{no}} · {{program}} · {{term}}",
+      "basket": "Registration",
+      "snapshot": "GPA / limit at submission",
+      "approve": {
+        "title": "Approve the registration?",
+        "description": "The courses become the student's enrolments and the student is notified by email.",
+        "done": "Registration approved."
+      },
+      "reject": {
+        "title": "Send the registration back?",
+        "description": "The student sees your reason and can edit and resubmit the basket.",
+        "done": "Registration sent back to the student."
+      },
+      "revoke": {
+        "title": "Revoke the approval?",
+        "description": "The enrolments are removed and the registration goes back to the student.",
+        "done": "Approval revoked."
+      }
+    },
+    "extension": {
+      "grant": "Grant extension",
+      "title": "Registration extension",
+      "description": "While the window is closed the student can edit and submit until this time, and the advisor can approve (at most 30 days).",
+      "until": "Until",
+      "done": "Extension granted."
+    },
+    "addDropQueue": {
+      "title": "Add-drop approvals",
+      "description": "Add-drop requests waiting for your decision, oldest first.",
+      "empty": "No add-drop request is waiting for you.",
+      "request": "Request of {{name}}",
+      "meta": "{{time}} · ECTS change {{delta}}",
+      "openRegistration": "Review registration",
+      "approve": {
+        "title": "Approve the request?",
+        "description": "At the advisor stage the request goes to the head of department; at the head of department stage it is applied.",
+        "done": "Request approved."
+      },
+      "reject": {
+        "title": "Reject the request?",
+        "description": "The student sees your reason; held seats are released.",
+        "done": "Request rejected."
+      }
+    },
+    "tabs": {
+      "offer": "Available courses",
+      "status": "Status"
+    }
+  },
+  "students": {
+    "title": "Students",
+    "description": "Student enrolments of the programs in your scope",
+    "search": "Student number or name",
+    "statusFilter": "Enrolment status",
+    "no": "Number",
+    "name": "Name",
+    "program": "Program",
+    "state": "Status",
+    "empty": "No student matches.",
+    "faculty": "Faculty",
+    "admission": "Admission",
+    "semester": "Semester",
+    "semesterOf": "semester {{current}} (normal {{normal}}, maximum {{max}})",
+    "earned": "Earned",
+    "curriculum": "Curriculum",
+    "beyondMax": "The student exceeded the maximum study period.",
+    "statusHistory": "Status history",
+    "openRegistration": "Review registration",
+    "status": {
+      "PREP": "Preparatory",
+      "ACTIVE": "Active",
+      "FROZEN": "Frozen",
+      "SUSPENDED": "Suspended",
+      "GRADUATED": "Graduated",
+      "WITHDRAWN": "Withdrawn",
+      "DISMISSED": "Dismissed"
+    },
+    "admissionTypes": {
+      "OSYS": "ÖSYS",
+      "DGS": "DGS",
+      "YOS": "YÖS",
+      "TRANSFER_INTERNAL": "Internal transfer",
+      "TRANSFER_EXTERNAL": "External transfer",
+      "SPECIAL_TALENT": "Special talent",
+      "EXCHANGE": "Exchange"
+    },
+    "statusChange": {
+      "title": "Change status",
+      "description": "Current status: {{status}}. The change is recorded with its reason in the status history and the audit log.",
+      "to": "New status",
+      "graduatedOn": "Graduation date",
+      "decisionRef": "Decision number (optional)",
+      "done": "Enrolment status changed."
+    },
+    "holds": {
+      "title": "Registration holds",
+      "none": "No holds.",
+      "place": "Place hold",
+      "placeFor": "{{name}} · {{program}}",
+      "release": "Release hold",
+      "releaseFor": "{{type}} · {{name}}",
+      "required": "Fill in the required fields.",
+      "exists": "The student already has an active hold of this type.",
+      "placed": "Hold placed.",
+      "released": "Hold released.",
+      "types": {
+        "TUITION_DEBT": "Tuition debt",
+        "DISCIPLINE_SUSPENSION": "Disciplinary penalty",
+        "MISSING_DOCUMENT": "Missing document",
+        "LIBRARY_DEBT": "Library debt"
+      },
+      "type": "Hold type",
+      "blocks": "Blocks",
+      "blockLabels": {
+        "REGISTRATION": "Registration",
+        "DOCUMENT": "Documents",
+        "GRADUATION": "Graduation"
+      },
+      "releasedBadge": "Released",
+      "placedBy": "{{by}} · {{time}}",
+      "releasedBy": "Released by {{by}} · {{time}}",
+      "pageTitle": "Registration holds",
+      "pageDescription": "Tuition debt, disciplinary, missing document and library holds",
+      "active": "Active",
+      "releasedTab": "Released",
+      "empty": "No holds.",
+      "pickStudent": "Search the student by number or name (at least 3 characters).",
+      "date": "Date"
+    }
   }
 }

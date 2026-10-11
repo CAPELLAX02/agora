@@ -40,12 +40,18 @@ export function RequirePasswordChanged() {
 }
 
 /** RequirePermission, yetkisi olmayan kullanıcıya sayfa yerine bir uyarı gösterir. */
-export function RequirePermission({ permission, children }: { permission: string; children: ReactNode }) {
-  const { has, isLoading } = usePermissions()
+export function RequirePermission({
+  permission,
+  children,
+}: {
+  permission: string | string[]
+  children: ReactNode
+}) {
+  const { hasAny, isLoading } = usePermissions()
   if (isLoading) {
     return <Skeleton className="h-40 w-full" />
   }
-  if (!has(permission)) {
+  if (!hasAny(permission)) {
     return <ForbiddenState />
   }
   return children

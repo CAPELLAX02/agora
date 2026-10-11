@@ -2,6 +2,11 @@ import type { ParseKeys } from 'i18next'
 import {
   BookMarkedIcon,
   BookOpenIcon,
+  ClipboardCheckIcon,
+  GraduationCapIcon,
+  ListChecksIcon,
+  LockIcon,
+  UsersRoundIcon,
   CalendarDaysIcon,
   CalendarRangeIcon,
   ClipboardListIcon,
@@ -22,8 +27,10 @@ export type NavItem = {
   to: string
   label: Key
   icon: LucideIcon
-  /** permission, öğenin görünmesi için gereken yetkidir. Boşsa herkes görür. */
-  permission?: string
+  /** permission, öğenin görünmesi için gereken yetkidir (dizi: herhangi biri). Boşsa herkes görür. */
+  permission?: string | string[]
+  /** scoped, yetkinin bir birimi kapsaması gerektiğini söyler (ilişkiye dayalı veriliş yetmez). */
+  scoped?: boolean
   end?: boolean
 }
 
@@ -35,6 +42,12 @@ export const navGroups: NavGroup[] = [
     label: 'nav.academic',
     items: [
       { to: '/takvim', label: 'nav.calendar', icon: CalendarDaysIcon, permission: 'calendar:read' },
+      {
+        to: '/ders-secimi',
+        label: 'nav.registration',
+        icon: ClipboardCheckIcon,
+        permission: 'registration:manage_own',
+      },
       {
         to: '/ders-planim',
         label: 'nav.myCurriculum',
@@ -55,6 +68,26 @@ export const navGroups: NavGroup[] = [
     ],
   },
   {
+    label: 'nav.studentAffairs',
+    items: [
+      { to: '/danismanlik', label: 'nav.advising', icon: UsersRoundIcon, permission: 'registration:approve' },
+      {
+        to: '/ekle-birak-onaylari',
+        label: 'nav.addDrop',
+        icon: ListChecksIcon,
+        permission: ['registration:approve', 'registration:approve_add_drop'],
+      },
+      {
+        to: '/ogrenciler',
+        label: 'nav.students',
+        icon: GraduationCapIcon,
+        permission: 'person:read',
+        scoped: true,
+      },
+      { to: '/kayit-engelleri', label: 'nav.holds', icon: LockIcon, permission: 'hold:manage' },
+    ],
+  },
+  {
     label: 'nav.account',
     items: [
       { to: '/profil', label: 'nav.profile', icon: UserRoundIcon },
@@ -69,3 +102,17 @@ export const navGroups: NavGroup[] = [
     ],
   },
 ]
+
+/** visible, menü öğesinin kullanıcının yetkilerine göre görünüp görünmediğini söyler. */
+export function visible(
+  item: NavItem,
+  perms: { hasAny: (p: string | string[]) => boolean; hasScoped: (p: string) => boolean },
+): boolean {
+  if (!item.permission) {
+    return true
+  }
+  if (item.scoped && typeof item.permission === 'string') {
+    return perms.hasScoped(item.permission)
+  }
+  return perms.hasAny(item.permission)
+}

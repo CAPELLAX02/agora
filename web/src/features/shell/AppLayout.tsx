@@ -23,9 +23,11 @@ export function AppLayout() {
       >
         {t('nav.skipToContent')}
       </a>
-      <Sidebar />
+      <div className="contents print:hidden">
+        <Sidebar />
+      </div>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/85 px-4 backdrop-blur md:px-6">
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/85 px-4 backdrop-blur md:px-6 print:hidden">
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="lg:hidden" aria-label={t('nav.openMenu')}>
@@ -44,7 +46,9 @@ export function AppLayout() {
           <div className="flex-1" />
           <UserMenu />
         </header>
-        <MfaBanner />
+        <div className="print:hidden">
+          <MfaBanner />
+        </div>
         <main id="main" tabIndex={-1} className="flex-1 px-4 py-6 outline-none md:px-6 lg:px-8">
           <div className="mx-auto max-w-6xl">
             <Outlet />

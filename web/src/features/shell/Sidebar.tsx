@@ -5,16 +5,16 @@ import { usePermissions } from '@/features/auth/usePermissions'
 import { cn } from '@/shared/lib/utils'
 import { Brand } from '@/shared/ui/brand'
 
-import { navGroups } from './nav'
+import { navGroups, visible } from './nav'
 
 /** SidebarNav, kullanıcının yetkilerine göre süzülmüş ana menüdür. */
 export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation()
-  const { has } = usePermissions()
+  const perms = usePermissions()
   return (
     <nav aria-label={t('nav.main')} className="flex flex-col gap-6 px-3">
       {navGroups.map((group) => {
-        const items = group.items.filter((i) => !i.permission || has(i.permission))
+        const items = group.items.filter((i) => visible(i, perms))
         if (items.length === 0) {
           return null
         }
