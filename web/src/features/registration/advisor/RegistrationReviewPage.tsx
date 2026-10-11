@@ -30,7 +30,7 @@ import { Textarea } from '@/shared/ui/textarea'
 
 import { BasketItems, EctsMeter, RegistrationState } from '../Basket'
 import { HistoryTable, ProgressView } from '../ProgressView'
-import { newKey, useRun } from '../shared'
+import { newKey, shownViolations, useRun } from '../shared'
 import { ViolationList } from '../ViolationList'
 import { WeeklyPreview } from '../WeeklyPreview'
 import { DecisionDialog } from './DecisionDialog'
@@ -108,7 +108,7 @@ export function RegistrationReviewPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <BasketItems items={r.items} />
-            <ViolationList violations={r.items.length > 0 ? r.evaluation.violations : []} />
+            <ViolationList violations={shownViolations(r)} />
           </CardContent>
         </Card>
         <Card className="h-fit">

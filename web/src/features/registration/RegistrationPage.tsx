@@ -30,7 +30,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { AddDropPanel } from './AddDropPanel'
 import { BasketItems, EctsMeter, RegistrationState } from './Basket'
 import { OfferList } from './OfferList'
-import { newKey, useRun, useViolationText } from './shared'
+import { newKey, shownViolations, useRun, useViolationText } from './shared'
 import { ViolationList } from './ViolationList'
 import { WeeklyPreview } from './WeeklyPreview'
 
@@ -245,7 +245,7 @@ function BasketCard({ registration: r }: { registration: Registration }) {
           }
         />
         <EctsMeter total={r.total_ects} limit={r.ects_limit} />
-        {r.items.length > 0 && <ViolationList violations={r.evaluation.violations} />}
+        <ViolationList violations={shownViolations(r)} />
         <div className="flex flex-wrap gap-2">
           {(r.status === 'DRAFT' || r.status === 'REJECTED') && r.actions.can_edit && (
             <Button disabled={!r.actions.can_submit} onClick={() => setConfirming(true)}>

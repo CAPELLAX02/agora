@@ -152,3 +152,17 @@ export function useRun() {
     [errorText],
   )
 }
+
+/**
+ * shownViolations, sepette gösterilecek kural sonuçlarıdır. Boş sepette "sepet boş" hatası
+ * gösterilmez ama ders seçmeyi baştan engelleyenler (kayıt engeli, aktif olmayan kayıt,
+ * ders planı yokluğu) gösterilir: öğrenci ders eklemeye çalışmadan nedenini görür.
+ */
+export function shownViolations(r: {
+  items: unknown[]
+  evaluation: { violations: RuleViolation[] }
+}): RuleViolation[] {
+  return r.items.length > 0
+    ? r.evaluation.violations
+    : r.evaluation.violations.filter((v) => v.code !== 'EMPTY_BASKET')
+}
