@@ -1,4 +1,4 @@
-import { CalendarClockIcon, CircleCheckIcon, CircleXIcon, Trash2Icon } from 'lucide-react'
+import { CalendarClockIcon, CircleCheckIcon, CircleXIcon, ShoppingBasketIcon, Trash2Icon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { formatDateTime } from '@/i18n/format'
@@ -7,6 +7,9 @@ import { useLocalized } from '@/shared/lib/localized'
 import { cn } from '@/shared/lib/utils'
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { Button } from '@/shared/ui/button'
+import { IconChip } from '@/shared/ui/icon-chip'
+import { Meter } from '@/shared/ui/meter'
+import { toneFill, toneFor, toneSoft } from '@/shared/ui/tone'
 
 import { ItemKindBadge, RegistrationStatusBadge } from './badges'
 import { SectionSchedule } from './SectionInfo'
@@ -14,32 +17,23 @@ import { SectionSchedule } from './SectionInfo'
 /** EctsMeter, sepetin AKTS'sini GANO'ya göre üst sınırla birlikte gösterir. */
 export function EctsMeter({ total, limit }: { total: number; limit: number }) {
   const { t } = useTranslation()
-  const ratio = limit > 0 ? Math.min(total / limit, 1) : 0
+  const ratio = limit > 0 ? total / limit : 0
   const over = total > limit
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       <div className="flex items-baseline justify-between text-sm">
-        <span className="text-muted-foreground">{t('registration.basket.ects')}</span>
-        <span className={cn('font-semibold tabular-nums', over && 'text-destructive')}>
+        <span className="font-semibold text-muted-foreground">{t('registration.basket.ects')}</span>
+        <span className={cn('font-extrabold tabular-nums', over && 'text-destructive')}>
           {t('registration.basket.ectsOf', { total, limit })}
         </span>
       </div>
-      <div
-        className="h-2 overflow-hidden rounded-full bg-muted"
-        role="meter"
-        aria-label={t('registration.basket.ects')}
-        aria-valuemin={0}
-        aria-valuemax={limit}
-        aria-valuenow={total}
-      >
-        <div
-          className={cn(
-            'h-full rounded-full',
-            over ? 'bg-destructive' : ratio > 0.9 ? 'bg-warning' : 'bg-primary',
-          )}
-          style={{ width: `${ratio * 100}%` }}
-        />
-      </div>
+      <Meter
+        value={total}
+        max={limit}
+        label={t('registration.basket.ects')}
+        tone={over ? 'rose' : ratio > 0.9 ? 'amber' : 'violet'}
+        size="lg"
+      />
     </div>
   )
 }
@@ -55,8 +49,15 @@ export function RegistrationState({ registration: r }: { registration: Registrat
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <RegistrationStatusBadge status={r.status} />
-        <span className="flex items-center gap-1 text-muted-foreground">
-          <CalendarClockIcon className="size-4" aria-hidden />
+        <span
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold',
+            w.open || w.extended
+              ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+              : 'bg-muted text-muted-foreground',
+          )}
+        >
+          <CalendarClockIcon className="size-3.5" aria-hidden />
           {w.open && w.ends_at
             ? t('registration.window.openUntil', {
                 time: formatDateTime(new Date(new Date(w.ends_at).getTime() - 60_000)),
@@ -109,38 +110,53 @@ export function BasketItems({
   const { t } = useTranslation()
   const localized = useLocalized()
   if (items.length === 0) {
-    return <p className="py-4 text-center text-sm text-muted-foreground">{t('registration.basket.empty')}</p>
+    return (
+      <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border px-4 py-6 text-center">
+        <IconChip icon={ShoppingBasketIcon} tone="violet" size="lg" className="rounded-full" />
+        <p className="text-sm text-muted-foreground">{t('registration.basket.empty')}</p>
+      </div>
+    )
   }
   return (
-    <ul className="divide-y" aria-label={t('registration.basket.title')}>
-      {items.map((it) => (
-        <li key={it.id} className="flex items-start justify-between gap-3 py-2.5">
-          <div className="min-w-0 space-y-0.5 text-sm">
-            <p className="flex flex-wrap items-center gap-2">
-              <span className="font-medium">{it.section.label}</span>
-              <span className="truncate">{localized(it.section.course)}</span>
-              <ItemKindBadge kind={it.kind} />
-            </p>
-            <p className="text-xs text-muted-foreground">
-              <SectionSchedule section={it.section} />
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-1">
-            <span className="text-sm tabular-nums">{t('registration.ects', { ects: it.ects })}</span>
-            {onRemove && (
-              <Button
-                variant="ghost"
-                size="icon"
-                disabled={busy}
-                onClick={() => onRemove(it)}
-                aria-label={t('registration.basket.remove', { code: it.section.course.code })}
-              >
-                <Trash2Icon />
-              </Button>
-            )}
-          </div>
-        </li>
-      ))}
+    <ul className="space-y-2" aria-label={t('registration.basket.title')}>
+      {items.map((it) => {
+        const tone = toneFor(it.section.course.code)
+        return (
+          <li
+            key={it.id}
+            className="relative flex items-start gap-3 overflow-hidden rounded-xl border border-border/70 bg-card py-2.5 pr-2 pl-4 shadow-xs"
+          >
+            <span aria-hidden className={cn('absolute inset-y-0 left-0 w-1', toneFill[tone])} />
+            <div className="min-w-0 flex-1 space-y-1 text-sm">
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="font-bold">{it.section.label}</span>
+                <ItemKindBadge kind={it.kind} />
+              </p>
+              <p className="truncate text-[13px] text-muted-foreground">{localized(it.section.course)}</p>
+              <p className="text-xs">
+                <SectionSchedule section={it.section} compact />
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-0.5">
+              <span className={cn('rounded-full px-2 py-0.5 text-xs font-bold tabular-nums', toneSoft[tone])}>
+                {t('registration.ects', { ects: it.ects })}
+              </span>
+              {onRemove && (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="text-muted-foreground hover:bg-rose-500/10 hover:text-rose-600"
+                  disabled={busy}
+                  onClick={() => onRemove(it)}
+                  aria-label={t('registration.basket.remove', { code: it.section.course.code })}
+                >
+                  <Trash2Icon />
+                </Button>
+              )}
+            </div>
+          </li>
+        )
+      })}
     </ul>
   )
 }

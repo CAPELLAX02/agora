@@ -1,4 +1,4 @@
-import { FileTextIcon, SendIcon, Undo2Icon } from 'lucide-react'
+import { ClipboardCheckIcon, FileTextIcon, SendIcon, ShoppingBasketIcon, Undo2Icon } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
@@ -18,14 +18,18 @@ import {
   type StudentProgram,
 } from '@/shared/api/generated'
 import { useLocalized } from '@/shared/lib/localized'
+import { cn } from '@/shared/lib/utils'
 import { Alert, AlertDescription } from '@/shared/ui/alert'
+import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
 import { ConfirmDialog } from '@/shared/ui/confirm-dialog'
+import { IconChip } from '@/shared/ui/icon-chip'
 import { PageHeader } from '@/shared/ui/page-header'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { EmptyState, ErrorState } from '@/shared/ui/states'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
+import { toneText } from '@/shared/ui/tone'
 
 import { AddDropPanel } from './AddDropPanel'
 import { BasketItems, EctsMeter, RegistrationState } from './Basket'
@@ -55,7 +59,12 @@ export function RegistrationPage() {
   const current = data.items.find((p) => p.id === active) ?? data.items[0]
   return (
     <>
-      <PageHeader title={t('registration.title')} description={t('registration.description')} />
+      <PageHeader
+        title={t('registration.title')}
+        description={t('registration.description')}
+        icon={ClipboardCheckIcon}
+        tone="violet"
+      />
       {!current ? (
         <EmptyState>{t('registration.noPrograms')}</EmptyState>
       ) : (
@@ -89,22 +98,41 @@ function StudentRegistration({ program }: { program: StudentProgram }) {
   }
   return (
     <div className="space-y-6">
-      <Card>
-        <CardContent className="grid gap-6 md:grid-cols-[minmax(0,1fr)_18rem]">
+      <Card className="relative overflow-hidden border-violet-500/20 bg-gradient-to-br from-violet-500/[0.07] via-card to-sky-500/[0.06]">
+        <CardContent className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
           <div className="space-y-3">
-            <h2 className="text-lg font-semibold">{t('registration.termTitle', { term: r.term.code })}</h2>
+            <h2 className="text-xl font-extrabold tracking-tight">
+              {t('registration.termTitle', { term: r.term.code })}
+            </h2>
             <RegistrationState registration={r} />
           </div>
-          <div className="space-y-3">
-            <EctsMeter total={r.total_ects} limit={r.ects_limit} />
-            <dl className="grid grid-cols-2 gap-2 text-sm">
-              <dt className="text-muted-foreground">{t('registration.facts.semester')}</dt>
-              <dd className="text-right tabular-nums">{r.student.semester}</dd>
-              <dt className="text-muted-foreground">{t('registration.facts.gpa')}</dt>
-              <dd className="text-right tabular-nums">{r.student.gpa?.toFixed(2) ?? '—'}</dd>
-              <dt className="text-muted-foreground">{t('registration.facts.advisor')}</dt>
-              <dd className="truncate text-right">{r.student.advisor ?? '—'}</dd>
+          <div className="space-y-4">
+            <dl className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,0.8fr)_minmax(0,1.6fr)] gap-2">
+              {(
+                [
+                  [t('registration.facts.semester'), String(r.student.semester), 'sky'],
+                  [t('registration.facts.gpa'), r.student.gpa?.toFixed(2) ?? '—', 'emerald'],
+                  [t('registration.facts.advisor'), r.student.advisor ?? '—', 'violet'],
+                ] as const
+              ).map(([label, value, tone]) => (
+                <div key={label} className="min-w-0 rounded-xl border border-border/60 bg-card/80 px-3 py-2">
+                  <dt className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">
+                    {label}
+                  </dt>
+                  <dd
+                    className={cn(
+                      'truncate font-extrabold tabular-nums',
+                      value.length > 6 ? 'text-sm leading-6' : 'text-lg',
+                      toneText[tone],
+                    )}
+                    title={value}
+                  >
+                    {value}
+                  </dd>
+                </div>
+              ))}
             </dl>
+            <EctsMeter total={r.total_ects} limit={r.ects_limit} />
           </div>
         </CardContent>
       </Card>
@@ -178,11 +206,17 @@ function Offers({ registration: r }: { registration: Registration }) {
       action={(o, s) => {
         const item = r.items.find((it) => it.section.course.id === o.course.id)
         if (item && item.section.id === s.id) {
-          return { label: t('registration.offer.inBasket'), disabled: true, onClick: () => undefined }
+          return {
+            label: t('registration.offer.inBasket'),
+            kind: 'done',
+            disabled: true,
+            onClick: () => undefined,
+          }
         }
         if (item) {
           return {
             label: t('registration.offer.switch'),
+            kind: 'switch',
             disabled: busy || !s.available,
             onClick: () =>
               void run(
@@ -201,6 +235,7 @@ function Offers({ registration: r }: { registration: Registration }) {
         }
         return {
           label: t('registration.offer.add'),
+          kind: 'add',
           disabled: busy || !s.available,
           onClick: () =>
             void run(
@@ -226,9 +261,11 @@ function BasketCard({ registration: r }: { registration: Registration }) {
   const warnings = r.evaluation.violations.filter((v) => v.severity === 'WARNING').length
 
   return (
-    <Card className="h-fit xl:sticky xl:top-4" role="region" aria-label={t('registration.basket.title')}>
-      <CardHeader>
-        <CardTitle>{t('registration.basket.title')}</CardTitle>
+    <Card className="h-fit xl:sticky xl:top-20" role="region" aria-label={t('registration.basket.title')}>
+      <CardHeader className="flex items-center gap-3">
+        <IconChip icon={ShoppingBasketIcon} tone="violet" solid />
+        <CardTitle className="flex-1 text-lg">{t('registration.basket.title')}</CardTitle>
+        <Badge variant="violet">{t('dashboard.registration.courses', { count: r.items.length })}</Badge>
       </CardHeader>
       <CardContent className="space-y-4">
         <BasketItems
@@ -248,7 +285,13 @@ function BasketCard({ registration: r }: { registration: Registration }) {
         <ViolationList violations={shownViolations(r)} />
         <div className="flex flex-wrap gap-2">
           {(r.status === 'DRAFT' || r.status === 'REJECTED') && r.actions.can_edit && (
-            <Button disabled={!r.actions.can_submit} onClick={() => setConfirming(true)}>
+            <Button
+              variant="brand"
+              size="lg"
+              className="w-full"
+              disabled={!r.actions.can_submit}
+              onClick={() => setConfirming(true)}
+            >
               <SendIcon />
               {t('registration.submit')}
             </Button>
@@ -287,6 +330,8 @@ function BasketCard({ registration: r }: { registration: Registration }) {
       </CardContent>
       {confirming && (
         <ConfirmDialog
+          icon={SendIcon}
+          tone="violet"
           title={t('registration.confirmSubmit.title')}
           description={t('registration.confirmSubmit.description', {
             count: r.items.length,

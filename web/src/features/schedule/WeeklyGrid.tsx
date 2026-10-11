@@ -1,3 +1,4 @@
+import { CalendarRangeIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
@@ -5,16 +6,11 @@ import type { ScheduleEntry } from '@/shared/api/generated'
 import { useLocalized } from '@/shared/lib/localized'
 import { cn } from '@/shared/lib/utils'
 import { EmptyState } from '@/shared/ui/states'
+import { toneBlock, toneFor } from '@/shared/ui/tone'
 
 import { day, minutes, placeEntries, roomLabel } from './layout'
 
 const HOUR_PX = 56
-
-const tones = {
-  THEORY: 'border-primary/40 bg-primary/10',
-  PRACTICE: 'border-warning/50 bg-warning/15',
-  LAB: 'border-success/40 bg-success/10',
-} as const
 
 /**
  * WeeklyGrid, haftalık programı gün sütunları ve saat satırlarıyla çizer. Aynı saatte
@@ -33,13 +29,19 @@ export function WeeklyGrid({
 }) {
   const { t } = useTranslation()
   if (entries.length === 0) {
-    return <EmptyState>{t('schedule.empty')}</EmptyState>
+    return (
+      <EmptyState icon={CalendarRangeIcon} tone="blue">
+        {t('schedule.empty')}
+      </EmptyState>
+    )
   }
   const days = [1, 2, 3, 4, 5, ...[6, 7].filter((d) => entries.some((e) => e.day_of_week === d))]
   const first = Math.min(8, ...entries.map((e) => Math.floor(minutes(e.start_time) / 60)))
   const last = Math.max(18, ...entries.map((e) => Math.ceil(minutes(e.end_time) / 60)))
   const hours = Array.from({ length: last - first }, (_, i) => first + i)
   const placed = placeEntries(entries)
+  // ISO: 1 pazartesi … 7 pazar.
+  const today = ((new Date().getDay() + 6) % 7) + 1
 
   return (
     <>
@@ -53,8 +55,15 @@ export function WeeklyGrid({
           <div role="row" className="contents">
             <div role="columnheader" />
             {days.map((d) => (
-              <div key={d} role="columnheader" className="border-b px-2 pb-2 text-sm font-medium">
-                {t(`schedule.days.${day(d)}`)}
+              <div key={d} role="columnheader" className="border-b px-2 pb-2 text-sm font-bold">
+                <span
+                  className={cn(
+                    'inline-flex rounded-full px-2.5 py-0.5',
+                    d === today && 'bg-primary text-primary-foreground shadow-sm shadow-primary/25',
+                  )}
+                >
+                  {t(`schedule.days.${day(d)}`)}
+                </span>
               </div>
             ))}
           </div>
@@ -75,7 +84,7 @@ export function WeeklyGrid({
                 key={d}
                 role="cell"
                 aria-label={t(`schedule.days.${day(d)}`)}
-                className="relative border-l"
+                className={cn('relative border-l', d === today && 'bg-primary/[0.03]')}
                 style={{
                   height: hours.length * HOUR_PX,
                   backgroundImage: `repeating-linear-gradient(to bottom, var(--color-border) 0 1px, transparent 1px ${HOUR_PX}px)`,
@@ -108,7 +117,7 @@ export function WeeklyGrid({
           .filter((d) => entries.some((e) => e.day_of_week === d))
           .map((d) => (
             <li key={d}>
-              <h3 className="mb-2 text-sm font-medium">{t(`schedule.days.${day(d)}`)}</h3>
+              <h3 className="mb-2 text-sm font-bold">{t(`schedule.days.${day(d)}`)}</h3>
               <ul className="space-y-2">
                 {entries
                   .filter((e) => e.day_of_week === d)
@@ -142,25 +151,25 @@ function Block({
   const label = `${e.course.code}-${e.section_code} ${localized(e.course)}, ${t(`schedule.days.${day(e.day_of_week)}`)} ${time}, ${roomLabel(e) ?? t('schedule.online')}`
   const body = (
     <>
-      <p className="truncate font-medium">
+      <p className="flex items-center gap-1 truncate font-bold">
         {e.course.code}-{e.section_code}
         {e.session_type !== 'THEORY' && (
-          <span className="ml-1 font-normal text-muted-foreground">
-            · {t(`schedule.sessions.${e.session_type}`)}
+          <span className="rounded bg-white/70 px-1 text-[10px] font-semibold dark:bg-black/20">
+            {t(`schedule.sessions.${e.session_type}`)}
           </span>
         )}
       </p>
-      <p className="truncate text-muted-foreground">{localized(e.course)}</p>
-      <p className="truncate tabular-nums">{time}</p>
-      {detail && <p className="truncate text-muted-foreground">{detail}</p>}
+      <p className="truncate opacity-80">{localized(e.course)}</p>
+      <p className="truncate font-semibold tabular-nums">{time}</p>
+      {detail && <p className="truncate opacity-70">{detail}</p>}
     </>
   )
   const className = cn(
-    'block overflow-hidden rounded-md border px-2 py-1 text-xs leading-snug',
+    'block overflow-hidden rounded-lg border border-l-4 px-2 py-1 text-xs leading-snug shadow-xs',
     style && 'absolute',
-    tones[e.session_type],
+    toneBlock[toneFor(e.course.code)],
     href &&
-      'transition-shadow hover:shadow-md focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none',
+      'transition-all hover:-translate-y-px hover:shadow-md focus-visible:ring-4 focus-visible:ring-ring/30 focus-visible:outline-none',
   )
   return href ? (
     <Link to={href} className={className} style={style} aria-label={label}>

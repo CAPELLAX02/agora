@@ -34,12 +34,17 @@ export function ViolationList({
           <li
             key={`${v.code}-${i}`}
             className={cn(
-              'flex gap-2 rounded-md border px-3 py-2 text-sm',
-              error ? 'border-destructive/30 bg-destructive/5' : 'border-warning/40 bg-warning/10',
+              'flex gap-2.5 rounded-xl border px-3 py-2.5 text-sm leading-snug',
+              error
+                ? 'border-rose-500/25 bg-rose-500/[0.07] text-rose-950 dark:text-rose-100'
+                : 'border-amber-500/30 bg-amber-500/[0.09] text-amber-950 dark:text-amber-100',
             )}
           >
             <Icon
-              className={cn('mt-0.5 size-4 shrink-0', error ? 'text-destructive' : 'text-warning')}
+              className={cn(
+                'mt-0.5 size-4 shrink-0',
+                error ? 'text-rose-600 dark:text-rose-400' : 'text-amber-600 dark:text-amber-400',
+              )}
               aria-hidden
             />
             <span>
