@@ -24,7 +24,7 @@ func NewRepository(q db.Querier) *Repository {
 
 const studentProgramSelect = `
 	SELECT sp.id, s.id, s.student_no, pe.first_name, pe.last_name,
-	       p.id, p.code, p.name_tr, d.id, d.name_tr, f.id, f.name_tr,
+	       p.id, p.code, p.name_tr, d.id, d.name_tr, f.id, f.name_tr, p.duration_semesters, p.max_duration_years,
 	       sp.enrollment_kind, sp.admission_type, sp.admission_year, sp.admitted_on, sp.status,
 	       sp.class_level, sp.current_semester, sp.gpa_cache::float8, sp.earned_ects_cache::float8, sp.version,
 	       aa.id, st.id, st.staff_no, t.name_tr, ape.first_name, ape.last_name, aa.valid_from,
@@ -52,7 +52,7 @@ func scanStudentProgram(row pgx.CollectableRow) (StudentProgram, error) {
 	)
 	err := row.Scan(&sp.ID, &sp.StudentID, &sp.StudentNo, &sp.FirstName, &sp.LastName,
 		&sp.Program.ID, &sp.Program.Code, &sp.Program.NameTR, &sp.Program.DepartmentID, &sp.Program.DepartmentName,
-		&sp.Program.FacultyID, &sp.Program.FacultyName,
+		&sp.Program.FacultyID, &sp.Program.FacultyName, &sp.Program.DurationSemesters, &sp.Program.MaxDurationYears,
 		&kind, &admission, &sp.AdmissionYear, &sp.AdmittedOn, &status,
 		&sp.ClassLevel, &sp.CurrentSemester, &sp.GPA, &sp.EarnedECTS, &sp.Version,
 		&assignmentID, &staffID, &staffNo, &title, &advFirst, &advLast, &since,

@@ -40,6 +40,8 @@ func (h *Handler) Register(rt *authz.Router) {
 
 	rt.HandleFunc("GET /api/v1/me/programs", authz.SelfService, h.myPrograms)
 	rt.HandleFunc("GET /api/v1/me/advisees", authz.Authenticated, h.myAdvisees)
+
+	h.registerHolds(rt)
 }
 
 // --- Yanıt tipleri -----------------------------------------------------------
@@ -77,10 +79,13 @@ type studentProgramResponse struct {
 	Status          string             `json:"status"`
 	ClassLevel      int                `json:"class_level"`
 	CurrentSemester int                `json:"current_semester"`
+	NormalSemesters int                `json:"normal_semesters"`
+	MaxSemesters    int                `json:"max_semesters"`
 	GPA             *float64           `json:"gpa"`
 	EarnedECTS      float64            `json:"earned_ects"`
 	Advisor         *advisorResponse   `json:"advisor"`
 	Curriculum      *curriculumRefRes  `json:"curriculum"`
+	Version         int                `json:"version"`
 }
 
 type curriculumRefRes struct {
@@ -132,7 +137,9 @@ func toStudentProgramResponse(sp StudentProgram) studentProgramResponse {
 		},
 		Kind: string(sp.Kind), AdmissionType: string(sp.AdmissionType), AdmissionYear: sp.AdmissionYear,
 		AdmittedOn: sp.AdmittedOn.Format(time.DateOnly), Status: string(sp.Status),
-		ClassLevel: sp.ClassLevel, CurrentSemester: sp.CurrentSemester, GPA: sp.GPA, EarnedECTS: sp.EarnedECTS,
+		ClassLevel: sp.ClassLevel, CurrentSemester: sp.CurrentSemester,
+		NormalSemesters: sp.Program.DurationSemesters, MaxSemesters: sp.MaxSemesters(),
+		GPA: sp.GPA, EarnedECTS: sp.EarnedECTS, Version: sp.Version,
 	}
 	if sp.Advisor != nil {
 		a := toAdvisorResponse(*sp.Advisor)

@@ -1,9 +1,10 @@
-// Package enrollment, öğrencilerin program kayıtlarını ve danışman atamalarını yönetir.
-// İleride ders seçme (registration) de bu modülde olacak.
+// Package enrollment, öğrencilerin program kayıtlarını, danışman atamalarını ve kayıt
+// engellerini yönetir. İleride ders seçme (registration) de bu modülde olacak.
 package enrollment
 
 import (
 	"errors"
+	"slices"
 	"time"
 )
 
@@ -15,6 +16,11 @@ var (
 	ErrProgramInactive = errors.New("enrollment: program aktif değil")
 	ErrNotAnAdvisor    = errors.New("enrollment: personel bu bölümde danışman değil")
 	ErrNotActive       = errors.New("enrollment: program kaydı aktif değil")
+
+	ErrInvalidTransition = errors.New("enrollment: bu durum geçişi yapılamaz")
+	ErrVersionMismatch   = errors.New("enrollment: kayıt başka biri tarafından değiştirilmiş")
+	ErrHoldExists        = errors.New("enrollment: aynı türde aktif engel var")
+	ErrHoldReleased      = errors.New("enrollment: engel zaten kaldırılmış")
 )
 
 // Kind, program kaydının türüdür.
@@ -93,6 +99,21 @@ func (s Status) Ongoing() bool {
 	return false
 }
 
+// CanBecome, kaydın to durumuna geçip geçemeyeceğini söyler. Mezuniyet, ayrılma ve
+// ilişik kesme kesindir: bu durumlardan çıkılmaz.
+func (s Status) CanBecome(to Status) bool {
+	switch s {
+	case StatusPrep:
+		return to == StatusActive || to == StatusWithdrawn || to == StatusDismissed
+	case StatusActive:
+		return to == StatusFrozen || to == StatusSuspended || to == StatusGraduated ||
+			to == StatusWithdrawn || to == StatusDismissed
+	case StatusFrozen, StatusSuspended:
+		return to == StatusActive || to == StatusWithdrawn || to == StatusDismissed
+	}
+	return false
+}
+
 // ProgramRef, program kaydında gösterilen program özetidir. Bölüm ve birim
 // kimlikleri yetki kapsamı kontrolü için de kullanılır.
 type ProgramRef struct {
@@ -103,6 +124,9 @@ type ProgramRef struct {
 	DepartmentName string
 	FacultyID      string
 	FacultyName    string
+
+	DurationSemesters int // normal süre
+	MaxDurationYears  int // azami süre (hazırlık hariç)
 }
 
 // AdvisorRef, program kaydının danışmanıdır.
@@ -136,6 +160,16 @@ type StudentProgram struct {
 	Advisor         *AdvisorRef    // danışman atanmamışsa nil
 	Curriculum      *CurriculumRef // izlediği müfredat sürümü; bağlanmamışsa nil
 	Version         int
+}
+
+// MaxSemesters, kaydın azami süresidir (yarıyıl). Hazırlık sınıfı süreye sayılmaz.
+func (sp StudentProgram) MaxSemesters() int {
+	return sp.Program.MaxDurationYears * 2
+}
+
+// BeyondMaxDuration, öğrencinin azami süreyi aşıp aşmadığını söyler.
+func (sp StudentProgram) BeyondMaxDuration() bool {
+	return sp.CurrentSemester > sp.MaxSemesters()
 }
 
 // CurriculumRef, program kaydının izlediği müfredat sürümünün özetidir.
@@ -173,4 +207,93 @@ type EligibleAdvisor struct {
 	FirstName   string
 	LastName    string
 	ActiveCount int // şu anki danışmanlık sayısı: yükü dengelemek için
+}
+
+// StatusChange, program kaydının durum geçmişindeki bir satırdır.
+type StatusChange struct {
+	From        *Status
+	To          Status
+	Reason      string
+	DecisionRef string
+	ChangedBy   string // değiştirenin adı; sistem değişikliğinde boş
+	ChangedAt   time.Time
+}
+
+// HoldType, kayıt engelinin türüdür.
+type HoldType string
+
+// Engel türleri.
+const (
+	HoldTuitionDebt          HoldType = "TUITION_DEBT"
+	HoldDisciplineSuspension HoldType = "DISCIPLINE_SUSPENSION"
+	HoldMissingDocument      HoldType = "MISSING_DOCUMENT"
+	HoldLibraryDebt          HoldType = "LIBRARY_DEBT"
+)
+
+// Valid, değerin tanımlı engel türlerinden biri olup olmadığını söyler.
+func (t HoldType) Valid() bool {
+	switch t {
+	case HoldTuitionDebt, HoldDisciplineSuspension, HoldMissingDocument, HoldLibraryDebt:
+		return true
+	}
+	return false
+}
+
+// DefaultBlocks, türün varsayılan olarak kapattığı işlemlerdir.
+func (t HoldType) DefaultBlocks() []HoldBlock {
+	switch t {
+	case HoldTuitionDebt:
+		return []HoldBlock{BlockRegistration, BlockDocument}
+	case HoldDisciplineSuspension:
+		return []HoldBlock{BlockRegistration}
+	case HoldMissingDocument:
+		return []HoldBlock{BlockGraduation}
+	case HoldLibraryDebt:
+		return []HoldBlock{BlockDocument, BlockGraduation}
+	}
+	return nil
+}
+
+// HoldBlock, engelin kapattığı işlemdir.
+type HoldBlock string
+
+// Engellenebilen işlemler.
+const (
+	BlockRegistration HoldBlock = "REGISTRATION"
+	BlockDocument     HoldBlock = "DOCUMENT"
+	BlockGraduation   HoldBlock = "GRADUATION"
+)
+
+// Valid, değerin tanımlı işlemlerden biri olup olmadığını söyler.
+func (b HoldBlock) Valid() bool {
+	return b == BlockRegistration || b == BlockDocument || b == BlockGraduation
+}
+
+// Hold, bir program kaydına konmuş engeldir.
+type Hold struct {
+	ID               string
+	StudentProgramID string
+	StudentID        string
+	StudentNo        string
+	FirstName        string
+	LastName         string
+	Program          ProgramRef // sadece kimlik, kod, ad ve kapsam alanları dolu
+	Type             HoldType
+	Blocks           []HoldBlock
+	Reason           string
+	PlacedBy         string // koyanın adı
+	PlacedAt         time.Time
+	ReleasedBy       string
+	ReleasedAt       *time.Time
+	ReleaseReason    string
+}
+
+// Active, engelin hâlâ geçerli olup olmadığını söyler.
+func (h Hold) Active() bool {
+	return h.ReleasedAt == nil
+}
+
+// BlocksAction, engelin verilen işlemi kapatıp kapatmadığını söyler.
+func (h Hold) BlocksAction(b HoldBlock) bool {
+	return h.Active() && slices.Contains(h.Blocks, b)
 }

@@ -942,6 +942,69 @@ const injectedRtkApi = api
         }),
         providesTags: ['\u00D6\u011Frenciler'],
       }),
+      changeStudentProgramStatus: build.mutation<
+        ChangeStudentProgramStatusApiResponse,
+        ChangeStudentProgramStatusApiArg
+      >({
+        query: (queryArg) => ({
+          url: `/api/v1/student-programs/${queryArg.id}/status`,
+          method: 'POST',
+          body: queryArg.body,
+          headers: {
+            'If-Match': queryArg['If-Match'],
+          },
+        }),
+        invalidatesTags: ['\u00D6\u011Frenciler'],
+      }),
+      listStudentProgramStatusHistory: build.query<
+        ListStudentProgramStatusHistoryApiResponse,
+        ListStudentProgramStatusHistoryApiArg
+      >({
+        query: (queryArg) => ({
+          url: `/api/v1/student-programs/${queryArg.id}/status-history`,
+        }),
+        providesTags: ['\u00D6\u011Frenciler'],
+      }),
+      listStudentProgramHolds: build.query<ListStudentProgramHoldsApiResponse, ListStudentProgramHoldsApiArg>(
+        {
+          query: (queryArg) => ({
+            url: `/api/v1/student-programs/${queryArg.id}/holds`,
+          }),
+          providesTags: ['\u00D6\u011Frenciler'],
+        },
+      ),
+      placeHold: build.mutation<PlaceHoldApiResponse, PlaceHoldApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/student-programs/${queryArg.id}/holds`,
+          method: 'POST',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['\u00D6\u011Frenciler'],
+      }),
+      listHolds: build.query<ListHoldsApiResponse, ListHoldsApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/holds`,
+          params: {
+            faculty_id: queryArg.facultyId,
+            department_id: queryArg.departmentId,
+            program_id: queryArg.programId,
+            type: queryArg['type'],
+            active: queryArg.active,
+            q: queryArg.q,
+            cursor: queryArg.cursor,
+            limit: queryArg.limit,
+          },
+        }),
+        providesTags: ['\u00D6\u011Frenciler'],
+      }),
+      releaseHold: build.mutation<ReleaseHoldApiResponse, ReleaseHoldApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/holds/${queryArg.id}/release`,
+          method: 'POST',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['\u00D6\u011Frenciler'],
+      }),
       listEligibleAdvisors: build.query<ListEligibleAdvisorsApiResponse, ListEligibleAdvisorsApiArg>({
         query: (queryArg) => ({
           url: `/api/v1/departments/${queryArg.id}/advisors`,
@@ -1872,6 +1935,71 @@ export type ListAdvisorHistoryApiArg = {
   /** Geçerli bir UUID değilse 404 döner. */
   id: string
 }
+export type ChangeStudentProgramStatusApiResponse = /** status 200 Güncel program kaydı */ StudentProgram
+export type ChangeStudentProgramStatusApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
+  'If-Match': string
+  body: {
+    status: EnrollmentStatus
+    reason: string
+    /** Ör. yönetim kurulu karar numarası */
+    decision_ref?: string | null
+    /** Sadece mezuniyette */
+    graduated_on?: string | null
+  }
+}
+export type ListStudentProgramStatusHistoryApiResponse =
+  /** status 200 En yeniden eskiye durum değişiklikleri */ {
+    items: StatusHistoryItem[]
+  }
+export type ListStudentProgramStatusHistoryApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type ListStudentProgramHoldsApiResponse = /** status 200 Engeller */ {
+  items: Hold[]
+}
+export type ListStudentProgramHoldsApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type PlaceHoldApiResponse = /** status 201 Engel konuldu */ Hold
+export type PlaceHoldApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: {
+    hold_type: HoldType
+    blocks?: HoldBlock[]
+    reason: string
+  }
+}
+export type ListHoldsApiResponse = /** status 200 Engeller */ {
+  items: Hold[]
+  next_cursor: string | null
+}
+export type ListHoldsApiArg = {
+  facultyId?: string
+  departmentId?: string
+  programId?: string
+  type?: HoldType
+  /** true (varsayılan) sadece aktifler, false sadece kaldırılmışlar */
+  active?: boolean
+  /** Öğrenci numarası ya da ad */
+  q?: string
+  /** Önceki yanıtın `next_cursor` değeri (opak) */
+  cursor?: string
+  limit?: number
+}
+export type ReleaseHoldApiResponse = /** status 200 Kaldırılan engel */ Hold
+export type ReleaseHoldApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: {
+    reason: string
+  }
+}
 export type ListEligibleAdvisorsApiResponse = /** status 200 Danışmanlar (soyada göre sıralı) */ {
   items: EligibleAdvisor[]
 }
@@ -2745,9 +2873,15 @@ export type StudentProgram = {
   status: EnrollmentStatus
   /** 0: hazırlık */
   class_level: number
+  /** Hazırlık hariç kaçıncı yarıyılda olduğu */
   current_semester: number
+  /** Programın normal süresi (yarıyıl) */
+  normal_semesters: number
+  /** Azami süre (yarıyıl): programın azami yılı × 2 */
+  max_semesters: number
   gpa: number | null
   earned_ects: number
+  version: number
   advisor: null | Advisor
   /** İzlenen müfredat sürümü; henüz bağlanmamışsa null */
   curriculum: null | {
@@ -2769,6 +2903,44 @@ export type AdvisorHistoryItem = Advisor & {
   until: string | null
   assigned_by: string | null
   reason: string | null
+}
+export type StatusHistoryItem = {
+  from_status: null | EnrollmentStatus
+  to_status: EnrollmentStatus
+  reason: string | null
+  decision_ref: string | null
+  /** Değişikliği yapanın adı */
+  changed_by: string | null
+  changed_at: string
+}
+export type StudentRef = {
+  id: string
+  student_no: string
+  first_name: string
+  last_name: string
+}
+export type HoldType = 'TUITION_DEBT' | 'DISCIPLINE_SUSPENSION' | 'MISSING_DOCUMENT' | 'LIBRARY_DEBT'
+export type HoldBlock = 'REGISTRATION' | 'DOCUMENT' | 'GRADUATION'
+export type Hold = {
+  id: string
+  student_program_id: string
+  student: StudentRef
+  program: {
+    id: string
+    code: string
+    name_tr: string
+  }
+  hold_type: HoldType
+  blocks: HoldBlock[]
+  reason: string
+  /** Engeli koyanın adı */
+  placed_by: string | null
+  placed_at: string
+  released_at: string | null
+  /** Engeli kaldıranın adı */
+  released_by: string | null
+  release_reason: string | null
+  active: boolean
 }
 export type EligibleAdvisor = {
   staff_id: string
@@ -2984,6 +3156,15 @@ export const {
   useAssignAdvisorMutation,
   useListAdvisorHistoryQuery,
   useLazyListAdvisorHistoryQuery,
+  useChangeStudentProgramStatusMutation,
+  useListStudentProgramStatusHistoryQuery,
+  useLazyListStudentProgramStatusHistoryQuery,
+  useListStudentProgramHoldsQuery,
+  useLazyListStudentProgramHoldsQuery,
+  usePlaceHoldMutation,
+  useListHoldsQuery,
+  useLazyListHoldsQuery,
+  useReleaseHoldMutation,
   useListEligibleAdvisorsQuery,
   useLazyListEligibleAdvisorsQuery,
   useListMyProgramsQuery,

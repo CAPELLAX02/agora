@@ -155,6 +155,11 @@ type res struct {
 
 func (w *world) do(method, path, user string, body any) res {
 	w.t.Helper()
+	return w.doWith(method, path, user, body, nil)
+}
+
+func (w *world) doWith(method, path, user string, body any, headers map[string]string) res {
+	w.t.Helper()
 	var reader io.Reader
 	if body != nil {
 		b, _ := json.Marshal(body)
@@ -165,6 +170,9 @@ func (w *world) do(method, path, user string, body any) res {
 		req.Header.Set("Content-Type", "application/json")
 	}
 	req.Header.Set("X-Test-User", user)
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
 	rec := httptest.NewRecorder()
 	w.h.ServeHTTP(rec, req)
 	out := res{status: rec.Code, raw: rec.Body.String()}
@@ -313,6 +321,150 @@ func TestCreateProgramValidation(t *testing.T) {
 	for _, f := range []string{"kind", "admission_type", "admission_year", "admitted_on", "status", "class_level"} {
 		if !strings.Contains(r.raw, `"field":"`+f+`"`) {
 			t.Errorf("%s alan hatası yok: %s", f, r.raw)
+		}
+	}
+}
+
+func TestHoldsAndStatus(t *testing.T) {
+	w := newWorld(t)
+	r := w.enroll(w.facultyRegistrar, w.student1, w.bilProgram)
+	if r.status != http.StatusCreated {
+		t.Fatalf("kayıt: %d %s", r.status, r.raw)
+	}
+	sp1 := r.body["id"].(string)
+	if r.body["version"].(float64) != 1 || r.body["normal_semesters"].(float64) != 8 || r.body["max_semesters"].(float64) != 14 {
+		t.Errorf("süre alanları = %v", r.body)
+	}
+	if r := w.do("PUT", "/api/v1/student-programs/"+sp1+"/advisor", w.head,
+		map[string]string{"staff_id": w.advisorStaff, "reason": "Dağılım"}); r.status != 200 {
+		t.Fatalf("danışman: %d %s", r.status, r.raw)
+	}
+	holds := "/api/v1/student-programs/" + sp1 + "/holds"
+
+	// --- Engel koyma: sadece hold:manage kapsamı.
+	if r := w.do("POST", holds, w.head, map[string]any{"hold_type": "TUITION_DEBT", "reason": "x"}); r.status != http.StatusForbidden {
+		t.Errorf("bölüm başkanı engel koyamaz: %d", r.status)
+	}
+	r = w.do("POST", holds, w.facultyRegistrar, map[string]any{"hold_type": "TUITION_DEBT", "reason": "2026 güz katkı payı ödenmedi"})
+	if r.status != http.StatusCreated {
+		t.Fatalf("engel: %d %s", r.status, r.raw)
+	}
+	holdID := r.body["id"].(string)
+	if b := r.body["blocks"].([]any); len(b) != 2 || b[0] != "REGISTRATION" || b[1] != "DOCUMENT" {
+		t.Errorf("varsayılan engellenen işlemler = %v", b)
+	}
+	if r.body["placed_by"] != "AdP20001 SoyadP20001" || r.body["active"] != true {
+		t.Errorf("engel = %v", r.body)
+	}
+	if r := w.do("POST", holds, w.facultyRegistrar, map[string]any{"hold_type": "TUITION_DEBT", "reason": "y"}); r.status != 409 || r.body["code"] != "HOLD_EXISTS" {
+		t.Errorf("aynı türde ikinci engel: %d %s", r.status, r.raw)
+	}
+	if r := w.do("POST", holds, w.facultyRegistrar, map[string]any{"hold_type": "LIBRARY_DEBT", "blocks": []string{"X"}, "reason": "y"}); r.status != 400 {
+		t.Errorf("geçersiz işlem: %d", r.status)
+	}
+	if r := w.do("POST", holds, w.facultyRegistrar, map[string]any{"hold_type": "LIBRARY_DEBT", "blocks": []string{"GRADUATION"}, "reason": "Kitap iade edilmedi"}); r.status != 201 {
+		t.Errorf("ikinci tür: %d %s", r.status, r.raw)
+	}
+
+	// --- Okuma: öğrenci kendini, danışman öğrencisini, mali işler kapsamını görür.
+	if n := len(w.do("GET", holds, w.student1User, nil).items()); n != 2 {
+		t.Errorf("öğrenci kendi engelleri = %d", n)
+	}
+	if n := len(w.do("GET", holds, w.advisor, nil).items()); n != 2 {
+		t.Errorf("danışman = %d", n)
+	}
+	if r := w.do("GET", holds, w.student2User, nil); r.status != 404 {
+		t.Errorf("başka öğrenci: %d", r.status)
+	}
+	if n := len(w.do("GET", "/api/v1/holds", w.facultyRegistrar, nil).items()); n != 2 {
+		t.Errorf("kapsamdaki engeller = %d", n)
+	}
+	if n := len(w.do("GET", "/api/v1/holds?type=TUITION_DEBT&q=2229", w.facultyRegistrar, nil).items()); n != 1 {
+		t.Errorf("filtreli engeller = %d", n)
+	}
+	if r := w.do("GET", "/api/v1/holds", w.head, nil); r.status != http.StatusForbidden {
+		t.Errorf("yetkisiz liste: %d", r.status)
+	}
+
+	// --- Kaldırma
+	release := "/api/v1/holds/" + holdID + "/release"
+	if r := w.do("POST", release, w.facultyRegistrar, map[string]string{"reason": " "}); r.status != 400 {
+		t.Errorf("gerekçesiz kaldırma: %d", r.status)
+	}
+	r = w.do("POST", release, w.facultyRegistrar, map[string]string{"reason": "Ödeme dekontu geldi"})
+	if r.status != 200 || r.body["active"] != false || r.body["release_reason"] != "Ödeme dekontu geldi" {
+		t.Fatalf("kaldırma: %d %s", r.status, r.raw)
+	}
+	if r := w.do("POST", release, w.facultyRegistrar, map[string]string{"reason": "tekrar"}); r.status != 409 {
+		t.Errorf("ikinci kaldırma: %d", r.status)
+	}
+	if n := len(w.do("GET", "/api/v1/holds?active=false", w.facultyRegistrar, nil).items()); n != 1 {
+		t.Errorf("kaldırılmış engeller = %d", n)
+	}
+	if items := w.do("GET", holds, w.student1User, nil).items(); items[0].(map[string]any)["active"] != true {
+		t.Errorf("aktif engel önce gelmeli: %v", items)
+	}
+
+	// --- Durum geçişleri
+	status := "/api/v1/student-programs/" + sp1 + "/status"
+	frozen := map[string]any{"status": "FROZEN", "reason": "Sağlık raporu", "decision_ref": "YK 2026/41"}
+	if r := w.do("POST", status, w.facultyRegistrar, frozen); r.status != 428 {
+		t.Errorf("If-Match olmadan: %d", r.status)
+	}
+	if r := w.doWith("POST", status, w.facultyRegistrar, frozen, map[string]string{"If-Match": `"7"`}); r.status != 412 {
+		t.Errorf("eski sürüm: %d", r.status)
+	}
+	if r := w.doWith("POST", status, w.head, frozen, map[string]string{"If-Match": `"1"`}); r.status != 403 {
+		t.Errorf("bölüm başkanı durum değiştiremez: %d", r.status)
+	}
+	if r := w.doWith("POST", status, w.facultyRegistrar, map[string]any{"status": "GRADUATED", "reason": "x"},
+		map[string]string{"If-Match": `"1"`}); r.status != 400 || !strings.Contains(r.raw, "graduated_on") {
+		t.Errorf("mezuniyet tarihi olmadan: %d %s", r.status, r.raw)
+	}
+	r = w.doWith("POST", status, w.facultyRegistrar, frozen, map[string]string{"If-Match": `"1"`})
+	if r.status != 200 || r.body["status"] != "FROZEN" || r.body["version"].(float64) != 2 {
+		t.Fatalf("dondurma: %d %s", r.status, r.raw)
+	}
+	if r := w.doWith("POST", status, w.facultyRegistrar, map[string]any{"status": "GRADUATED", "reason": "x", "graduated_on": "2026-07-01"},
+		map[string]string{"If-Match": `"2"`}); r.status != 409 || r.body["code"] != "INVALID_STATUS_TRANSITION" {
+		t.Errorf("dondurulmuş kayıt mezun olamaz: %d %s", r.status, r.raw)
+	}
+	r = w.doWith("POST", status, w.facultyRegistrar, map[string]any{"status": "DISMISSED", "reason": "Azami süre doldu"},
+		map[string]string{"If-Match": `"2"`})
+	if r.status != 200 || r.body["advisor"] != nil {
+		t.Fatalf("ilişik kesme danışmanlığı sonlandırmalı: %d %s", r.status, r.raw)
+	}
+	history := w.do("GET", "/api/v1/student-programs/"+sp1+"/status-history", w.student1User, nil).items()
+	if len(history) != 3 {
+		t.Fatalf("durum geçmişi = %v", history)
+	}
+	if h := history[1].(map[string]any); h["from_status"] != "ACTIVE" || h["to_status"] != "FROZEN" ||
+		h["decision_ref"] != "YK 2026/41" || h["changed_by"] != "AdP20001 SoyadP20001" {
+		t.Errorf("dondurma kaydı = %v", h)
+	}
+	if r := w.do("POST", holds, w.facultyRegistrar, map[string]any{"hold_type": "MISSING_DOCUMENT", "reason": "x"}); r.status != 409 {
+		t.Errorf("ilişiği kesilmiş kayda engel: %d", r.status)
+	}
+}
+
+func TestStatusTransitions(t *testing.T) {
+	cases := []struct {
+		from, to enrollment.Status
+		ok       bool
+	}{
+		{enrollment.StatusPrep, enrollment.StatusActive, true},
+		{enrollment.StatusPrep, enrollment.StatusFrozen, false},
+		{enrollment.StatusActive, enrollment.StatusGraduated, true},
+		{enrollment.StatusActive, enrollment.StatusPrep, false},
+		{enrollment.StatusFrozen, enrollment.StatusActive, true},
+		{enrollment.StatusSuspended, enrollment.StatusGraduated, false},
+		{enrollment.StatusGraduated, enrollment.StatusActive, false},
+		{enrollment.StatusDismissed, enrollment.StatusActive, false},
+		{enrollment.StatusActive, enrollment.StatusActive, false},
+	}
+	for _, c := range cases {
+		if got := c.from.CanBecome(c.to); got != c.ok {
+			t.Errorf("%s → %s = %v, want %v", c.from, c.to, got, c.ok)
 		}
 	}
 }
