@@ -12,6 +12,9 @@ GOOSE       := github.com/pressly/goose/v3/cmd/goose@v3.28.0
 # staticcheck ve govulncheck backend/tools modülünde sabitlenmiştir (go.sum ile doğrulanır).
 GOTOOL      := go -C $(BACKEND) tool -modfile=tools/go.mod
 REDOCLY     := @redocly/cli@2.53.3
+K6_IMAGE    := grafana/k6:2.3.0
+# Yük testinin hedefi: k6 Docker'da çalışır, API'ye host üzerinden ulaşır.
+LOADTEST_BASE_URL ?= http://host.docker.internal:8080
 
 -include .env
 export
@@ -20,7 +23,8 @@ export
 
 .PHONY: help up down ps logs psql redis api worker migrate-up migrate-down migrate-status migration seed seed-synthetic \
         test test-unit cover vet lint vuln fmt contract-lint check \
-        web-install web-dev web-codegen web-check web-e2e
+        web-install web-dev web-codegen web-check web-e2e \
+        loadtest-data loadtest-reset loadtest-registration loadtest-verify
 
 help: ## Komutları listeler
 	@grep -hE '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -131,3 +135,23 @@ web-check: ## Web: biçim, lint, tip kontrolü, test ve build (CI ile aynı)
 
 web-e2e: ## Uçtan uca testler (Playwright): ayrı bir veritabanı kurar, API, worker ve web'i kendisi başlatır
 	$(PNPM) e2e
+
+# --- Yük testleri (k6) ------------------------------------------------------------
+
+loadtest-data: ## Yük testinin öğrenci listesini hazırlar (sentetik BM öğrencileri, loadtest/data)
+	@mkdir -p loadtest/data
+	docker compose exec -T postgres psql -q -U agora -d agora < loadtest/sql/students.sql > loadtest/data/students.csv
+	@echo "loadtest/data/students.csv: $$(wc -l < loadtest/data/students.csv | tr -d ' ') öğrenci"
+
+loadtest-reset: ## Sentetik öğrencilerin dönemdeki ders seçme kayıtlarını siler (testi tekrarlamak için)
+	docker compose exec -T postgres psql -q -v ON_ERROR_STOP=1 -U agora -d agora < loadtest/sql/reset.sql
+
+loadtest-registration: loadtest-data ## k6 registration-rush: ders seçme açılışı, ardından kontenjan denetimi (bkz. loadtest/README.md)
+	@mkdir -p loadtest/results
+	docker run --rm -i --add-host=host.docker.internal:host-gateway -v "$(CURDIR)/loadtest:/loadtest" -w /loadtest/k6 \
+		-e BASE_URL=$(LOADTEST_BASE_URL) -e PEAK_RATE -e RAMP -e HOLD -e RUN_ID -e PRELOGIN $(K6_IMAGE) run \
+		--summary-export=/loadtest/results/registration-rush.json registration-rush.js
+	$(MAKE) loadtest-verify
+
+loadtest-verify: ## Kontenjan aşımı = 0 ve sepet tutarlılığı denetimi (SQL)
+	docker compose exec -T postgres psql -U agora -d agora < loadtest/sql/verify.sql

@@ -260,7 +260,7 @@ flowchart LR
 | ✅ | İdempotentlik, hız sınırı ve iş metrikleri | `Idempotency-Key` başlığı (`platform.idempotency_keys`); ders seçme uçları için kullanıcı başına ayrı hız sınırı; `agora_registration_items_added_total`, `agora_registration_submitted_total`, `agora_section_full_rejections_total` ve Grafana panosu |
 | ✅ | Ekle-bırak | Onaylı kayıtta öğrenci talebi (ekle-bırak penceresi) → danışman → bölüm başkanı onayı → uygulama; eklenecek şubenin kontenjanı talepte ayrılır, red ya da geri çekmede serbest kalır |
 | ✅ | Seed: geçmiş dönemler ve demo senaryoları | 2020-2026 akademik yılları; BM öğrencilerine giriş yılına ve müfredatlarına göre deterministik ders geçmişi (başarısız ve tekrar alınan dersler dahil), GANO ve AKTS önbellekleri; demo öğrencileri (alttan ve eşdeğer ders, 1. sınıf), P10001'in danışmanlığında onay bekleyen kayıtlarıyla bir demo grubu, bir kayıt engeli; güz kayıtları servis üzerinden (kurallar ve kontenjan denetimli); BM için program kapsamlı demo pencereleri (§5 #13) |
-| ⬜ | k6 `registration-rush` | Eşzamanlı giriş ve popüler şubelere ders ekleme; kontenjan aşımı = 0 kanıtı (SQL doğrulaması), gecikme ve hata oranı sonuçları dokümanda; `make loadtest-registration` |
+| ✅ | k6 `registration-rush` | Eşzamanlı giriş ve popüler şubelere ders ekleme; kontenjan aşımı = 0 kanıtı (SQL doğrulaması), gecikme ve hata oranı sonuçları dokümanda; `make loadtest-registration` |
 
 **Web**
 

@@ -216,4 +216,4 @@ Katmanlar: **handler** (HTTP ↔ DTO, doğrulama) → **service** (iş kurallar�
 | `soak` | Dayanıklılık | Orta yük, 4–8 saat | Bellek sızıntısı yok, gecikme kayması yok |
 | `breakpoint` | Kırılma noktası | Artan yük, sistem çökene kadar | Kırılma noktası ve darboğaz (DB, CPU, havuz) raporlanır |
 
-Her senaryo sonrası: Grafana ekran görüntüleri, `pg_stat_statements` en yavaş sorgular, iyileştirme → tekrar ölçüm. Bitirme raporunda "önce/sonra" bölümü olarak kullanılır.
+Her senaryo sonrası: Grafana ekran görüntüleri, `pg_stat_statements` en yavaş sorgular, iyileştirme → tekrar ölçüm. Bitirme raporunda "önce/sonra" bölümü olarak kullanılır. Ölçülen sonuçlar: [08 · Yük Testleri](08-yuk-testleri.md).

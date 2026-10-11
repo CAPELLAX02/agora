@@ -9,5 +9,6 @@
 | 05 | [Analitik Katman (OLAP)](mimari/05-analitik-olap.md) | Yıldız şema, ETL, takma adlandırma, KPI'lar, erken uyarı |
 | 06 | [Sistem Mimarisi ve Teknoloji](mimari/06-sistem-mimarisi-ve-teknoloji.md) | Modüler monolit, Spring → Go eşlemesi, API kuralları, web/mobil yığını, gözlemlenebilirlik, k6 |
 | 07 | [Yol Haritası](mimari/07-yol-haritasi.md) | Geliştirme sırası kararı, fazlar, Go öğrenme konuları, açık sorular |
+| 08 | [Yük Testleri](mimari/08-yuk-testleri.md) | k6 senaryoları, ölçüm ortamı, sonuçlar, darboğaz analizi ve iyileştirmeler |
 
 > Tüm dokümanlar **Taslak v0.1** durumundadır ve kararlarla birlikte güncellenecektir.

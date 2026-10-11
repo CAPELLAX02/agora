@@ -17,3 +17,7 @@ backend/bin/
 *.test
 *.out
 coverage.html
+
+# Yük testi verisi ve sonuçları (üretilir)
+loadtest/data/
+loadtest/results/
