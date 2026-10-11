@@ -21,12 +21,16 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 
+import type { Tone } from '@/shared/ui/tone'
+
 type Key = ParseKeys
 
 export type NavItem = {
   to: string
   label: Key
   icon: LucideIcon
+  /** tone, öğenin rengidir: menüde ikon kutusu, sayfa başlığında aynı renk. */
+  tone: Tone
   /** permission, öğenin görünmesi için gereken yetkidir (dizi: herhangi biri). Boşsa herkes görür. */
   permission?: string | string[]
   /** scoped, yetkinin bir birimi kapsaması gerektiğini söyler (ilişkiye dayalı veriliş yetmez). */
@@ -37,68 +41,124 @@ export type NavItem = {
 export type NavGroup = { label: Key; items: NavItem[] }
 
 export const navGroups: NavGroup[] = [
-  { label: 'nav.general', items: [{ to: '/', label: 'nav.dashboard', icon: HomeIcon, end: true }] },
+  {
+    label: 'nav.general',
+    items: [{ to: '/', label: 'nav.dashboard', tone: 'indigo', icon: HomeIcon, end: true }],
+  },
   {
     label: 'nav.academic',
     items: [
-      { to: '/takvim', label: 'nav.calendar', icon: CalendarDaysIcon, permission: 'calendar:read' },
+      {
+        to: '/takvim',
+        label: 'nav.calendar',
+        tone: 'sky',
+        icon: CalendarDaysIcon,
+        permission: 'calendar:read',
+      },
       {
         to: '/ders-secimi',
         label: 'nav.registration',
+        tone: 'violet',
         icon: ClipboardCheckIcon,
         permission: 'registration:manage_own',
       },
       {
         to: '/ders-planim',
         label: 'nav.myCurriculum',
+        tone: 'emerald',
         icon: BookMarkedIcon,
         permission: 'registration:manage_own',
       },
-      { to: '/dersler', label: 'nav.catalog', icon: BookOpenIcon, permission: 'course:read' },
-      { to: '/ders-planlari', label: 'nav.curricula', icon: LibraryIcon, permission: 'curriculum:read' },
-      { to: '/program', label: 'nav.schedule', icon: CalendarRangeIcon, permission: 'course:read' },
-      { to: '/not-olcegi', label: 'nav.gradeScale', icon: GaugeIcon, permission: 'curriculum:read' },
+      { to: '/dersler', label: 'nav.catalog', tone: 'amber', icon: BookOpenIcon, permission: 'course:read' },
+      {
+        to: '/ders-planlari',
+        label: 'nav.curricula',
+        tone: 'teal',
+        icon: LibraryIcon,
+        permission: 'curriculum:read',
+      },
+      {
+        to: '/program',
+        label: 'nav.schedule',
+        tone: 'blue',
+        icon: CalendarRangeIcon,
+        permission: 'course:read',
+      },
+      {
+        to: '/not-olcegi',
+        label: 'nav.gradeScale',
+        tone: 'orange',
+        icon: GaugeIcon,
+        permission: 'curriculum:read',
+      },
       {
         to: '/verdigim-dersler',
         label: 'nav.teaching',
+        tone: 'fuchsia',
         icon: PresentationIcon,
         permission: 'assessment_plan:manage',
       },
-      { to: '/ders-acma', label: 'nav.offerings', icon: ClipboardListIcon, permission: 'offering:manage' },
+      {
+        to: '/ders-acma',
+        label: 'nav.offerings',
+        tone: 'pink',
+        icon: ClipboardListIcon,
+        permission: 'offering:manage',
+      },
     ],
   },
   {
     label: 'nav.studentAffairs',
     items: [
-      { to: '/danismanlik', label: 'nav.advising', icon: UsersRoundIcon, permission: 'registration:approve' },
+      {
+        to: '/danismanlik',
+        label: 'nav.advising',
+        tone: 'violet',
+        icon: UsersRoundIcon,
+        permission: 'registration:approve',
+      },
       {
         to: '/ekle-birak-onaylari',
         label: 'nav.addDrop',
+        tone: 'teal',
         icon: ListChecksIcon,
         permission: ['registration:approve', 'registration:approve_add_drop'],
       },
       {
         to: '/ogrenciler',
         label: 'nav.students',
+        tone: 'sky',
         icon: GraduationCapIcon,
         permission: 'person:read',
         scoped: true,
       },
-      { to: '/kayit-engelleri', label: 'nav.holds', icon: LockIcon, permission: 'hold:manage' },
+      { to: '/kayit-engelleri', label: 'nav.holds', tone: 'rose', icon: LockIcon, permission: 'hold:manage' },
     ],
   },
   {
     label: 'nav.account',
     items: [
-      { to: '/profil', label: 'nav.profile', icon: UserRoundIcon },
-      { to: '/guvenlik', label: 'nav.security', icon: ShieldCheckIcon },
+      { to: '/profil', label: 'nav.profile', tone: 'indigo', icon: UserRoundIcon },
+      { to: '/guvenlik', label: 'nav.security', tone: 'emerald', icon: ShieldCheckIcon },
     ],
   },
   {
     label: 'nav.admin',
     items: [
-      { to: '/yonetim/kullanicilar', label: 'nav.users', icon: UsersIcon, permission: 'user:read' },
-      { to: '/yonetim/denetim', label: 'nav.audit', icon: ScrollTextIcon, permission: 'audit:read' },
+      {
+        to: '/yonetim/kullanicilar',
+        label: 'nav.users',
+        tone: 'blue',
+        icon: UsersIcon,
+        permission: 'user:read',
+      },
+      {
+        to: '/yonetim/denetim',
+        label: 'nav.audit',
+        tone: 'slate',
+        icon: ScrollTextIcon,
+        permission: 'audit:read',
+      },
     ],
   },
 ]
@@ -115,4 +175,15 @@ export function visible(
     return perms.hasScoped(item.permission)
   }
   return perms.hasAny(item.permission)
+}
+
+/** navItem, bir yolun menü öğesidir: sayfalar başlıklarında menüdeki ikon ve rengi kullanır. */
+export function navItem(to: string): NavItem | undefined {
+  for (const g of navGroups) {
+    const item = g.items.find((i) => i.to === to)
+    if (item) {
+      return item
+    }
+  }
+  return undefined
 }

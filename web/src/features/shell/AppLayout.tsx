@@ -8,6 +8,7 @@ import { Button } from '@/shared/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from '@/shared/ui/sheet'
 
 import { MfaBanner } from './MfaBanner'
+import { PreferenceButtons } from './Preferences'
 import { Sidebar, SidebarNav } from './Sidebar'
 import { UserMenu } from './UserMenu'
 
@@ -26,8 +27,8 @@ export function AppLayout() {
       <div className="contents print:hidden">
         <Sidebar />
       </div>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/85 px-4 backdrop-blur md:px-6 print:hidden">
+      <div className="flex min-w-0 flex-1 flex-col app-glow">
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-border/60 bg-background/75 px-4 backdrop-blur-xl md:px-6 print:hidden">
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="lg:hidden" aria-label={t('nav.openMenu')}>
@@ -44,12 +45,13 @@ export function AppLayout() {
           </Sheet>
           <Brand className="lg:hidden" />
           <div className="flex-1" />
+          <PreferenceButtons />
           <UserMenu />
         </header>
         <div className="print:hidden">
           <MfaBanner />
         </div>
-        <main id="main" tabIndex={-1} className="flex-1 px-4 py-6 outline-none md:px-6 lg:px-8">
+        <main id="main" tabIndex={-1} className="flex-1 px-4 py-7 outline-none md:px-6 lg:px-8">
           <div className="mx-auto max-w-6xl">
             <Outlet />
           </div>
