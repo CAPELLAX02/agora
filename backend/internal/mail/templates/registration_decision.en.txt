@@ -1,0 +1,11 @@
+{{define "subject"}}{{if eq .decision "APPROVED"}}Your course registration was approved{{else if eq .decision "REJECTED"}}Your course registration was sent back for changes{{else}}The approval of your course registration was revoked{{end}} ({{.term}}){{end}}
+{{define "text"}}Hello {{.name}},
+
+{{if eq .decision "APPROVED"}}Your course registration for {{.term}} has been approved by your advisor: {{.courses}} courses, {{.total_ects}} ECTS.{{else if eq .decision "REJECTED"}}Your course registration for {{.term}} has been sent back for changes by your advisor. You can edit and resubmit your basket while course registration is open.{{else}}The approval of your course registration for {{.term}} has been revoked. You can edit and resubmit your basket while course registration is open.{{end}}
+{{if .note}}
+Advisor's note: {{.note}}
+{{end}}
+Your registration: {{.link}}
+
+Agora
+{{end}}

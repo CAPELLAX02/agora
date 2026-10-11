@@ -159,3 +159,40 @@ func TestBackoff(t *testing.T) {
 		}
 	}
 }
+
+func TestRenderRegistrationDecision(t *testing.T) {
+	r := newRenderer(t)
+	subjects := map[string]bool{}
+	for _, decision := range []string{"APPROVED", "REJECTED", "REVOKED"} {
+		for _, locale := range locales {
+			m, err := r.Render(TemplateRegistrationDecision, locale, "ece@agora.test", map[string]any{
+				"name": "Ece", "term": "2026-FALL", "decision": decision, "note": "COM3035'i ekleyin",
+				"courses": 6, "total_ects": 39.0, "link": "http://localhost:5173/ders-secimi",
+			})
+			if err != nil {
+				t.Fatalf("%s.%s: %v", decision, locale, err)
+			}
+			subjects[m.Subject] = true
+			if !strings.Contains(m.Subject, "2026-FALL") {
+				t.Errorf("konu = %q", m.Subject)
+			}
+			for _, body := range []string{m.Text, m.HTML} {
+				if !strings.Contains(body, "Ece") || !strings.Contains(body, "/ders-secimi") ||
+					!strings.Contains(body, "COM3035") {
+					t.Errorf("%s.%s gövdesi eksik:\n%s", decision, locale, body)
+				}
+			}
+		}
+	}
+	if len(subjects) != 6 {
+		t.Errorf("her karar ve dil için ayrı konu olmalı: %v", subjects)
+	}
+	// Not boşsa danışman notu satırı yok.
+	m, err := r.Render(TemplateRegistrationDecision, "tr", "ece@agora.test", map[string]any{
+		"name": "Ece", "term": "2026-FALL", "decision": "APPROVED", "note": "",
+		"courses": 6, "total_ects": 39.0, "link": "http://localhost:5173/ders-secimi",
+	})
+	if err != nil || strings.Contains(m.Text, "Danışman notu") {
+		t.Errorf("boş not: %v\n%s", err, m.Text)
+	}
+}

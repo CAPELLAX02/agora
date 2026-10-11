@@ -11,6 +11,7 @@ import (
 
 	"github.com/CAPELLAX02/agora/backend/internal/audit"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/db"
+	"github.com/CAPELLAX02/agora/backend/internal/platform/outbox"
 )
 
 // Repository, akademik takvim verisine erişir.
@@ -216,6 +217,12 @@ func (r *Repository) MakeCurrent(ctx context.Context, actorID, id string) error 
 			UPDATE academic.terms SET is_current = true, status = 'ACTIVE', version = version + 1, updated_at = now()
 			WHERE id = $1`, id); err != nil {
 			return fmt.Errorf("academic: aktif dönem değiştirilemedi: %w", err)
+		}
+		// Yarıyıl ilerletmesi gibi başka modüllerin işleri bu olayla (outbox) tetiklenir.
+		if err := outbox.Publish(ctx, tx, "term.made_current", "term", id, map[string]any{
+			"term_id": id, "code": t.Code, "term_type": t.Type, "previous": previous,
+		}); err != nil {
+			return err
 		}
 		return audit.Record(ctx, tx, audit.Entry{
 			ActorUserID: actorID, Action: "term.make_current", EntityType: "term", EntityID: id,

@@ -1,4 +1,5 @@
-// Komut worker, API'den bağımsız çalışan arka plan işlerini yürütür: e-posta outbox'ı,
+// Komut worker, API'den bağımsız çalışan arka plan işlerini yürütür: e-posta outbox'ı, alan
+// olaylarının dağıtımı (outbox), ders seçme penceresi biten taslakların serbest bırakılması,
 // denetim partition'larının bakımı ve süresi dolmuş kayıtların temizliği.
 //
 // API yatayda çoğaltıldığında zamanlanmış işler her kopyada çalışmasın diye ayrı bir
@@ -22,15 +23,20 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/CAPELLAX02/agora/backend/internal/audit"
+	"github.com/CAPELLAX02/agora/backend/internal/enrollment"
 	"github.com/CAPELLAX02/agora/backend/internal/mail"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/config"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/db"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/logging"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/metrics"
+	"github.com/CAPELLAX02/agora/backend/internal/platform/outbox"
+	"github.com/CAPELLAX02/agora/backend/internal/registration"
 )
 
 const (
 	outboxInterval      = 2 * time.Second
+	eventsInterval      = 2 * time.Second
+	expireInterval      = 10 * time.Minute
 	maintenanceInterval = 24 * time.Hour
 	sentEmailRetention  = 30 * 24 * time.Hour
 	resetTokenRetention = 7 * 24 * time.Hour
@@ -100,6 +106,38 @@ func run() error {
 	dispatcher := mail.NewDispatcher(pool, renderer, sender, mail.DefaultDispatcherConfig, logger,
 		func(result string) { emails.WithLabelValues(result).Inc() })
 
+	domainEvents := prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "agora_domain_events_total",
+		Help: "Outbox'tan dağıtılan alan olayları, sonuca göre (done, retry, failed).",
+	}, []string{"result"})
+	reg.MustRegister(domainEvents)
+	reg.MustRegister(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "agora_domain_events_lag_seconds",
+		Help: "İşlenmeyi bekleyen en eski alan olayının bekleme süresi.",
+	}, func() float64 {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		lag, err := outbox.Lag(ctx, pool)
+		if err != nil {
+			logger.Warn("olay gecikmesi ölçülemedi", "err", err)
+			return 0
+		}
+		return lag.Seconds()
+	}))
+	expiredDrafts := prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "agora_registration_drafts_expired_total",
+		Help: "Ders seçme penceresi bitince boşaltılan (kontenjanı serbest bırakılan) taslak sepetler.",
+	})
+	reg.MustRegister(expiredDrafts)
+
+	// Tüketiciler: öğrenciye karar bildirimi, dönem geçişinde yarıyıl ilerletmesi. LMS üyeliği
+	// (Faz 5) aynı registration.approved olayına bağlanacak.
+	events := outbox.NewDispatcher(pool, []outbox.Consumer{
+		registration.Notifier{WebBaseURL: cfg.WebBaseURL},
+		enrollment.SemesterAdvancer{},
+	}, outbox.DefaultConfig, logger, func(result string) { domainEvents.WithLabelValues(result).Inc() })
+	registrations := registration.NewService(pool, time.Now, nil)
+
 	admin := &http.Server{
 		Addr:              cfg.WorkerMetricsAddr,
 		Handler:           adminRoutes(reg),
@@ -119,6 +157,23 @@ func run() error {
 	wg.Go(func() {
 		logger.Info("e-posta outbox'ı işleniyor", "smtp", cfg.SMTPAddr, "interval", outboxInterval.String())
 		dispatcher.Run(ctx, outboxInterval)
+	})
+	wg.Go(func() {
+		logger.Info("alan olayları dağıtılıyor", "interval", eventsInterval.String())
+		events.Run(ctx, eventsInterval)
+	})
+	wg.Go(func() {
+		every(ctx, expireInterval, func(ctx context.Context) {
+			n, err := registrations.ExpireDrafts(ctx)
+			if err != nil {
+				logger.Error("süresi dolan taslaklar serbest bırakılamadı", "err", err)
+				return
+			}
+			if n > 0 {
+				expiredDrafts.Add(float64(n))
+				logger.Info("ders seçme penceresi biten taslaklar boşaltıldı", "count", n)
+			}
+		})
 	})
 	wg.Go(func() {
 		every(ctx, maintenanceInterval, func(ctx context.Context) {

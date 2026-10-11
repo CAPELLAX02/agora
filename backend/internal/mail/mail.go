@@ -27,6 +27,8 @@ import (
 const (
 	TemplatePasswordReset     = "password_reset"
 	TemplateAccountActivation = "account_activation"
+	// TemplateRegistrationDecision, danışmanın ders seçme kararı (onay, red, onayın geri alınması).
+	TemplateRegistrationDecision = "registration_decision"
 )
 
 // Desteklenen diller. İlki varsayılandır.
@@ -54,7 +56,7 @@ type Renderer struct {
 func NewRenderer() (*Renderer, error) {
 	r := &Renderer{text: map[string]*texttemplate.Template{}, html: map[string]*htmltemplate.Template{}}
 
-	for _, code := range []string{TemplatePasswordReset, TemplateAccountActivation} {
+	for _, code := range []string{TemplatePasswordReset, TemplateAccountActivation, TemplateRegistrationDecision} {
 		for _, locale := range locales {
 			key := code + "." + locale
 

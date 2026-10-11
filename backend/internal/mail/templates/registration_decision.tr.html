@@ -1,0 +1,7 @@
+{{define "content"}}<p>Merhaba {{.Data.name}},</p>
+{{if eq .Data.decision "APPROVED"}}<p><strong>{{.Data.term}}</strong> dönemi ders kaydınız danışmanınız tarafından <strong>onaylandı</strong>: {{.Data.courses}} ders, {{.Data.total_ects}} AKTS.</p>
+{{else if eq .Data.decision "REJECTED"}}<p><strong>{{.Data.term}}</strong> dönemi ders kaydınız danışmanınız tarafından <strong>düzeltilmek üzere geri gönderildi</strong>. Ders seçme süresi içinde sepetinizi düzenleyip yeniden gönderebilirsiniz.</p>
+{{else}}<p><strong>{{.Data.term}}</strong> dönemi ders kaydınızın onayı <strong>geri alındı</strong>. Ders seçme süresi içinde sepetinizi düzenleyip yeniden gönderebilirsiniz.</p>
+{{end}}{{if .Data.note}}<p style="border-left:3px solid #1e3a8a;padding-left:12px;color:#374151;">Danışman notu: {{.Data.note}}</p>
+{{end}}<p style="margin:24px 0;"><a href="{{.Data.link}}" style="background:#1e3a8a;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:6px;display:inline-block;font-weight:600;">Ders seçimime git</a></p>{{end}}
+{{define "footer"}}Bu e-posta ders seçme kaydınızdaki bir değişiklik nedeniyle gönderildi.{{end}}

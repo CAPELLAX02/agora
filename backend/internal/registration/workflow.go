@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -12,6 +13,7 @@ import (
 	"github.com/CAPELLAX02/agora/backend/internal/audit"
 	"github.com/CAPELLAX02/agora/backend/internal/enrollment"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/db"
+	"github.com/CAPELLAX02/agora/backend/internal/platform/outbox"
 	"github.com/CAPELLAX02/agora/backend/internal/registration/rules"
 )
 
@@ -223,6 +225,17 @@ func (s *Service) Decide(ctx context.Context, d Decider, sp enrollment.StudentPr
 			payload["override"] = true
 		}
 		if err := event(ctx, tx, registrationID, eventType, d.UserID, payload); err != nil {
+			return err
+		}
+		// Bildirim (ve ileride LMS üyeliği) bu olayla, kayıt commit edilirse yapılır.
+		sections := make([]string, len(items))
+		for i, it := range items {
+			sections[i] = it.Section.ID
+		}
+		if err := outbox.Publish(ctx, tx, "registration."+strings.ToLower(eventType), "registration", registrationID, DecisionEvent{
+			RegistrationID: registrationID, StudentProgramID: sp.ID, TermID: termID, Status: next,
+			Note: note, Override: d.Override, SectionIDs: sections,
+		}); err != nil {
 			return err
 		}
 		return audit.Record(ctx, tx, audit.Entry{

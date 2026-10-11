@@ -18,3 +18,9 @@ FROM academic.academic_years ay
 CROSS JOIN (VALUES ('FALL'), ('SPRING')) AS v(term_type)
 WHERE ay.start_year BETWEEN 2020 AND 2025
 ON CONFLICT (code) DO NOTHING;
+
+-- Öğrencilerin yarıyılları 2026 güzüne göre seed'lenir: bu dönem için yarıyıl ilerletmesi
+-- yapılmış sayılır. Bahar dönemi aktif yapılınca aktif öğrencilerin yarıyılı bir ilerler.
+INSERT INTO enrollment.semester_advances (term_id, advanced)
+SELECT id, 0 FROM academic.terms WHERE code = '2026-FALL'
+ON CONFLICT (term_id) DO NOTHING;

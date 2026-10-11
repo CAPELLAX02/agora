@@ -1,0 +1,11 @@
+{{define "subject"}}{{if eq .decision "APPROVED"}}Ders kaydınız onaylandı{{else if eq .decision "REJECTED"}}Ders kaydınız düzeltme için geri gönderildi{{else}}Ders kaydınızın onayı geri alındı{{end}} ({{.term}}){{end}}
+{{define "text"}}Merhaba {{.name}},
+
+{{if eq .decision "APPROVED"}}{{.term}} dönemi ders kaydınız danışmanınız tarafından onaylandı: {{.courses}} ders, {{.total_ects}} AKTS.{{else if eq .decision "REJECTED"}}{{.term}} dönemi ders kaydınız danışmanınız tarafından düzeltilmek üzere geri gönderildi. Ders seçme süresi içinde sepetinizi düzenleyip yeniden gönderebilirsiniz.{{else}}{{.term}} dönemi ders kaydınızın onayı geri alındı. Ders seçme süresi içinde sepetinizi düzenleyip yeniden gönderebilirsiniz.{{end}}
+{{if .note}}
+Danışman notu: {{.note}}
+{{end}}
+Ders seçiminiz: {{.link}}
+
+Agora
+{{end}}
