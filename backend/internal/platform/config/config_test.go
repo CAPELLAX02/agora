@@ -20,7 +20,7 @@ func clearAgoraEnv(t *testing.T) {
 		"AGORA_DB_MAX_CONN_LIFETIME", "AGORA_DB_MAX_CONN_IDLE_TIME",
 		"AGORA_JWT_PRIVATE_KEY_FILE", "AGORA_ACCESS_TOKEN_TTL", "AGORA_SESSION_IDLE_TIMEOUT",
 		"AGORA_SESSION_ABSOLUTE_TIMEOUT", "AGORA_PASSWORD_HASH_WORKERS",
-		"AGORA_REDIS_URL", "AGORA_LOGIN_RATE_LIMIT", "AGORA_CORS_ALLOWED_ORIGINS",
+		"AGORA_REDIS_URL", "AGORA_LOGIN_RATE_LIMIT", "AGORA_REGISTRATION_RATE_LIMIT", "AGORA_CORS_ALLOWED_ORIGINS",
 		"AGORA_WEB_BASE_URL", "AGORA_SMTP_ADDR", "AGORA_SMTP_FROM", "AGORA_SMTP_USERNAME",
 		"AGORA_SMTP_PASSWORD", "AGORA_WORKER_METRICS_ADDR", "AGORA_MFA_ENCRYPTION_KEY",
 	} {
@@ -53,6 +53,7 @@ func defaultsWith(modify func(c *Config)) Config {
 		SessionAbsoluteTimeout: 30 * 24 * time.Hour,
 		PasswordHashWorkers:    4,
 		LoginRateLimit:         20,
+		RegistrationRateLimit:  60,
 		MFAKey:                 []byte("agora-dev-mfa-key-32-bytes-long!"),
 
 		WebBaseURL:        devWebBaseURL,
@@ -94,6 +95,7 @@ func TestLoad(t *testing.T) {
 				"AGORA_PASSWORD_HASH_WORKERS":    "8",
 				"AGORA_REDIS_URL":                "redis://:sifre@cache:6379/1",
 				"AGORA_LOGIN_RATE_LIMIT":         "60",
+				"AGORA_REGISTRATION_RATE_LIMIT":  "120",
 				"AGORA_CORS_ALLOWED_ORIGINS":     " https://agora.example.edu.tr , https://yonetim.agora.example.edu.tr:8443,",
 				"AGORA_WEB_BASE_URL":             "https://agora.example.edu.tr",
 				"AGORA_SMTP_ADDR":                "smtp.example.edu.tr:587",
@@ -118,6 +120,7 @@ func TestLoad(t *testing.T) {
 				c.PasswordHashWorkers = 8
 				c.RedisURL = "redis://:sifre@cache:6379/1"
 				c.LoginRateLimit = 60
+				c.RegistrationRateLimit = 120
 				c.CORSOrigins = []string{"https://agora.example.edu.tr", "https://yonetim.agora.example.edu.tr:8443"}
 				c.WebBaseURL = "https://agora.example.edu.tr"
 				c.SMTPAddr = "smtp.example.edu.tr:587"
@@ -188,8 +191,8 @@ func TestLoad(t *testing.T) {
 		},
 		{
 			name:    "giriş hız sınırı en az 1",
-			env:     map[string]string{"AGORA_LOGIN_RATE_LIMIT": "0"},
-			wantErr: []string{"AGORA_LOGIN_RATE_LIMIT en az 1 olmalı"},
+			env:     map[string]string{"AGORA_LOGIN_RATE_LIMIT": "0", "AGORA_REGISTRATION_RATE_LIMIT": "0"},
+			wantErr: []string{"AGORA_LOGIN_RATE_LIMIT en az 1 olmalı", "AGORA_REGISTRATION_RATE_LIMIT en az 1 olmalı"},
 		},
 		{
 			name:    "en az bir hash işçisi",

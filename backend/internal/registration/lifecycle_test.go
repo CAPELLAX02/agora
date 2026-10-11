@@ -147,3 +147,22 @@ func TestExpireDrafts(t *testing.T) {
 		t.Errorf("ikinci çalıştırma %d sepet boşalttı", n)
 	}
 }
+
+// Aynı Idempotency-Key ile tekrarlanan ekleme ikinci kez yer ayırmaz; ilk yanıt döner.
+func TestIdempotentAdd(t *testing.T) {
+	w := newWorld(t)
+	path := "/api/v1/student-programs/" + w.aliSP + "/registration/items"
+	body := map[string]string{"section_id": w.sections["ALG201"]}
+	first := w.do("POST", path, w.ali, body, "Idempotency-Key", "ekle-alg201-0001")
+	again := w.do("POST", path, w.ali, body, "Idempotency-Key", "ekle-alg201-0001")
+	if first.status != http.StatusCreated || again.status != http.StatusCreated || again.header.Get("Idempotent-Replayed") != "true" {
+		t.Fatalf("ilk %d, tekrar %d %v", first.status, again.status, again.header)
+	}
+	if n := w.count(`SELECT enrolled_count FROM offering.sections WHERE id = $1`, w.sections["ALG201"]); n != 1 {
+		t.Errorf("şube mevcudu = %d, 1 olmalı", n)
+	}
+	// Anahtarsız tekrar kural motoruna takılır (aynı ders).
+	if r := w.do("POST", path, w.ali, body); r.status != 422 {
+		t.Errorf("anahtarsız tekrar: %d", r.status)
+	}
+}

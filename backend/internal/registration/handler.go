@@ -22,6 +22,14 @@ type Handler struct {
 	students   *enrollment.Repository
 	studentSvc *enrollment.Service
 	logger     *slog.Logger
+	mutations  []httpx.Middleware // değiştirici uçlara: hız sınırı, idempotentlik
+}
+
+// WithMutationMiddleware, değiştirici ders seçme uçlarına (ekle, çıkar, gönder, karar...)
+// uygulanacak middleware'leri verir: kullanıcı başına hız sınırı ve Idempotency-Key.
+func (h *Handler) WithMutationMiddleware(mws ...httpx.Middleware) *Handler {
+	h.mutations = mws
+	return h
 }
 
 // NewHandler, bir Handler oluşturur. now, pencere kontrolleri için saattir (testlerde

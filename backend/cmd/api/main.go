@@ -19,6 +19,7 @@ import (
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authz"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/config"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/db"
+	"github.com/CAPELLAX02/agora/backend/internal/platform/httpx"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/logging"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/metrics"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/ratelimit"
@@ -38,7 +39,10 @@ type application struct {
 	auth          *iam.Auth
 	authenticator *authn.Authenticator
 	limits        iam.Limits
-	permissions   authz.Resolver
+
+	registrationMetrics *metrics.Registration
+	registrationLimit   httpx.Middleware // ders seçme değiştirici uçlarının kullanıcı başına hız sınırı
+	permissions         authz.Resolver
 }
 
 func main() {
@@ -92,6 +96,7 @@ func run() error {
 	}
 	loginLimiter := ratelimit.New(rdb, "login", cfg.LoginRateLimit, time.Minute, time.Now)
 	resetLimiter := ratelimit.New(rdb, "password_reset", passwordResetLimit, time.Minute, time.Now)
+	registrationLimiter := ratelimit.New(rdb, "registration", cfg.RegistrationRateLimit, time.Minute, time.Now)
 
 	permissions := iam.NewPermissionResolver(pool, rdb, time.Hour, logger)
 
@@ -101,6 +106,7 @@ func run() error {
 	auth.SetMetrics(authMetrics)
 	loginLimiter.OnReject(authMetrics.RateLimited)
 	resetLimiter.OnReject(authMetrics.RateLimited)
+	registrationLimiter.OnReject(authMetrics.RateLimited)
 
 	app := &application{
 		cfg:     cfg,
@@ -120,6 +126,8 @@ func run() error {
 			Login:         loginLimiter.ByIP(logger),
 			PasswordReset: resetLimiter.ByIP(logger),
 		},
+		registrationMetrics: metrics.NewRegistration(reg),
+		registrationLimit:   registrationLimiter.ByUser(logger),
 	}
 
 	servers := []*http.Server{

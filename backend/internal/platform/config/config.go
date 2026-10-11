@@ -68,6 +68,7 @@ type Config struct {
 	SessionAbsoluteTimeout time.Duration // oturumun refresh'lerle bile aşamayacağı üst sınır
 	PasswordHashWorkers    int           // aynı anda en fazla kaç parola hash'lenir (her biri 64 MiB)
 	LoginRateLimit         int           // bir IP'den dakikada en fazla kaç giriş denemesi
+	RegistrationRateLimit  int           // bir kullanıcının dakikada en fazla kaç ders seçme işlemi yapabileceği
 	MFAKey                 []byte        // gizli: TOTP sırlarını şifreleyen 32 baytlık anahtar
 
 	// E-posta ve worker
@@ -121,6 +122,7 @@ func Load() (Config, error) {
 		SessionAbsoluteTimeout: duration("AGORA_SESSION_ABSOLUTE_TIMEOUT", 30*24*time.Hour),
 		PasswordHashWorkers:    integer("AGORA_PASSWORD_HASH_WORKERS", 4),
 		LoginRateLimit:         integer("AGORA_LOGIN_RATE_LIMIT", 20),
+		RegistrationRateLimit:  integer("AGORA_REGISTRATION_RATE_LIMIT", 60),
 
 		WebBaseURL:        lookup("AGORA_WEB_BASE_URL", ""),
 		SMTPAddr:          lookup("AGORA_SMTP_ADDR", ""),
@@ -208,6 +210,7 @@ func (c Config) LogValue() slog.Value {
 		slog.String("session_absolute_timeout", c.SessionAbsoluteTimeout.String()),
 		slog.Int("password_hash_workers", c.PasswordHashWorkers),
 		slog.Int("login_rate_limit", c.LoginRateLimit),
+		slog.Int("registration_rate_limit", c.RegistrationRateLimit),
 		slog.Bool("mfa_encryption_key_set", len(c.MFAKey) > 0),
 		slog.String("web_base_url", c.WebBaseURL),
 		slog.String("smtp_addr", c.SMTPAddr),
@@ -300,6 +303,9 @@ func (c Config) validate() []error {
 		errs = append(errs, fmt.Errorf("AGORA_WORKER_METRICS_ADDR diğer adreslerle aynı olamaz: %q", c.WorkerMetricsAddr))
 	}
 
+	if c.RegistrationRateLimit < 1 {
+		errs = append(errs, fmt.Errorf("AGORA_REGISTRATION_RATE_LIMIT en az 1 olmalı: %d", c.RegistrationRateLimit))
+	}
 	if c.LoginRateLimit < 1 {
 		errs = append(errs, fmt.Errorf("AGORA_LOGIN_RATE_LIMIT en az 1 olmalı: %d", c.LoginRateLimit))
 	}

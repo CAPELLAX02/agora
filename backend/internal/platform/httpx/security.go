@@ -32,7 +32,7 @@ func SecurityHeaders(hsts bool) Middleware {
 var (
 	corsAllowedMethods = "GET, POST, PUT, PATCH, DELETE"
 	corsAllowedHeaders = "Authorization, Content-Type, If-Match, Idempotency-Key, X-Agora-Client, X-Request-Id"
-	corsExposedHeaders = "Retry-After, X-Request-Id, ETag, Location"
+	corsExposedHeaders = "Retry-After, X-Request-Id, ETag, Location, Idempotent-Replayed"
 	corsMaxAge         = strconv.Itoa(600) // preflight sonucu 10 dk önbellekte tutulur
 )
 

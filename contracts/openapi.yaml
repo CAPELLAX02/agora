@@ -4100,6 +4100,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/ID"
       requestBody:
         required: true
@@ -4133,6 +4134,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/RuleProblem" }
+        "429": { $ref: "#/components/responses/RateLimited" }
 
   /api/v1/student-programs/{id}/registration/items/{itemId}:
     put:
@@ -4144,6 +4146,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/ItemID"
       requestBody:
@@ -4178,6 +4181,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/RuleProblem" }
+        "429": { $ref: "#/components/responses/RateLimited" }
     delete:
       tags: [Ders seçme]
       summary: Dersi sepetten çıkarır
@@ -4187,6 +4191,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/ItemID"
       responses:
@@ -4205,6 +4210,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Problem" }
+        "429": { $ref: "#/components/responses/RateLimited" }
 
   /api/v1/student-programs/{id}/registration/submit:
     post:
@@ -4219,6 +4225,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/IfMatch"
         - name: term_id
@@ -4248,6 +4255,7 @@ paths:
             application/problem+json:
               schema: { $ref: "#/components/schemas/RuleProblem" }
         "428": { $ref: "#/components/responses/PreconditionRequired" }
+        "429": { $ref: "#/components/responses/RateLimited" }
 
   /api/v1/student-programs/{id}/registration/withdraw:
     post:
@@ -4259,6 +4267,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/IfMatch"
         - name: term_id
@@ -4283,6 +4292,7 @@ paths:
               schema: { $ref: "#/components/schemas/Problem" }
         "412": { $ref: "#/components/responses/VersionMismatch" }
         "428": { $ref: "#/components/responses/PreconditionRequired" }
+        "429": { $ref: "#/components/responses/RateLimited" }
 
   /api/v1/student-programs/{id}/registration/extension:
     post:
@@ -4298,6 +4308,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/ID"
       requestBody:
         required: true
@@ -4323,6 +4334,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
 
   /api/v1/registrations:
     get:
@@ -4367,6 +4379,8 @@ paths:
       x-agora-permission: registration:approve
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
@@ -4412,6 +4426,7 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
 
   /api/v1/registrations/{id}:
     get:
@@ -4447,6 +4462,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/IfMatch"
       requestBody:
@@ -4482,6 +4498,7 @@ paths:
             application/problem+json:
               schema: { $ref: "#/components/schemas/RuleProblem" }
         "428": { $ref: "#/components/responses/PreconditionRequired" }
+        "429": { $ref: "#/components/responses/RateLimited" }
 
   /api/v1/registrations/{id}/reject:
     post:
@@ -4496,6 +4513,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/IfMatch"
       requestBody:
@@ -4532,6 +4550,7 @@ paths:
             application/problem+json:
               schema: { $ref: "#/components/schemas/RuleProblem" }
         "428": { $ref: "#/components/responses/PreconditionRequired" }
+        "429": { $ref: "#/components/responses/RateLimited" }
 
   /api/v1/registrations/{id}/revoke:
     post:
@@ -4546,6 +4565,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/IfMatch"
       requestBody:
@@ -4582,6 +4602,7 @@ paths:
             application/problem+json:
               schema: { $ref: "#/components/schemas/RuleProblem" }
         "428": { $ref: "#/components/responses/PreconditionRequired" }
+        "429": { $ref: "#/components/responses/RateLimited" }
 
   /api/v1/me/advisee-registrations:
     get:
@@ -4879,6 +4900,16 @@ components:
       in: query
       description: Önceki yanıtın `next_cursor` değeri (opak)
       schema: { type: string }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: |
+        İstemcinin her değiştirici istek için ürettiği anahtar (8-255 karakter). Aynı anahtarla
+        tekrarlanan istek işlemi yeniden yapmaz, ilk yanıt `Idempotent-Replayed: true` başlığıyla
+        döner. İlk istek sürerken gelen tekrar 409 (`IDEMPOTENCY_IN_PROGRESS`), başka bir gövdeyle
+        kullanılan anahtar 422 (`IDEMPOTENCY_KEY_REUSED`) alır. Anahtarlar bir gün saklanır.
+      schema: { type: string, minLength: 8, maxLength: 255 }
     IfMatch:
       name: If-Match
       in: header

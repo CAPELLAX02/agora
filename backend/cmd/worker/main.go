@@ -27,6 +27,7 @@ import (
 	"github.com/CAPELLAX02/agora/backend/internal/mail"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/config"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/db"
+	"github.com/CAPELLAX02/agora/backend/internal/platform/idempotency"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/logging"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/metrics"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/outbox"
@@ -40,6 +41,8 @@ const (
 	maintenanceInterval = 24 * time.Hour
 	sentEmailRetention  = 30 * 24 * time.Hour
 	resetTokenRetention = 7 * 24 * time.Hour
+	// İdempotentlik anahtarları: istemcinin yeniden denemelerini kapsayan süre.
+	idempotencyRetention = 24 * time.Hour
 )
 
 func main() {
@@ -232,6 +235,13 @@ func maintain(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger) {
 		logger.Error("eski e-posta kayıtları silinemedi", "err", err)
 	} else if n := tag.RowsAffected(); n > 0 {
 		logger.Info("eski e-posta kayıtları silindi", "count", n)
+	}
+
+	// İdempotentlik anahtarları bir gün saklanır: istemci yeniden denemelerini kapsar.
+	if n, err := idempotency.Purge(ctx, pool, idempotencyRetention); err != nil {
+		logger.Error("eski idempotentlik anahtarları silinemedi", "err", err)
+	} else if n > 0 {
+		logger.Info("eski idempotentlik anahtarları silindi", "count", n)
 	}
 
 	// Kullanılmış ya da süresi dolmuş bağlantılar bir hafta sonra silinir. Olayın

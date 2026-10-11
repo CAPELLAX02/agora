@@ -20,22 +20,23 @@ import (
 // registerRegistration, ders seçme route'larını kaydeder.
 func (h *Handler) registerRegistration(rt *authz.Router) {
 	const base = "/api/v1/student-programs/{id}/registration"
+	m := h.mutations
 	rt.HandleFunc("GET "+base, authz.Authenticated, h.getRegistration)
 	rt.HandleFunc("GET "+base+"/offer", authz.Authenticated, h.offer)
 	rt.HandleFunc("GET "+base+"/events", authz.Authenticated, h.events)
-	rt.HandleFunc("POST "+base+"/items", authz.Permission("registration:manage_own"), h.addItem)
-	rt.HandleFunc("PUT "+base+"/items/{itemId}", authz.Permission("registration:manage_own"), h.changeSection)
-	rt.HandleFunc("DELETE "+base+"/items/{itemId}", authz.Permission("registration:manage_own"), h.removeItem)
-	rt.HandleFunc("POST "+base+"/submit", authz.Permission("registration:manage_own"), h.submit)
-	rt.HandleFunc("POST "+base+"/withdraw", authz.Permission("registration:manage_own"), h.withdraw)
-	rt.HandleFunc("POST "+base+"/extension", authz.Permission("registration:override"), h.extension)
+	rt.HandleFunc("POST "+base+"/items", authz.Permission("registration:manage_own"), h.addItem, m...)
+	rt.HandleFunc("PUT "+base+"/items/{itemId}", authz.Permission("registration:manage_own"), h.changeSection, m...)
+	rt.HandleFunc("DELETE "+base+"/items/{itemId}", authz.Permission("registration:manage_own"), h.removeItem, m...)
+	rt.HandleFunc("POST "+base+"/submit", authz.Permission("registration:manage_own"), h.submit, m...)
+	rt.HandleFunc("POST "+base+"/withdraw", authz.Permission("registration:manage_own"), h.withdraw, m...)
+	rt.HandleFunc("POST "+base+"/extension", authz.Permission("registration:override"), h.extension, m...)
 
 	// Danışman (ilişki) ya da öğrenci işleri (registration:override kapsamı): karar politikası handler'da.
 	rt.HandleFunc("GET /api/v1/registrations/{id}", authz.Authenticated, h.getByID)
-	rt.HandleFunc("POST /api/v1/registrations/{id}/approve", authz.Authenticated, h.decide(Approve))
-	rt.HandleFunc("POST /api/v1/registrations/{id}/reject", authz.Authenticated, h.decide(Reject))
-	rt.HandleFunc("POST /api/v1/registrations/{id}/revoke", authz.Authenticated, h.decide(Revoke))
-	rt.HandleFunc("POST /api/v1/registrations/bulk-approve", authz.Permission("registration:approve"), h.bulkApprove)
+	rt.HandleFunc("POST /api/v1/registrations/{id}/approve", authz.Authenticated, h.decide(Approve), m...)
+	rt.HandleFunc("POST /api/v1/registrations/{id}/reject", authz.Authenticated, h.decide(Reject), m...)
+	rt.HandleFunc("POST /api/v1/registrations/{id}/revoke", authz.Authenticated, h.decide(Revoke), m...)
+	rt.HandleFunc("POST /api/v1/registrations/bulk-approve", authz.Permission("registration:approve"), h.bulkApprove, m...)
 	rt.HandleFunc("GET /api/v1/me/advisee-registrations", authz.Authenticated, h.adviseeRegistrations)
 	rt.HandleFunc("GET /api/v1/registrations", authz.Permission("registration:override"), h.listRegistrations)
 }

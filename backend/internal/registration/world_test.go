@@ -21,6 +21,7 @@ import (
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authn"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authz"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/dbtest"
+	"github.com/CAPELLAX02/agora/backend/internal/platform/idempotency"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/redistest"
 	"github.com/CAPELLAX02/agora/backend/internal/registration"
 )
@@ -176,7 +177,8 @@ func newWorld(t *testing.T) *world {
 	}
 	mux := http.NewServeMux()
 	rt := authz.NewRouter(mux, authenticate, resolver, logger)
-	registration.NewHandler(w.pool, logger, func() time.Time { return w.now }, nil).Register(rt)
+	registration.NewHandler(w.pool, logger, func() time.Time { return w.now }, nil).
+		WithMutationMiddleware(idempotency.Middleware(w.pool, logger)).Register(rt)
 	enrollment.NewHandler(enrollment.NewRepository(w.pool), enrollment.NewService(w.pool), logger).Register(rt)
 	w.h = mux
 	return w

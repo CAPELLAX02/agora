@@ -1050,6 +1050,9 @@ const injectedRtkApi = api
           url: `/api/v1/student-programs/${queryArg.id}/registration/items`,
           method: 'POST',
           body: queryArg.body,
+          headers: {
+            'Idempotency-Key': queryArg['Idempotency-Key'],
+          },
         }),
         invalidatesTags: ['Ders se\u00E7me'],
       }),
@@ -1061,6 +1064,9 @@ const injectedRtkApi = api
           url: `/api/v1/student-programs/${queryArg.id}/registration/items/${queryArg.itemId}`,
           method: 'PUT',
           body: queryArg.body,
+          headers: {
+            'Idempotency-Key': queryArg['Idempotency-Key'],
+          },
         }),
         invalidatesTags: ['Ders se\u00E7me'],
       }),
@@ -1069,6 +1075,9 @@ const injectedRtkApi = api
           query: (queryArg) => ({
             url: `/api/v1/student-programs/${queryArg.id}/registration/items/${queryArg.itemId}`,
             method: 'DELETE',
+            headers: {
+              'Idempotency-Key': queryArg['Idempotency-Key'],
+            },
           }),
           invalidatesTags: ['Ders se\u00E7me'],
         },
@@ -1078,6 +1087,7 @@ const injectedRtkApi = api
           url: `/api/v1/student-programs/${queryArg.id}/registration/submit`,
           method: 'POST',
           headers: {
+            'Idempotency-Key': queryArg['Idempotency-Key'],
             'If-Match': queryArg['If-Match'],
           },
           params: {
@@ -1091,6 +1101,7 @@ const injectedRtkApi = api
           url: `/api/v1/student-programs/${queryArg.id}/registration/withdraw`,
           method: 'POST',
           headers: {
+            'Idempotency-Key': queryArg['Idempotency-Key'],
             'If-Match': queryArg['If-Match'],
           },
           params: {
@@ -1107,6 +1118,9 @@ const injectedRtkApi = api
           url: `/api/v1/student-programs/${queryArg.id}/registration/extension`,
           method: 'POST',
           body: queryArg.body,
+          headers: {
+            'Idempotency-Key': queryArg['Idempotency-Key'],
+          },
         }),
         invalidatesTags: ['Ders se\u00E7me'],
       }),
@@ -1134,6 +1148,9 @@ const injectedRtkApi = api
           url: `/api/v1/registrations/bulk-approve`,
           method: 'POST',
           body: queryArg.body,
+          headers: {
+            'Idempotency-Key': queryArg['Idempotency-Key'],
+          },
         }),
         invalidatesTags: ['Ders se\u00E7me'],
       }),
@@ -1147,6 +1164,7 @@ const injectedRtkApi = api
           method: 'POST',
           body: queryArg.body,
           headers: {
+            'Idempotency-Key': queryArg['Idempotency-Key'],
             'If-Match': queryArg['If-Match'],
           },
         }),
@@ -1158,6 +1176,7 @@ const injectedRtkApi = api
           method: 'POST',
           body: queryArg.body,
           headers: {
+            'Idempotency-Key': queryArg['Idempotency-Key'],
             'If-Match': queryArg['If-Match'],
           },
         }),
@@ -1169,6 +1188,7 @@ const injectedRtkApi = api
           method: 'POST',
           body: queryArg.body,
           headers: {
+            'Idempotency-Key': queryArg['Idempotency-Key'],
             'If-Match': queryArg['If-Match'],
           },
         }),
@@ -2220,6 +2240,12 @@ export type ListRegistrationEventsApiArg = {
 }
 export type AddRegistrationItemApiResponse = /** status 201 Şube sepete eklendi */ Registration
 export type AddRegistrationItemApiArg = {
+  /** İstemcinin her değiştirici istek için ürettiği anahtar (8-255 karakter). Aynı anahtarla
+    tekrarlanan istek işlemi yeniden yapmaz, ilk yanıt `Idempotent-Replayed: true` başlığıyla
+    döner. İlk istek sürerken gelen tekrar 409 (`IDEMPOTENCY_IN_PROGRESS`), başka bir gövdeyle
+    kullanılan anahtar 422 (`IDEMPOTENCY_KEY_REUSED`) alır. Anahtarlar bir gün saklanır.
+     */
+  'Idempotency-Key'?: string
   /** Geçerli bir UUID değilse 404 döner. */
   id: string
   body: {
@@ -2228,6 +2254,12 @@ export type AddRegistrationItemApiArg = {
 }
 export type ChangeRegistrationSectionApiResponse = /** status 200 Kaydın güncel hali */ Registration
 export type ChangeRegistrationSectionApiArg = {
+  /** İstemcinin her değiştirici istek için ürettiği anahtar (8-255 karakter). Aynı anahtarla
+    tekrarlanan istek işlemi yeniden yapmaz, ilk yanıt `Idempotent-Replayed: true` başlığıyla
+    döner. İlk istek sürerken gelen tekrar 409 (`IDEMPOTENCY_IN_PROGRESS`), başka bir gövdeyle
+    kullanılan anahtar 422 (`IDEMPOTENCY_KEY_REUSED`) alır. Anahtarlar bir gün saklanır.
+     */
+  'Idempotency-Key'?: string
   /** Geçerli bir UUID değilse 404 döner. */
   id: string
   itemId: string
@@ -2238,12 +2270,24 @@ export type ChangeRegistrationSectionApiArg = {
 }
 export type RemoveRegistrationItemApiResponse = /** status 200 Kaydın güncel hali */ Registration
 export type RemoveRegistrationItemApiArg = {
+  /** İstemcinin her değiştirici istek için ürettiği anahtar (8-255 karakter). Aynı anahtarla
+    tekrarlanan istek işlemi yeniden yapmaz, ilk yanıt `Idempotent-Replayed: true` başlığıyla
+    döner. İlk istek sürerken gelen tekrar 409 (`IDEMPOTENCY_IN_PROGRESS`), başka bir gövdeyle
+    kullanılan anahtar 422 (`IDEMPOTENCY_KEY_REUSED`) alır. Anahtarlar bir gün saklanır.
+     */
+  'Idempotency-Key'?: string
   /** Geçerli bir UUID değilse 404 döner. */
   id: string
   itemId: string
 }
 export type SubmitRegistrationApiResponse = /** status 200 Kaydın güncel hali */ Registration
 export type SubmitRegistrationApiArg = {
+  /** İstemcinin her değiştirici istek için ürettiği anahtar (8-255 karakter). Aynı anahtarla
+    tekrarlanan istek işlemi yeniden yapmaz, ilk yanıt `Idempotent-Replayed: true` başlığıyla
+    döner. İlk istek sürerken gelen tekrar 409 (`IDEMPOTENCY_IN_PROGRESS`), başka bir gövdeyle
+    kullanılan anahtar 422 (`IDEMPOTENCY_KEY_REUSED`) alır. Anahtarlar bir gün saklanır.
+     */
+  'Idempotency-Key'?: string
   /** Geçerli bir UUID değilse 404 döner. */
   id: string
   /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
@@ -2253,6 +2297,12 @@ export type SubmitRegistrationApiArg = {
 }
 export type WithdrawRegistrationApiResponse = /** status 200 Kaydın güncel hali */ Registration
 export type WithdrawRegistrationApiArg = {
+  /** İstemcinin her değiştirici istek için ürettiği anahtar (8-255 karakter). Aynı anahtarla
+    tekrarlanan istek işlemi yeniden yapmaz, ilk yanıt `Idempotent-Replayed: true` başlığıyla
+    döner. İlk istek sürerken gelen tekrar 409 (`IDEMPOTENCY_IN_PROGRESS`), başka bir gövdeyle
+    kullanılan anahtar 422 (`IDEMPOTENCY_KEY_REUSED`) alır. Anahtarlar bir gün saklanır.
+     */
+  'Idempotency-Key'?: string
   /** Geçerli bir UUID değilse 404 döner. */
   id: string
   /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
@@ -2262,6 +2312,12 @@ export type WithdrawRegistrationApiArg = {
 }
 export type GrantRegistrationExtensionApiResponse = /** status 200 Kaydın güncel hali */ Registration
 export type GrantRegistrationExtensionApiArg = {
+  /** İstemcinin her değiştirici istek için ürettiği anahtar (8-255 karakter). Aynı anahtarla
+    tekrarlanan istek işlemi yeniden yapmaz, ilk yanıt `Idempotent-Replayed: true` başlığıyla
+    döner. İlk istek sürerken gelen tekrar 409 (`IDEMPOTENCY_IN_PROGRESS`), başka bir gövdeyle
+    kullanılan anahtar 422 (`IDEMPOTENCY_KEY_REUSED`) alır. Anahtarlar bir gün saklanır.
+     */
+  'Idempotency-Key'?: string
   /** Geçerli bir UUID değilse 404 döner. */
   id: string
   body: {
@@ -2297,6 +2353,12 @@ export type BulkApproveRegistrationsApiResponse = /** status 200 Sonuçlar */ {
   }[]
 }
 export type BulkApproveRegistrationsApiArg = {
+  /** İstemcinin her değiştirici istek için ürettiği anahtar (8-255 karakter). Aynı anahtarla
+    tekrarlanan istek işlemi yeniden yapmaz, ilk yanıt `Idempotent-Replayed: true` başlığıyla
+    döner. İlk istek sürerken gelen tekrar 409 (`IDEMPOTENCY_IN_PROGRESS`), başka bir gövdeyle
+    kullanılan anahtar 422 (`IDEMPOTENCY_KEY_REUSED`) alır. Anahtarlar bir gün saklanır.
+     */
+  'Idempotency-Key'?: string
   body: {
     items: {
       id: string
@@ -2313,6 +2375,12 @@ export type GetRegistrationByIdApiArg = {
 }
 export type ApproveRegistrationApiResponse = /** status 200 Kaydın güncel hali */ Registration
 export type ApproveRegistrationApiArg = {
+  /** İstemcinin her değiştirici istek için ürettiği anahtar (8-255 karakter). Aynı anahtarla
+    tekrarlanan istek işlemi yeniden yapmaz, ilk yanıt `Idempotent-Replayed: true` başlığıyla
+    döner. İlk istek sürerken gelen tekrar 409 (`IDEMPOTENCY_IN_PROGRESS`), başka bir gövdeyle
+    kullanılan anahtar 422 (`IDEMPOTENCY_KEY_REUSED`) alır. Anahtarlar bir gün saklanır.
+     */
+  'Idempotency-Key'?: string
   /** Geçerli bir UUID değilse 404 döner. */
   id: string
   /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
@@ -2324,6 +2392,12 @@ export type ApproveRegistrationApiArg = {
 }
 export type RejectRegistrationApiResponse = /** status 200 Kaydın güncel hali */ Registration
 export type RejectRegistrationApiArg = {
+  /** İstemcinin her değiştirici istek için ürettiği anahtar (8-255 karakter). Aynı anahtarla
+    tekrarlanan istek işlemi yeniden yapmaz, ilk yanıt `Idempotent-Replayed: true` başlığıyla
+    döner. İlk istek sürerken gelen tekrar 409 (`IDEMPOTENCY_IN_PROGRESS`), başka bir gövdeyle
+    kullanılan anahtar 422 (`IDEMPOTENCY_KEY_REUSED`) alır. Anahtarlar bir gün saklanır.
+     */
+  'Idempotency-Key'?: string
   /** Geçerli bir UUID değilse 404 döner. */
   id: string
   /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
@@ -2335,6 +2409,12 @@ export type RejectRegistrationApiArg = {
 }
 export type RevokeRegistrationApiResponse = /** status 200 Kaydın güncel hali */ Registration
 export type RevokeRegistrationApiArg = {
+  /** İstemcinin her değiştirici istek için ürettiği anahtar (8-255 karakter). Aynı anahtarla
+    tekrarlanan istek işlemi yeniden yapmaz, ilk yanıt `Idempotent-Replayed: true` başlığıyla
+    döner. İlk istek sürerken gelen tekrar 409 (`IDEMPOTENCY_IN_PROGRESS`), başka bir gövdeyle
+    kullanılan anahtar 422 (`IDEMPOTENCY_KEY_REUSED`) alır. Anahtarlar bir gün saklanır.
+     */
+  'Idempotency-Key'?: string
   /** Geçerli bir UUID değilse 404 döner. */
   id: string
   /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */

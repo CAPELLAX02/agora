@@ -13,6 +13,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
+	"github.com/CAPELLAX02/agora/backend/internal/platform/authn"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/httpx"
 )
 
@@ -99,9 +100,26 @@ func (l *Limiter) Allow(ctx context.Context, key string) (Result, error) {
 // değil: girişte hesap kilitleme veritabanında çalışmaya devam eder. Redis
 // kesintisinin bütün girişleri durdurması daha büyük bir zarar olurdu.
 func (l *Limiter) ByIP(logger *slog.Logger) httpx.Middleware {
+	return l.middleware(logger, ipKey)
+}
+
+// ByUser, kimliği doğrulanmış kullanıcı başına sınırlayan bir middleware döndürür:
+// kampüs ağındaki bütün öğrenciler aynı NAT adresinin arkasında olabileceğinden ders
+// seçme gibi yoğun uçlar IP'ye değil kullanıcıya göre sınırlanır. Kimliği doğrulanmamış
+// istekte IP kullanılır. Redis'e ulaşılamazsa istek geçirilir (fail open).
+func (l *Limiter) ByUser(logger *slog.Logger) httpx.Middleware {
+	return l.middleware(logger, func(r *http.Request) string {
+		if p, ok := authn.PrincipalFrom(r.Context()); ok && p.UserID != "" {
+			return "user:" + p.UserID
+		}
+		return ipKey(r)
+	})
+}
+
+func (l *Limiter) middleware(logger *slog.Logger, keyFn func(*http.Request) string) httpx.Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			res, err := l.Allow(r.Context(), ipKey(r))
+			res, err := l.Allow(r.Context(), keyFn(r))
 			if err != nil {
 				logger.Error("hız sınırı uygulanamadı, istek geçiriliyor",
 					"err", err, "request_id", httpx.RequestIDFrom(r.Context()))

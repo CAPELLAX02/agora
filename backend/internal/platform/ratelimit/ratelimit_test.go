@@ -15,6 +15,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
+	"github.com/CAPELLAX02/agora/backend/internal/platform/authn"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/redistest"
 )
 
@@ -207,5 +208,31 @@ func TestByIPFailsOpen(t *testing.T) {
 	}
 	if !strings.Contains(logs.String(), "hız sınırı uygulanamadı") {
 		t.Errorf("hata log'a yazılmadı:\n%s", logs.String())
+	}
+}
+
+// TestByUser, kullanıcı başına sınırın aynı IP'nin (kampüs NAT'ı) arkasındaki farklı
+// kullanıcıları birbirinden ayırdığını doğrular.
+func TestByUser(t *testing.T) {
+	rdb := redistest.New(t)
+	l := New(rdb, "registration", 2, time.Minute, newClock().Now)
+	h := l.ByUser(slog.New(slog.NewTextHandler(io.Discard, nil)))(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	do := func(user string) int {
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/student-programs/x/registration/items", nil)
+		req.RemoteAddr = "203.0.113.7:1000" // hepsi aynı NAT adresinden
+		if user != "" {
+			req = req.WithContext(authn.WithPrincipal(req.Context(), authn.Principal{UserID: user}))
+		}
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		return rec.Code
+	}
+	for i, want := range []int{200, 200, 429} {
+		if got := do("ece"); got != want {
+			t.Errorf("ece %d. istek: %d, want %d", i+1, got, want)
+		}
+	}
+	if got := do("deniz"); got != 200 {
+		t.Errorf("aynı IP'deki başka kullanıcı etkilenmemeli: %d", got)
 	}
 }

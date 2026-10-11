@@ -14,6 +14,7 @@ import (
 	"github.com/CAPELLAX02/agora/backend/internal/org"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authz"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/httpx"
+	"github.com/CAPELLAX02/agora/backend/internal/platform/idempotency"
 	"github.com/CAPELLAX02/agora/backend/internal/registration"
 )
 
@@ -41,7 +42,17 @@ func (app *application) routes() http.Handler {
 	curriculum.NewHandler(curriculum.NewRepository(app.db), org.NewTargets(app.db), app.logger).Register(rt)
 	offering.NewHandler(offering.NewRepository(app.db), org.NewTargets(app.db), app.logger).Register(rt)
 	grading.NewHandler(grading.NewRepository(app.db), app.logger).Register(rt)
-	registration.NewHandler(app.db, app.logger, time.Now, nil).Register(rt)
+	// Ders seçme açılışı: değiştirici uçlarda kullanıcı başına hız sınırı ve Idempotency-Key.
+	var mutations []httpx.Middleware
+	if app.registrationLimit != nil {
+		mutations = append(mutations, app.registrationLimit)
+	}
+	mutations = append(mutations, idempotency.Middleware(app.db, app.logger))
+	var regMetrics registration.Metrics
+	if app.registrationMetrics != nil {
+		regMetrics = app.registrationMetrics
+	}
+	registration.NewHandler(app.db, app.logger, time.Now, regMetrics).WithMutationMiddleware(mutations...).Register(rt)
 
 	return httpx.Chain(
 		httpx.WithProblemFallback(mux),
