@@ -1,14 +1,17 @@
+import { CircleCheckBigIcon, HourglassIcon, ListTodoIcon, StarIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import type { CourseAttempt, ProgressLine, ProgressStatus, StudentProgress } from '@/shared/api/generated'
 import { useLocalized } from '@/shared/lib/localized'
 import { Badge } from '@/shared/ui/badge'
+import { Meter } from '@/shared/ui/meter'
+import { StatTile } from '@/shared/ui/stat-tile'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
 
 const statusVariant = {
   PASSED: 'success',
   FAILED: 'destructive',
-  IN_PROGRESS: 'secondary',
+  IN_PROGRESS: 'info',
   PARTIAL: 'warning',
   NOT_TAKEN: 'muted',
 } as const
@@ -23,26 +26,47 @@ export function ProgressBadge({ status }: { status: ProgressStatus }) {
 export function ProgressSummary({ progress: p }: { progress: StudentProgress }) {
   const { t } = useTranslation()
   const s = p.summary
-  const ratio = s.required_ects > 0 ? Math.min(s.completed_ects / s.required_ects, 1) : 0
+  const percent = s.required_ects > 0 ? Math.round((s.completed_ects / s.required_ects) * 100) : 0
   return (
     <div className="space-y-3" aria-label={t('registration.progress.summary')} role="group">
-      <div className="h-2 overflow-hidden rounded-full bg-muted">
-        <div className="h-full bg-success" style={{ width: `${ratio * 100}%` }} />
+      <div className="flex items-center gap-3">
+        <Meter
+          value={s.completed_ects}
+          max={s.required_ects}
+          label={t('registration.progress.completed')}
+          tone="emerald"
+          size="lg"
+          className="flex-1"
+        />
+        <span className="text-sm font-extrabold text-emerald-700 tabular-nums dark:text-emerald-300">
+          %{percent}
+        </span>
       </div>
-      <dl className="grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-3">
-        {(
-          [
-            [t('registration.progress.completed'), `${s.completed_ects} / ${s.required_ects}`],
-            [t('registration.progress.inProgress'), String(s.in_progress_ects)],
-            [t('registration.progress.remaining'), String(s.remaining_courses)],
-            [t('registration.progress.gpa'), p.gpa?.toFixed(2) ?? '—'],
-          ] as const
-        ).map(([label, value]) => (
-          <div key={label} className="rounded-md border p-3">
-            <dt className="text-xs text-muted-foreground">{label}</dt>
-            <dd className="mt-1 text-lg font-semibold tabular-nums">{value}</dd>
-          </div>
-        ))}
+      <dl className="grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-3">
+        <StatTile
+          label={t('registration.progress.completed')}
+          value={`${s.completed_ects} / ${s.required_ects}`}
+          icon={CircleCheckBigIcon}
+          tone="emerald"
+        />
+        <StatTile
+          label={t('registration.progress.inProgress')}
+          value={s.in_progress_ects}
+          icon={HourglassIcon}
+          tone="sky"
+        />
+        <StatTile
+          label={t('registration.progress.remaining')}
+          value={s.remaining_courses}
+          icon={ListTodoIcon}
+          tone="amber"
+        />
+        <StatTile
+          label={t('registration.progress.gpa')}
+          value={p.gpa?.toFixed(2) ?? '—'}
+          icon={StarIcon}
+          tone="violet"
+        />
       </dl>
     </div>
   )

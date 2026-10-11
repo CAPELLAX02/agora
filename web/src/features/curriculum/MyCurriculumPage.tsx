@@ -7,6 +7,7 @@ import {
   useMyCurriculaQuery,
   type MyCurriculaApiResponse,
 } from '@/shared/api/generated'
+import { navTheme } from '@/features/shell/nav'
 import { useLocalized } from '@/shared/lib/localized'
 import { Alert, AlertDescription } from '@/shared/ui/alert'
 import { PageHeader } from '@/shared/ui/page-header'
@@ -45,7 +46,11 @@ export function MyCurriculumPage() {
 
   return (
     <>
-      <PageHeader title={t('curriculum.my.title')} description={t('curriculum.my.description')} />
+      <PageHeader
+        {...navTheme('/ders-planim')}
+        title={t('curriculum.my.title')}
+        description={t('curriculum.my.description')}
+      />
       {!current ? (
         <EmptyState>{t('curriculum.my.noPrograms')}</EmptyState>
       ) : (

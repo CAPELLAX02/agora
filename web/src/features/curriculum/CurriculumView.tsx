@@ -13,12 +13,27 @@ import {
   type StudentProgress,
 } from '@/shared/api/generated'
 import { useLocalized } from '@/shared/lib/localized'
+import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Card, CardHeader, CardTitle } from '@/shared/ui/card'
+import { LetterGrade } from '@/shared/ui/letter-grade'
 import { Skeleton } from '@/shared/ui/skeleton'
+import { StatTile } from '@/shared/ui/stat-tile'
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
+import { toneSolid, type Tone } from '@/shared/ui/tone'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip'
+
+const semesterTones: Tone[] = ['indigo', 'violet', 'sky', 'teal', 'emerald', 'amber', 'orange', 'pink']
+
+/** Ders durumunun rengi (satırın başındaki nokta). */
+const statusDot: Record<ProgressLine['status'], string> = {
+  PASSED: 'bg-emerald-500',
+  FAILED: 'bg-rose-500',
+  IN_PROGRESS: 'bg-sky-500',
+  PARTIAL: 'bg-amber-500',
+  NOT_TAKEN: 'bg-slate-300 dark:bg-slate-600',
+}
 
 /**
  * CurriculumView, bir müfredat sürümünü yarıyıl yarıyıl gösterir: zorunlu dersler, seçmeli
@@ -57,13 +72,24 @@ export function CurriculumView({
               <Card
                 key={no}
                 role="region"
-                className="gap-0 py-0"
+                className="gap-0 overflow-hidden py-0"
                 aria-label={t('curriculum.view.semester', { no })}
               >
-                <CardHeader className="border-b py-3">
-                  <CardTitle className="flex items-baseline justify-between gap-2 text-base">
-                    <span>{t('curriculum.view.semester', { no })}</span>
-                    <span className="text-xs font-normal text-muted-foreground">
+                <CardHeader className="border-b border-border/60 py-3">
+                  <CardTitle className="flex items-center justify-between gap-2 text-base">
+                    <span className="flex items-center gap-2.5">
+                      <span
+                        aria-hidden
+                        className={cn(
+                          'inline-flex size-8 items-center justify-center rounded-xl text-sm font-extrabold',
+                          toneSolid[semesterTones[(no - 1) % semesterTones.length]!],
+                        )}
+                      >
+                        {no}
+                      </span>
+                      {t('curriculum.view.semester', { no })}
+                    </span>
+                    <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold text-muted-foreground">
                       {t('curriculum.view.yearSeason', {
                         year: Math.ceil(no / 2),
                         season: t(no % 2 === 1 ? 'curriculum.view.fall' : 'curriculum.view.spring'),
@@ -71,13 +97,13 @@ export function CurriculumView({
                     </span>
                   </CardTitle>
                 </CardHeader>
-                <Table>
+                <Table className="table-fixed">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-24">{t('catalog.code')}</TableHead>
+                      <TableHead className="w-28">{t('catalog.code')}</TableHead>
                       <TableHead>{t('catalog.name')}</TableHead>
                       <TableHead className="w-14 text-right">{t('catalog.hours')}</TableHead>
-                      <TableHead className="w-14 text-right">{t('catalog.credit')}</TableHead>
+                      <TableHead className="w-16 text-right">{t('catalog.credit')}</TableHead>
                       <TableHead className="w-14 text-right">{t('catalog.ects')}</TableHead>
                       {onRemove && <TableHead className="w-10" />}
                     </TableRow>
@@ -117,16 +143,17 @@ function Summary({ curriculum }: { curriculum: CurriculumDetail }) {
   ]
   return (
     <dl
-      className="grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-3"
+      className="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-3"
       aria-label={t('curriculum.view.summary')}
     >
-      {tiles.map(([label, value]) => (
-        <div key={label} className="rounded-md border p-3">
-          <dt className="text-xs text-muted-foreground">{label}</dt>
-          <dd className="mt-1 text-lg font-semibold whitespace-nowrap tabular-nums">
-            {value} <span className="text-xs font-normal text-muted-foreground">{t('catalog.ects')}</span>
-          </dd>
-        </div>
+      {tiles.map(([label, value], i) => (
+        <StatTile
+          key={label}
+          label={label}
+          value={value}
+          suffix={t('catalog.ects')}
+          tone={semesterTones[i % semesterTones.length]}
+        />
       ))}
     </dl>
   )
@@ -149,9 +176,16 @@ function ItemRow({
 
   return (
     <Fragment>
-      <TableRow className={slot ? 'bg-muted/30' : undefined}>
-        <TableCell className="font-mono text-xs">{item.code}</TableCell>
-        <TableCell>
+      <TableRow className={slot ? 'bg-violet-500/[0.04]' : undefined}>
+        <TableCell className="font-mono text-xs font-semibold">
+          <span className="flex items-center gap-2">
+            {line && (
+              <span aria-hidden className={cn('size-2 shrink-0 rounded-full', statusDot[line.status])} />
+            )}
+            <span className="truncate">{item.code}</span>
+          </span>
+        </TableCell>
+        <TableCell className="whitespace-normal">
           <div className="flex flex-wrap items-center gap-2">
             {slot ? (
               <Button
@@ -179,9 +213,9 @@ function ItemRow({
             {item.course_kind && <CourseKindBadge kind={item.course_kind} />}
             {line && <ProgressBadge status={line.status} />}
             {line?.last_attempt?.letter && (
-              <span className="text-xs text-muted-foreground tabular-nums">
-                {line.last_attempt.letter}
-                {line.last_attempt.course_code !== item.code && ` (${line.last_attempt.course_code})`}
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <LetterGrade letter={line.last_attempt.letter} />
+                {line.last_attempt.course_code !== item.code && `(${line.last_attempt.course_code})`}
               </span>
             )}
             {line && slot && line.filled.length + line.in_progress.length > 0 && (
