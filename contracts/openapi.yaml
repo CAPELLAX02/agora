@@ -3230,7 +3230,7 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409":
-          description: "`ASSESSMENT_PLAN_LOCKED`: plan kilitli, `SECTION_CANCELLED`: şube iptal edilmiş"
+          description: "`ASSESSMENT_PLAN_LOCKED`: plan kilitli, `SECTION_CANCELLED`: şube iptal edilmiş, `COMPONENT_HAS_SCORES`: notu girilmiş bileşen plandan çıkarılamaz"
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Problem" }
@@ -3293,6 +3293,163 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/AssessmentPlan" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/sections/{id}/gradebook:
+    get:
+      tags: [Değerlendirme]
+      summary: Şubenin not tablosunu döndürür
+      description: >-
+        Kesin kayıtlı (bırakmamış) öğrenciler, plandaki bileşenler, girilmiş notlar, devam
+        durumları ve her bileşenin not girişi penceresi. Şubenin öğretim elemanları ve
+        şubeyi kapsayan `grade:read_scoped` yetkisi olanlar (bölüm başkanı, öğrenci işleri)
+        görür. `can_enter` ve bileşenlerin `editable` alanı isteği yapana göredir.
+      operationId: getGradebook
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Not tablosu
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Gradebook" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/assessment-components/{id}/scores:
+    put:
+      tags: [Değerlendirme]
+      summary: Bir bileşenin notlarını yazar
+      description: >-
+        Sadece gönderilen öğrencilerin notu değişir. `score` 0-100 arası (en fazla iki
+        ondalık), `absent: true` "girmedi" demektir (`score` boş olmalı); ikisi de boşsa not
+        silinir. Şubenin sorumlu ya da ortak öğretim elemanı yazar (`score:enter`, MFA).
+        Plan kilitli ve bileşenin not girişi penceresi açık olmalı: dönem içi bileşenler ara
+        sınav ya da final not girişi, final final not girişi, bütünleme bütünleme not girişi
+        penceresinde. İyimser kilit bileşen başınadır: `If-Match` bileşenin `version` değeri.
+      operationId: setComponentScores
+      x-agora-permission: score:enter
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  minItems: 1
+                  maxItems: 1000
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [enrollment_id]
+                    properties:
+                      enrollment_id: { type: string, format: uuid }
+                      score: { type: [number, "null"], minimum: 0, maximum: 100 }
+                      absent: { type: boolean, default: false }
+      responses:
+        "200":
+          description: Güncel not tablosu
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Gradebook" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: >-
+            `ASSESSMENT_PLAN_NOT_LOCKED`, `GRADE_ENTRY_WINDOW_CLOSED`, `MAKEUP_NOT_AVAILABLE`
+            (bütünleme notları harf notları ilan edildikten sonra girilir)
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "412": { $ref: "#/components/responses/VersionMismatch" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
+
+  /api/v1/assessment-components/{id}/publish:
+    post:
+      tags: [Değerlendirme]
+      summary: Bileşenin notlarını öğrencilere yayımlar
+      description: >-
+        Yayımlanan bileşenin notu öğrencinin notlarında görünür. Yayımdan sonra pencere
+        açıkken yapılan düzeltmeler de hemen görünür (denetim izine yazılır). Zaten
+        yayımlanmışsa bir şey değişmez.
+      operationId: publishComponentScores
+      x-agora-permission: score:enter
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Güncel not tablosu
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Gradebook" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`ASSESSMENT_PLAN_NOT_LOCKED`, `NO_SCORES` (yayımlanacak not yok)"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/sections/{id}/attendance:
+    put:
+      tags: [Değerlendirme]
+      summary: Öğrencilerin devam durumunu yazar
+      description: >-
+        `ATTENDANCE_FAIL` (devamsız) öğrencinin harf notu F1 olur. Sadece gönderilen
+        öğrenciler değişir. Şubenin sorumlu ya da ortak öğretim elemanı yazar
+        (`score:enter`, MFA); harf notları ilan edilmeden önce yapılır.
+      operationId: setAttendance
+      x-agora-permission: score:enter
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  minItems: 1
+                  maxItems: 1000
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [enrollment_id, attendance_status]
+                    properties:
+                      enrollment_id: { type: string, format: uuid }
+                      attendance_status: { $ref: "#/components/schemas/AttendanceStatus" }
+      responses:
+        "200":
+          description: Güncel not tablosu
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Gradebook" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
@@ -4591,7 +4748,7 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409":
-          description: "`WINDOW_CLOSED` · `INVALID_REGISTRATION_STATE`"
+          description: "`WINDOW_CLOSED` · `INVALID_REGISTRATION_STATE` · `GRADES_ENTERED` (kaydın derslerine not girilmiş)"
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Problem" }
@@ -6546,6 +6703,105 @@ components:
         editable: { type: boolean, description: İsteği yapan kullanıcı planı şu an düzenleyebilir mi? }
         can_unlock: { type: boolean }
         version: { type: integer }
+
+    AttendanceStatus:
+      type: string
+      enum: [CONTINUING, ATTENDANCE_FAIL]
+      description: "`ATTENDANCE_FAIL`: devamsız, harf notu F1"
+
+    GradeEntryWindow:
+      type: object
+      required: [open, starts_at, ends_at, next_starts_at]
+      description: >-
+        Bileşenin not girişi penceresi (şubenin birimine göre). Dönem içi bileşenler için ara
+        sınav ve final not girişi pencerelerinden açık olan.
+      properties:
+        open: { type: boolean }
+        starts_at: { type: [string, "null"], format: date-time }
+        ends_at: { type: [string, "null"], format: date-time, description: "Bitiş anı hariç" }
+        next_starts_at: { type: [string, "null"], format: date-time }
+
+    ComponentScore:
+      type: object
+      required: [score, absent]
+      properties:
+        score: { type: [number, "null"] }
+        absent: { type: boolean, description: Girmedi }
+
+    Gradebook:
+      type: object
+      required: [section, components, students, can_enter, mfa_required]
+      properties:
+        section:
+          type: object
+          required: [id, section_code, course, term, plan_locked, instructor_role]
+          properties:
+            id: { type: string, format: uuid }
+            section_code: { type: string }
+            course:
+              type: object
+              required: [id, code, name_tr, name_en, grading_mode]
+              properties:
+                id: { type: string, format: uuid }
+                code: { type: string }
+                name_tr: { type: string }
+                name_en: { type: string }
+                grading_mode: { type: string, enum: [LETTER, PASS_FAIL] }
+            term:
+              type: object
+              required: [id, code]
+              properties:
+                id: { type: string, format: uuid }
+                code: { type: string, examples: ["2026-FALL"] }
+            plan_locked: { type: boolean, description: Notlar sadece kilitli plana girilir }
+            instructor_role:
+              type: [string, "null"]
+              enum: [PRIMARY, CO_INSTRUCTOR, ASSISTANT, null]
+              description: İsteği yapanın şubedeki rolü
+        components:
+          type: array
+          items:
+            type: object
+            required: [id, type, sequence_no, label_tr, label_en, weight, version, published_at, entry_window, editable,
+                       scored_count, absent_count, average]
+            properties:
+              id: { type: string, format: uuid }
+              type: { $ref: "#/components/schemas/AssessmentType" }
+              sequence_no: { type: integer }
+              label_tr: { type: string }
+              label_en: { type: string }
+              weight: { type: number }
+              version: { type: integer, description: "Not yazarken If-Match" }
+              published_at: { type: [string, "null"], format: date-time }
+              entry_window: { $ref: "#/components/schemas/GradeEntryWindow" }
+              editable: { type: boolean, description: İsteği yapan bu bileşene şu an not girebilir mi? }
+              scored_count: { type: integer }
+              absent_count: { type: integer }
+              average: { type: [number, "null"], description: Girilen puanların ortalaması (girmedi hariç) }
+        students:
+          type: array
+          description: Soyadı ve adına göre sıralı
+          items:
+            type: object
+            required: [enrollment_id, student, program, attempt_no, attendance_status, scores]
+            properties:
+              enrollment_id: { type: string, format: uuid }
+              student: { $ref: "#/components/schemas/StudentRef" }
+              program:
+                type: object
+                required: [code, name_tr, name_en]
+                properties:
+                  code: { type: string }
+                  name_tr: { type: string }
+                  name_en: { type: string }
+              attempt_no: { type: integer, description: "1'den büyükse dersi tekrar alıyor" }
+              attendance_status: { $ref: "#/components/schemas/AttendanceStatus" }
+              scores:
+                type: object
+                description: Bileşen kimliğine göre girilmiş notlar; not girilmemiş bileşen yer almaz
+                additionalProperties: { $ref: "#/components/schemas/ComponentScore" }
+        can_enter: { type: boolean, description: "İsteği yapan bu şubeye not girebilir: sorumlu ya da ortak öğretim elemanı, MFA'lı oturum" }
+        mfa_required: { type: boolean, description: Not girebilecek ama oturum iki adımlı doğrulamayla açılmamış }
 
     HoldType:
       type: string

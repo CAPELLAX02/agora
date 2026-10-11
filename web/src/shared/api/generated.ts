@@ -829,6 +829,40 @@ const injectedRtkApi = api
         }),
         invalidatesTags: ['De\u011Ferlendirme'],
       }),
+      getGradebook: build.query<GetGradebookApiResponse, GetGradebookApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/sections/${queryArg.id}/gradebook`,
+        }),
+        providesTags: ['De\u011Ferlendirme'],
+      }),
+      setComponentScores: build.mutation<SetComponentScoresApiResponse, SetComponentScoresApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/assessment-components/${queryArg.id}/scores`,
+          method: 'PUT',
+          body: queryArg.body,
+          headers: {
+            'If-Match': queryArg['If-Match'],
+          },
+        }),
+        invalidatesTags: ['De\u011Ferlendirme'],
+      }),
+      publishComponentScores: build.mutation<PublishComponentScoresApiResponse, PublishComponentScoresApiArg>(
+        {
+          query: (queryArg) => ({
+            url: `/api/v1/assessment-components/${queryArg.id}/publish`,
+            method: 'POST',
+          }),
+          invalidatesTags: ['De\u011Ferlendirme'],
+        },
+      ),
+      setAttendance: build.mutation<SetAttendanceApiResponse, SetAttendanceApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/sections/${queryArg.id}/attendance`,
+          method: 'PUT',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['De\u011Ferlendirme'],
+      }),
       listBuildings: build.query<ListBuildingsApiResponse, ListBuildingsApiArg>({
         query: (queryArg) => ({
           url: `/api/v1/buildings`,
@@ -2071,6 +2105,41 @@ export type UnlockAssessmentPlanApiArg = {
   id: string
   body: {
     reason: string
+  }
+}
+export type GetGradebookApiResponse = /** status 200 Not tablosu */ Gradebook
+export type GetGradebookApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type SetComponentScoresApiResponse = /** status 200 Güncel not tablosu */ Gradebook
+export type SetComponentScoresApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
+  'If-Match': string
+  body: {
+    items: {
+      enrollment_id: string
+      score?: number | null
+      absent?: boolean
+    }[]
+  }
+}
+export type PublishComponentScoresApiResponse = /** status 200 Güncel not tablosu */ Gradebook
+export type PublishComponentScoresApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type SetAttendanceApiResponse = /** status 200 Güncel not tablosu */ Gradebook
+export type SetAttendanceApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: {
+    items: {
+      enrollment_id: string
+      attendance_status: AttendanceStatus
+    }[]
   }
 }
 export type ListBuildingsApiResponse = /** status 200 Binalar */ {
@@ -3353,6 +3422,86 @@ export type AssessmentPlan = {
   can_unlock: boolean
   version: number
 }
+export type GradeEntryWindow = {
+  open: boolean
+  starts_at: string | null
+  /** Bitiş anı hariç */
+  ends_at: string | null
+  next_starts_at: string | null
+}
+export type StudentRef = {
+  id: string
+  student_no: string
+  first_name: string
+  last_name: string
+}
+export type AttendanceStatus = 'CONTINUING' | 'ATTENDANCE_FAIL'
+export type ComponentScore = {
+  score: number | null
+  /** Girmedi */
+  absent: boolean
+}
+export type Gradebook = {
+  section: {
+    id: string
+    section_code: string
+    course: {
+      id: string
+      code: string
+      name_tr: string
+      name_en: string
+      grading_mode: 'LETTER' | 'PASS_FAIL'
+    }
+    term: {
+      id: string
+      code: string
+    }
+    /** Notlar sadece kilitli plana girilir */
+    plan_locked: boolean
+    /** İsteği yapanın şubedeki rolü */
+    instructor_role:
+      ('PRIMARY' | 'CO_INSTRUCTOR' | 'ASSISTANT' | null) | ('PRIMARY' | 'CO_INSTRUCTOR' | 'ASSISTANT' | null)
+  }
+  components: {
+    id: string
+    type: AssessmentType
+    sequence_no: number
+    label_tr: string
+    label_en: string
+    weight: number
+    /** Not yazarken If-Match */
+    version: number
+    published_at: string | null
+    entry_window: GradeEntryWindow
+    /** İsteği yapan bu bileşene şu an not girebilir mi? */
+    editable: boolean
+    scored_count: number
+    absent_count: number
+    /** Girilen puanların ortalaması (girmedi hariç) */
+    average: number | null
+  }[]
+  /** Soyadı ve adına göre sıralı */
+  students: {
+    enrollment_id: string
+    student: StudentRef
+    program: {
+      code: string
+      name_tr: string
+      name_en: string
+    }
+    /** 1'den büyükse dersi tekrar alıyor */
+    attempt_no: number
+    attendance_status: AttendanceStatus
+    /** Bileşen kimliğine göre girilmiş notlar; not girilmemiş bileşen yer almaz */
+    scores: {
+      [key: string]: ComponentScore
+    }
+  }[]
+  /** İsteği yapan bu şubeye not girebilir: sorumlu ya da ortak öğretim elemanı, MFA'lı oturum */
+  can_enter: boolean
+  /** Not girebilecek ama oturum iki adımlı doğrulamayla açılmamış */
+  mfa_required: boolean
+}
 export type Ref = {
   id: string
   code: string
@@ -3486,12 +3635,6 @@ export type StatusHistoryItem = {
   /** Değişikliği yapanın adı */
   changed_by: string | null
   changed_at: string
-}
-export type StudentRef = {
-  id: string
-  student_no: string
-  first_name: string
-  last_name: string
 }
 export type HoldType = 'TUITION_DEBT' | 'DISCIPLINE_SUSPENSION' | 'MISSING_DOCUMENT' | 'LIBRARY_DEBT'
 export type HoldBlock = 'REGISTRATION' | 'DOCUMENT' | 'GRADUATION'
@@ -4065,6 +4208,11 @@ export const {
   useSetAssessmentPlanMutation,
   useLockAssessmentPlanMutation,
   useUnlockAssessmentPlanMutation,
+  useGetGradebookQuery,
+  useLazyGetGradebookQuery,
+  useSetComponentScoresMutation,
+  usePublishComponentScoresMutation,
+  useSetAttendanceMutation,
   useListBuildingsQuery,
   useLazyListBuildingsQuery,
   useCreateBuildingMutation,
