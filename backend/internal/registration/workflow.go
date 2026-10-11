@@ -206,6 +206,19 @@ func (s *Service) Decide(ctx context.Context, d Decider, sp enrollment.StudentPr
 			}
 			next, eventType = StatusApproved, "APPROVED"
 		case Revoke:
+			// Not girilmiş kesin kayıt silinmez: önce notlar (ya da ders) ele alınmalı.
+			var graded bool
+			if err := tx.QueryRow(ctx, `
+				SELECT EXISTS (
+					SELECT 1 FROM grading.assessment_scores sc
+					JOIN enrollment.enrollments e ON e.id = sc.enrollment_id
+					JOIN enrollment.registration_items i ON i.id = e.registration_item_id
+					WHERE i.registration_id = $1)`, registrationID).Scan(&graded); err != nil {
+				return fmt.Errorf("registration: notlar okunamadı: %w", err)
+			}
+			if graded {
+				return ErrGradesEntered
+			}
 			if _, err := tx.Exec(ctx, `
 				DELETE FROM enrollment.enrollments WHERE status = 'ENROLLED' AND registration_item_id IN (
 					SELECT id FROM enrollment.registration_items WHERE registration_id = $1)`, registrationID); err != nil {

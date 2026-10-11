@@ -684,6 +684,8 @@ func (h *Handler) writeError(w http.ResponseWriter, r *http.Request, err error) 
 		h.problem(w, r, http.StatusConflict, "SECTION_NOT_FOR_PROGRAM", "Bu şube programınıza kontenjan ayırmamış.")
 	case errors.Is(err, ErrSectionNotOpen):
 		h.problem(w, r, http.StatusConflict, "SECTION_NOT_OPEN", "Şube bu dönem ders seçmeye açık değil.")
+	case errors.Is(err, ErrGradesEntered):
+		h.problem(w, r, http.StatusConflict, "GRADES_ENTERED", "Kaydın derslerine not girilmiş; onay geri alınamaz.")
 	case errors.Is(err, ErrWindowClosed):
 		h.problem(w, r, http.StatusConflict, "WINDOW_CLOSED", "Bu işlemin takvim penceresi kapalı.")
 	case errors.Is(err, ErrLocked):

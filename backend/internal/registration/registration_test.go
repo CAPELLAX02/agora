@@ -232,6 +232,19 @@ func TestBasketAndWorkflow(t *testing.T) {
 		}
 	}
 
+	// --- Derslerinden birine not girilmişse onay geri alınamaz.
+	w.exec(`
+		INSERT INTO grading.assessment_components (section_id, type_code, weight)
+		SELECT section_id, 'MIDTERM', 40 FROM enrollment.enrollments
+		WHERE student_program_id = '` + w.aliSP + `' AND status = 'ENROLLED' LIMIT 1;
+		INSERT INTO grading.assessment_scores (component_id, enrollment_id, status, score)
+		SELECT ac.id, e.id, 'SCORED', 70 FROM grading.assessment_components ac
+		JOIN enrollment.enrollments e ON e.section_id = ac.section_id AND e.student_program_id = '` + w.aliSP + `'`)
+	if g := w.do("POST", "/api/v1/registrations/"+regID+"/revoke", w.advisor, map[string]string{"note": "Öğrenci talebiyle"}, "If-Match", etag(r)); g.status != 409 || g.body["code"] != "GRADES_ENTERED" {
+		t.Errorf("notlu kaydın onayını geri alma: %d %s", g.status, g.raw)
+	}
+	w.exec(`DELETE FROM grading.assessment_scores; DELETE FROM grading.assessment_components`)
+
 	// --- Onayı geri alma kesin kayıtları siler.
 	r = w.do("POST", "/api/v1/registrations/"+regID+"/revoke", w.advisor, map[string]string{"note": "Öğrenci talebiyle"}, "If-Match", etag(r))
 	if r.status != 200 || r.body["status"] != "REJECTED" {

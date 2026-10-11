@@ -232,6 +232,8 @@ func errorCode(err error) (string, string) {
 		return "INVALID_REGISTRATION_STATE", "Kayıt onay bekleyen durumda değil."
 	case errors.Is(err, ErrWindowClosed):
 		return "WINDOW_CLOSED", "Danışman onayı penceresi kapalı."
+	case errors.Is(err, ErrGradesEntered):
+		return "GRADES_ENTERED", "Kaydın derslerine not girilmiş; onay geri alınamaz."
 	case errors.Is(err, ErrNotFound):
 		return "NOT_FOUND", "Kayıt bulunamadı."
 	}

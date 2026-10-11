@@ -27,6 +27,7 @@ var (
 	ErrNotOwner         = errors.New("registration: kayıt öğrencinin kendisine ait değil")
 	ErrCourseMismatch   = errors.New("registration: şube aynı dersin şubesi değil")
 	ErrExtensionInvalid = errors.New("registration: ek süre geçersiz")
+	ErrGradesEntered    = errors.New("registration: kayıttaki derslere not girilmiş")
 )
 
 // RuleError, kural motorunun engellediği bir işlemdir. Violations en az bir hata içerir.
