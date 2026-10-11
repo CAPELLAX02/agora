@@ -46,11 +46,12 @@ test('unutulan parola e-postadaki bağlantıyla sıfırlanır', async ({ page })
   const newPassword = 'sıfırlanmış uzun bir parola'
   const since = new Date(Date.now() - 1000)
   await page.goto('/sifremi-unuttum')
-  await page.getByLabel('Öğrenci / personel numarası ya da e-posta').fill('22290002')
+  // Ders seçme senaryolarında kullanılmayan bir öğrenci: parolası değişir.
+  await page.getByLabel('Öğrenci / personel numarası ya da e-posta').fill('25290011')
   await page.getByRole('button', { name: 'Bağlantı gönder' }).click()
   await expect(page.getByRole('heading', { name: 'E-postanızı kontrol edin' })).toBeVisible()
 
-  const link = await linkFromLatestEmail('ece.kaya@ogrenci.agora.test', since)
+  const link = await linkFromLatestEmail('zeynep.arslan@ogrenci.agora.test', since)
   await page.goto(link)
   await expect(page.getByRole('heading', { name: 'Yeni parola belirleyin' })).toBeVisible()
   // Token adres çubuğundan silinir.
@@ -65,5 +66,5 @@ test('unutulan parola e-postadaki bağlantıyla sıfırlanır', async ({ page })
   await page.goto(link)
   await expect(page.getByRole('heading', { name: 'Bağlantı geçersiz' })).toBeVisible()
 
-  await login(page, '22290002', newPassword)
+  await login(page, '25290011', newPassword)
 })
