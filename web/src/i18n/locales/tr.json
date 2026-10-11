@@ -819,6 +819,7 @@
     "weekly": "Haftalık program",
     "view": "Görünüm",
     "views": {
+      "mine": "Benim programım",
       "department": "Bölüm",
       "classroom": "Derslik",
       "instructor": "Öğretim elemanı"
@@ -868,6 +869,12 @@
       "time": "Saat",
       "course": "Ders",
       "instructor": "Öğretim elemanı"
+    },
+    "mine": {
+      "empty": "{{term}} dönemi için sepetinizde henüz ders yok.",
+      "goRegistration": "Ders seçimine git",
+      "hint_one": "{{term}} dönemi · sepetinizdeki {{count}} ders",
+      "hint_other": "{{term}} dönemi · sepetinizdeki {{count}} ders"
     }
   },
   "teaching": {

@@ -819,6 +819,7 @@
     "weekly": "Weekly schedule",
     "view": "View",
     "views": {
+      "mine": "My schedule",
       "department": "Department",
       "classroom": "Classroom",
       "instructor": "Instructor"
@@ -868,6 +869,12 @@
       "time": "Time",
       "course": "Course",
       "instructor": "Instructor"
+    },
+    "mine": {
+      "empty": "You have no courses in your basket for {{term}} yet.",
+      "goRegistration": "Go to course registration",
+      "hint_one": "{{term}} · {{count}} course in your basket",
+      "hint_other": "{{term}} · {{count}} courses in your basket"
     }
   },
   "teaching": {
