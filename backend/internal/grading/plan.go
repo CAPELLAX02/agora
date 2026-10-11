@@ -1,4 +1,4 @@
-// Package grading, şubelerin değerlendirme planlarını (ve sonraki fazlarda notları)
+// Package grading, şubelerin değerlendirme planlarını, bileşen notlarını ve harf notlarını
 // yönetir.
 package grading
 
@@ -23,6 +23,8 @@ var (
 	ErrPlanLocked      = errors.New("grading: değerlendirme planı kilitli")
 	ErrPlanIncomplete  = errors.New("grading: değerlendirme planı tamamlanmamış")
 	ErrSectionInactive = errors.New("grading: şube iptal edilmiş")
+	// ErrComponentHasScores: plan yeniden yazılırken notu girilmiş bir bileşen çıkarılmak istendi.
+	ErrComponentHasScores = errors.New("grading: notu girilmiş bileşen plandan çıkarılamaz")
 )
 
 // Category, değerlendirme türünün plandaki yeridir.
@@ -75,9 +77,15 @@ type SectionContext struct {
 	SectionID      string
 	SectionCode    string
 	SectionStatus  string
+	CourseID       string
 	CourseCode     string
+	CourseNameTR   string
+	CourseNameEN   string
+	GradingMode    string // LETTER ya da PASS_FAIL (BŞR/BŞZ)
 	DepartmentID   string
 	FacultyID      string
+	TermID         string
+	TermCode       string
 	TermStartsOn   time.Time
 	TermEndsOn     time.Time
 	Version        int
@@ -121,7 +129,8 @@ func (r *Repository) AssessmentTypes(ctx context.Context) ([]AssessmentType, err
 }
 
 const contextSelect = `
-	SELECT s.id, s.section_code, s.status, c.code, o.department_id, d.faculty_id, t.starts_on, t.ends_on,
+	SELECT s.id, s.section_code, s.status, c.id, c.code, c.name_tr, c.name_en, c.grading_mode,
+	       o.department_id, d.faculty_id, t.id, t.code, t.starts_on, t.ends_on,
 	       s.assessment_plan_version, s.assessment_plan_locked_at,
 	       coalesce((SELECT pe.first_name || ' ' || pe.last_name FROM iam.users u JOIN people.persons pe ON pe.id = u.person_id
 	                 WHERE u.id = s.assessment_plan_locked_by), ''),
@@ -142,8 +151,10 @@ func (r *Repository) sectionContext(ctx context.Context, q db.Querier, sectionID
 		query += ` FOR UPDATE OF s`
 	}
 	var sc SectionContext
-	err := q.QueryRow(ctx, query, sectionID, viewerID).Scan(&sc.SectionID, &sc.SectionCode, &sc.SectionStatus, &sc.CourseCode,
-		&sc.DepartmentID, &sc.FacultyID, &sc.TermStartsOn, &sc.TermEndsOn, &sc.Version, &sc.LockedAt, &sc.LockedByName, &sc.InstructorRole)
+	err := q.QueryRow(ctx, query, sectionID, viewerID).Scan(&sc.SectionID, &sc.SectionCode, &sc.SectionStatus,
+		&sc.CourseID, &sc.CourseCode, &sc.CourseNameTR, &sc.CourseNameEN, &sc.GradingMode,
+		&sc.DepartmentID, &sc.FacultyID, &sc.TermID, &sc.TermCode, &sc.TermStartsOn, &sc.TermEndsOn,
+		&sc.Version, &sc.LockedAt, &sc.LockedByName, &sc.InstructorRole)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return SectionContext{}, ErrNotFound
 	}
@@ -243,6 +254,17 @@ func (r *Repository) SetPlan(ctx context.Context, actorID, sectionID string, ver
 				sectionID, it.TypeCode, it.SequenceNo, nullable(it.NameTR), nullable(it.NameEN), it.Weight, it.ScheduledOn, i); err != nil {
 				return fmt.Errorf("grading: bileşen yazılamadı: %w", err)
 			}
+		}
+		var scored bool
+		if err := tx.QueryRow(ctx, `
+			SELECT EXISTS (
+				SELECT 1 FROM grading.assessment_components ac JOIN grading.assessment_scores sc ON sc.component_id = ac.id
+				WHERE ac.section_id = $1 AND NOT (ac.type_code || '#' || ac.sequence_no::text = ANY($2::text[])))`,
+			sectionID, keep).Scan(&scored); err != nil {
+			return fmt.Errorf("grading: bileşen notları okunamadı: %w", err)
+		}
+		if scored {
+			return ErrComponentHasScores
 		}
 		if _, err := tx.Exec(ctx, `
 			DELETE FROM grading.assessment_components

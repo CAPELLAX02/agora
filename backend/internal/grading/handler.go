@@ -377,6 +377,8 @@ func (h *Handler) failed(w http.ResponseWriter, r *http.Request, err error) bool
 		h.problem(w, r, http.StatusConflict, "ASSESSMENT_PLAN_INCOMPLETE", "Plan kilitlenmeden önce tamamlanmalı: tek final ve toplam ağırlık 100.")
 	case errors.Is(err, ErrSectionInactive):
 		h.problem(w, r, http.StatusConflict, "SECTION_CANCELLED", "Şube iptal edilmiş.")
+	case errors.Is(err, ErrComponentHasScores):
+		h.problem(w, r, http.StatusConflict, "COMPONENT_HAS_SCORES", "Notu girilmiş bir bileşen plandan çıkarılamaz.")
 	default:
 		h.serverError(w, r, err)
 	}
