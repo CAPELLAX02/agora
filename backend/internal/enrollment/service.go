@@ -34,6 +34,9 @@ type NewStudentProgram struct {
 	AdmittedOn    time.Time
 	Status        Status // PREP ya da ACTIVE
 	ClassLevel    int
+	// CurrentSemester, hazırlık hariç kaçıncı yarıyılda olduğudur; verilmezse 1 (yeni kayıt).
+	// Yatay geçişle ya da eski sistemden gelen öğrencide farklıdır.
+	CurrentSemester int
 }
 
 // CreateStudentProgram, öğrenciyi bir programa kaydeder. Öğrenci zaten bu programa
@@ -61,13 +64,15 @@ func (s *Service) CreateStudentProgram(ctx context.Context, actorID string, in N
 			return ErrProgramInactive
 		}
 
+		semester := max(in.CurrentSemester, 1)
 		err = tx.QueryRow(ctx, `
 			INSERT INTO enrollment.student_programs
-				(student_id, program_id, enrollment_kind, admission_type, admission_year, admitted_on, status, class_level)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+				(student_id, program_id, enrollment_kind, admission_type, admission_year, admitted_on, status,
+				 class_level, current_semester)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 			RETURNING id`,
 			in.StudentID, in.ProgramID, string(in.Kind), string(in.AdmissionType), in.AdmissionYear,
-			in.AdmittedOn, string(in.Status), in.ClassLevel,
+			in.AdmittedOn, string(in.Status), in.ClassLevel, semester,
 		).Scan(&id)
 		if db.IsConflict(err) {
 			return ErrConflict

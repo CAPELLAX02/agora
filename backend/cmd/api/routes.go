@@ -14,6 +14,7 @@ import (
 	"github.com/CAPELLAX02/agora/backend/internal/org"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authz"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/httpx"
+	"github.com/CAPELLAX02/agora/backend/internal/registration"
 )
 
 func (app *application) routes() http.Handler {
@@ -40,6 +41,7 @@ func (app *application) routes() http.Handler {
 	curriculum.NewHandler(curriculum.NewRepository(app.db), org.NewTargets(app.db), app.logger).Register(rt)
 	offering.NewHandler(offering.NewRepository(app.db), org.NewTargets(app.db), app.logger).Register(rt)
 	grading.NewHandler(grading.NewRepository(app.db), app.logger).Register(rt)
+	registration.NewHandler(app.db, app.logger, time.Now).Register(rt)
 
 	return httpx.Chain(
 		httpx.WithProblemFallback(mux),

@@ -411,11 +411,11 @@ func conflict(in *Input, a, b Item) (Violation, bool) {
 	return Violation{}, false
 }
 
-// remainingCourses, mezuniyet için kalan ders sayısıdır: geçilmemiş zorunlu dersler ve
+// RemainingCourses, mezuniyet için kalan ders sayısıdır: geçilmemiş zorunlu dersler ve
 // seçmeli yuvalarında kalan ders sayıları. Bu dönem alınanlar kalan sayılmaz.
-func remainingCourses(in *Input) int {
+func RemainingCourses(p Progress) int {
 	n := 0
-	for _, lp := range in.Progress().Lines {
+	for _, lp := range p.Lines {
 		switch {
 		case lp.Line.IsSlot():
 			n += lp.Remaining
@@ -434,7 +434,7 @@ func maxDuration(in *Input, count int, cand *Item) (Violation, bool) {
 		return Violation{}, false
 	}
 	limit := in.Params.MaxCoursesAfterMaxDuration
-	remaining := remainingCourses(in)
+	remaining := RemainingCourses(in.Progress())
 	switch {
 	case remaining > limit:
 		return Violation{

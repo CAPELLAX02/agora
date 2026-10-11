@@ -18,13 +18,12 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strings"
 	"syscall"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/CAPELLAX02/agora/backend/internal/enrollment"
 	"github.com/CAPELLAX02/agora/backend/internal/iam"
 	"github.com/CAPELLAX02/agora/backend/internal/iam/password"
 	"github.com/CAPELLAX02/agora/backend/internal/people"
@@ -73,6 +72,15 @@ var users = []seedUser{
 		email: "can.polat@ogrenci.agora.test", student: true, mustChangePassword: true,
 		roles: []role{{code: "STUDENT", scope: iam.ScopeNone}},
 	},
+	// Ders seçme demo grubu (bkz. demo.go): P10001'in danışmanlığında farklı durumlarda öğrenciler.
+	student("26290004", "Mert", "Şimşek"),
+	student("25290011", "Zeynep", "Arslan"),
+	student("24290012", "Emre", "Yılmaz"),
+	student("23290013", "Buse", "Demirtaş"),
+	student("24290014", "Onur", "Kılıç"),
+	student("23290015", "Derya", "Uçar"),
+	student("25290016", "Kaan", "Tekin"),
+	student("26290017", "İrem", "Çakır"),
 	{
 		username: "P10001", firstName: "Ayşe", lastName: "Demir",
 		email: "ayse.demir@agora.test", staffType: people.StaffAcademic, title: "PROF", deptCode: "BIL",
@@ -112,6 +120,21 @@ var users = []seedUser{
 		email: "admin@agora.test", staffType: people.StaffAdministrative,
 		roles: []role{{code: "SYSTEM_ADMIN", scope: iam.ScopeUniversity}},
 	},
+}
+
+// student, bir demo öğrencisidir. E-posta adresi ad ve soyaddan türetilir.
+func student(no, first, last string) seedUser {
+	return seedUser{
+		username: no, firstName: first, lastName: last,
+		email: asciiLower(first) + "." + asciiLower(last) + "@ogrenci.agora.test", student: true,
+		roles: []role{{code: "STUDENT", scope: iam.ScopeNone}},
+	}
+}
+
+// asciiLower, Türkçe harfleri e-posta adresinde kullanılabilir ASCII karşılıklarına çevirir.
+func asciiLower(s string) string {
+	return strings.NewReplacer("ç", "c", "ğ", "g", "ı", "i", "ö", "o", "ş", "s", "ü", "u",
+		"Ç", "c", "Ğ", "g", "İ", "i", "Ö", "o", "Ş", "s", "Ü", "u").Replace(strings.ToLower(s))
 }
 
 // instructor, bölümünde ders veren bir akademik personeldir.
@@ -214,47 +237,11 @@ func run() error {
 	if err := linkCurricula(ctx, pool); err != nil {
 		return err
 	}
+	if err := seedHistory(ctx, pool, *seed); err != nil {
+		return fmt.Errorf("ders geçmişi: %w", err)
+	}
 
 	fmt.Printf("\nTüm seed kullanıcılarının parolası: %s\n", plain)
-	return nil
-}
-
-// enrollDemoStudents, demo öğrencilerini Bilgisayar Mühendisliği programına kaydeder
-// ve P10001'i (bölüm danışmanı) danışmanları olarak atar. Kayıtlıysa atlar.
-func enrollDemoStudents(ctx context.Context, pool *pgxpool.Pool) error {
-	svc := enrollment.NewService(pool)
-
-	var programID, advisorStaffID string
-	if err := pool.QueryRow(ctx, `SELECT id FROM org.programs WHERE code = 'BIL-EN-NO'`).Scan(&programID); err != nil {
-		return fmt.Errorf("BIL-EN-NO programı bulunamadı (önce SQL seed'leri yükleyin): %w", err)
-	}
-	if err := pool.QueryRow(ctx, `SELECT id FROM people.staff WHERE staff_no = 'P10001'`).Scan(&advisorStaffID); err != nil {
-		return fmt.Errorf("P10001 bulunamadı: %w", err)
-	}
-
-	for _, no := range []string{"22290001", "22290002"} {
-		var studentID string
-		if err := pool.QueryRow(ctx, `SELECT id FROM people.students WHERE student_no = $1`, no).Scan(&studentID); err != nil {
-			return fmt.Errorf("%s bulunamadı: %w", no, err)
-		}
-		spID, err := svc.CreateStudentProgram(ctx, "", enrollment.NewStudentProgram{
-			StudentID: studentID, ProgramID: programID, Kind: enrollment.KindMajor,
-			AdmissionType: enrollment.AdmissionOSYS, AdmissionYear: 2022,
-			AdmittedOn: time.Date(2022, time.September, 19, 0, 0, 0, 0, time.UTC),
-			Status:     enrollment.StatusActive, ClassLevel: 4,
-		})
-		if errors.Is(err, enrollment.ErrConflict) {
-			fmt.Printf("ATLANDI    %-9s zaten BIL-EN-NO programında\n", no)
-			continue
-		}
-		if err != nil {
-			return fmt.Errorf("%s programa kaydedilemedi: %w", no, err)
-		}
-		if err := svc.AssignAdvisor(ctx, "", spID, advisorStaffID, "Demo danışmanı"); err != nil {
-			return fmt.Errorf("%s danışman atanamadı: %w", no, err)
-		}
-		fmt.Printf("KAYDEDİLDİ %-9s BIL-EN-NO, danışman P10001\n", no)
-	}
 	return nil
 }
 

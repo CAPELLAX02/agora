@@ -13,6 +13,7 @@ export const addTagTypes = [
   'De\u011Ferlendirme',
   'Organizasyon',
   '\u00D6\u011Frenciler',
+  'Ders se\u00E7me',
 ] as const
 const injectedRtkApi = api
   .enhanceEndpoints({
@@ -1004,6 +1005,18 @@ const injectedRtkApi = api
           body: queryArg.body,
         }),
         invalidatesTags: ['\u00D6\u011Frenciler'],
+      }),
+      listCourseHistory: build.query<ListCourseHistoryApiResponse, ListCourseHistoryApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/student-programs/${queryArg.id}/history`,
+        }),
+        providesTags: ['\u00D6\u011Frenciler'],
+      }),
+      getStudentProgress: build.query<GetStudentProgressApiResponse, GetStudentProgressApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/student-programs/${queryArg.id}/progress`,
+        }),
+        providesTags: ['Ders se\u00E7me'],
       }),
       listEligibleAdvisors: build.query<ListEligibleAdvisorsApiResponse, ListEligibleAdvisorsApiArg>({
         query: (queryArg) => ({
@@ -2000,6 +2013,18 @@ export type ReleaseHoldApiArg = {
     reason: string
   }
 }
+export type ListCourseHistoryApiResponse = /** status 200 Ders kayıtları */ {
+  items: CourseAttempt[]
+}
+export type ListCourseHistoryApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type GetStudentProgressApiResponse = /** status 200 Ders durumu */ StudentProgress
+export type GetStudentProgressApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
 export type ListEligibleAdvisorsApiResponse = /** status 200 Danışmanlar (soyada göre sıralı) */ {
   items: EligibleAdvisor[]
 }
@@ -2942,6 +2967,87 @@ export type Hold = {
   release_reason: string | null
   active: boolean
 }
+export type CourseAttempt = {
+  id: string
+  term: {
+    id: string
+    code: string
+  }
+  course: {
+    id: string
+    code: string
+    name_tr: string
+    name_en: string
+  }
+  section_code: string
+  /** Dersin (ya da eşdeğerinin) kaçıncı alınışı */
+  attempt_no: number
+  /** ENROLLED: dönem sürüyor, COMPLETED: notu verildi */
+  status: 'ENROLLED' | 'DROPPED' | 'COMPLETED'
+  letter_grade: string | null
+  /** Katsayısız harflerde (BŞR, MUAF) null */
+  coefficient: number | null
+  is_passing: boolean
+  counts_in_gpa: boolean
+  /** Devamsızlıktan kaldı */
+  attendance_fail: boolean
+  ects: number
+  credit: number
+  source: 'REGISTRATION' | 'ADD_DROP' | 'IMPORT'
+  /** Yerini sonraki bir deneme aldı (son not geçerli) */
+  superseded: boolean
+}
+export type ProgressStatus = 'PASSED' | 'FAILED' | 'IN_PROGRESS' | 'PARTIAL' | 'NOT_TAKEN'
+export type AttemptRef = {
+  course_id: string
+  course_code: string
+  course_name_tr: string
+  course_name_en: string
+  term_code: string
+  letter: string | null
+  ects: number
+}
+export type ProgressLine = {
+  item_id: string
+  semester_no: number
+  item_type: 'COURSE' | 'ELECTIVE_SLOT'
+  /** Dersin ya da havuzun kodu */
+  code: string
+  name_tr: string
+  name_en: string
+  ects: number
+  is_compulsory: boolean
+  slot_course_count: number
+  status: ProgressStatus
+  /** Ders satırının son denemesi (dersin kendisi ya da eşdeğeri) */
+  last_attempt: null | AttemptRef
+  /** Seçmeli yuvasını dolduran geçilmiş dersler */
+  filled: AttemptRef[]
+  /** Seçmeli yuvasına bu dönem alınan dersler */
+  in_progress: AttemptRef[]
+  /** Seçmeli yuvasında kalan ders sayısı */
+  remaining: number
+}
+export type StudentProgress = {
+  student_program_id: string
+  curriculum: null | {
+    id: string
+    name_tr: string
+    name_en: string
+  }
+  current_semester: number
+  gpa: number | null
+  summary: {
+    required_ects: number
+    completed_ects: number
+    in_progress_ects: number
+    /** Mezuniyet için kalan ders sayısı */
+    remaining_courses: number
+  }
+  lines: ProgressLine[]
+  /** Müfredatla eşleşmeyen derslerin son denemeleri */
+  extra: AttemptRef[]
+}
 export type EligibleAdvisor = {
   staff_id: string
   staff_no: string
@@ -3165,6 +3271,10 @@ export const {
   useListHoldsQuery,
   useLazyListHoldsQuery,
   useReleaseHoldMutation,
+  useListCourseHistoryQuery,
+  useLazyListCourseHistoryQuery,
+  useGetStudentProgressQuery,
+  useLazyGetStudentProgressQuery,
   useListEligibleAdvisorsQuery,
   useLazyListEligibleAdvisorsQuery,
   useListMyProgramsQuery,

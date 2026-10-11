@@ -21,6 +21,7 @@ func (h *Handler) registerHolds(rt *authz.Router) {
 	rt.HandleFunc("POST /api/v1/student-programs/{id}/holds", authz.Permission("hold:manage"), h.placeHold)
 	rt.HandleFunc("GET /api/v1/holds", authz.Permission("hold:manage"), h.listHolds)
 	rt.HandleFunc("POST /api/v1/holds/{id}/release", authz.Permission("hold:manage"), h.releaseHold)
+	rt.HandleFunc("GET /api/v1/student-programs/{id}/history", authz.Authenticated, h.courseHistory)
 }
 
 type holdProgramResponse struct {
@@ -400,4 +401,66 @@ func (h *Handler) releaseHold(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.writeJSON(w, r, http.StatusOK, toHoldResponse(x))
+}
+
+// --- Ders geçmişi ----------------------------------------------------------------------
+
+type attemptTermResponse struct {
+	ID   string `json:"id"`
+	Code string `json:"code"`
+}
+
+type attemptCourseResponse struct {
+	ID     string `json:"id"`
+	Code   string `json:"code"`
+	NameTR string `json:"name_tr"`
+	NameEN string `json:"name_en"`
+}
+
+type courseAttemptResponse struct {
+	ID             string                `json:"id"`
+	Term           attemptTermResponse   `json:"term"`
+	Course         attemptCourseResponse `json:"course"`
+	SectionCode    string                `json:"section_code"`
+	AttemptNo      int                   `json:"attempt_no"`
+	Status         string                `json:"status"`
+	LetterGrade    *string               `json:"letter_grade"`
+	Coefficient    *float64              `json:"coefficient"`
+	IsPassing      bool                  `json:"is_passing"`
+	CountsInGPA    bool                  `json:"counts_in_gpa"`
+	AttendanceFail bool                  `json:"attendance_fail"`
+	ECTS           float64               `json:"ects"`
+	Credit         float64               `json:"credit"`
+	Source         string                `json:"source"`
+	Superseded     bool                  `json:"superseded"`
+}
+
+func (h *Handler) courseHistory(w http.ResponseWriter, r *http.Request) {
+	sp, ok := h.studentProgram(w, r)
+	if !ok {
+		return
+	}
+	if _, ok := h.readableStudent(w, r, sp.StudentID); !ok {
+		return
+	}
+	list, err := h.repo.CourseHistory(r.Context(), sp.ID)
+	if err != nil {
+		h.serverError(w, r, err)
+		return
+	}
+	res := httpx.ListResponse[courseAttemptResponse]{Items: make([]courseAttemptResponse, 0, len(list))}
+	for _, a := range list {
+		res.Items = append(res.Items, courseAttemptResponse{
+			ID:   a.ID,
+			Term: attemptTermResponse{ID: a.TermID, Code: a.TermCode},
+			Course: attemptCourseResponse{
+				ID: a.CourseID, Code: a.CourseCode, NameTR: a.CourseNameTR, NameEN: a.CourseNameEN,
+			},
+			SectionCode: a.SectionCode, AttemptNo: a.AttemptNo, Status: string(a.Status),
+			LetterGrade: optional(a.Letter), Coefficient: a.Coefficient, IsPassing: a.Passing,
+			CountsInGPA: a.CountsInGPA, AttendanceFail: a.AbsenceFail, ECTS: a.ECTS, Credit: a.Credit,
+			Source: a.Source, Superseded: a.Superseded,
+		})
+	}
+	h.writeJSON(w, r, http.StatusOK, res)
 }

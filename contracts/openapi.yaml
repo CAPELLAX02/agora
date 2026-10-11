@@ -67,6 +67,8 @@ tags:
     description: Dönemde açılan dersler, şubeler, kontenjanlar, öğretim elemanları ve haftalık program
   - name: Değerlendirme
     description: Şubelerin değerlendirme planları (ara sınav, ödev, final ... ağırlıkları)
+  - name: Ders seçme
+    description: Ders durumu, alınabilir dersler, sepet, kural denetimi, danışman onayı ve ekle-bırak
 
 paths:
   /healthz:
@@ -3937,6 +3939,59 @@ paths:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Problem" }
 
+  /api/v1/student-programs/{id}/history:
+    get:
+      tags: [Öğrenciler]
+      summary: Ders geçmişi
+      description: |
+        Program kaydının bırakılmamış bütün ders kayıtları, dönem sırasıyla: eski sistemden
+        aktarılanlar ve ders seçmeyle gelenler. Tekrar alınan derste son not geçerlidir;
+        yerini sonraki bir denemenin aldığı kayıt `superseded` ile işaretlidir. Öğrenciyi
+        görebilen herkes görebilir (bkz. öğrenci okuma kuralı).
+      operationId: listCourseHistory
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Ders kayıtları
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/CourseAttempt" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/student-programs/{id}/progress:
+    get:
+      tags: [Ders seçme]
+      summary: Müfredata göre ders durumu
+      description: |
+        Öğrencinin izlediği müfredat sürümünün her satırı için durum: geçti, kaldı (son
+        denemede), bu dönem alınıyor, kısmen dolu (seçmeli yuvası) ya da alınmadı. Eski
+        koddan alınan ders yeni kodun satırını (eşdeğerlikle) karşılar; seçmeli yuvaları
+        havuzdaki geçilmiş derslerle yarıyıl sırasıyla dolar. Hiçbir satırla eşleşmeyen
+        dersler `extra`'dadır. Öğrenciyi görebilen herkes görebilir.
+      operationId: getStudentProgress
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Ders durumu
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StudentProgress" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/v1/departments/{id}/advisors:
     get:
       tags: [Öğrenciler]
@@ -5647,3 +5702,115 @@ components:
         decision_ref: { type: [string, "null"] }
         changed_by: { type: [string, "null"], description: Değişikliği yapanın adı }
         changed_at: { type: string, format: date-time }
+
+    CourseAttempt:
+      type: object
+      required: [id, term, course, section_code, attempt_no, status, letter_grade, coefficient, is_passing, counts_in_gpa, attendance_fail, ects, credit, source, superseded]
+      properties:
+        id: { type: string, format: uuid }
+        term:
+          type: object
+          required: [id, code]
+          properties:
+            id: { type: string, format: uuid }
+            code: { type: string, examples: ["2025-FALL"] }
+        course:
+          type: object
+          required: [id, code, name_tr, name_en]
+          properties:
+            id: { type: string, format: uuid }
+            code: { type: string }
+            name_tr: { type: string }
+            name_en: { type: string }
+        section_code: { type: string }
+        attempt_no: { type: integer, description: Dersin (ya da eşdeğerinin) kaçıncı alınışı }
+        status:
+          type: string
+          enum: [ENROLLED, DROPPED, COMPLETED]
+          description: "ENROLLED: dönem sürüyor, COMPLETED: notu verildi"
+        letter_grade: { type: [string, "null"] }
+        coefficient: { type: [number, "null"], description: "Katsayısız harflerde (BŞR, MUAF) null" }
+        is_passing: { type: boolean }
+        counts_in_gpa: { type: boolean }
+        attendance_fail: { type: boolean, description: Devamsızlıktan kaldı }
+        ects: { type: number }
+        credit: { type: number }
+        source: { type: string, enum: [REGISTRATION, ADD_DROP, IMPORT] }
+        superseded: { type: boolean, description: Yerini sonraki bir deneme aldı (son not geçerli) }
+
+    ProgressStatus:
+      type: string
+      enum: [PASSED, FAILED, IN_PROGRESS, PARTIAL, NOT_TAKEN]
+
+    AttemptRef:
+      type: object
+      required: [course_id, course_code, course_name_tr, course_name_en, term_code, letter, ects]
+      properties:
+        course_id: { type: string, format: uuid }
+        course_code: { type: string }
+        course_name_tr: { type: string }
+        course_name_en: { type: string }
+        term_code: { type: string }
+        letter: { type: [string, "null"] }
+        ects: { type: number }
+
+    ProgressLine:
+      type: object
+      required: [item_id, semester_no, item_type, code, name_tr, name_en, ects, is_compulsory, slot_course_count, status, last_attempt, filled, in_progress, remaining]
+      properties:
+        item_id: { type: string, format: uuid }
+        semester_no: { type: integer }
+        item_type: { type: string, enum: [COURSE, ELECTIVE_SLOT] }
+        code: { type: string, description: Dersin ya da havuzun kodu }
+        name_tr: { type: string }
+        name_en: { type: string }
+        ects: { type: number }
+        is_compulsory: { type: boolean }
+        slot_course_count: { type: integer }
+        status: { $ref: "#/components/schemas/ProgressStatus" }
+        last_attempt:
+          description: Ders satırının son denemesi (dersin kendisi ya da eşdeğeri)
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/AttemptRef"
+        filled:
+          type: array
+          description: Seçmeli yuvasını dolduran geçilmiş dersler
+          items: { $ref: "#/components/schemas/AttemptRef" }
+        in_progress:
+          type: array
+          description: Seçmeli yuvasına bu dönem alınan dersler
+          items: { $ref: "#/components/schemas/AttemptRef" }
+        remaining: { type: integer, description: Seçmeli yuvasında kalan ders sayısı }
+
+    StudentProgress:
+      type: object
+      required: [student_program_id, curriculum, current_semester, gpa, summary, lines, extra]
+      properties:
+        student_program_id: { type: string, format: uuid }
+        curriculum:
+          oneOf:
+            - type: "null"
+            - type: object
+              required: [id, name_tr, name_en]
+              properties:
+                id: { type: string, format: uuid }
+                name_tr: { type: string }
+                name_en: { type: string }
+        current_semester: { type: integer }
+        gpa: { type: [number, "null"] }
+        summary:
+          type: object
+          required: [required_ects, completed_ects, in_progress_ects, remaining_courses]
+          properties:
+            required_ects: { type: number }
+            completed_ects: { type: number }
+            in_progress_ects: { type: number }
+            remaining_courses: { type: integer, description: Mezuniyet için kalan ders sayısı }
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/ProgressLine" }
+        extra:
+          type: array
+          description: Müfredatla eşleşmeyen derslerin son denemeleri
+          items: { $ref: "#/components/schemas/AttemptRef" }
