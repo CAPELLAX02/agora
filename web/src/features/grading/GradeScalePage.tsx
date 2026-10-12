@@ -189,6 +189,16 @@ function Regulations() {
 /** Value, parametre değerini okunur gösterir: sayı olduğu gibi, nesne anahtar-değer, dizi satır satır. */
 function Value({ parameter }: { parameter: RegulationParameter }) {
   const value = parameter.value as unknown
+  // Harf listesi (ör. bütünleme hakkı veren harfler): rozetler yan yana.
+  if (Array.isArray(value) && value.every((v) => typeof v === 'string')) {
+    return (
+      <span className="flex flex-wrap gap-1">
+        {value.map((v) => (
+          <LetterGrade key={v} letter={v} />
+        ))}
+      </span>
+    )
+  }
   if (Array.isArray(value)) {
     return (
       <ul className="space-y-0.5 font-mono text-xs">
