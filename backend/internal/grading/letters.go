@@ -23,6 +23,7 @@ var (
 	ErrPublishWindowClosed  = errors.New("grading: ilan penceresi kapalı")
 	ErrOverrideWindowClosed = errors.New("grading: elle harf notu atama penceresi kapalı")
 	ErrLetterNotAllowed     = errors.New("grading: bu harf elle verilemez")
+	ErrMakeupWindowClosed   = errors.New("grading: bütünleme not girişi penceresi kapalı")
 )
 
 // IncompleteError: notu eksik (ve elle harf notu verilmemiş) öğrenciler varken ilan edilemez.
@@ -60,6 +61,18 @@ type LetterRow struct {
 	PublishedLetter   string
 	PublishedWeighted *Points
 	PublishedReason   string
+	// MakeupEligible, harf notları ilan edildikten sonra bütünleme hakkını söyler.
+	MakeupEligible bool
+	// PreviousLetter, harf bütünlemeyle değiştiyse bütünlemeden önceki (ilk ilan edilen) harftir.
+	PreviousLetter string
+}
+
+// MakeupLetter, bütünleme ilanından önce girilen bütünleme notuyla olacak harftir.
+func (r LetterRow) MakeupLetter() string {
+	if r.MakeupEligible && r.Result.UsedMakeup && r.Result.Complete {
+		return r.Result.Letter
+	}
+	return ""
 }
 
 // Letter, geçerli harftir: ilan edilmişse ilan edilen, yoksa elle verilen, yoksa hesaplanan.
@@ -107,6 +120,7 @@ type LetterGrades struct {
 	PublishedBy    string
 	PublishWindow  EntryWindow
 	OverrideWindow EntryWindow
+	MakeupWindow   EntryWindow
 	Params         letter.Params
 	Scales         map[string]letter.Scale
 	DefaultScaleID string
@@ -155,6 +169,9 @@ func (s *Service) LetterGrades(ctx context.Context, sectionID, viewerID string) 
 	if g.OverrideWindow, err = s.windowOf(ctx, sc, WindowManualLetter); err != nil {
 		return LetterGrades{}, err
 	}
+	if g.MakeupWindow, err = s.window(ctx, sc, CategoryMakeup); err != nil {
+		return LetterGrades{}, err
+	}
 	return g, nil
 }
 
@@ -181,13 +198,22 @@ func (s *Service) letterGrades(ctx context.Context, q db.Querier, sc SectionCont
 	if err != nil {
 		return LetterGrades{}, err
 	}
+	var allowed []string
+	if g.PublishedAt != nil {
+		if allowed, err = loadMakeupLetters(ctx, q, s.now()); err != nil {
+			return LetterGrades{}, err
+		}
+	}
 
 	rows, err := q.Query(ctx, `
 		SELECT e.id, coalesce(e.grade_scale_id, $2), coalesce(e.letter_grade, ''),
 		       (e.weighted_score * 100)::int8, coalesce(e.letter_reason, ''),
 		       o.letter, o.reason, o.set_at,
 		       coalesce((SELECT pe.first_name || ' ' || pe.last_name FROM iam.users u JOIN people.persons pe ON pe.id = u.person_id
-		                 WHERE u.id = o.set_by), '')
+		                 WHERE u.id = o.set_by), ''),
+		       coalesce((SELECT h.letter FROM grading.grade_history h WHERE h.enrollment_id = e.id AND h.kind = 'PUBLISHED'
+		                   AND EXISTS (SELECT 1 FROM grading.grade_history m WHERE m.enrollment_id = e.id AND m.kind = 'MAKEUP')
+		                 ORDER BY h.id DESC LIMIT 1), '')
 		FROM enrollment.enrollments e
 		LEFT JOIN grading.letter_overrides o ON o.enrollment_id = e.id
 		WHERE e.section_id = $1 AND e.status <> 'DROPPED'`, sc.SectionID, g.DefaultScaleID)
@@ -195,9 +221,9 @@ func (s *Service) letterGrades(ctx context.Context, q db.Querier, sc SectionCont
 		return LetterGrades{}, fmt.Errorf("grading: harf notları okunamadı: %w", err)
 	}
 	type extra struct {
-		scaleID, published, reason string
-		weighted                   *int64
-		override                   *Override
+		scaleID, published, reason, previous string
+		weighted                             *int64
+		override                             *Override
 	}
 	extras := map[string]extra{}
 	for rows.Next() {
@@ -207,7 +233,7 @@ func (s *Service) letterGrades(ctx context.Context, q db.Querier, sc SectionCont
 			oL, oR, oBy *string
 			oAt         *time.Time
 		)
-		if err := rows.Scan(&id, &x.scaleID, &x.published, &x.weighted, &x.reason, &oL, &oR, &oAt, &oBy); err != nil {
+		if err := rows.Scan(&id, &x.scaleID, &x.published, &x.weighted, &x.reason, &oL, &oR, &oAt, &oBy, &x.previous); err != nil {
 			rows.Close()
 			return LetterGrades{}, fmt.Errorf("grading: harf notları okunamadı: %w", err)
 		}
@@ -227,7 +253,11 @@ func (s *Service) letterGrades(ctx context.Context, q db.Querier, sc SectionCont
 				return LetterGrades{}, err
 			}
 		}
-		row := LetterRow{GradebookStudent: st, ScaleID: x.scaleID, Override: x.override, PublishedLetter: x.published, PublishedReason: x.reason}
+		row := LetterRow{
+			GradebookStudent: st, ScaleID: x.scaleID, Override: x.override,
+			PublishedLetter: x.published, PublishedReason: x.reason, PreviousLetter: x.previous,
+			MakeupEligible: g.PublishedAt != nil && makeupEligible(x.published, st.Attendance, allowed),
+		}
 		if x.weighted != nil {
 			p := Points(*x.weighted)
 			row.PublishedWeighted = &p
@@ -353,6 +383,82 @@ type OverrideInput struct {
 	Reason       string
 }
 
+// lockSectionForMakeup, bütünleme notu yazımı için şubeyi paylaşımlı kilitler: harf notları
+// ilan edilmiş, bütünleme sonuçları ilan edilmemiş olmalı.
+func lockSectionForMakeup(ctx context.Context, tx pgx.Tx, sectionID string) error {
+	var published, makeup *time.Time
+	err := tx.QueryRow(ctx, `
+		SELECT grades_published_at, makeup_published_at FROM offering.sections WHERE id = $1 FOR SHARE`,
+		sectionID).Scan(&published, &makeup)
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+		return ErrNotFound
+	case err != nil:
+		return fmt.Errorf("grading: şube kilitlenemedi: %w", err)
+	case published == nil:
+		return ErrMakeupNotAvailable
+	case makeup != nil:
+		return ErrMakeupPublished
+	}
+	return nil
+}
+
+// makeupEligible: ilan edilen harf bütünleme hakkı veren harflerden ve öğrenci devamsız değil.
+func makeupEligible(letter string, att Attendance, allowed []string) bool {
+	return letter != "" && att != AttendanceFail && slices.Contains(allowed, letter)
+}
+
+// checkMakeupEligible, bütünleme notu girilecek öğrencilerin hakkı olduğunu doğrular.
+func checkMakeupEligible(ctx context.Context, tx pgx.Tx, items []ScoreInput, allowed []string) error {
+	ids := make([]string, 0, len(items))
+	for _, it := range items {
+		ids = append(ids, it.EnrollmentID)
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT id, coalesce(letter_grade, ''), attendance_status FROM enrollment.enrollments WHERE id = ANY($1)`, ids)
+	if err != nil {
+		return fmt.Errorf("grading: bütünleme hakları okunamadı: %w", err)
+	}
+	var (
+		id, letterGrade, att string
+		denied               []string
+	)
+	_, err = pgx.ForEachRow(rows, []any{&id, &letterGrade, &att}, func() error {
+		if !makeupEligible(letterGrade, Attendance(att), allowed) {
+			denied = append(denied, id)
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("grading: bütünleme hakları okunamadı: %w", err)
+	}
+	if len(denied) > 0 {
+		sort.Strings(denied)
+		return &NotEligibleError{IDs: denied}
+	}
+	return nil
+}
+
+// loadMakeupLetters, bütünleme hakkı veren harflerdir (makeup_eligible_letters).
+func loadMakeupLetters(ctx context.Context, q db.Querier, at time.Time) ([]string, error) {
+	var raw []byte
+	err := q.QueryRow(ctx, `
+		SELECT value FROM curriculum.regulation_parameters
+		WHERE key = 'makeup_eligible_letters' AND effective_from <= $1 AND (effective_to IS NULL OR effective_to > $1)`,
+		at).Scan(&raw)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return []string{"F2", "BŞZ"}, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("grading: bütünleme parametresi okunamadı: %w", err)
+	}
+	var letters []string
+	if err := json.Unmarshal(raw, &letters); err != nil {
+		return nil, fmt.Errorf("grading: makeup_eligible_letters: %w", err)
+	}
+	return letters, nil
+}
+
 // lockSection, şubeyi kilitler ve harf notlarının ilan edilmediğini doğrular. Not ve devam
 // yazmaları paylaşımlı (FOR SHARE), ilan özel (FOR UPDATE) kilit alır: ilanla eşzamanlı bir
 // not yazımı ya ilandan önce biter ya da ilanı görüp reddedilir.
@@ -474,6 +580,7 @@ func (s *Service) SetOverrides(ctx context.Context, actorID string, sc SectionCo
 // PublishedEvent, grades.published olayının verisidir: dönem sonuçları ve sınıf
 // istatistikleri bu olayla yeniden hesaplanır.
 type PublishedEvent struct {
+	Phase           string   `json:"phase"` // FINAL ya da MAKEUP
 	SectionID       string   `json:"section_id"`
 	TermID          string   `json:"term_id"`
 	CourseID        string   `json:"course_id"`
@@ -513,7 +620,7 @@ func (s *Service) PublishGrades(ctx context.Context, actorID string, sc SectionC
 			return &IncompleteError{Students: incomplete}
 		}
 
-		ev := PublishedEvent{SectionID: sc.SectionID, TermID: sc.TermID, CourseID: sc.CourseID}
+		ev := PublishedEvent{Phase: "FINAL", SectionID: sc.SectionID, TermID: sc.TermID, CourseID: sc.CourseID}
 		distribution := map[string]int{}
 		for _, r := range g.Rows {
 			var weighted any
@@ -529,6 +636,9 @@ func (s *Service) PublishGrades(ctx context.Context, actorID string, sc SectionC
 				RETURNING student_program_id`,
 				r.EnrollmentID, r.Letter(), r.ScaleID, weighted, r.Reason()).Scan(&spID); err != nil {
 				return fmt.Errorf("grading: %s notu yazılamadı: %w", r.StudentNo, err)
+			}
+			if err := recordHistory(ctx, tx, r.EnrollmentID, "PUBLISHED", r.Letter(), weighted, r.Reason(), actorID); err != nil {
+				return err
 			}
 			// Son not geçerli: aynı dersin ya da eşdeğerinin önceki dönemlerdeki denemesi kapanır.
 			if _, err := tx.Exec(ctx, `
@@ -570,4 +680,102 @@ func (s *Service) PublishGrades(ctx context.Context, actorID string, sc SectionC
 		return 0, err
 	}
 	return count, nil
+}
+
+// recordHistory, kesin kayda verilen harfi not geçmişine yazar.
+func recordHistory(ctx context.Context, tx pgx.Tx, enrollmentID, kind, letterGrade string, weighted any, reason, actorID string) error {
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO grading.grade_history (enrollment_id, kind, letter, weighted_score, letter_reason, recorded_by)
+		VALUES ($1, $2, $3, $4::numeric, $5, $6)`,
+		enrollmentID, kind, letterGrade, weighted, nullable(reason), nullable(actorID)); err != nil {
+		return fmt.Errorf("grading: not geçmişi yazılamadı: %w", err)
+	}
+	return nil
+}
+
+// PublishMakeup, bütünleme sonuçlarını ilan eder: bütünleme notu (puan olarak) girilen her hak
+// sahibinin harfi bütünleme notuyla yeniden hesaplanır; bütünlemeye girmeyenin ya da notu
+// girilmeyenin harfi değişmez. Bir kez yapılır. Harfi değişen öğrenci sayısını döndürür.
+func (s *Service) PublishMakeup(ctx context.Context, actorID string, sc SectionContext) (int, error) {
+	switch {
+	case sc.GradesPublishedAt == nil:
+		return 0, ErrMakeupNotAvailable
+	case sc.MakeupPublishedAt != nil:
+		return 0, ErrMakeupPublished
+	}
+	w, err := s.window(ctx, sc, CategoryMakeup)
+	if err != nil {
+		return 0, err
+	}
+	if !w.Open {
+		return 0, ErrMakeupWindowClosed
+	}
+	changed := 0
+	err = db.InTx(ctx, s.pool, func(tx pgx.Tx) error {
+		var published, makeup *time.Time
+		if err := tx.QueryRow(ctx, `
+			SELECT grades_published_at, makeup_published_at FROM offering.sections WHERE id = $1 FOR UPDATE`,
+			sc.SectionID).Scan(&published, &makeup); err != nil {
+			return fmt.Errorf("grading: şube kilitlenemedi: %w", err)
+		}
+		if published == nil {
+			return ErrMakeupNotAvailable
+		}
+		if makeup != nil {
+			return ErrMakeupPublished
+		}
+		g, err := s.letterGrades(ctx, tx, sc)
+		if err != nil {
+			return err
+		}
+		ev := PublishedEvent{Phase: "MAKEUP", SectionID: sc.SectionID, TermID: sc.TermID, CourseID: sc.CourseID}
+		var changes []map[string]any
+		for _, r := range g.Rows {
+			next := r.MakeupLetter()
+			if next == "" {
+				continue
+			}
+			var weighted any
+			if r.Result.Weighted != nil {
+				weighted = fmt.Sprintf("%d.%02d", *r.Result.Weighted/100, *r.Result.Weighted%100)
+			}
+			var spID string
+			if err := tx.QueryRow(ctx, `
+				UPDATE enrollment.enrollments
+				SET letter_grade = $2, weighted_score = $3::numeric, letter_reason = $4, grade_published_at = now(),
+				    version = version + 1, updated_at = now()
+				WHERE id = $1 AND status = 'COMPLETED'
+				RETURNING student_program_id`,
+				r.EnrollmentID, next, weighted, string(r.Result.Reason)).Scan(&spID); err != nil {
+				return fmt.Errorf("grading: %s bütünleme notu yazılamadı: %w", r.StudentNo, err)
+			}
+			if err := recordHistory(ctx, tx, r.EnrollmentID, "MAKEUP", next, weighted, string(r.Result.Reason), actorID); err != nil {
+				return err
+			}
+			changes = append(changes, map[string]any{"enrollment_id": r.EnrollmentID, "from": r.PublishedLetter, "to": next})
+			ev.Enrollments = append(ev.Enrollments, r.EnrollmentID)
+			ev.StudentPrograms = append(ev.StudentPrograms, spID)
+		}
+		if _, err := tx.Exec(ctx, `
+			UPDATE offering.sections SET makeup_published_at = now(), makeup_published_by = $2 WHERE id = $1`,
+			sc.SectionID, nullable(actorID)); err != nil {
+			return fmt.Errorf("grading: bütünleme ilanı kaydedilemedi: %w", err)
+		}
+		changed = len(changes)
+		if err := audit.Record(ctx, tx, audit.Entry{
+			ActorUserID: actorID, Action: "grades.makeup_publish", EntityType: "section", EntityID: sc.SectionID,
+			After: map[string]any{"changes": changes},
+		}); err != nil {
+			return err
+		}
+		if changed == 0 {
+			return nil
+		}
+		sort.Strings(ev.StudentPrograms)
+		return outbox.Publish(ctx, tx, "grades.published", "section", sc.SectionID, ev)
+	})
+	if err != nil {
+		return 0, err
+	}
+	return changed, nil
 }

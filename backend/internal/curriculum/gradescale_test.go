@@ -71,7 +71,7 @@ func TestRegulationParameters(t *testing.T) {
 		return d
 	}
 	params, err := repo.RegulationParameters(ctx, day("2026-10-01"))
-	if err != nil || len(params) != 7 {
+	if err != nil || len(params) != 8 {
 		t.Fatalf("parametreler = %d, %v", len(params), err)
 	}
 	if err := repo.SetRegulationParameter(ctx, "", "final_min_score", json.RawMessage(`45`), day("2027-02-01"), "Senato kararı"); err != nil {
@@ -152,7 +152,7 @@ func TestHTTPGradeScales(t *testing.T) {
 
 	// Yönetmelik parametreleri.
 	res = s.do("GET", "/api/v1/regulation-parameters?at=2026-10-01", student, nil, nil)
-	if res.status != 200 || len(res.items()) != 7 {
+	if res.status != 200 || len(res.items()) != 8 {
 		t.Fatalf("parametreler: %d %s", res.status, res.raw)
 	}
 	if res := s.do("POST", "/api/v1/regulation-parameters/final_min_score", deptMg, nil, map[string]any{"value": 45, "effective_from": "2027-02-01"}); res.status != 403 {

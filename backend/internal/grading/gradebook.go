@@ -20,7 +20,17 @@ var (
 	ErrEntryWindowClosed  = errors.New("grading: not girişi penceresi kapalı")
 	ErrMakeupNotAvailable = errors.New("grading: bütünleme notları harf notları ilan edildikten sonra girilir")
 	ErrNoScores           = errors.New("grading: yayımlanacak not yok")
+	ErrMakeupPublished    = errors.New("grading: bütünleme sonuçları ilan edildi")
 )
+
+// NotEligibleError: bütünleme notu, bütünleme hakkı olmayan öğrencilere girilmek istendi.
+type NotEligibleError struct {
+	IDs []string
+}
+
+func (e *NotEligibleError) Error() string {
+	return fmt.Sprintf("grading: bütünleme hakkı olmayan %d öğrenci", len(e.IDs))
+}
 
 // UnknownEnrollmentsError: istekte şubenin kesin kayıtlı öğrencisi olmayan kayıtlar var.
 type UnknownEnrollmentsError struct {
@@ -115,6 +125,9 @@ type GradebookStudent struct {
 	AttemptNo     int
 	Attendance    Attendance
 	Scores        map[string]Score // bileşen kimliğine göre
+	Letter        string           // ilan edilmiş harf notu
+	// MakeupEligible, harf notları ilan edildikten sonra bütünleme hakkını söyler.
+	MakeupEligible bool
 }
 
 // Gradebook, şubenin not tablosudur.
@@ -193,6 +206,15 @@ func (s *Service) Gradebook(ctx context.Context, sectionID, viewerID string) (Gr
 	if g.Students, err = s.gradebookStudents(ctx, sectionID); err != nil {
 		return Gradebook{}, err
 	}
+	if sc.GradesPublishedAt != nil {
+		allowed, err := loadMakeupLetters(ctx, s.pool, s.now())
+		if err != nil {
+			return Gradebook{}, err
+		}
+		for i, st := range g.Students {
+			g.Students[i].MakeupEligible = makeupEligible(st.Letter, st.Attendance, allowed)
+		}
+	}
 	return g, nil
 }
 
@@ -267,7 +289,7 @@ func (s *Service) gradebookStudents(ctx context.Context, sectionID string) ([]Gr
 func (s *Service) gradebookStudentsQ(ctx context.Context, q db.Querier, sectionID string) ([]GradebookStudent, error) {
 	rows, err := q.Query(ctx, `
 		SELECT e.id, st.id, st.student_no, pe.first_name, pe.last_name, p.code, p.name_tr, p.name_en,
-		       e.attempt_no, e.attendance_status
+		       e.attempt_no, e.attendance_status, coalesce(e.letter_grade, '')
 		FROM enrollment.enrollments e
 		JOIN enrollment.student_programs sp ON sp.id = e.student_program_id
 		JOIN people.students st ON st.id = sp.student_id
@@ -285,7 +307,7 @@ func (s *Service) gradebookStudentsQ(ctx context.Context, q db.Querier, sectionI
 			att     string
 		)
 		err := row.Scan(&st.EnrollmentID, &st.StudentID, &st.StudentNo, &st.FirstName, &st.LastName,
-			&st.ProgramCode, &st.ProgramNameTR, &st.ProgramNameEN, &attempt, &att)
+			&st.ProgramCode, &st.ProgramNameTR, &st.ProgramNameEN, &attempt, &att, &st.Letter)
 		st.AttemptNo, st.Attendance, st.Scores = int(attempt), Attendance(att), map[string]Score{}
 		return st, err
 	})
@@ -362,11 +384,14 @@ type ScoreInput struct {
 // (iyimser kilit). Değişen not yoksa sürüm artmaz: aynı isteğin tekrarı zararsızdır.
 // Değişen not sayısını döndürür.
 func (s *Service) SetScores(ctx context.Context, actorID string, ref ComponentRef, version int, items []ScoreInput) (int, error) {
-	if ref.Section.GradesPublishedAt != nil {
-		return 0, ErrGradesPublished
-	}
-	if ref.Category == CategoryMakeup {
+	makeup := ref.Category == CategoryMakeup
+	switch {
+	case makeup && ref.Section.GradesPublishedAt == nil:
 		return 0, ErrMakeupNotAvailable
+	case makeup && ref.Section.MakeupPublishedAt != nil:
+		return 0, ErrMakeupPublished
+	case !makeup && ref.Section.GradesPublishedAt != nil:
+		return 0, ErrGradesPublished
 	}
 	if ref.Section.LockedAt == nil {
 		return 0, ErrPlanNotLocked
@@ -379,10 +404,23 @@ func (s *Service) SetScores(ctx context.Context, actorID string, ref ComponentRe
 		return 0, ErrEntryWindowClosed
 	}
 
+	var allowed []string
+	if makeup {
+		if allowed, err = loadMakeupLetters(ctx, s.pool, s.now()); err != nil {
+			return 0, err
+		}
+	}
+
 	changed := 0
 	err = db.InTx(ctx, s.pool, func(tx pgx.Tx) error {
-		if err := lockSection(ctx, tx, ref.Section.SectionID, false); err != nil {
-			return err
+		var lockErr error
+		if makeup {
+			lockErr = lockSectionForMakeup(ctx, tx, ref.Section.SectionID)
+		} else {
+			lockErr = lockSection(ctx, tx, ref.Section.SectionID, false)
+		}
+		if lockErr != nil {
+			return lockErr
 		}
 		var (
 			current int
@@ -417,6 +455,11 @@ func (s *Service) SetScores(ctx context.Context, actorID string, ref ComponentRe
 		}
 		if len(unknown) > 0 {
 			return &UnknownEnrollmentsError{IDs: unknown}
+		}
+		if makeup {
+			if err := checkMakeupEligible(ctx, tx, items, allowed); err != nil {
+				return err
+			}
 		}
 
 		var before, after []map[string]any

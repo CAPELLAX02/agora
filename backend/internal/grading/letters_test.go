@@ -324,3 +324,134 @@ func TestPublishRacesScoreWrites(t *testing.T) {
 		}
 	}
 }
+
+func TestHTTPMakeup(t *testing.T) {
+	s := newGradebookServer(t)
+	fx := s.fx
+	ctx := context.Background()
+	s.addGrant(fx.ayseUser, authz.Grant{Permission: "grade:finalize", ScopeType: authz.ScopeDepartment, ScopeID: fx.bil, RequiresMFA: true})
+	s.calendar.set(grading.WindowFinalEntry, true)
+	section := "/api/v1/sections/" + fx.section
+	scores := func(code string) string { return "/api/v1/assessment-components/" + fx.components[code] + "/scores" }
+	item := func(i int, score any) map[string]any {
+		return map[string]any{"enrollment_id": fx.enrollments[i], "score": score, "absent": false}
+	}
+	put := func(path, version string, items ...map[string]any) result {
+		return s.do("PUT", path, fx.ayseUser, with(mfa, "If-Match", version), map[string]any{"items": items})
+	}
+	if res := s.do("POST", section+"/assessment-plan/lock", fx.ayseUser, nil, nil); res.status != 200 {
+		t.Fatalf("kilit: %d %s", res.status, res.raw)
+	}
+	// Ali geçer (B1), Ece final barajında kalır (F2), Can devamsız (F1).
+	for code, items := range map[string][]map[string]any{
+		"MIDTERM":  {item(0, 80), item(1, 60), item(2, 90)},
+		"HOMEWORK": {item(0, 100), item(1, 50), item(2, 90)},
+		"FINAL":    {item(0, 90), item(1, 45), item(2, 90)},
+	} {
+		if res := put(scores(code), `"1"`, items...); res.status != 200 {
+			t.Fatalf("%s: %d %s", code, res.status, res.raw)
+		}
+	}
+	if res := s.do("PUT", section+"/attendance", fx.ayseUser, mfa, map[string]any{"items": []any{
+		map[string]any{"enrollment_id": fx.enrollments[2], "attendance_status": "ATTENDANCE_FAIL"}}}); res.status != 200 {
+		t.Fatalf("devam: %d %s", res.status, res.raw)
+	}
+	makeup := ""
+	for _, c := range s.do("GET", section+"/gradebook", fx.ayseUser, mfa, nil).body["components"].([]any) {
+		if m := c.(map[string]any); m["type"].(map[string]any)["code"] == "MAKEUP" {
+			makeup = "/api/v1/assessment-components/" + m["id"].(string)
+		}
+	}
+	if res := s.do("POST", section+"/makeup/publish", fx.ayseUser, mfa, nil); res.status != 409 || res.code() != "MAKEUP_NOT_AVAILABLE" {
+		t.Errorf("ilandan önce bütünleme ilanı: %d %s", res.status, res.raw)
+	}
+	if res := s.do("POST", section+"/letter-grades/publish", fx.ayseUser, mfa, nil); res.status != 200 {
+		t.Fatalf("ilan: %d %s", res.status, res.raw)
+	}
+
+	// Bütünleme hakkı: sadece F2 (Ece); geçen ve devamsız öğrenci giremez.
+	book := s.do("GET", section+"/gradebook", fx.ayseUser, mfa, nil)
+	for i, want := range []bool{false, true, false} {
+		if got := studentRow(book, fx.enrollments[i])["makeup_eligible"]; got != want {
+			t.Errorf("öğrenci %d bütünleme hakkı = %v", i, got)
+		}
+	}
+	if c := component(book, strings.TrimPrefix(makeup, "/api/v1/assessment-components/")); c["editable"] != false {
+		t.Errorf("bütünleme penceresi kapalıyken düzenlenemez: %v", c)
+	}
+	if res := put(makeup+"/scores", `"1"`, item(1, 70)); res.status != 409 || res.code() != "GRADE_ENTRY_WINDOW_CLOSED" {
+		t.Errorf("kapalı bütünleme penceresi: %d %s", res.status, res.raw)
+	}
+	if res := s.do("POST", section+"/makeup/publish", fx.ayseUser, mfa, nil); res.status != 409 || res.code() != "MAKEUP_WINDOW_CLOSED" {
+		t.Errorf("kapalı pencerede bütünleme ilanı: %d %s", res.status, res.raw)
+	}
+	s.calendar.set(grading.WindowMakeupEntry, true)
+	book = s.do("GET", section+"/gradebook", fx.ayseUser, mfa, nil)
+	if component(book, strings.TrimPrefix(makeup, "/api/v1/assessment-components/"))["editable"] != true ||
+		component(book, fx.components["FINAL"])["editable"] != false {
+		t.Errorf("ilandan sonra sadece bütünleme düzenlenir: %s", book.raw)
+	}
+	for _, idx := range []int{0, 2} {
+		if res := put(makeup+"/scores", `"1"`, item(idx, 70)); res.status != 400 {
+			t.Errorf("hakkı olmayan öğrenci %d: %d %s", idx, res.status, res.raw)
+		}
+	}
+	if res := put(makeup+"/scores", `"1"`, item(1, 70)); res.status != 200 {
+		t.Fatalf("bütünleme notu: %d %s", res.status, res.raw)
+	}
+
+	// Önizleme: bütünlemeyle olacak harf (18 + 5 + 42 = 65 → C1), ilan edilen harf henüz F2.
+	letters := s.do("GET", section+"/letter-grades", fx.ayseUser, mfa, nil)
+	if r := letterRow(letters, fx.enrollments[1]); r["letter"] != "F2" || r["makeup_letter"] != "C1" || r["makeup_eligible"] != true {
+		t.Errorf("bütünleme önizlemesi: %v", r)
+	}
+	if letters.body["can_publish_makeup"] != true {
+		t.Errorf("bütünleme ilan edilebilir olmalı: %s", letters.raw)
+	}
+	res := s.do("POST", section+"/makeup/publish", fx.ayseUser, mfa, nil)
+	if res.status != 200 || res.body["makeup_published_at"] == nil || res.body["can_publish_makeup"] != false {
+		t.Fatalf("bütünleme ilanı: %d %s", res.status, res.raw)
+	}
+	if r := letterRow(res, fx.enrollments[1]); r["letter"] != "C1" || r["previous_letter"] != "F2" || r["makeup_letter"] != nil {
+		t.Errorf("bütünleme sonrası: %v", r)
+	}
+	if r := letterRow(res, fx.enrollments[0]); r["letter"] != "B1" || r["previous_letter"] != nil {
+		t.Errorf("bütünlemeye girmeyenin notu değişmez: %v", r)
+	}
+
+	var letter, reason string
+	_ = s.pool.QueryRow(ctx, `SELECT letter_grade, letter_reason FROM enrollment.enrollments WHERE id = $1`, fx.enrollments[1]).Scan(&letter, &reason)
+	if letter != "C1" || reason != "RANGE" {
+		t.Errorf("kesin kayıt = %s (%s)", letter, reason)
+	}
+	var history []string
+	rows, err := s.pool.Query(ctx, `
+		SELECT kind || ':' || letter FROM grading.grade_history WHERE enrollment_id = $1 ORDER BY id`, fx.enrollments[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	for rows.Next() {
+		var h string
+		_ = rows.Scan(&h)
+		history = append(history, h)
+	}
+	rows.Close()
+	if strings.Join(history, " ") != "PUBLISHED:F2 MAKEUP:C1" {
+		t.Errorf("not geçmişi = %v", history)
+	}
+	var phases string
+	_ = s.pool.QueryRow(ctx, `
+		SELECT string_agg(payload->>'phase' || '/' || jsonb_array_length(payload->'enrollments'), ' ' ORDER BY id)
+		FROM platform.outbox_events WHERE event_type = 'grades.published'`).Scan(&phases)
+	if phases != "FINAL/3 MAKEUP/1" {
+		t.Errorf("olaylar = %q", phases)
+	}
+
+	// Bütünleme ilanından sonra bütünleme notu değişmez, ikinci ilan reddedilir.
+	if res := put(makeup+"/scores", `"2"`, item(1, 90)); res.status != 409 || res.code() != "MAKEUP_PUBLISHED" {
+		t.Errorf("ilan sonrası bütünleme notu: %d %s", res.status, res.raw)
+	}
+	if res := s.do("POST", section+"/makeup/publish", fx.ayseUser, mfa, nil); res.status != 409 || res.code() != "MAKEUP_PUBLISHED" {
+		t.Errorf("ikinci bütünleme ilanı: %d %s", res.status, res.raw)
+	}
+}

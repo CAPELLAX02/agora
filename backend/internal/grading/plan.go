@@ -93,6 +93,8 @@ type SectionContext struct {
 	LockedByName  string
 	// GradesPublishedAt, harf notlarının ilan anıdır: ilandan sonra plan ve notlar değişmez.
 	GradesPublishedAt *time.Time
+	// MakeupPublishedAt, bütünleme sonuçlarının ilan anıdır.
+	MakeupPublishedAt *time.Time
 	InstructorRole    string // görüntüleyen kullanıcının şubedeki rolü; öğretim elemanı değilse boş
 }
 
@@ -133,7 +135,7 @@ func (r *Repository) AssessmentTypes(ctx context.Context) ([]AssessmentType, err
 const contextSelect = `
 	SELECT s.id, s.section_code, s.status, c.id, c.code, c.name_tr, c.name_en, c.grading_mode,
 	       o.department_id, d.faculty_id, t.id, t.code, t.starts_on, t.ends_on,
-	       s.assessment_plan_version, s.assessment_plan_locked_at, s.grades_published_at,
+	       s.assessment_plan_version, s.assessment_plan_locked_at, s.grades_published_at, s.makeup_published_at,
 	       coalesce((SELECT pe.first_name || ' ' || pe.last_name FROM iam.users u JOIN people.persons pe ON pe.id = u.person_id
 	                 WHERE u.id = s.assessment_plan_locked_by), ''),
 	       coalesce((SELECT si.role FROM offering.section_instructors si
@@ -156,7 +158,7 @@ func (r *Repository) sectionContext(ctx context.Context, q db.Querier, sectionID
 	err := q.QueryRow(ctx, query, sectionID, viewerID).Scan(&sc.SectionID, &sc.SectionCode, &sc.SectionStatus,
 		&sc.CourseID, &sc.CourseCode, &sc.CourseNameTR, &sc.CourseNameEN, &sc.GradingMode,
 		&sc.DepartmentID, &sc.FacultyID, &sc.TermID, &sc.TermCode, &sc.TermStartsOn, &sc.TermEndsOn,
-		&sc.Version, &sc.LockedAt, &sc.GradesPublishedAt, &sc.LockedByName, &sc.InstructorRole)
+		&sc.Version, &sc.LockedAt, &sc.GradesPublishedAt, &sc.MakeupPublishedAt, &sc.LockedByName, &sc.InstructorRole)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return SectionContext{}, ErrNotFound
 	}

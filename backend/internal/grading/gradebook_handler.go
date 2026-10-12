@@ -113,6 +113,8 @@ type gradebookStudentResponse struct {
 	AttemptNo        int                               `json:"attempt_no"`
 	AttendanceStatus string                            `json:"attendance_status"`
 	Scores           map[string]componentScoreResponse `json:"scores"`
+	Letter           *string                           `json:"letter"`
+	MakeupEligible   bool                              `json:"makeup_eligible"`
 }
 
 type courseRefResponse struct {
@@ -136,6 +138,7 @@ type gradebookSectionResponse struct {
 	PlanLocked        bool              `json:"plan_locked"`
 	InstructorRole    *string           `json:"instructor_role"`
 	GradesPublishedAt *time.Time        `json:"grades_published_at"`
+	MakeupPublishedAt *time.Time        `json:"makeup_published_at"`
 }
 
 type gradebookResponse struct {
@@ -155,7 +158,7 @@ func toGradebookResponse(r *http.Request, g Gradebook) gradebookResponse {
 			ID: sc.SectionID, SectionCode: sc.SectionCode,
 			Course: courseRefResponse{ID: sc.CourseID, Code: sc.CourseCode, NameTR: sc.CourseNameTR, NameEN: sc.CourseNameEN, GradingMode: sc.GradingMode},
 			Term:   termRefResponse{ID: sc.TermID, Code: sc.TermCode}, PlanLocked: sc.LockedAt != nil, InstructorRole: optional(sc.InstructorRole),
-			GradesPublishedAt: sc.GradesPublishedAt,
+			GradesPublishedAt: sc.GradesPublishedAt, MakeupPublishedAt: sc.MakeupPublishedAt,
 		},
 		Components:  make([]gradebookComponentResponse, 0, len(g.Components)),
 		Students:    make([]gradebookStudentResponse, 0, len(g.Students)),
@@ -173,7 +176,7 @@ func toGradebookResponse(r *http.Request, g Gradebook) gradebookResponse {
 			LabelTR: c.Label(false, numbered), LabelEN: c.Label(true, numbered), Weight: c.Weight,
 			Version: c.Version, PublishedAt: c.PublishedAt,
 			EntryWindow: toWindowResponse(c.Window),
-			Editable:    canEnter && sc.LockedAt != nil && sc.GradesPublishedAt == nil && c.Window.Open && c.Type.Category != CategoryMakeup,
+			Editable:    canEnter && sc.LockedAt != nil && c.Window.Open && editablePhase(sc, c.Type.Category),
 			ScoredCount: c.Scored, AbsentCount: c.Absent,
 		}
 		if c.Average != nil {
@@ -188,6 +191,7 @@ func toGradebookResponse(r *http.Request, g Gradebook) gradebookResponse {
 			Student:      studentRefResponse{ID: st.StudentID, StudentNo: st.StudentNo, FirstName: st.FirstName, LastName: st.LastName},
 			Program:      programRefResponse{Code: st.ProgramCode, NameTR: st.ProgramNameTR, NameEN: st.ProgramNameEN},
 			AttemptNo:    st.AttemptNo, AttendanceStatus: string(st.Attendance),
+			Letter: optional(st.Letter), MakeupEligible: st.MakeupEligible,
 			Scores: make(map[string]componentScoreResponse, len(st.Scores)),
 		}
 		for id, sc := range st.Scores {
@@ -201,6 +205,16 @@ func toGradebookResponse(r *http.Request, g Gradebook) gradebookResponse {
 		res.Students = append(res.Students, sr)
 	}
 	return res
+}
+
+// editablePhase, bileşenin şubenin not aşamasında düzenlenebilir olup olmadığıdır: ilandan
+// önce bütünleme dışındakiler, ilandan sonra (bütünleme sonuçları ilan edilene kadar)
+// sadece bütünleme.
+func editablePhase(sc SectionContext, c Category) bool {
+	if c == CategoryMakeup {
+		return sc.GradesPublishedAt != nil && sc.MakeupPublishedAt == nil
+	}
+	return sc.GradesPublishedAt == nil
 }
 
 // --- Uçlar ---------------------------------------------------------------------
@@ -384,8 +398,9 @@ func (h *GradebookHandler) setAttendance(w http.ResponseWriter, r *http.Request)
 
 func (h *GradebookHandler) gradebookFailed(w http.ResponseWriter, r *http.Request, err error) bool {
 	var (
-		unknown    *UnknownEnrollmentsError
-		incomplete *IncompleteError
+		unknown     *UnknownEnrollmentsError
+		incomplete  *IncompleteError
+		notEligible *NotEligibleError
 	)
 	switch {
 	case err == nil:
@@ -402,6 +417,14 @@ func (h *GradebookHandler) gradebookFailed(w http.ResponseWriter, r *http.Reques
 		h.problem(w, r, http.StatusConflict, "MAKEUP_NOT_AVAILABLE", "Bütünleme notları harf notları ilan edildikten sonra girilir.")
 	case errors.Is(err, ErrNoScores):
 		h.problem(w, r, http.StatusConflict, "NO_SCORES", "Bu bileşende yayımlanacak not yok.")
+	case errors.As(err, &notEligible):
+		httpx.ValidationFailed(w, r, []httpx.FieldError{{
+			Field: "items.enrollment_id", Message: "Bütünleme hakkı olmayan öğrenci: " + strings.Join(notEligible.IDs, ", "),
+		}})
+	case errors.Is(err, ErrMakeupPublished):
+		h.problem(w, r, http.StatusConflict, "MAKEUP_PUBLISHED", "Bütünleme sonuçları ilan edildi; notlar artık sadece not düzeltme talebiyle değişir.")
+	case errors.Is(err, ErrMakeupWindowClosed):
+		h.problem(w, r, http.StatusConflict, "MAKEUP_WINDOW_CLOSED", "Bütünleme not girişi penceresi kapalı.")
 	case errors.Is(err, ErrGradesPublished):
 		h.problem(w, r, http.StatusConflict, "GRADES_PUBLISHED", "Harf notları ilan edildi; notlar artık sadece not düzeltme talebiyle değişir.")
 	case errors.Is(err, ErrPublishWindowClosed):

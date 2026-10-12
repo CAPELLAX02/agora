@@ -24,6 +24,7 @@ func (h *GradebookHandler) registerLetters(rt *authz.Router) {
 	rt.HandleFunc("GET /api/v1/sections/{id}/letter-grades", authz.Authenticated, h.getLetters)
 	rt.HandleFunc("PUT /api/v1/sections/{id}/letter-overrides", authz.Permission(permFinalize), h.setOverrides)
 	rt.HandleFunc("POST /api/v1/sections/{id}/letter-grades/publish", authz.Permission(permFinalize), h.publishLetters)
+	rt.HandleFunc("POST /api/v1/sections/{id}/makeup/publish", authz.Permission(permFinalize), h.publishMakeup)
 }
 
 // --- Yanıt tipleri -------------------------------------------------------------
@@ -56,6 +57,9 @@ type letterRowResponse struct {
 	Override          *overrideResponse  `json:"override"`
 	Letter            *string            `json:"letter"`
 	Passing           *bool              `json:"passing"`
+	MakeupEligible    bool               `json:"makeup_eligible"`
+	MakeupLetter      *string            `json:"makeup_letter"`
+	PreviousLetter    *string            `json:"previous_letter"`
 }
 
 type letterCountResponse struct {
@@ -72,19 +76,22 @@ type letterSummaryResponse struct {
 }
 
 type letterGradesResponse struct {
-	SectionID      string                `json:"section_id"`
-	GradingMode    string                `json:"grading_mode"`
-	PublishedAt    *time.Time            `json:"published_at"`
-	PublishedBy    *string               `json:"published_by"`
-	CanPublish     bool                  `json:"can_publish"`
-	CanOverride    bool                  `json:"can_override"`
-	PublishWindow  entryWindowResponse   `json:"publish_window"`
-	OverrideWindow entryWindowResponse   `json:"override_window"`
-	FinalMinScore  float64               `json:"final_min_score"`
-	Scale          []scaleItemResponse   `json:"scale"`
-	Students       []letterRowResponse   `json:"students"`
-	Distribution   []letterCountResponse `json:"distribution"`
-	Summary        letterSummaryResponse `json:"summary"`
+	SectionID         string                `json:"section_id"`
+	GradingMode       string                `json:"grading_mode"`
+	PublishedAt       *time.Time            `json:"published_at"`
+	PublishedBy       *string               `json:"published_by"`
+	CanPublish        bool                  `json:"can_publish"`
+	CanOverride       bool                  `json:"can_override"`
+	PublishWindow     entryWindowResponse   `json:"publish_window"`
+	OverrideWindow    entryWindowResponse   `json:"override_window"`
+	MakeupPublishedAt *time.Time            `json:"makeup_published_at"`
+	CanPublishMakeup  bool                  `json:"can_publish_makeup"`
+	MakeupWindow      entryWindowResponse   `json:"makeup_window"`
+	FinalMinScore     float64               `json:"final_min_score"`
+	Scale             []scaleItemResponse   `json:"scale"`
+	Students          []letterRowResponse   `json:"students"`
+	Distribution      []letterCountResponse `json:"distribution"`
+	Summary           letterSummaryResponse `json:"summary"`
 }
 
 func toWindowResponse(w EntryWindow) entryWindowResponse {
@@ -97,14 +104,17 @@ func toLetterGradesResponse(r *http.Request, g LetterGrades) letterGradesRespons
 	scale := g.Scale()
 	res := letterGradesResponse{
 		SectionID: g.SectionID, GradingMode: g.GradingMode, PublishedAt: g.PublishedAt, PublishedBy: optional(g.PublishedBy),
-		CanPublish:     finalize && !published && g.LockedAt != nil && g.PublishWindow.Open && g.Ready(),
-		CanOverride:    finalize && !published && g.OverrideWindow.Open,
-		PublishWindow:  toWindowResponse(g.PublishWindow),
-		OverrideWindow: toWindowResponse(g.OverrideWindow),
-		FinalMinScore:  Points(g.Params.FinalMinScore).Float(),
-		Scale:          []scaleItemResponse{},
-		Students:       make([]letterRowResponse, 0, len(g.Rows)),
-		Distribution:   []letterCountResponse{},
+		CanPublish:        finalize && !published && g.LockedAt != nil && g.PublishWindow.Open && g.Ready(),
+		CanOverride:       finalize && !published && g.OverrideWindow.Open,
+		PublishWindow:     toWindowResponse(g.PublishWindow),
+		OverrideWindow:    toWindowResponse(g.OverrideWindow),
+		MakeupPublishedAt: g.MakeupPublishedAt,
+		CanPublishMakeup:  finalize && published && g.MakeupPublishedAt == nil && g.MakeupWindow.Open,
+		MakeupWindow:      toWindowResponse(g.MakeupWindow),
+		FinalMinScore:     Points(g.Params.FinalMinScore).Float(),
+		Scale:             []scaleItemResponse{},
+		Students:          make([]letterRowResponse, 0, len(g.Rows)),
+		Distribution:      []letterCountResponse{},
 	}
 	pointsPtr := func(p *Points) *float64 {
 		if p == nil {
@@ -133,6 +143,11 @@ func toLetterGradesResponse(r *http.Request, g LetterGrades) letterGradesRespons
 			WeightedScore:     pointsPtr(row.Weighted()),
 			RoundedScore:      row.Result.Rounded,
 			UsedMakeup:        row.Result.UsedMakeup,
+			MakeupEligible:    row.MakeupEligible,
+			PreviousLetter:    optional(row.PreviousLetter),
+		}
+		if g.MakeupPublishedAt == nil {
+			rr.MakeupLetter = optional(row.MakeupLetter())
 		}
 		if row.Result.Complete {
 			rr.ComputedLetter = optional(row.Result.Letter)
@@ -299,6 +314,21 @@ func (h *GradebookHandler) publishLetters(w http.ResponseWriter, r *http.Request
 		return
 	}
 	if _, err := h.svc.PublishGrades(r.Context(), actorID(r), sc); h.gradebookFailed(w, r, err) {
+		return
+	}
+	h.writeLetters(w, r, sc.SectionID)
+}
+
+func (h *GradebookHandler) publishMakeup(w http.ResponseWriter, r *http.Request) {
+	sc, ok := h.letterSection(w, r)
+	if !ok {
+		return
+	}
+	if !mayFinalize(r, sc) {
+		h.problem(w, r, http.StatusForbidden, "FORBIDDEN", "Bütünleme sonuçlarını sadece şubenin sorumlu öğretim elemanı ilan edebilir.")
+		return
+	}
+	if _, err := h.svc.PublishMakeup(r.Context(), actorID(r), sc); h.gradebookFailed(w, r, err) {
 		return
 	}
 	h.writeLetters(w, r, sc.SectionID)
