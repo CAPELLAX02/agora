@@ -884,6 +884,13 @@ const injectedRtkApi = api
         }),
         invalidatesTags: ['De\u011Ferlendirme'],
       }),
+      publishMakeup: build.mutation<PublishMakeupApiResponse, PublishMakeupApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/sections/${queryArg.id}/makeup/publish`,
+          method: 'POST',
+        }),
+        invalidatesTags: ['De\u011Ferlendirme'],
+      }),
       listBuildings: build.query<ListBuildingsApiResponse, ListBuildingsApiArg>({
         query: (queryArg) => ({
           url: `/api/v1/buildings`,
@@ -2183,6 +2190,11 @@ export type SetLetterOverridesApiArg = {
 }
 export type PublishLetterGradesApiResponse = /** status 200 İlan edilmiş harf notları */ LetterGrades
 export type PublishLetterGradesApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type PublishMakeupApiResponse = /** status 200 Güncel harf notları */ LetterGrades
+export type PublishMakeupApiArg = {
   /** Geçerli bir UUID değilse 404 döner. */
   id: string
 }
@@ -3504,6 +3516,8 @@ export type Gradebook = {
     plan_locked: boolean
     /** Harf notları ilan edildiyse: notlar artık değişmez */
     grades_published_at: string | null
+    /** Bütünleme sonuçları ilan edildiyse */
+    makeup_published_at: string | null
     /** İsteği yapanın şubedeki rolü */
     instructor_role:
       ('PRIMARY' | 'CO_INSTRUCTOR' | 'ASSISTANT' | null) | ('PRIMARY' | 'CO_INSTRUCTOR' | 'ASSISTANT' | null)
@@ -3537,6 +3551,10 @@ export type Gradebook = {
     }
     /** 1'den büyükse dersi tekrar alıyor */
     attempt_no: number
+    /** İlan edilmiş harf notu */
+    letter: string | null
+    /** Harf notları ilan edildi ve öğrencinin bütünleme hakkı var */
+    makeup_eligible: boolean
     attendance_status: AttendanceStatus
     /** Bileşen kimliğine göre girilmiş notlar; not girilmemiş bileşen yer almaz */
     scores: {
@@ -3562,6 +3580,10 @@ export type LetterGrades = {
   can_override: boolean
   publish_window: GradeEntryWindow
   override_window: GradeEntryWindow
+  makeup_published_at: string | null
+  /** İsteği yapan bütünleme sonuçlarını şimdi ilan edebilir */
+  can_publish_makeup: boolean
+  makeup_window: GradeEntryWindow
   /** Final ya da bütünlemede en az alınması gereken puan (yönetmelik parametresi) */
   final_min_score: number
   /** Elle verilebilecek harfler, başarıdan başarısızlığa */
@@ -3596,6 +3618,12 @@ export type LetterGrades = {
     /** Geçerli harf: ilan edilmişse ilan edilen, yoksa elle verilen ya da hesaplanan */
     letter: string | null
     passing: boolean | null
+    /** Bütünleme hakkı var (harf notları ilan edildikten sonra) */
+    makeup_eligible: boolean
+    /** Bütünleme ilanından önce: girilen bütünleme notuyla olacak harf */
+    makeup_letter: string | null
+    /** Bütünlemeyle değiştiyse bütünlemeden önceki harf */
+    previous_letter: string | null
   }[]
   /** Geçerli harflerin dağılımı (ölçek sırasıyla, sıfır olanlar dahil) */
   distribution: {
@@ -4328,6 +4356,7 @@ export const {
   useLazyGetLetterGradesQuery,
   useSetLetterOverridesMutation,
   usePublishLetterGradesMutation,
+  usePublishMakeupMutation,
   useListBuildingsQuery,
   useLazyListBuildingsQuery,
   useCreateBuildingMutation,

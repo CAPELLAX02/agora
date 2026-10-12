@@ -3337,7 +3337,9 @@ paths:
         silinir. Şubenin sorumlu ya da ortak öğretim elemanı yazar (`score:enter`, MFA).
         Plan kilitli ve bileşenin not girişi penceresi açık olmalı: dönem içi bileşenler ara
         sınav ya da final not girişi, final final not girişi, bütünleme bütünleme not girişi
-        penceresinde. İyimser kilit bileşen başınadır: `If-Match` bileşenin `version` değeri.
+        penceresinde. Bütünleme notu harf notları ilan edildikten sonra ve sadece bütünleme
+        hakkı olan öğrencilere girilir. İyimser kilit bileşen başınadır: `If-Match` bileşenin
+        `version` değeri.
       operationId: setComponentScores
       x-agora-permission: score:enter
       security:
@@ -3380,7 +3382,8 @@ paths:
           description: >-
             `ASSESSMENT_PLAN_NOT_LOCKED`, `GRADE_ENTRY_WINDOW_CLOSED`, `MAKEUP_NOT_AVAILABLE`
             (bütünleme notları harf notları ilan edildikten sonra girilir), `GRADES_PUBLISHED`
-            (harf notları ilan edildi)
+            (harf notları ilan edildi), `MAKEUP_PUBLISHED` (bütünleme sonuçları ilan edildi);
+            bütünleme hakkı olmayan öğrenci 400 `VALIDATION_FAILED`
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Problem" }
@@ -3573,6 +3576,39 @@ paths:
           description: >-
             `GRADES_INCOMPLETE` (notu eksik öğrenciler; `errors` alanında), `GRADES_PUBLISHED`,
             `PUBLISH_WINDOW_CLOSED`, `ASSESSMENT_PLAN_NOT_LOCKED`
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/sections/{id}/makeup/publish:
+    post:
+      tags: [Değerlendirme]
+      summary: Bütünleme sonuçlarını ilan eder
+      description: >-
+        Harf notları ilan edilmiş şubede, bütünleme not girişi penceresi açıkken sorumlu öğretim
+        elemanı (`grade:finalize`, MFA) ilan eder. Bütünleme notu (puan olarak) girilen her
+        hak sahibinde not finalin yerine geçer ve harf yeniden hesaplanır; bütünlemeye girmeyenin
+        ya da notu girilmeyenin harfi değişmez. Önceki harf not geçmişine yazılır,
+        `grades.published` olayı (`phase: MAKEUP`) yayımlanır. Bir kez yapılır.
+      operationId: publishMakeup
+      x-agora-permission: grade:finalize
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Güncel harf notları
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LetterGrades" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: >-
+            `MAKEUP_NOT_AVAILABLE` (harf notları henüz ilan edilmedi), `MAKEUP_PUBLISHED` (zaten
+            ilan edildi), `MAKEUP_WINDOW_CLOSED`
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Problem" }
@@ -6856,7 +6892,7 @@ components:
       properties:
         section:
           type: object
-          required: [id, section_code, course, term, plan_locked, instructor_role, grades_published_at]
+          required: [id, section_code, course, term, plan_locked, instructor_role, grades_published_at, makeup_published_at]
           properties:
             id: { type: string, format: uuid }
             section_code: { type: string }
@@ -6877,6 +6913,7 @@ components:
                 code: { type: string, examples: ["2026-FALL"] }
             plan_locked: { type: boolean, description: Notlar sadece kilitli plana girilir }
             grades_published_at: { type: [string, "null"], format: date-time, description: "Harf notları ilan edildiyse: notlar artık değişmez" }
+            makeup_published_at: { type: [string, "null"], format: date-time, description: Bütünleme sonuçları ilan edildiyse }
             instructor_role:
               type: [string, "null"]
               enum: [PRIMARY, CO_INSTRUCTOR, ASSISTANT, null]
@@ -6906,7 +6943,7 @@ components:
           description: Soyadı ve adına göre sıralı
           items:
             type: object
-            required: [enrollment_id, student, program, attempt_no, attendance_status, scores]
+            required: [enrollment_id, student, program, attempt_no, attendance_status, scores, letter, makeup_eligible]
             properties:
               enrollment_id: { type: string, format: uuid }
               student: { $ref: "#/components/schemas/StudentRef" }
@@ -6918,6 +6955,8 @@ components:
                   name_tr: { type: string }
                   name_en: { type: string }
               attempt_no: { type: integer, description: "1'den büyükse dersi tekrar alıyor" }
+              letter: { type: [string, "null"], description: İlan edilmiş harf notu }
+              makeup_eligible: { type: boolean, description: "Harf notları ilan edildi ve öğrencinin bütünleme hakkı var" }
               attendance_status: { $ref: "#/components/schemas/AttendanceStatus" }
               scores:
                 type: object
@@ -6936,7 +6975,8 @@ components:
     LetterGrades:
       type: object
       required: [section_id, grading_mode, published_at, published_by, can_publish, can_override, publish_window,
-                 override_window, final_min_score, scale, students, distribution, summary]
+                 override_window, makeup_published_at, can_publish_makeup, makeup_window, final_min_score, scale,
+                 students, distribution, summary]
       properties:
         section_id: { type: string, format: uuid }
         grading_mode: { type: string, enum: [LETTER, PASS_FAIL] }
@@ -6946,6 +6986,9 @@ components:
         can_override: { type: boolean, description: İsteği yapan şimdi elle harf notu verebilir }
         publish_window: { $ref: "#/components/schemas/GradeEntryWindow" }
         override_window: { $ref: "#/components/schemas/GradeEntryWindow" }
+        makeup_published_at: { type: [string, "null"], format: date-time }
+        can_publish_makeup: { type: boolean, description: "İsteği yapan bütünleme sonuçlarını şimdi ilan edebilir" }
+        makeup_window: { $ref: "#/components/schemas/GradeEntryWindow" }
         final_min_score: { type: number, description: "Final ya da bütünlemede en az alınması gereken puan (yönetmelik parametresi)" }
         scale:
           type: array
@@ -6964,7 +7007,8 @@ components:
           items:
             type: object
             required: [enrollment_id, student, attendance_status, complete, missing_components, weighted_score, rounded_score,
-                       computed_letter, reason, used_makeup, override, letter, passing]
+                       computed_letter, reason, used_makeup, override, letter, passing, makeup_eligible, makeup_letter,
+                       previous_letter]
             properties:
               enrollment_id: { type: string, format: uuid }
               student: { $ref: "#/components/schemas/StudentRef" }
@@ -6993,6 +7037,9 @@ components:
                       set_at: { type: string, format: date-time }
               letter: { type: [string, "null"], description: "Geçerli harf: ilan edilmişse ilan edilen, yoksa elle verilen ya da hesaplanan" }
               passing: { type: [boolean, "null"] }
+              makeup_eligible: { type: boolean, description: Bütünleme hakkı var (harf notları ilan edildikten sonra) }
+              makeup_letter: { type: [string, "null"], description: "Bütünleme ilanından önce: girilen bütünleme notuyla olacak harf" }
+              previous_letter: { type: [string, "null"], description: "Bütünlemeyle değiştiyse bütünlemeden önceki harf" }
         distribution:
           type: array
           description: Geçerli harflerin dağılımı (ölçek sırasıyla, sıfır olanlar dahil)
