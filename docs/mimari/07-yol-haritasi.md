@@ -301,7 +301,7 @@ flowchart LR
 | ✅ | Sınıf istatistikleri | `grading.section_grade_stats`: öğrenci sayısı, ortalama, medyan, standart sapma, başarı oranı, harf dağılımı; harf notu ve bütünleme ilanıyla aynı transaction'da güncellenir (önizleme özeti de aynı hesaptan). `GET /sections/{id}/grade-stats`: şubenin öğrencisi, öğretim elemanları ve kapsamdaki birimler görür; öğrenci kendi notunun yanında sınıf ortalamasını "Öğrencinin notları"nda görür. Aktarılan geçmiş dönem şubeleri için seed hesaplar |
 | ✅ | YANO/GANO ve dönem sonuçları | `enrollment.term_results`: alınan ve kazanılan AKTS, YANO, GANO, onur/yüksek onur (`honor_gpa`, tam yük, finalde başarı, disiplin cezası yok). Saf Go hesap paketi (`grading/gpa`, tamsayı aritmetik), son not geçerli (eşdeğer ders ve kalınan seçmelinin yerine alınan ders dahil), AKTS ağırlıklı, iki haneye yuvarlama. `grades.published` tüketicisi idempotent yeniden hesaplar ve ders seçmenin kullandığı `gpa_cache`'i besler; aktarılan geçmiş dönemler için seed aynı kodla üretir. Kurallar [veri modelinde](04-veri-modeli-oltp.md) |
 | ✅ | Toplu yeniden hesap ve doğrulama | `cmd/termresults`: notu olan bütün öğrencilerin dönem sonuçlarını kesin kayıtlardan yeniden hesaplar, kayıtlı sonuçlar ve GANO önbelleğiyle farkı raporlar (fark varsa çıkış kodu 1), `-apply` ile sadece farkı olanları yazar; `errgroup` ile paralel gruplar (`make term-results-verify`, `make term-results-recompute`). Worker günde bir doğrular, `agora_term_results_drift` metriği. 92 bin öğrenci ve 3,7 milyon kesin kayıtta doğrulama 8 sn, ilk hesap 12 sn ([ölçüm](08-yuk-testleri.md)) |
-| ⬜ | Transkript | `GET /student-programs/{id}/transcript`: dönem dönem dersler, AKTS, kredi, harf notu, tekrar işaretleri, dönem ve genel özet. Öğrenci kendisininkini, danışman danışmanlığındakileri, kapsamdaki birimler (`transcript:read_scoped`) görür |
+| ✅ | Transkript | `GET /student-programs/{id}/transcript`: dönem dönem dersler, AKTS, kredi, harf notu ve katsayı, tekrar ve yerini sonraki denemeye bırakmış satır işaretleri, dönem sonuçları (YANO, GANO, AKTS, onur) ve genel özet (GANO, kazanılan / gereken AKTS, onur dönemleri). Öğrenci kendisininkini (`transcript:read_own`), danışman danışmanlığındakileri, kapsamdaki birimler (`transcript:read_scoped`) görür; görme yetkisi olmayana 404 |
 | ⬜ | Sanal transkript ("ne olur") | Varsayımsal harf notlarıyla YANO/GANO hesabı, hiçbir şey kaydedilmez; aynı hesap kodu kullanılır |
 | ⬜ | Öğrencinin notları | Dönem seçimli: dersler, yayımlanmış bileşen notları ve ağırlıkları, harf notu, ilan tarihi, sınıf ortalaması, devam durumu |
 | ⬜ | Not düzeltme talebi | İlandan sonra öğretim elemanı gerekçeyle talep eder (`grade_change:request`) → bölüm başkanı ya da fakülte öğrenci işleri onaylar (`grade_change:approve`, MFA; talep eden onaylayamaz) → uygulanır, dönem sonuçları yeniden hesaplanır, denetim izi |
@@ -314,8 +314,8 @@ flowchart LR
 | --- | --- |
 | ⬜ | Öğretim elemanı: not girişi tablosu (öğrenciler × bileşenler, klavyeyle gezinme, girmedi ve devamsız işaretleri, kaydedilmemiş değişiklik uyarısı, pencere durumu), bileşen yayımlama, CSV içe ve dışa aktarma |
 | ⬜ | Harf notu önizleme (istatistikler ve dağılım grafiği), elle harf notu, ilan; bütünleme listesi ve girişi |
-| ⬜ | Öğrenci: notlarım (dönem dönem, bileşenler, sınıf ortalaması), transkript (yazdırılabilir), sanal transkript |
-| ⬜ | Danışman ve öğrenci işleri: öğrenci detayında transkript ve dönem sonuçları |
+| ⬜ | Öğrenci: notlarım (dönem dönem, bileşenler, sınıf ortalaması), sanal transkript. Transkript (yazdırılabilir, mobilde sadeleşen tablo) ✅ |
+| ✅ | Danışman ve öğrenci işleri: öğrenci detayında transkript ve dönem sonuçları, yazdırılabilir görünüm |
 | ⬜ | Not düzeltme talepleri: öğretim elemanının talebi, onay ekranı |
 | ⬜ | Ana sayfa: öğrenci için son ilan edilen notlar, öğretim elemanı için not girişi bekleyen şubeler |
 

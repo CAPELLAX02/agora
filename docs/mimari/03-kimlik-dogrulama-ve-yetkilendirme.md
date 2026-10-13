@@ -281,7 +281,7 @@ canManageHold(actor, studentProgram):                            # uygulandı (F
                                                                      # fakülte öğrenci işleri fakülte kapsamı
     # Kaldırmada gerekçe zorunlu; öğrenci kendi engellerini görür, danışman danışmanlığındakileri.
 
-canReadTranscript(actor, studentProgram):
+canReadTranscript(actor, studentProgram):                        # uygulandı (Faz 4)
     (has(actor, "transcript:read_own") AND owns(actor, studentProgram))
     OR (has(actor, "transcript:read_scoped") AND (
           inScope(actor, studentProgram.program.department)         # kapsam
