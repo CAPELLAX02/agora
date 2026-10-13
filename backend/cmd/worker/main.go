@@ -1,6 +1,7 @@
 // Komut worker, API'den bağımsız çalışan arka plan işlerini yürütür: e-posta outbox'ı, alan
 // olaylarının dağıtımı (outbox), ders seçme penceresi biten taslakların serbest bırakılması,
-// denetim partition'larının bakımı ve süresi dolmuş kayıtların temizliği.
+// denetim partition'larının bakımı, süresi dolmuş kayıtların temizliği ve dönem sonuçlarının
+// günlük doğrulaması.
 //
 // API yatayda çoğaltıldığında zamanlanmış işler her kopyada çalışmasın diye ayrı bir
 // süreçtir. Birden fazla worker da güvenle çalışabilir: outbox kayıtları
@@ -133,6 +134,11 @@ func run() error {
 		Help: "Ders seçme penceresi bitince boşaltılan (kontenjanı serbest bırakılan) taslak sepetler.",
 	})
 	reg.MustRegister(expiredDrafts)
+	termDrift := prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "agora_term_results_drift",
+		Help: "Son günlük doğrulamada dönem sonuçları ya da GANO önbelleği kesin kayıtlarla tutmayan öğrenci sayısı (0 olmalı).",
+	})
+	reg.MustRegister(termDrift)
 
 	// Tüketiciler: öğrenciye karar bildirimi, dönem geçişinde yarıyıl ilerletmesi, not ilanında
 	// dönem sonuçları (YANO/GANO). LMS üyeliği (Faz 5) aynı registration.approved olayına
@@ -184,6 +190,26 @@ func run() error {
 	wg.Go(func() {
 		every(ctx, maintenanceInterval, func(ctx context.Context) {
 			maintain(ctx, pool, logger)
+		})
+	})
+	// Dönem sonuçlarının doğrulaması: türetilmiş veri kesin kayıtlardan yeniden hesaplanır ve
+	// karşılaştırılır; yazılmaz. Fark, not ilanı olayının işlenmediğini ya da kesin kayıtların
+	// olay dışında değiştiğini gösterir: metrik alarmı tetikler, düzeltme `make term-results-recompute`.
+	wg.Go(func() {
+		every(ctx, maintenanceInterval, func(ctx context.Context) {
+			r, err := grading.RecomputeAll(ctx, pool, grading.RecomputeOptions{Workers: 2, Batch: 500})
+			if err != nil {
+				if ctx.Err() == nil {
+					logger.Error("dönem sonuçları doğrulanamadı", "err", err)
+				}
+				return
+			}
+			termDrift.Set(float64(r.Drifted))
+			if r.Drifted > 0 {
+				logger.Warn("dönem sonuçları kesin kayıtlarla tutmuyor", "students", r.Drifted, "examples", r.Examples)
+				return
+			}
+			logger.Info("dönem sonuçları doğrulandı", "students", r.Students, "duration", r.Duration.String())
 		})
 	})
 
