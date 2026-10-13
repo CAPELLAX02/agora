@@ -1088,6 +1088,15 @@ const injectedRtkApi = api
         }),
         providesTags: ['\u00D6\u011Frenciler'],
       }),
+      getStudentGrades: build.query<GetStudentGradesApiResponse, GetStudentGradesApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/student-programs/${queryArg.id}/grades`,
+          params: {
+            term_id: queryArg.termId,
+          },
+        }),
+        providesTags: ['\u00D6\u011Frenciler'],
+      }),
       listCourseHistory: build.query<ListCourseHistoryApiResponse, ListCourseHistoryApiArg>({
         query: (queryArg) => ({
           url: `/api/v1/student-programs/${queryArg.id}/history`,
@@ -2432,6 +2441,13 @@ export type SimulateTranscriptApiArg = {
       letter_grade: string
     }[]
   }
+}
+export type GetStudentGradesApiResponse = /** status 200 Notlar */ StudentGrades
+export type GetStudentGradesApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Dönem; öğrencinin o dönemde dersi yoksa 404 */
+  termId?: string
 }
 export type ListCourseHistoryApiResponse = /** status 200 Ders kayıtları */ {
   items: CourseAttempt[]
@@ -3948,6 +3964,58 @@ export type TranscriptSimulation = {
     simulated_earned_ects: number
   }
 }
+export type StudentGradesTerm = {
+  id: string
+  code: string
+  term_type: 'FALL' | 'SPRING' | 'SUMMER'
+  is_current: boolean
+}
+export type StudentGrades = {
+  student_program_id: string
+  /** Öğrencinin ders aldığı dönemler, eskiden yeniye (dönem seçici için) */
+  terms: StudentGradesTerm[]
+  term: StudentGradesTerm
+  courses: {
+    enrollment_id: string
+    course: {
+      id: string
+      code: string
+      name_tr: string
+      name_en: string
+    }
+    section_code: string
+    ects: number
+    status: 'ENROLLED' | 'COMPLETED'
+    attendance_status: AttendanceStatus
+    letter_grade: string | null
+    is_passing: boolean | null
+    /** Ders başarı puanı (ilandan sonra) */
+    weighted_score: number | null
+    grade_published_at: string | null
+    components: {
+      id: string
+      type_code: string
+      category: 'IN_TERM' | 'FINAL' | 'MAKEUP'
+      label_tr: string
+      label_en: string
+      weight: number
+      scheduled_on: string | null
+      /** Yayımlanmadıysa null; not ve ortalama görünmez */
+      published_at: string | null
+      score: number | null
+      /** Girmedi */
+      absent: boolean
+      /** Sınıfın girilen puanlarının ortalaması (girmedi hariç) */
+      class_average: number | null
+    }[]
+    /** Sınıf istatistiği (harf notları ilan edildiyse) */
+    class_stats: {
+      student_count: number
+      mean: number | null
+      median: number | null
+    } | null
+  }[]
+}
 export type CourseAttempt = {
   id: string
   term: {
@@ -4542,6 +4610,8 @@ export const {
   useLazyGetTranscriptQuery,
   useSimulateTranscriptQuery,
   useLazySimulateTranscriptQuery,
+  useGetStudentGradesQuery,
+  useLazyGetStudentGradesQuery,
   useListCourseHistoryQuery,
   useLazyListCourseHistoryQuery,
   useGetStudentProgressQuery,

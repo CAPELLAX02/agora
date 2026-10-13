@@ -4355,6 +4355,37 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/v1/student-programs/{id}/grades:
+    get:
+      tags: [Öğrenciler]
+      summary: Öğrencinin bir dönemdeki notları
+      description: |
+        Dönemin dersleri: değerlendirme bileşenleri ve ağırlıkları, yayımlanan bileşenlerde
+        öğrencinin notu (ya da girmedi) ve sınıfın ortalaması (girilen puanların, girmedi hariç),
+        devam durumu, harf notu ve ilan tarihi, harf notları ilan edildiyse sınıf istatistiği.
+        Yayımlanmamış bileşenin notu görünmez; bütünleme bileşeni sadece bütünleme notu olana
+        listelenir. `term_id` verilmezse içinde bulunulan dönem, o dönemde dersi yoksa ders
+        alınan son dönem. Öğrenci kendisininkini (`grade:read_own`), danışmanı ve kapsamdaki
+        birimler (`grade:read_scoped`) görür; görme yetkisi olmayana 404.
+      operationId: getStudentGrades
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - name: term_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: Dönem; öğrencinin o dönemde dersi yoksa 404
+      responses:
+        "200":
+          description: Notlar
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StudentGrades" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/v1/student-programs/{id}/history:
     get:
       tags: [Öğrenciler]
@@ -7369,6 +7400,76 @@ components:
             simulated_gpa: { type: [number, "null"] }
             actual_earned_ects: { type: number }
             simulated_earned_ects: { type: number }
+
+    StudentGradesTerm:
+      type: object
+      required: [id, code, term_type, is_current]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, examples: ["2026-FALL"] }
+        term_type: { type: string, enum: [FALL, SPRING, SUMMER] }
+        is_current: { type: boolean }
+
+    StudentGrades:
+      type: object
+      required: [student_program_id, terms, term, courses]
+      properties:
+        student_program_id: { type: string, format: uuid }
+        terms:
+          type: array
+          description: Öğrencinin ders aldığı dönemler, eskiden yeniye (dönem seçici için)
+          items: { $ref: "#/components/schemas/StudentGradesTerm" }
+        term: { $ref: "#/components/schemas/StudentGradesTerm" }
+        courses:
+          type: array
+          items:
+            type: object
+            required: [enrollment_id, course, section_code, ects, status, attendance_status, letter_grade, is_passing, weighted_score, grade_published_at, components, class_stats]
+            properties:
+              enrollment_id: { type: string, format: uuid }
+              course:
+                type: object
+                required: [id, code, name_tr, name_en]
+                properties:
+                  id: { type: string, format: uuid }
+                  code: { type: string }
+                  name_tr: { type: string }
+                  name_en: { type: string }
+              section_code: { type: string }
+              ects: { type: number }
+              status: { type: string, enum: [ENROLLED, COMPLETED] }
+              attendance_status: { $ref: "#/components/schemas/AttendanceStatus" }
+              letter_grade: { type: [string, "null"] }
+              is_passing: { type: [boolean, "null"] }
+              weighted_score: { type: [number, "null"], description: Ders başarı puanı (ilandan sonra) }
+              grade_published_at: { type: [string, "null"], format: date-time }
+              components:
+                type: array
+                items:
+                  type: object
+                  required: [id, type_code, category, label_tr, label_en, weight, scheduled_on, published_at, score, absent, class_average]
+                  properties:
+                    id: { type: string, format: uuid }
+                    type_code: { type: string, examples: ["MIDTERM"] }
+                    category: { type: string, enum: [IN_TERM, FINAL, MAKEUP] }
+                    label_tr: { type: string, examples: ["Ara sınav 1"] }
+                    label_en: { type: string }
+                    weight: { type: number }
+                    scheduled_on: { type: [string, "null"], format: date }
+                    published_at: { type: [string, "null"], format: date-time, description: Yayımlanmadıysa null; not ve ortalama görünmez }
+                    score: { type: [number, "null"] }
+                    absent: { type: boolean, description: Girmedi }
+                    class_average: { type: [number, "null"], description: Sınıfın girilen puanlarının ortalaması (girmedi hariç) }
+              class_stats:
+                description: Sınıf istatistiği (harf notları ilan edildiyse)
+                oneOf:
+                  - type: object
+                    required: [student_count, mean, median]
+                    properties:
+                      student_count: { type: integer }
+                      mean: { type: [number, "null"] }
+                      median: { type: [number, "null"] }
+                  - { type: "null" }
 
     CourseAttempt:
       type: object
