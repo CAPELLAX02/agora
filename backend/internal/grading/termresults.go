@@ -65,7 +65,16 @@ func RecomputeTermResults(ctx context.Context, q db.Querier, studentProgramIDs [
 	if len(studentProgramIDs) == 0 {
 		return nil
 	}
+	results, err := computeTermResults(ctx, q, studentProgramIDs)
+	if err != nil {
+		return err
+	}
+	return writeTermResults(ctx, q, studentProgramIDs, results)
+}
 
+// computeTermResults, program kayıtlarının dönem sonuçlarını kesin kayıtlardan hesaplar;
+// hiçbir şey yazmaz. Notu olmayan kaydın sonucu boştur.
+func computeTermResults(ctx context.Context, q db.Querier, studentProgramIDs []string) (map[string][]gpa.Result, error) {
 	// Dönemler: dönem sırası başlangıç gününden; disiplin cezası, dönem içinde konmuş
 	// uzaklaştırma engelidir; parametreler dönemin bitişinde geçerli olanlardır.
 	terms := map[string]map[string]gpa.Term{}
@@ -85,7 +94,7 @@ func RecomputeTermResults(ctx context.Context, q db.Querier, studentProgramIDs [
 		          AND p.effective_from <= t.ends_on AND (p.effective_to IS NULL OR p.effective_to > t.ends_on))
 		FROM t`, studentProgramIDs)
 	if err != nil {
-		return fmt.Errorf("grading: dönemler okunamadı: %w", err)
+		return nil, fmt.Errorf("grading: dönemler okunamadı: %w", err)
 	}
 	var (
 		spID        string
@@ -104,7 +113,7 @@ func RecomputeTermResults(ctx context.Context, q db.Querier, studentProgramIDs [
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("grading: dönemler okunamadı: %w", err)
+		return nil, fmt.Errorf("grading: dönemler okunamadı: %w", err)
 	}
 
 	attempts := map[string][]gpa.Attempt{}
@@ -119,7 +128,7 @@ func RecomputeTermResults(ctx context.Context, q db.Querier, studentProgramIDs [
 		LEFT JOIN enrollment.enrollments n ON n.id = e.superseded_by_id
 		WHERE e.student_program_id = ANY($1) AND e.status <> 'DROPPED'`, studentProgramIDs)
 	if err != nil {
-		return fmt.Errorf("grading: ders geçmişi okunamadı: %w", err)
+		return nil, fmt.Errorf("grading: ders geçmişi okunamadı: %w", err)
 	}
 	var (
 		a          gpa.Attempt
@@ -132,9 +141,24 @@ func RecomputeTermResults(ctx context.Context, q db.Querier, studentProgramIDs [
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("grading: ders geçmişi okunamadı: %w", err)
+		return nil, fmt.Errorf("grading: ders geçmişi okunamadı: %w", err)
 	}
 
+	results := make(map[string][]gpa.Result, len(studentProgramIDs))
+	for _, id := range studentProgramIDs {
+		list := make([]gpa.Term, 0, len(terms[id]))
+		for _, t := range terms[id] {
+			list = append(list, t)
+		}
+		results[id] = gpa.Compute(list, attempts[id])
+	}
+	return results, nil
+}
+
+// writeTermResults, hesaplanan dönem sonuçlarını yazar: program kayıtlarının artık notu
+// kalmayan dönemlerinin sonucu silinir, GANO ve kazanılan AKTS önbellekleri (son dönemin
+// sonucu) değiştiyse güncellenir.
+func writeTermResults(ctx context.Context, q db.Querier, studentProgramIDs []string, computed map[string][]gpa.Result) error {
 	tenths := func(v gpa.ECTS) string { return fmt.Sprintf("%d.%d", v/10, v%10) }
 	hundredths := func(v *gpa.Hundredths) *string {
 		if v == nil {
@@ -151,11 +175,7 @@ func RecomputeTermResults(ctx context.Context, q db.Querier, studentProgramIDs [
 		cacheGPAs                         []*string
 	)
 	for _, id := range studentProgramIDs {
-		list := make([]gpa.Term, 0, len(terms[id]))
-		for _, t := range terms[id] {
-			list = append(list, t)
-		}
-		results := gpa.Compute(list, attempts[id])
+		results := computed[id]
 		for _, r := range results {
 			sps, termIDs, standings = append(sps, id), append(termIDs, r.TermID), append(standings, string(r.Standing))
 			attempted, earned = append(attempted, tenths(r.AttemptedECTS)), append(earned, tenths(r.EarnedECTS))
