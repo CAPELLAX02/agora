@@ -75,22 +75,23 @@ func TestTranscript(t *testing.T) {
 	take("2025-SPRING", "COM1001", 2, "COMPLETED", "C1")
 	take("2025-SPRING", "COM1002", 1, "COMPLETED", "A")
 	take("2026-FALL", "COM2001", 1, "ENROLLED", "")
+	take("2026-FALL", "MTH1001", 2, "ENROLLED", "") // geçilen dersi not yükseltmek için tekrar
 	exec(`
 		UPDATE enrollment.enrollments old SET superseded_by_id = new.id
 		FROM enrollment.enrollments new
 		WHERE old.student_program_id = $1 AND new.student_program_id = $1 AND old.course_id = new.course_id
-		  AND old.attempt_no = 1 AND new.attempt_no = 2`, sp)
+		  AND old.attempt_no = 1 AND new.attempt_no = 2 AND new.status = 'COMPLETED'`, sp)
 	if err := grading.RecomputeTermResults(ctx, w.pool, []string{sp}); err != nil {
 		t.Fatal(err)
 	}
 
 	path := "/api/v1/student-programs/" + sp + "/transcript"
-	res := w.do("GET", path, w.student1User, nil)
-	if res.status != 200 {
-		t.Fatalf("transkript: %d %s", res.status, res.raw)
+	got := w.do("GET", path, w.student1User, nil)
+	if got.status != 200 {
+		t.Fatalf("transkript: %d %s", got.status, got.raw)
 	}
 	obj := func(v any) map[string]any { return v.(map[string]any) }
-	terms := res.body["terms"].([]any)
+	terms := got.body["terms"].([]any)
 	if len(terms) != 3 || obj(obj(terms[0])["term"])["code"] != "2025-FALL" || obj(obj(terms[2])["term"])["code"] != "2026-FALL" {
 		t.Fatalf("dönemler = %v", terms)
 	}
@@ -115,6 +116,13 @@ func TestTranscript(t *testing.T) {
 	if c := course(2, "COM2001"); c["status"] != "ENROLLED" || c["letter_grade"] != nil {
 		t.Errorf("süren ders = %v", c)
 	}
+	options := map[string]bool{}
+	for _, l := range course(2, "COM2001")["letter_options"].([]any) {
+		options[l.(string)] = true
+	}
+	if !options["A"] || !options["C3"] || !options["F1"] || !options["F3"] || !options["F4"] || options["BŞR"] || options["MUAF"] {
+		t.Errorf("harf seçenekleri = %v", options)
+	}
 	// Güz: (0 × 6 + 3,50 × 5) / 11 = 1,59. Bahar: YANO (2,75 × 6 + 4 × 6) / 12 = 3,38; GANO
 	// F2'siz (3,50 × 5 + 2,75 × 6 + 4 × 6) / 17 = 3,41. 2026 güzün henüz sonucu yok.
 	result := func(term int) map[string]any {
@@ -130,10 +138,10 @@ func TestTranscript(t *testing.T) {
 	if result(2) != nil {
 		t.Errorf("süren dönemin sonucu olmamalı: %v", result(2))
 	}
-	sum := obj(res.body["summary"])
+	sum := obj(got.body["summary"])
 	if sum["gpa"] != 3.41 || sum["earned_ects"] != 17.0 || sum["required_ects"] != 240.0 || sum["completed_courses"] != 4.0 ||
-		sum["in_progress"] != 1.0 || res.body["degree_level"] != "BACHELOR" || obj(res.body["student_program"])["id"] != sp {
-		t.Errorf("özet = %v / %s", sum, res.raw)
+		sum["in_progress"] != 2.0 || got.body["degree_level"] != "BACHELOR" || obj(got.body["student_program"])["id"] != sp {
+		t.Errorf("özet = %v / %s", sum, got.raw)
 	}
 
 	for name, c := range map[string]struct {
@@ -153,5 +161,64 @@ func TestTranscript(t *testing.T) {
 	}
 	if r := w.do("GET", "/api/v1/student-programs/01a11b7f-0000-7000-8000-0000000000ff/transcript", w.head, nil); r.status != 404 {
 		t.Errorf("olmayan kayıt: %d", r.status)
+	}
+
+	// Sanal transkript: hiçbir şey kaydedilmez.
+	simulate := func(user string, grades ...map[string]any) res {
+		t.Helper()
+		return w.do("POST", path+"/simulate", user, map[string]any{"grades": grades})
+	}
+	grade := func(term int, code, letter string) map[string]any {
+		return map[string]any{"enrollment_id": course(term, code)["enrollment_id"], "letter_grade": letter}
+	}
+	simTerm := func(r res, i int) (actual, simulated map[string]any) {
+		term := obj(r.body["terms"].([]any)[i])
+		actual, _ = term["actual"].(map[string]any)
+		simulated, _ = term["simulated"].(map[string]any)
+		return actual, simulated
+	}
+	// Süren derse A: 2026 güz YANO 4,00; GANO (3,50 × 5 + 2,75 × 6 + 4 × 6 + 4 × 6) / 23 = 3,57.
+	sim := simulate(w.student1User, grade(2, "COM2001", "A"))
+	if sim.status != 200 {
+		t.Fatalf("sanal transkript: %d %s", sim.status, sim.raw)
+	}
+	if actual, simulated := simTerm(sim, 2); actual != nil || simulated["term_gpa"] != 4.0 || simulated["cumulative_gpa"] != 3.57 {
+		t.Errorf("süren dönem: %v / %v", actual, simulated)
+	}
+	if actual, simulated := simTerm(sim, 1); actual["cumulative_gpa"] != 3.41 || simulated["cumulative_gpa"] != 3.41 {
+		t.Errorf("geçmiş dönem değişmemeli: %v / %v", actual, simulated)
+	}
+	if s := obj(sim.body["summary"]); s["actual_gpa"] != 3.41 || s["simulated_gpa"] != 3.57 ||
+		s["actual_earned_ects"] != 17.0 || s["simulated_earned_ects"] != 23.0 {
+		t.Errorf("sanal özet = %v", s)
+	}
+	// Not yükseltme tekrarında C1: yerini aldığı B1 GANO'dan düşer, ilandaki gibi.
+	// (2,75 × 6 + 4 × 6 + 2,75 × 5) / 17 = 3,19 (B1 kalsaydı 3,26 olurdu).
+	sim = simulate(w.advisor, grade(2, "MTH1001", "C1"))
+	if _, simulated := simTerm(sim, 2); sim.status != 200 || simulated["cumulative_gpa"] != 3.19 || simulated["term_gpa"] != 2.75 {
+		t.Errorf("tekrar: %d %s", sim.status, sim.raw)
+	}
+	// Geçmiş bir dersin harfi: o dönem öyle olsaydı. (2 × 6 + 3,50 × 5) / 11 = 2,68.
+	sim = simulate(w.student1User, grade(0, "COM1001", "C3"))
+	if actual, simulated := simTerm(sim, 0); actual["term_gpa"] != 1.59 || simulated["term_gpa"] != 2.68 {
+		t.Errorf("geçmiş ders: %v / %v", actual, simulated)
+	}
+
+	for name, body := range map[string][]map[string]any{
+		"harf notlu derste BŞR": {grade(2, "COM2001", "BŞR")},
+		"ölçekte olmayan harf":  {grade(2, "COM2001", "AA")},
+		"boş harf":              {grade(2, "COM2001", " ")},
+		"aynı ders iki kez":     {grade(2, "COM2001", "A"), grade(2, "COM2001", "B1")},
+		"başka programın kaydı": {{"enrollment_id": "01a11b7f-0000-7000-8000-0000000000ee", "letter_grade": "A"}},
+	} {
+		if r := simulate(w.student1User, body...); r.status != 400 {
+			t.Errorf("%s: %d %s", name, r.status, r.raw)
+		}
+	}
+	if r := simulate(w.student2User, grade(2, "COM2001", "A")); r.status != 404 {
+		t.Errorf("başka öğrenci: %d", r.status)
+	}
+	if r := w.do("GET", path, w.student1User, nil); obj(r.body["summary"])["gpa"] != 3.41 || obj(r.body["summary"])["in_progress"] != 2.0 {
+		t.Errorf("sanal transkript bir şey kaydetmemeli: %s", r.raw)
 	}
 }

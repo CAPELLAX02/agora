@@ -75,6 +75,37 @@ func RecomputeTermResults(ctx context.Context, q db.Querier, studentProgramIDs [
 // computeTermResults, program kayıtlarının dönem sonuçlarını kesin kayıtlardan hesaplar;
 // hiçbir şey yazmaz. Notu olmayan kaydın sonucu boştur.
 func computeTermResults(ctx context.Context, q db.Querier, studentProgramIDs []string) (map[string][]gpa.Result, error) {
+	terms, attempts, err := loadGPAInputs(ctx, q, studentProgramIDs)
+	if err != nil {
+		return nil, err
+	}
+	results := make(map[string][]gpa.Result, len(studentProgramIDs))
+	for _, id := range studentProgramIDs {
+		results[id] = gpa.Compute(terms[id], plainAttempts(attempts[id]))
+	}
+	return results, nil
+}
+
+// gpaAttempt, hesaba giren bir kesin kayıttır: sanal transkriptte harfi değiştirilebilsin diye
+// kimliği, not ölçeği ve dersin notlandırması da tutulur.
+type gpaAttempt struct {
+	EnrollmentID string
+	ScaleID      string
+	PassFail     bool
+	gpa.Attempt
+}
+
+func plainAttempts(list []gpaAttempt) []gpa.Attempt {
+	out := make([]gpa.Attempt, len(list))
+	for i, a := range list {
+		out[i] = a.Attempt
+	}
+	return out
+}
+
+// loadGPAInputs, program kayıtlarının dönemlerini (onur kuralları dahil) ve bırakılmamış kesin
+// kayıtlarını okur.
+func loadGPAInputs(ctx context.Context, q db.Querier, studentProgramIDs []string) (map[string][]gpa.Term, map[string][]gpaAttempt, error) {
 	// Dönemler: dönem sırası başlangıç gününden; disiplin cezası, dönem içinde konmuş
 	// uzaklaştırma engelidir; parametreler dönemin bitişinde geçerli olanlardır.
 	terms := map[string]map[string]gpa.Term{}
@@ -94,7 +125,7 @@ func computeTermResults(ctx context.Context, q db.Querier, studentProgramIDs []s
 		          AND p.effective_from <= t.ends_on AND (p.effective_to IS NULL OR p.effective_to > t.ends_on))
 		FROM t`, studentProgramIDs)
 	if err != nil {
-		return nil, fmt.Errorf("grading: dönemler okunamadı: %w", err)
+		return nil, nil, fmt.Errorf("grading: dönemler okunamadı: %w", err)
 	}
 	var (
 		spID        string
@@ -113,46 +144,46 @@ func computeTermResults(ctx context.Context, q db.Querier, studentProgramIDs []s
 		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("grading: dönemler okunamadı: %w", err)
+		return nil, nil, fmt.Errorf("grading: dönemler okunamadı: %w", err)
 	}
 
-	attempts := map[string][]gpa.Attempt{}
+	attempts := map[string][]gpaAttempt{}
 	rows, err = q.Query(ctx, `
-		SELECT e.student_program_id, e.term_id, e.status = 'COMPLETED', (e.ects_snapshot * 10)::int8,
+		SELECT e.student_program_id, e.id, coalesce(e.grade_scale_id, (SELECT id FROM curriculum.grade_scales WHERE is_default)),
+		       c.grading_mode = 'PASS_FAIL', e.term_id, e.status = 'COMPLETED', (e.ects_snapshot * 10)::int8,
 		       coalesce((gi.coefficient * 100)::int8, 0), coalesce(gi.counts_in_gpa, false),
 		       coalesce(gi.earns_ects, false), coalesce(gi.is_passing, false),
 		       EXISTS (SELECT 1 FROM grading.grade_history gh WHERE gh.enrollment_id = e.id AND gh.kind = 'MAKEUP'),
 		       coalesce(n.term_id::text, '')
 		FROM enrollment.enrollments e
+		JOIN curriculum.courses c ON c.id = e.course_id
 		LEFT JOIN curriculum.grade_scale_items gi ON gi.grade_scale_id = e.grade_scale_id AND gi.letter = e.letter_grade
 		LEFT JOIN enrollment.enrollments n ON n.id = e.superseded_by_id
 		WHERE e.student_program_id = ANY($1) AND e.status <> 'DROPPED'`, studentProgramIDs)
 	if err != nil {
-		return nil, fmt.Errorf("grading: ders geçmişi okunamadı: %w", err)
+		return nil, nil, fmt.Errorf("grading: ders geçmişi okunamadı: %w", err)
 	}
 	var (
-		a          gpa.Attempt
+		a          gpaAttempt
 		ects, coef int64
 	)
-	_, err = pgx.ForEachRow(rows, []any{&spID, &a.TermID, &a.Completed, &ects, &coef, &a.CountsInGPA,
-		&a.EarnsECTS, &a.Passing, &a.ViaMakeup, &a.SupersededIn}, func() error {
+	_, err = pgx.ForEachRow(rows, []any{&spID, &a.EnrollmentID, &a.ScaleID, &a.PassFail, &a.TermID, &a.Completed,
+		&ects, &coef, &a.CountsInGPA, &a.EarnsECTS, &a.Passing, &a.ViaMakeup, &a.SupersededIn}, func() error {
 		a.ECTS, a.Coefficient = gpa.ECTS(ects), gpa.Hundredths(coef)
 		attempts[spID] = append(attempts[spID], a)
 		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("grading: ders geçmişi okunamadı: %w", err)
+		return nil, nil, fmt.Errorf("grading: ders geçmişi okunamadı: %w", err)
 	}
 
-	results := make(map[string][]gpa.Result, len(studentProgramIDs))
-	for _, id := range studentProgramIDs {
-		list := make([]gpa.Term, 0, len(terms[id]))
-		for _, t := range terms[id] {
-			list = append(list, t)
+	lists := make(map[string][]gpa.Term, len(terms))
+	for id, byID := range terms {
+		for _, t := range byID {
+			lists[id] = append(lists[id], t)
 		}
-		results[id] = gpa.Compute(list, attempts[id])
 	}
-	return results, nil
+	return lists, attempts, nil
 }
 
 // writeTermResults, hesaplanan dönem sonuçlarını yazar: program kayıtlarının artık notu

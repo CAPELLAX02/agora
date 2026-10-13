@@ -8,6 +8,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/CAPELLAX02/agora/backend/internal/grading"
+	"github.com/CAPELLAX02/agora/backend/internal/grading/gpa"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authz"
 )
 
@@ -33,6 +35,11 @@ type TranscriptCourse struct {
 	// satır sonraki dönemlerin genel ortalamasına girmez.
 	Superseded bool
 	Source     string // REGISTRATION, ADD_DROP, IMPORT
+	// LetterOptions, sanal transkriptte bu derse verilebilecek harflerdir (kaydın not ölçeğinde
+	// derse verilebilen harfler).
+	LetterOptions []string
+	scaleID       string
+	passFail      bool
 }
 
 // TranscriptResult, bir dönemin kayıtlı sonucudur (enrollment.term_results).
@@ -91,7 +98,8 @@ func (r *Repository) Transcript(ctx context.Context, sp StudentProgram, now time
 		SELECT t.id, t.code, t.term_type, e.id, c.id, c.code, c.name_tr, c.name_en,
 		       e.ects_snapshot::float8, e.credit_snapshot::float8, e.status, coalesce(e.letter_grade, ''),
 		       gi.coefficient::float8, coalesce(gi.is_passing, false), coalesce(gi.counts_in_gpa, false), e.attempt_no,
-		       e.attempt_no > 1 OR coalesce(ri.item_kind, 'NEW') <> 'NEW', e.superseded_by_id IS NOT NULL, e.source
+		       e.attempt_no > 1 OR coalesce(ri.item_kind, 'NEW') <> 'NEW', e.superseded_by_id IS NOT NULL, e.source,
+		       coalesce(e.grade_scale_id, (SELECT id FROM curriculum.grade_scales WHERE is_default)), c.grading_mode = 'PASS_FAIL'
 		FROM enrollment.enrollments e
 		JOIN academic.terms t     ON t.id = e.term_id
 		JOIN curriculum.courses c ON c.id = e.course_id
@@ -114,12 +122,27 @@ func (r *Repository) Transcript(ctx context.Context, sp StudentProgram, now time
 		c := &l.course
 		err := row.Scan(&l.term.TermID, &l.term.TermCode, &l.term.TermType, &c.EnrollmentID, &c.CourseID, &c.CourseCode,
 			&c.CourseNameTR, &c.CourseNameEN, &c.ECTS, &c.Credit, &status, &c.Letter, &c.Coefficient, &c.Passing,
-			&c.CountsInGPA, &c.AttemptNo, &c.Repeat, &c.Superseded, &c.Source)
+			&c.CountsInGPA, &c.AttemptNo, &c.Repeat, &c.Superseded, &c.Source, &c.scaleID, &c.passFail)
 		c.Status = EnrollmentStatus(status)
 		return l, err
 	})
 	if err != nil {
 		return Transcript{}, fmt.Errorf("enrollment: transkript okunamadı: %w", err)
+	}
+	type optionKey struct {
+		scaleID  string
+		passFail bool
+	}
+	options := map[optionKey][]string{}
+	for i := range lines {
+		c := &lines[i].course
+		key := optionKey{c.scaleID, c.passFail}
+		if _, ok := options[key]; !ok {
+			if options[key], err = grading.LetterOptions(ctx, r.db, c.scaleID, c.passFail); err != nil {
+				return Transcript{}, err
+			}
+		}
+		c.LetterOptions = options[key]
 	}
 	for _, l := range lines {
 		if n := len(t.Terms); n == 0 || t.Terms[n-1].TermID != l.term.TermID {
@@ -186,4 +209,64 @@ func (s *Service) CanReadTranscript(ctx context.Context, perms *authz.Permission
 		return false, err
 	}
 	return r.IsCurrentAdvisor(ctx, staffID, st.ID)
+}
+
+// SimulatedTerm, sanal transkriptte bir dönemin gerçek ve varsayımsal sonucudur.
+type SimulatedTerm struct {
+	TermID, TermCode, TermType string
+	Actual, Simulated          *TranscriptResult // o dönemde notu verilmiş ders yoksa nil
+}
+
+// SimulateTranscript, transkripti varsayımsal harflerle yeniden hesaplar; hiçbir şey kaydetmez.
+// Hesap dönem sonuçlarınınkiyle aynıdır (grading.SimulateTermResults).
+func (s *Service) SimulateTranscript(ctx context.Context, sp StudentProgram, changes []grading.Hypothetical) ([]SimulatedTerm, error) {
+	sim, err := grading.SimulateTermResults(ctx, s.pool, sp.ID, changes)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := s.pool.Query(ctx, `
+		SELECT DISTINCT t.id, t.code, t.term_type, t.starts_on FROM enrollment.enrollments e
+		JOIN academic.terms t ON t.id = e.term_id
+		WHERE e.student_program_id = $1 AND e.status <> 'DROPPED' ORDER BY t.starts_on`, sp.ID)
+	if err != nil {
+		return nil, fmt.Errorf("enrollment: dönemler okunamadı: %w", err)
+	}
+	terms, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (SimulatedTerm, error) {
+		var (
+			t        SimulatedTerm
+			startsOn time.Time
+		)
+		return t, row.Scan(&t.TermID, &t.TermCode, &t.TermType, &startsOn)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("enrollment: dönemler okunamadı: %w", err)
+	}
+	result := func(list []gpa.Result, termID string) *TranscriptResult {
+		for _, r := range list {
+			if r.TermID == termID {
+				return toTranscriptResult(r)
+			}
+		}
+		return nil
+	}
+	for i := range terms {
+		terms[i].Actual = result(sim.Actual, terms[i].TermID)
+		terms[i].Simulated = result(sim.Simulated, terms[i].TermID)
+	}
+	return terms, nil
+}
+
+func toTranscriptResult(r gpa.Result) *TranscriptResult {
+	hundredths := func(v *gpa.Hundredths) *float64 {
+		if v == nil {
+			return nil
+		}
+		f := float64(*v) / 100
+		return &f
+	}
+	return &TranscriptResult{
+		AttemptedECTS: float64(r.AttemptedECTS) / 10, EarnedECTS: float64(r.EarnedECTS) / 10,
+		TermGPA: hundredths(r.TermGPA), CumulativeECTS: float64(r.CumulativeECTS) / 10,
+		CumulativeGPA: hundredths(r.CumulativeGPA), Standing: string(r.Standing),
+	}
 }
