@@ -221,4 +221,38 @@ func TestTranscript(t *testing.T) {
 	if r := w.do("GET", path, w.student1User, nil); obj(r.body["summary"])["gpa"] != 3.41 || obj(r.body["summary"])["in_progress"] != 2.0 {
 		t.Errorf("sanal transkript bir şey kaydetmemeli: %s", r.raw)
 	}
+
+	// Notlar: varsayılan dönem içinde bulunulan dönem; başka dönem term_id ile.
+	gradesPath := "/api/v1/student-programs/" + sp + "/grades"
+	g := w.do("GET", gradesPath, w.student1User, nil)
+	if g.status != 200 || obj(g.body["term"])["code"] != "2026-FALL" || obj(g.body["term"])["is_current"] != true ||
+		len(g.body["terms"].([]any)) != 3 || len(g.body["courses"].([]any)) != 2 {
+		t.Fatalf("notlar: %d %s", g.status, g.raw)
+	}
+	spring := obj(terms[1])["term"].(map[string]any)["id"].(string)
+	g = w.do("GET", gradesPath+"?term_id="+spring, w.advisor, nil)
+	if g.status != 200 || obj(g.body["term"])["code"] != "2025-SPRING" {
+		t.Fatalf("bahar notları: %d %s", g.status, g.raw)
+	}
+	letters := map[string]any{}
+	for _, c := range g.body["courses"].([]any) {
+		letters[obj(obj(c)["course"])["code"].(string)] = obj(c)["letter_grade"]
+	}
+	if letters["COM1001"] != "C1" || letters["COM1002"] != "A" || len(letters) != 2 {
+		t.Errorf("bahar dersleri = %v", letters)
+	}
+	for name, c := range map[string]struct {
+		user, query string
+		want        int
+	}{
+		"bölüm başkanı":              {w.head, "", 200},
+		"başka öğrenci":              {w.student2User, "", 404},
+		"ders veren öğretim elemanı": {w.notAdvisor, "", 404},
+		"ders alınmayan dönem":       {w.student1User, "?term_id=01a11b7f-0000-7000-8000-0000000000ff", 404},
+		"geçersiz dönem kimliği":     {w.student1User, "?term_id=x", 400},
+	} {
+		if r := w.do("GET", gradesPath+c.query, c.user, nil); r.status != c.want {
+			t.Errorf("%s: %d, beklenen %d", name, r.status, c.want)
+		}
+	}
 }

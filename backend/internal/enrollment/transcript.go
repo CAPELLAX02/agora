@@ -188,6 +188,18 @@ func (r *Repository) Transcript(ctx context.Context, sp StudentProgram, now time
 // kapsamındaki birimler ve öğrencinin şu anki danışmanı (`transcript:read_scoped`; danışmanın
 // yetkisi ilişkiden gelir).
 func (s *Service) CanReadTranscript(ctx context.Context, perms *authz.Permissions, userID string, sp StudentProgram) (bool, error) {
+	return s.canReadRecord(ctx, perms, userID, sp, "transcript:read_own", "transcript:read_scoped")
+}
+
+// CanReadGrades, öğrencinin notlarını (bileşen notları dahil) görebilecekler: öğrencinin kendisi
+// (`grade:read_own`), kapsamındaki birimler ve şu anki danışmanı (`grade:read_scoped`).
+func (s *Service) CanReadGrades(ctx context.Context, perms *authz.Permissions, userID string, sp StudentProgram) (bool, error) {
+	return s.canReadRecord(ctx, perms, userID, sp, "grade:read_own", "grade:read_scoped")
+}
+
+// canReadRecord, öğrenci kaydı okuma politikasıdır: kendisi own yetkisiyle; scoped yetkisi
+// programı kapsayan birimler ya da (ilişkiye dayalı) öğrencinin şu anki danışmanı.
+func (s *Service) canReadRecord(ctx context.Context, perms *authz.Permissions, userID string, sp StudentProgram, own, scoped string) (bool, error) {
 	r := NewRepository(s.pool)
 	st, err := r.Student(ctx, sp.StudentID)
 	if err != nil {
@@ -195,10 +207,10 @@ func (s *Service) CanReadTranscript(ctx context.Context, perms *authz.Permission
 	}
 	switch {
 	case st.UserID != "" && st.UserID == userID:
-		return perms.Has("transcript:read_own"), nil
-	case perms.Allows("transcript:read_scoped", sp.Program.Target()):
+		return perms.Has(own), nil
+	case perms.Allows(scoped, sp.Program.Target()):
 		return true, nil
-	case !perms.Has("transcript:read_scoped"):
+	case !perms.Has(scoped):
 		return false, nil
 	}
 	staffID, err := r.StaffByUser(ctx, userID)

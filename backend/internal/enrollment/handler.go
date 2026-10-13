@@ -43,6 +43,7 @@ func (h *Handler) Register(rt *authz.Router) {
 
 	h.registerHolds(rt)
 	h.registerTranscript(rt)
+	h.registerGrades(rt)
 }
 
 // --- Yanıt tipleri -----------------------------------------------------------

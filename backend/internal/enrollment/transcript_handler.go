@@ -1,6 +1,7 @@
 package enrollment
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strings"
@@ -129,13 +130,20 @@ func toTranscriptResponse(t Transcript) transcriptResponse {
 // transcriptProgram, path'teki program kaydını okur ve transkripti görme yetkisini denetler:
 // yetkisi olmayana kayıt yokmuş gibi 404.
 func (h *Handler) transcriptProgram(w http.ResponseWriter, r *http.Request) (StudentProgram, bool) {
+	return h.recordProgram(w, r, h.service.CanReadTranscript)
+}
+
+// recordProgram, path'teki program kaydını okur ve can ile görme yetkisini denetler: yetkisi
+// olmayana kayıt yokmuş gibi 404.
+func (h *Handler) recordProgram(w http.ResponseWriter, r *http.Request,
+	can func(context.Context, *authz.Permissions, string, StudentProgram) (bool, error)) (StudentProgram, bool) {
 	sp, ok := h.studentProgram(w, r)
 	if !ok {
 		return StudentProgram{}, false
 	}
 	principal, _ := authn.PrincipalFrom(r.Context())
 	perms, _ := authz.PermissionsFrom(r.Context())
-	allowed, err := h.service.CanReadTranscript(r.Context(), perms, principal.UserID, sp)
+	allowed, err := can(r.Context(), perms, principal.UserID, sp)
 	if err != nil {
 		h.serverError(w, r, err)
 		return StudentProgram{}, false
