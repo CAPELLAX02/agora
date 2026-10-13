@@ -107,7 +107,8 @@ test('ekle-bırak: öğrenci talep eder, danışman ve bölüm başkanı onaylar
   // Derya'nın kaydı seed'de onaylı.
   await openRegistration(page, '23290015')
   await page.getByRole('button', { name: 'Yeni ekle-bırak talebi' }).click()
-  await page.getByLabel(/^COM4507-1/).check()
+  // Bırakılacak ders: sadece onay kutusu (alınabilir dersler listesinde aynı şube "Sepette" görünür).
+  await page.getByRole('checkbox', { name: /^COM4507-1/ }).check()
   await page.getByRole('button', { name: 'COM4511-1: Talebe ekle' }).click()
   await page.getByRole('button', { name: 'Talebi gönder' }).click()
   await expect(page.getByText('Ekle-bırak talebiniz danışmanınıza gönderildi.')).toBeVisible()
