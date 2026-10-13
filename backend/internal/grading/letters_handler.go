@@ -2,7 +2,6 @@ package grading
 
 import (
 	"net/http"
-	"sort"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -25,6 +24,7 @@ func (h *GradebookHandler) registerLetters(rt *authz.Router) {
 	rt.HandleFunc("PUT /api/v1/sections/{id}/letter-overrides", authz.Permission(permFinalize), h.setOverrides)
 	rt.HandleFunc("POST /api/v1/sections/{id}/letter-grades/publish", authz.Permission(permFinalize), h.publishLetters)
 	rt.HandleFunc("POST /api/v1/sections/{id}/makeup/publish", authz.Permission(permFinalize), h.publishMakeup)
+	rt.HandleFunc("GET /api/v1/sections/{id}/grade-stats", authz.Authenticated, h.getStats)
 }
 
 // --- Yanıt tipleri -------------------------------------------------------------
@@ -72,6 +72,7 @@ type letterSummaryResponse struct {
 	Complete int      `json:"complete"`
 	Mean     *float64 `json:"mean"`
 	Median   *float64 `json:"median"`
+	StdDev   *float64 `json:"stddev"`
 	PassRate *float64 `json:"pass_rate"`
 }
 
@@ -114,14 +115,6 @@ func toLetterGradesResponse(r *http.Request, g LetterGrades) letterGradesRespons
 		FinalMinScore:     Points(g.Params.FinalMinScore).Float(),
 		Scale:             []scaleItemResponse{},
 		Students:          make([]letterRowResponse, 0, len(g.Rows)),
-		Distribution:      []letterCountResponse{},
-	}
-	pointsPtr := func(p *Points) *float64 {
-		if p == nil {
-			return nil
-		}
-		v := p.Float()
-		return &v
 	}
 	for _, it := range ManualLetters(scale, g.GradingMode == "PASS_FAIL") {
 		res.Scale = append(res.Scale, scaleItemResponse{
@@ -130,9 +123,7 @@ func toLetterGradesResponse(r *http.Request, g LetterGrades) letterGradesRespons
 		})
 	}
 
-	counts := map[string]int{}
-	var weighted []Points
-	passed := 0
+	var samples []Sample
 	for _, row := range g.Rows {
 		rr := letterRowResponse{
 			EnrollmentID:      row.EnrollmentID,
@@ -158,59 +149,40 @@ func toLetterGradesResponse(r *http.Request, g LetterGrades) letterGradesRespons
 		}
 		if l := row.Letter(); l != "" {
 			rr.Letter = &l
-			counts[l]++
+			sample := Sample{Letter: l, Weighted: row.Weighted()}
 			if grade, ok := g.Scales[row.ScaleID].Find(l); ok {
 				p := grade.Passing
 				rr.Passing = &p
-				if p {
-					passed++
-				}
+				sample.Passing = p
 			}
-			if w := row.Weighted(); w != nil {
-				weighted = append(weighted, *w)
-			}
+			samples = append(samples, sample)
 		}
 		res.Students = append(res.Students, rr)
 	}
 
-	// Dağılım: dersin notlandırmasına uygun bütün harfler (sıfır olanlar dahil), ayrıca
-	// başka bir harf verilmişse o da.
-	listed := map[string]bool{}
-	for _, it := range ManualLetters(scale, g.GradingMode == "PASS_FAIL") {
-		res.Distribution = append(res.Distribution, letterCountResponse{Letter: it.Letter, Count: counts[it.Letter]})
-		listed[it.Letter] = true
-	}
-	for _, it := range scale {
-		if !listed[it.Letter] && counts[it.Letter] > 0 {
-			res.Distribution = append(res.Distribution, letterCountResponse{Letter: it.Letter, Count: counts[it.Letter]})
-		}
-	}
-	complete := 0
-	for _, c := range counts {
-		complete += c
-	}
-	res.Summary = letterSummaryResponse{Students: len(g.Rows), Complete: complete}
-	if len(weighted) > 0 {
-		var sum Points
-		for _, w := range weighted {
-			sum += w
-		}
-		m := mean(sum, len(weighted)).Float()
-		res.Summary.Mean = &m
-		sort.Slice(weighted, func(i, j int) bool { return weighted[i] < weighted[j] })
-		n := len(weighted)
-		med := weighted[n/2]
-		if n%2 == 0 {
-			med = mean(weighted[n/2-1]+weighted[n/2], 2)
-		}
-		md := med.Float()
-		res.Summary.Median = &md
-	}
-	if complete > 0 {
-		rate := float64(passed) / float64(complete)
-		res.Summary.PassRate = &rate
+	st := ComputeStats(samples)
+	res.Distribution = toDistribution(Distribution(scale, g.GradingMode == "PASS_FAIL", st.Distribution))
+	res.Summary = letterSummaryResponse{
+		Students: len(g.Rows), Complete: st.Students, PassRate: st.PassRate(),
+		Mean: pointsPtr(st.Mean), Median: pointsPtr(st.Median), StdDev: pointsPtr(st.StdDev),
 	}
 	return res
+}
+
+func pointsPtr(p *Points) *float64 {
+	if p == nil {
+		return nil
+	}
+	v := p.Float()
+	return &v
+}
+
+func toDistribution(counts []LetterCount) []letterCountResponse {
+	out := make([]letterCountResponse, 0, len(counts))
+	for _, c := range counts {
+		out = append(out, letterCountResponse(c))
+	}
+	return out
 }
 
 // --- Uçlar ---------------------------------------------------------------------
@@ -332,4 +304,53 @@ func (h *GradebookHandler) publishMakeup(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	h.writeLetters(w, r, sc.SectionID)
+}
+
+type gradeStatsResponse struct {
+	SectionID    string                `json:"section_id"`
+	GradingMode  string                `json:"grading_mode"`
+	Students     int                   `json:"student_count"`
+	Scored       int                   `json:"scored_count"`
+	Passed       int                   `json:"passed_count"`
+	PassRate     *float64              `json:"pass_rate"`
+	Mean         *float64              `json:"mean"`
+	Median       *float64              `json:"median"`
+	StdDev       *float64              `json:"stddev"`
+	Distribution []letterCountResponse `json:"distribution"`
+	ComputedAt   time.Time             `json:"computed_at"`
+}
+
+// getStats, şubenin sınıf istatistikleridir: öğretim elemanları, kapsamdaki birimler ve
+// şubeye kayıtlı öğrenciler görür. Harf notları ilan edilmeden istatistik yoktur.
+func (h *GradebookHandler) getStats(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if !httpx.ValidUUID(id) {
+		httpx.NotFound(w, r)
+		return
+	}
+	sc, err := h.svc.repo.sectionContext(r.Context(), h.svc.pool, id, actorID(r), false)
+	if h.gradebookFailed(w, r, err) {
+		return
+	}
+	if !mayViewGradebook(r, sc) {
+		enrolled, err := h.svc.EnrolledIn(r.Context(), sc.SectionID, actorID(r))
+		if h.gradebookFailed(w, r, err) {
+			return
+		}
+		if !enrolled {
+			h.problem(w, r, http.StatusForbidden, "FORBIDDEN", "Bu şubenin sınıf istatistiklerini sadece şubenin öğrencileri, öğretim elemanları ve yetkili birimler görebilir.")
+			return
+		}
+	}
+	st, err := h.svc.SectionStats(r.Context(), sc.SectionID)
+	if h.gradebookFailed(w, r, err) {
+		return
+	}
+	h.writeJSON(w, r, http.StatusOK, gradeStatsResponse{
+		SectionID: sc.SectionID, GradingMode: sc.GradingMode,
+		Students: st.Students, Scored: st.Scored, Passed: st.Passed, PassRate: st.PassRate(),
+		Mean: pointsPtr(st.Mean), Median: pointsPtr(st.Median), StdDev: pointsPtr(st.StdDev),
+		Distribution: toDistribution(Distribution(st.Scale, sc.GradingMode == "PASS_FAIL", st.Distribution)),
+		ComputedAt:   st.ComputedAt,
+	})
 }

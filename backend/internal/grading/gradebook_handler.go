@@ -431,6 +431,8 @@ func (h *GradebookHandler) gradebookFailed(w http.ResponseWriter, r *http.Reques
 		h.problem(w, r, http.StatusConflict, "PUBLISH_WINDOW_CLOSED", "Harf notları final not girişi ya da elle harf notu atama penceresinde ilan edilir.")
 	case errors.Is(err, ErrOverrideWindowClosed):
 		h.problem(w, r, http.StatusConflict, "MANUAL_LETTER_WINDOW_CLOSED", "Elle harf notu atama penceresi kapalı.")
+	case errors.Is(err, ErrStatsNotAvailable):
+		h.problem(w, r, http.StatusNotFound, "GRADES_NOT_PUBLISHED", "Bu şubenin harf notları henüz ilan edilmedi; sınıf istatistikleri ilandan sonra görünür.")
 	case errors.Is(err, ErrLetterNotAllowed):
 		httpx.ValidationFailed(w, r, []httpx.FieldError{{Field: "items.letter", Message: "Bu harf bu derse elle verilemez."}})
 	case errors.As(err, &incomplete):

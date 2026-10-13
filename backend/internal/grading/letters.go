@@ -577,8 +577,8 @@ func (s *Service) SetOverrides(ctx context.Context, actorID string, sc SectionCo
 	})
 }
 
-// PublishedEvent, grades.published olayının verisidir: dönem sonuçları ve sınıf
-// istatistikleri bu olayla yeniden hesaplanır.
+// PublishedEvent, grades.published olayının verisidir: dönem sonuçları bu olayla yeniden
+// hesaplanır. Sınıf istatistikleri ilanın kendi transaction'ında güncellenir.
 type PublishedEvent struct {
 	Phase           string   `json:"phase"` // FINAL ya da MAKEUP
 	SectionID       string   `json:"section_id"`
@@ -665,6 +665,9 @@ func (s *Service) PublishGrades(ctx context.Context, actorID string, sc SectionC
 			UPDATE offering.sections SET grades_published_at = now(), grades_published_by = $2 WHERE id = $1`,
 			sc.SectionID, nullable(actorID)); err != nil {
 			return fmt.Errorf("grading: ilan kaydedilemedi: %w", err)
+		}
+		if err := RefreshStats(ctx, tx, []string{sc.SectionID}); err != nil {
+			return err
 		}
 		count = len(g.Rows)
 		sort.Strings(ev.StudentPrograms)
@@ -760,6 +763,9 @@ func (s *Service) PublishMakeup(ctx context.Context, actorID string, sc SectionC
 			UPDATE offering.sections SET makeup_published_at = now(), makeup_published_by = $2 WHERE id = $1`,
 			sc.SectionID, nullable(actorID)); err != nil {
 			return fmt.Errorf("grading: bütünleme ilanı kaydedilemedi: %w", err)
+		}
+		if err := RefreshStats(ctx, tx, []string{sc.SectionID}); err != nil {
+			return err
 		}
 		changed = len(changes)
 		if err := audit.Record(ctx, tx, audit.Entry{
