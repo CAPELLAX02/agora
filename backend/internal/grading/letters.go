@@ -608,6 +608,10 @@ func (s *Service) PublishGrades(ctx context.Context, actorID string, sc SectionC
 		if err := lockSection(ctx, tx, sc.SectionID, true); err != nil {
 			return err
 		}
+		at, err := publishedAt(ctx, tx)
+		if err != nil {
+			return err
+		}
 		g, err := s.letterGrades(ctx, tx, sc)
 		if err != nil {
 			return err
@@ -633,10 +637,10 @@ func (s *Service) PublishGrades(ctx context.Context, actorID string, sc SectionC
 			if err := tx.QueryRow(ctx, `
 				UPDATE enrollment.enrollments
 				SET status = 'COMPLETED', letter_grade = $2, grade_scale_id = $3, weighted_score = $4::numeric,
-				    letter_reason = $5, grade_published_at = now(), version = version + 1, updated_at = now()
+				    letter_reason = $5, grade_published_at = $6, version = version + 1, updated_at = now()
 				WHERE id = $1 AND status = 'ENROLLED'
 				RETURNING student_program_id`,
-				r.EnrollmentID, r.Letter(), r.ScaleID, weighted, r.Reason()).Scan(&spID); err != nil {
+				r.EnrollmentID, r.Letter(), r.ScaleID, weighted, r.Reason(), at).Scan(&spID); err != nil {
 				return fmt.Errorf("grading: %s notu yazılamadı: %w", r.StudentNo, err)
 			}
 			if err := recordHistory(ctx, tx, r.EnrollmentID, "PUBLISHED", r.Letter(), weighted, r.Reason(), actorID); err != nil {
@@ -687,8 +691,8 @@ func (s *Service) PublishGrades(ctx context.Context, actorID string, sc SectionC
 			distribution[r.Letter()]++
 		}
 		if _, err := tx.Exec(ctx, `
-			UPDATE offering.sections SET grades_published_at = now(), grades_published_by = $2 WHERE id = $1`,
-			sc.SectionID, nullable(actorID)); err != nil {
+			UPDATE offering.sections SET grades_published_at = $3, grades_published_by = $2 WHERE id = $1`,
+			sc.SectionID, nullable(actorID), at); err != nil {
 			return fmt.Errorf("grading: ilan kaydedilemedi: %w", err)
 		}
 		if err := RefreshStats(ctx, tx, []string{sc.SectionID}); err != nil {
@@ -708,6 +712,17 @@ func (s *Service) PublishGrades(ctx context.Context, actorID string, sc SectionC
 		return 0, err
 	}
 	return count, nil
+}
+
+// publishedAt, ilan anıdır: şube kilidi alındıktan sonraki gerçek saat (clock_timestamp). now()
+// transaction'ın başladığı anı verir; ilan transaction'ı başladıktan sonra, kilidi almadan önce
+// biten bir not yazımı ilana dahildir ama zamanı now()'dan sonra görünürdü.
+func publishedAt(ctx context.Context, tx pgx.Tx) (time.Time, error) {
+	var at time.Time
+	if err := tx.QueryRow(ctx, `SELECT clock_timestamp()`).Scan(&at); err != nil {
+		return at, fmt.Errorf("grading: ilan anı okunamadı: %w", err)
+	}
+	return at, nil
 }
 
 // recordHistory, kesin kayda verilen harfi not geçmişine yazar.
@@ -752,6 +767,10 @@ func (s *Service) PublishMakeup(ctx context.Context, actorID string, sc SectionC
 		if makeup != nil {
 			return ErrMakeupPublished
 		}
+		at, err := publishedAt(ctx, tx)
+		if err != nil {
+			return err
+		}
 		g, err := s.letterGrades(ctx, tx, sc)
 		if err != nil {
 			return err
@@ -770,11 +789,11 @@ func (s *Service) PublishMakeup(ctx context.Context, actorID string, sc SectionC
 			var spID string
 			if err := tx.QueryRow(ctx, `
 				UPDATE enrollment.enrollments
-				SET letter_grade = $2, weighted_score = $3::numeric, letter_reason = $4, grade_published_at = now(),
+				SET letter_grade = $2, weighted_score = $3::numeric, letter_reason = $4, grade_published_at = $5,
 				    version = version + 1, updated_at = now()
 				WHERE id = $1 AND status = 'COMPLETED'
 				RETURNING student_program_id`,
-				r.EnrollmentID, next, weighted, string(r.Result.Reason)).Scan(&spID); err != nil {
+				r.EnrollmentID, next, weighted, string(r.Result.Reason), at).Scan(&spID); err != nil {
 				return fmt.Errorf("grading: %s bütünleme notu yazılamadı: %w", r.StudentNo, err)
 			}
 			if err := recordHistory(ctx, tx, r.EnrollmentID, "MAKEUP", next, weighted, string(r.Result.Reason), actorID); err != nil {
@@ -785,8 +804,8 @@ func (s *Service) PublishMakeup(ctx context.Context, actorID string, sc SectionC
 			ev.StudentPrograms = append(ev.StudentPrograms, spID)
 		}
 		if _, err := tx.Exec(ctx, `
-			UPDATE offering.sections SET makeup_published_at = now(), makeup_published_by = $2 WHERE id = $1`,
-			sc.SectionID, nullable(actorID)); err != nil {
+			UPDATE offering.sections SET makeup_published_at = $3, makeup_published_by = $2 WHERE id = $1`,
+			sc.SectionID, nullable(actorID), at); err != nil {
 			return fmt.Errorf("grading: bütünleme ilanı kaydedilemedi: %w", err)
 		}
 		if err := RefreshStats(ctx, tx, []string{sc.SectionID}); err != nil {
