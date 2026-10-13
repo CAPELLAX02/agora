@@ -4309,6 +4309,52 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/v1/student-programs/{id}/transcript/simulate:
+    post:
+      tags: [Öğrenciler]
+      summary: Sanal transkript ("ne olur")
+      description: |
+        Derslere varsayımsal harfler verilerek YANO ve GANO yeniden hesaplanır; **hiçbir şey
+        kaydedilmez**. Hesap dönem sonuçlarınınkiyle aynıdır. Notu henüz verilmemiş bir derse harf
+        verilirse ders notlanmış sayılır ve ilanda olacağı gibi yerini aldığı önceki denemeler
+        (tekrar, eşdeğer ders, kalınan seçmelinin yerine alınan ders) sonraki GANO'ya girmez.
+        Geçmiş bir dersin harfini değiştirmek "o dönem bu notu alsaydım" sorusunu yanıtlar. Harf,
+        dersin `letter_options` listesinden olmalı. Transkripti görebilen herkes kullanabilir.
+      operationId: simulateTranscript
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [grades]
+              properties:
+                grades:
+                  type: array
+                  minItems: 1
+                  maxItems: 200
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [enrollment_id, letter_grade]
+                    properties:
+                      enrollment_id: { type: string, format: uuid }
+                      letter_grade: { type: string, examples: ["B1"] }
+      responses:
+        "200":
+          description: Gerçek ve varsayımsal dönem sonuçları
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TranscriptSimulation" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/v1/student-programs/{id}/history:
     get:
       tags: [Öğrenciler]
@@ -7244,7 +7290,7 @@ components:
                 type: array
                 items:
                   type: object
-                  required: [enrollment_id, course, ects, credit, status, letter_grade, coefficient, is_passing, counts_in_gpa, attempt_no, is_repeat, superseded, source]
+                  required: [enrollment_id, course, ects, credit, status, letter_grade, coefficient, is_passing, counts_in_gpa, attempt_no, is_repeat, superseded, source, letter_options]
                   properties:
                     enrollment_id: { type: string, format: uuid }
                     course:
@@ -7266,6 +7312,10 @@ components:
                     is_repeat: { type: boolean, description: "Tekrar alınan ders (dersin ya da eşdeğerinin önceki denemesi var) ya da kalınan seçmelinin yerine alınan ders" }
                     superseded: { type: boolean, description: Yerini sonraki bir deneme aldı; sonraki dönemlerin GANO'suna girmez }
                     source: { type: string, enum: [REGISTRATION, ADD_DROP, IMPORT] }
+                    letter_options:
+                      type: array
+                      items: { type: string }
+                      description: Sanal transkriptte bu derse verilebilecek harfler (kaydın not ölçeğinde derse verilebilenler, ölçek sırasıyla)
               result:
                 description: Dönem sonucu; notu verilmiş dersi olmayan dönemde null
                 oneOf:
@@ -7283,6 +7333,42 @@ components:
             honor_terms: { type: integer }
             high_honor_terms: { type: integer }
         generated_at: { type: string, format: date-time }
+
+    TranscriptSimulation:
+      type: object
+      required: [terms, summary]
+      properties:
+        terms:
+          type: array
+          items:
+            type: object
+            required: [term, actual, simulated]
+            properties:
+              term:
+                type: object
+                required: [id, code, term_type]
+                properties:
+                  id: { type: string, format: uuid }
+                  code: { type: string }
+                  term_type: { type: string, enum: [FALL, SPRING, SUMMER] }
+              actual:
+                description: Gerçek harflerle dönem sonucu; notu verilmiş ders yoksa null
+                oneOf:
+                  - { $ref: "#/components/schemas/TermResult" }
+                  - { type: "null" }
+              simulated:
+                description: Varsayımsal harflerle dönem sonucu
+                oneOf:
+                  - { $ref: "#/components/schemas/TermResult" }
+                  - { type: "null" }
+        summary:
+          type: object
+          required: [actual_gpa, simulated_gpa, actual_earned_ects, simulated_earned_ects]
+          properties:
+            actual_gpa: { type: [number, "null"] }
+            simulated_gpa: { type: [number, "null"] }
+            actual_earned_ects: { type: number }
+            simulated_earned_ects: { type: number }
 
     CourseAttempt:
       type: object

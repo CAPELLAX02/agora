@@ -1080,6 +1080,14 @@ const injectedRtkApi = api
         }),
         providesTags: ['\u00D6\u011Frenciler'],
       }),
+      simulateTranscript: build.query<SimulateTranscriptApiResponse, SimulateTranscriptApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/student-programs/${queryArg.id}/transcript/simulate`,
+          method: 'POST',
+          body: queryArg.body,
+        }),
+        providesTags: ['\u00D6\u011Frenciler'],
+      }),
       listCourseHistory: build.query<ListCourseHistoryApiResponse, ListCourseHistoryApiArg>({
         query: (queryArg) => ({
           url: `/api/v1/student-programs/${queryArg.id}/history`,
@@ -2412,6 +2420,18 @@ export type GetTranscriptApiResponse = /** status 200 Transkript */ Transcript
 export type GetTranscriptApiArg = {
   /** Geçerli bir UUID değilse 404 döner. */
   id: string
+}
+export type SimulateTranscriptApiResponse =
+  /** status 200 Gerçek ve varsayımsal dönem sonuçları */ TranscriptSimulation
+export type SimulateTranscriptApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: {
+    grades: {
+      enrollment_id: string
+      letter_grade: string
+    }[]
+  }
 }
 export type ListCourseHistoryApiResponse = /** status 200 Ders kayıtları */ {
   items: CourseAttempt[]
@@ -3889,6 +3909,8 @@ export type Transcript = {
       /** Yerini sonraki bir deneme aldı; sonraki dönemlerin GANO'suna girmez */
       superseded: boolean
       source: 'REGISTRATION' | 'ADD_DROP' | 'IMPORT'
+      /** Sanal transkriptte bu derse verilebilecek harfler (kaydın not ölçeğinde derse verilebilenler, ölçek sırasıyla) */
+      letter_options: string[]
     }[]
     /** Dönem sonucu; notu verilmiş dersi olmayan dönemde null */
     result: TermResult | null
@@ -3906,6 +3928,25 @@ export type Transcript = {
     high_honor_terms: number
   }
   generated_at: string
+}
+export type TranscriptSimulation = {
+  terms: {
+    term: {
+      id: string
+      code: string
+      term_type: 'FALL' | 'SPRING' | 'SUMMER'
+    }
+    /** Gerçek harflerle dönem sonucu; notu verilmiş ders yoksa null */
+    actual: TermResult | null
+    /** Varsayımsal harflerle dönem sonucu */
+    simulated: TermResult | null
+  }[]
+  summary: {
+    actual_gpa: number | null
+    simulated_gpa: number | null
+    actual_earned_ects: number
+    simulated_earned_ects: number
+  }
 }
 export type CourseAttempt = {
   id: string
@@ -4499,6 +4540,8 @@ export const {
   useReleaseHoldMutation,
   useGetTranscriptQuery,
   useLazyGetTranscriptQuery,
+  useSimulateTranscriptQuery,
+  useLazySimulateTranscriptQuery,
   useListCourseHistoryQuery,
   useLazyListCourseHistoryQuery,
   useGetStudentProgressQuery,
