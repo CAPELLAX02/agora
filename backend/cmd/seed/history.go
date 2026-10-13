@@ -26,6 +26,11 @@ import (
 // havuzdan rastgele doldurulur. Kalınan ders bir sonraki aynı dönemde (güz dersi güzde)
 // tekrar alınır. Normal süresini aşmış öğrencilerin birkaç dersi hiç geçilememiştir:
 // uzamalarının sebebi budur. Demo öğrencilerinin belirli notları sabittir (demo.go).
+//
+// Her dönemin notu o dönemde geçerli ölçekle verilir: yönetmeliğin 2023 değişikliğinden önceki
+// dönemlerde AU-LISANS (50-59 C3, devamsızlık F1), sonrakilerde AU-LISANS-2023 (50-59 F1
+// başarısız, devamsızlık F4). Puan dağılımı ölçeğin geçme puanına göre kayar: demo
+// senaryolarının geçilen ve kalınan dersleri ölçekten bağımsızdır, harfler ve ortalamalar değişir.
 
 type histTerm struct {
 	id      string
@@ -33,6 +38,7 @@ type histTerm struct {
 	typ     string
 	order   int
 	endedOn time.Time
+	year    int // akademik yılın başlangıç yılı
 }
 
 type histCourse struct {
@@ -58,18 +64,46 @@ type histGrade struct {
 	min, max float64
 }
 
+// histScale, bir not ölçeğidir.
+type histScale struct {
+	id       string
+	fromYear int
+	grades   []histGrade // puanla verilen harfler, yüksekten düşüğe
+	absence  string      // devamsızlık harfi
+	passing  map[string]bool
+	passMin  float64 // geçen en düşük puan
+}
+
+func (s *histScale) letterFor(score float64) string {
+	for _, g := range s.grades {
+		if score >= g.min && score <= g.max {
+			return g.letter
+		}
+	}
+	return s.grades[len(s.grades)-1].letter
+}
+
+// scoreFor, sabitlenmiş bir harf notuna uyan bir puandır (aralığın ortası).
+func (s *histScale) scoreFor(letter string) float64 {
+	for _, g := range s.grades {
+		if g.letter == letter {
+			return math.Round((g.min + g.max) / 2)
+		}
+	}
+	return 0
+}
+
 type histRecord struct {
 	spID, termID, courseID string
 	attempt                int
-	letter                 string
+	scaleID, letter        string
 	score                  *float64
 	absent                 bool
 }
 
 type historyData struct {
-	terms      []histTerm // güz ve bahar dönemleri, eskiden yeniye; sonuncusu içinde bulunulan dönem
-	scaleID    string
-	grades     []histGrade // puanla verilen harfler
+	terms      []histTerm  // güz ve bahar dönemleri, eskiden yeniye; sonuncusu içinde bulunulan dönem
+	scales     []histScale // başlangıç yılına göre sıralı
 	courses    map[string]histCourse
 	codeToID   map[string]string
 	lines      map[string][]histLine // müfredat → satırlar
@@ -118,7 +152,7 @@ func seedHistory(ctx context.Context, pool *pgxpool.Pool, seed uint64) error {
 			}
 			rows = append(rows, []any{
 				r.spID, sections[sectionKey{r.termID, r.courseID}], r.termID, r.courseID, r.attempt,
-				"COMPLETED", attendance, r.score, d.scaleID, r.letter, c.ects, c.credit, "IMPORT", termEnd[r.termID],
+				"COMPLETED", attendance, r.score, r.scaleID, r.letter, c.ects, c.credit, "IMPORT", termEnd[r.termID],
 			})
 		}
 		if _, err := tx.CopyFrom(ctx, pgx.Identifier{"enrollment", "enrollments"},
@@ -155,7 +189,7 @@ func seedHistory(ctx context.Context, pool *pgxpool.Pool, seed uint64) error {
 			WHERE s.id = c.section_id`, sectionIDs); err != nil {
 			return fmt.Errorf("şube mevcutları güncellenemedi: %w", err)
 		}
-		return grading.RecomputeTermResults(ctx, tx, spIDs, time.Now())
+		return grading.RecomputeTermResults(ctx, tx, spIDs)
 	})
 	if err != nil {
 		return err
@@ -207,7 +241,7 @@ func seedTermResults(ctx context.Context, pool *pgxpool.Pool) error {
 		return nil
 	}
 	if err := pgx.BeginFunc(ctx, pool, func(tx pgx.Tx) error {
-		return grading.RecomputeTermResults(ctx, tx, ids, time.Now())
+		return grading.RecomputeTermResults(ctx, tx, ids)
 	}); err != nil {
 		return err
 	}
@@ -265,6 +299,7 @@ func (d *historyData) generate(st histStudent, seed uint64) []histRecord {
 		s.attempts++
 		s.lastTerm = term
 		c := d.courses[courseID]
+		sc := d.scaleFor(term)
 
 		var letter string
 		var score *float64
@@ -276,9 +311,10 @@ func (d *historyData) generate(st histStudent, seed uint64) []histRecord {
 		switch {
 		case hasFixed && s.attempts <= len(fixed):
 			letter = fixed[s.attempts-1]
-			absent = letter == "F1"
-			if !absent && !c.passFail {
-				v := d.scoreFor(letter)
+			if letter == absentLetter {
+				letter, absent = sc.absence, true
+			} else if !c.passFail {
+				v := sc.scoreFor(letter)
 				score = &v
 			}
 			if s.attempts == len(fixed) {
@@ -286,14 +322,14 @@ func (d *historyData) generate(st histStudent, seed uint64) []histRecord {
 			}
 		case persistent[courseID]:
 			v := float64(30 + rng.IntN(18))
-			letter, score = d.letterFor(v), &v
+			letter, score = sc.letterFor(v), &v
 		default:
-			letter, score, absent = d.grade(rng, c, ability, isDemo && demo.clean)
+			letter, score, absent = d.grade(rng, c, sc, ability, isDemo && demo.clean)
 		}
-		s.passed = letter != "F1" && letter != "F2" && letter != "BŞZ"
+		s.passed = sc.passing[letter]
 		out = append(out, histRecord{
 			spID: st.spID, termID: d.terms[term].id, courseID: courseID, attempt: s.attempts,
-			letter: letter, score: score, absent: absent,
+			scaleID: sc.id, letter: letter, score: score, absent: absent,
 		})
 	}
 
@@ -339,8 +375,20 @@ func (d *historyData) generate(st histStudent, seed uint64) []histRecord {
 	return out
 }
 
+// scaleFor, dönemde geçerli ölçektir: başlangıç yılı dönemin akademik yılını geçmeyen en yeni
+// ölçek.
+func (d *historyData) scaleFor(term int) *histScale {
+	sc := &d.scales[0]
+	for i := range d.scales {
+		if d.scales[i].fromYear <= d.terms[term].year {
+			sc = &d.scales[i]
+		}
+	}
+	return sc
+}
+
 // grade, bir dersin notunu üretir: başarı düzeyi, dersin zorluğu ve rastlantı.
-func (d *historyData) grade(rng *rand.Rand, c histCourse, ability float64, clean bool) (string, *float64, bool) {
+func (d *historyData) grade(rng *rand.Rand, c histCourse, sc *histScale, ability float64, clean bool) (string, *float64, bool) {
 	if c.passFail {
 		if !clean && rng.Float64() < 0.03 {
 			return "BŞZ", nil, false
@@ -348,36 +396,18 @@ func (d *historyData) grade(rng *rand.Rand, c histCourse, ability float64, clean
 		return "BŞR", nil, false
 	}
 	if !clean && rng.Float64() < 0.015+math.Max(0, -ability)*0.02 {
-		return "F1", nil, true
+		return sc.absence, nil, true
 	}
 	h := fnv.New32a()
 	_, _ = h.Write([]byte(c.code))
 	difficulty := float64(h.Sum32()%9) - 2
-	v := math.Round(70 + 10*ability + rng.NormFloat64()*9 - difficulty)
-	if clean && v < 50 {
-		v = float64(50 + rng.IntN(15))
+	// Dağılım ölçeğin geçme puanına göre: aynı öğrenci aynı dersten her ölçekte geçer ya da kalır.
+	v := math.Round(sc.passMin + 20 + 10*ability + rng.NormFloat64()*9 - difficulty)
+	if clean && v < sc.passMin {
+		v = sc.passMin + float64(rng.IntN(15))
 	}
 	v = math.Max(0, math.Min(100, v))
-	return d.letterFor(v), &v, false
-}
-
-func (d *historyData) letterFor(score float64) string {
-	for _, g := range d.grades {
-		if score >= g.min && score <= g.max {
-			return g.letter
-		}
-	}
-	return "F2"
-}
-
-// scoreFor, sabitlenmiş bir harf notuna uyan bir puandır (aralığın ortası).
-func (d *historyData) scoreFor(letter string) float64 {
-	for _, g := range d.grades {
-		if g.letter == letter {
-			return math.Round((g.min + g.max) / 2)
-		}
-	}
-	return 0
+	return sc.letterFor(v), &v, false
 }
 
 type sectionKey struct{ termID, courseID string }
@@ -432,12 +462,57 @@ func ensurePastSections(ctx context.Context, pool *pgxpool.Pool, d *historyData,
 	return out, err
 }
 
+// loadHistScales, not ölçeklerini başlangıç yılına göre okur (aynı yılda varsayılan sonda).
+func loadHistScales(ctx context.Context, pool *pgxpool.Pool) ([]histScale, error) {
+	rows, err := pool.Query(ctx, `
+		SELECT s.id, s.effective_from_year, i.letter, coalesce(i.min_score::float8, -1), coalesce(i.max_score::float8, -1),
+		       i.is_passing, i.is_attendance_fail
+		FROM curriculum.grade_scales s JOIN curriculum.grade_scale_items i ON i.grade_scale_id = s.id
+		ORDER BY s.effective_from_year, s.is_default, s.code, i.min_score DESC NULLS LAST`)
+	if err != nil {
+		return nil, fmt.Errorf("not ölçekleri okunamadı: %w", err)
+	}
+	var (
+		scales            []histScale
+		id, letter        string
+		year              int
+		lo, hi            float64
+		passing, absentee bool
+	)
+	_, err = pgx.ForEachRow(rows, []any{&id, &year, &letter, &lo, &hi, &passing, &absentee}, func() error {
+		if len(scales) == 0 || scales[len(scales)-1].id != id {
+			scales = append(scales, histScale{id: id, fromYear: year, passing: map[string]bool{}, passMin: 101})
+		}
+		sc := &scales[len(scales)-1]
+		sc.passing[letter] = passing
+		if absentee {
+			sc.absence = letter
+		}
+		if lo >= 0 {
+			sc.grades = append(sc.grades, histGrade{letter: letter, min: lo, max: hi})
+			if passing {
+				sc.passMin = math.Min(sc.passMin, lo)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("not ölçekleri okunamadı: %w", err)
+	}
+	scales = slices.DeleteFunc(scales, func(s histScale) bool { return len(s.grades) == 0 || s.absence == "" })
+	if len(scales) == 0 {
+		return nil, fmt.Errorf("puan aralıklı ve devamsızlık harfli bir not ölçeği yok")
+	}
+	return scales, nil
+}
+
 func loadHistoryData(ctx context.Context, pool *pgxpool.Pool) (*historyData, error) {
 	d := &historyData{courses: map[string]histCourse{}, codeToID: map[string]string{},
 		lines: map[string][]histLine{}, groups: map[string][]string{}}
 
 	rows, err := pool.Query(ctx, `
-		SELECT t.id, t.code, t.term_type, ay.start_year * 3 + CASE t.term_type WHEN 'FALL' THEN 0 ELSE 1 END, t.ends_on
+		SELECT t.id, t.code, t.term_type, ay.start_year * 3 + CASE t.term_type WHEN 'FALL' THEN 0 ELSE 1 END, t.ends_on,
+		       ay.start_year
 		FROM academic.terms t JOIN academic.academic_years ay ON ay.id = t.academic_year_id
 		WHERE t.term_type IN ('FALL', 'SPRING')
 		  AND t.starts_on <= (SELECT starts_on FROM academic.terms WHERE is_current)
@@ -447,7 +522,7 @@ func loadHistoryData(ctx context.Context, pool *pgxpool.Pool) (*historyData, err
 	}
 	d.terms, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (histTerm, error) {
 		var t histTerm
-		return t, row.Scan(&t.id, &t.code, &t.typ, &t.order, &t.endedOn)
+		return t, row.Scan(&t.id, &t.code, &t.typ, &t.order, &t.endedOn, &t.year)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("dönemler okunamadı: %w", err)
@@ -457,21 +532,8 @@ func loadHistoryData(ctx context.Context, pool *pgxpool.Pool) (*historyData, err
 		return nil, nil
 	}
 
-	if err := pool.QueryRow(ctx, `SELECT id FROM curriculum.grade_scales WHERE is_default`).Scan(&d.scaleID); err != nil {
-		return nil, fmt.Errorf("varsayılan not ölçeği okunamadı: %w", err)
-	}
-	rows, err = pool.Query(ctx, `
-		SELECT letter, min_score::float8, max_score::float8 FROM curriculum.grade_scale_items
-		WHERE grade_scale_id = $1 AND min_score IS NOT NULL ORDER BY min_score DESC`, d.scaleID)
-	if err != nil {
-		return nil, fmt.Errorf("not ölçeği okunamadı: %w", err)
-	}
-	d.grades, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (histGrade, error) {
-		var g histGrade
-		return g, row.Scan(&g.letter, &g.min, &g.max)
-	})
-	if err != nil {
-		return nil, fmt.Errorf("not ölçeği okunamadı: %w", err)
+	if d.scales, err = loadHistScales(ctx, pool); err != nil {
+		return nil, err
 	}
 
 	rows, err = pool.Query(ctx, `

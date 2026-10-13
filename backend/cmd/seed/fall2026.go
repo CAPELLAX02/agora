@@ -70,9 +70,9 @@ const (
 var (
 	exam6040  = []planPart{{"MIDTERM", 40}, {"FINAL", 60}}
 	exam3010  = []planPart{{"MIDTERM", 30}, {"HOMEWORK", 10}, {"FINAL", 60}}
-	exam2x    = []planPart{{"MIDTERM", 25}, {"MIDTERM", 25}, {"FINAL", 50}}
-	labCourse = []planPart{{"MIDTERM", 30}, {"LAB", 20}, {"FINAL", 50}}
-	project   = []planPart{{"PROJECT", 40}, {"PRESENTATION", 20}, {"FINAL", 40}}
+	exam2x    = []planPart{{"MIDTERM", 20}, {"MIDTERM", 20}, {"FINAL", 60}}
+	labCourse = []planPart{{"MIDTERM", 25}, {"LAB", 15}, {"FINAL", 60}}
+	project   = []planPart{{"PROJECT", 25}, {"PRESENTATION", 15}, {"FINAL", 60}}
 	passFail  = []planPart{{"PARTICIPATION", 40}, {"FINAL", 60}}
 )
 

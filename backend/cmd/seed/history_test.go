@@ -85,7 +85,8 @@ func TestHistory(t *testing.T) {
 	if got := letters("22290002", "COM3035"); len(got) != 1 || got[0] != "F2" {
 		t.Errorf("İşletim Sistemleri: %v", got)
 	}
-	if got := letters("25290011", "COM1002"); len(got) != 1 || got[0] != "F1" {
+	// 2025 bahar yönetmeliğin 2023 değişikliğinden sonra: devamsızlık harfi F4.
+	if got := letters("25290011", "COM1002"); len(got) != 1 || got[0] != "F4" {
 		t.Errorf("Programlama II devamsızlık: %v", got)
 	}
 	if g := gpa("22290002"); g < 2 || g >= 3 {
@@ -100,7 +101,8 @@ func TestHistory(t *testing.T) {
 	if n := count(t, pool, `
 		SELECT count(*) FROM enrollment.enrollments e
 		JOIN enrollment.student_programs sp ON sp.id = e.student_program_id JOIN people.students s ON s.id = sp.student_id
-		WHERE s.student_no IN ('22290001', '23290013', '25290016') AND e.letter_grade IN ('F1', 'F2', 'BŞZ')`); n != 0 {
+		JOIN curriculum.grade_scale_items gi ON gi.grade_scale_id = e.grade_scale_id AND gi.letter = e.letter_grade
+		WHERE s.student_no IN ('22290001', '23290013', '25290016') AND NOT gi.is_passing`); n != 0 {
 		t.Errorf("hiç kalmamış demo öğrencilerinin %d kalınan dersi var", n)
 	}
 	// 1. yarıyıldakilerin geçmişi yok; 7. yarıyıldakiler altı dönem ders almış.
@@ -130,6 +132,14 @@ func TestHistory(t *testing.T) {
 		WHERE NOT t.is_current
 		  AND s.enrolled_count <> (SELECT count(*) FROM enrollment.enrollments e WHERE e.section_id = s.id AND e.status <> 'DROPPED')`); n != 0 {
 		t.Errorf("%d şubenin mevcudu kayıtlarla tutmuyor", n)
+	}
+	// Her dönemin notu o dönemin ölçeğiyle: 2023-2024 akademik yılından itibaren AU-LISANS-2023.
+	if n := count(t, pool, `
+		SELECT count(*) FROM enrollment.enrollments e
+		JOIN academic.terms t ON t.id = e.term_id JOIN academic.academic_years ay ON ay.id = t.academic_year_id
+		JOIN curriculum.grade_scales g ON g.id = e.grade_scale_id
+		WHERE e.source = 'IMPORT' AND (g.code = 'AU-LISANS-2023') <> (ay.start_year >= 2023)`); n != 0 {
+		t.Errorf("%d aktarılan not yanlış ölçekte", n)
 	}
 	// Notu verilmiş her şubenin sınıf istatistiği vardır ve kayıtlarla tutar.
 	if n := count(t, pool, `

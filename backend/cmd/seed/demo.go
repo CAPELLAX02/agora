@@ -11,6 +11,10 @@ import (
 	"github.com/CAPELLAX02/agora/backend/internal/enrollment"
 )
 
+// absentLetter, demo notlarında devamsızlıktan kalmayı gösterir: dönemin ölçeğindeki
+// devamsızlık harfi verilir (2023 öncesi F1, sonrası F4).
+const absentLetter = "DEVAMSIZ"
+
 // demoStudent, Bilgisayar Mühendisliği (İngilizce) programına kayıtlı bir demo öğrencisidir.
 // Geçmiş dönem notları üretilir (bkz. history.go); letters, demo senaryoları için belirli
 // derslerin notlarını sabitler: sırayla her denemenin harf notu. Listenin son notu kalma
@@ -37,9 +41,9 @@ var demoStudents = []demoStudent{
 	{no: "26290004", admission: 2026, semester: 1, classLevel: 1},
 	// Ön koşul: Bilgisayar Programlama II'ye devamsızlıktan kaldı, Veri Yapıları'nı alamaz.
 	{no: "25290011", admission: 2025, semester: 3, classLevel: 2, ability: -0.1,
-		letters: map[string][]string{"COM1002": {"F1"}}},
+		letters: map[string][]string{"COM1002": {absentLetter}}},
 	// Düşük GANO (30 AKTS sınırı) ve alttan ders.
-	{no: "24290012", admission: 2024, semester: 5, classLevel: 3, ability: -1.1,
+	{no: "24290012", admission: 2024, semester: 5, classLevel: 3, ability: -1.4,
 		letters: map[string][]string{"COM2067": {"F2"}}},
 	{no: "23290013", admission: 2023, semester: 7, classLevel: 4, ability: 1.7, clean: true},
 	// Katkı payı borcu: ders seçemez.
