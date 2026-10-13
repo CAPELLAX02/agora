@@ -281,6 +281,10 @@ canManageHold(actor, studentProgram):                            # uygulandı (F
                                                                      # fakülte öğrenci işleri fakülte kapsamı
     # Kaldırmada gerekçe zorunlu; öğrenci kendi engellerini görür, danışman danışmanlığındakileri.
 
+canReadGrades(actor, studentProgram):                            # uygulandı (Faz 4)
+    # canReadTranscript'in aynısı, grade:read_own / grade:read_scoped ile. Bileşen notu ve
+    # sınıf ortalaması sadece yayımlanan bileşende görünür.
+
 canReadTranscript(actor, studentProgram):                        # uygulandı (Faz 4)
     (has(actor, "transcript:read_own") AND owns(actor, studentProgram))
     OR (has(actor, "transcript:read_scoped") AND (

@@ -81,6 +81,7 @@ make web-dev       # web: http://localhost:5173
 | ----- | ----- | --- |
 | Akademik takvim | herkes | Birim olarak Mühendislik seçilince uzatılmış ekle-bırak penceresi uygulanır. Olay yönetimi `P20002` ile, MFA kurulduktan sonra |
 | Ders planım | `22290002` | 2022 girişli: 2022 ders planı, seçmeli yuvaların havuzları açılır |
+| Notlarım | `22290002` | Dönem seçici; geçmiş dönemlerde harf notu, ilan tarihi ve sınıf ortalaması (2025-2026 Bahar'da devamsızlıktan F4). Bileşen notları öğretim elemanı yayımlayınca görünür |
 | Transkript | `22290002`; danışman `P10001` öğrenci detayında | Dönem dönem notlar, tekrar ve geçersiz deneme işaretleri (Fizik I iki kez kalındı, yeni koduyla tekrar alınıyor), YANO/GANO, onur; yazdırılabilir görünüm. "Ne olur?" ile sanal transkript: Fizik I'e (PHY0105) B1 verilince eski F2 GANO'dan düşer |
 | Ders kataloğu, ders planları, haftalık program, not ölçeği | herkes | Ders planı taslağı açma ve yürürlüğe koyma `P20002` (merkezi öğrenci işleri) ya da `P20001` (fakülte) ile |
 | Ders açma | `P10002` (bölüm başkanı) | Şube, kontenjan, öğretim elemanı ve oturum ekleme; çakışmada sunucunun mesajı gösterilir |
