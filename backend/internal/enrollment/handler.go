@@ -42,6 +42,7 @@ func (h *Handler) Register(rt *authz.Router) {
 	rt.HandleFunc("GET /api/v1/me/advisees", authz.Authenticated, h.myAdvisees)
 
 	h.registerHolds(rt)
+	h.registerTranscript(rt)
 }
 
 // --- Yanıt tipleri -----------------------------------------------------------
