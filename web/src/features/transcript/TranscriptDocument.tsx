@@ -10,7 +10,7 @@ import {
 import { useTranslation } from 'react-i18next'
 
 import { formatDateTime } from '@/i18n/format'
-import type { Transcript } from '@/shared/api/generated'
+import type { TermResult, Transcript, TranscriptSimulation } from '@/shared/api/generated'
 import { useLocalized } from '@/shared/lib/localized'
 import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/ui/badge'
@@ -24,6 +24,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 type Term = Transcript['terms'][number]
 
+/** Simulation, sanal transkript modudur: derslere verilen varsayımsal harfler ve son hesap. */
+export type Simulation = {
+  /** edits, kesin kayıt → varsayımsal harf. */
+  edits: Record<string, string>
+  onChange: (enrollmentId: string, letter: string | null) => void
+  result?: TranscriptSimulation
+}
+
 /** termName, "2025-FALL" kodlu dönemi "2025-2026 Güz" biçiminde yazar. */
 function termName(t: TFunction, term: Term['term']): string {
   const year = Number(term.code.slice(0, 4))
@@ -36,7 +44,13 @@ function termName(t: TFunction, term: Term['term']): string {
  * dönem dönem dersler (tekrar ve geçersiz deneme işaretleriyle) ve dönem sonuçları. Ekranda
  * renkli, yazdırırken sayfa sayfa bölünecek biçimdedir.
  */
-export function TranscriptDocument({ transcript: tr }: { transcript: Transcript }) {
+export function TranscriptDocument({
+  transcript: tr,
+  simulation,
+}: {
+  transcript: Transcript
+  simulation?: Simulation
+}) {
   const { t } = useTranslation()
   const localized = useLocalized()
   const sp = tr.student_program
@@ -131,7 +145,9 @@ export function TranscriptDocument({ transcript: tr }: { transcript: Transcript 
           {t('transcript.empty')}
         </p>
       ) : (
-        tr.terms.map((term) => <TermSection key={term.term.id} term={term} localized={localized} />)
+        tr.terms.map((term) => (
+          <TermSection key={term.term.id} term={term} localized={localized} simulation={simulation} />
+        ))
       )}
 
       <footer className="space-y-1 border-t pt-4 text-xs text-muted-foreground">
@@ -150,9 +166,46 @@ export function TranscriptDocument({ transcript: tr }: { transcript: Transcript 
   )
 }
 
-function TermSection({ term, localized }: { term: Term; localized: ReturnType<typeof useLocalized> }) {
+/** Compare, gerçek değeri ve sanal transkriptte farklıysa varsayımsal değeri gösterir. */
+function Compare({
+  actual,
+  simulated,
+  gpa = true,
+}: {
+  actual: number | null | undefined
+  simulated?: number | null
+  gpa?: boolean
+}) {
+  const value = (v: number | null | undefined) =>
+    gpa ? <Gpa value={v} /> : <span className="font-semibold tabular-nums">{v ?? '—'}</span>
+  if (simulated === undefined || simulated === actual) {
+    return value(actual)
+  }
+  return (
+    <span className="inline-flex items-center gap-1">
+      <span className="opacity-60">{value(actual)}</span>
+      <span aria-hidden>→</span>
+      <span className="rounded-md bg-violet-500/12 px-1 ring-1 ring-violet-500/30">{value(simulated)}</span>
+    </span>
+  )
+}
+
+function TermSection({
+  term,
+  localized,
+  simulation,
+}: {
+  term: Term
+  localized: ReturnType<typeof useLocalized>
+  simulation?: Simulation
+}) {
   const { t } = useTranslation()
-  const r = term.result
+  const simulated: TermResult | null | undefined = simulation?.result?.terms.find(
+    (x) => x.term.id === term.term.id,
+  )?.simulated
+  const r = term.result ?? simulated ?? null
+  // shown, başlıkta gösterilen sonuç: sanal transkriptte varsayımsal, yoksa gerçek.
+  const shown = simulated ?? r
   return (
     <section
       className="break-inside-avoid overflow-hidden rounded-2xl border bg-card shadow-xs print:rounded-none print:shadow-none"
@@ -161,36 +214,43 @@ function TermSection({ term, localized }: { term: Term; localized: ReturnType<ty
       <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-muted/40 px-4 py-3">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="font-bold">{termName(t, term.term)}</h3>
-          {r && r.standing !== 'NORMAL' && (
-            <Badge variant={r.standing === 'HIGH_HONOR' ? 'violet' : 'warning'} className="gap-1">
+          {shown && shown.standing !== 'NORMAL' && (
+            <Badge variant={shown.standing === 'HIGH_HONOR' ? 'violet' : 'warning'} className="gap-1">
               <AwardIcon className="size-3.5" aria-hidden />
-              {t(`transcript.standing.${r.standing}`)}
+              {t(`transcript.standing.${shown.standing}`)}
             </Badge>
           )}
+          {!term.result && simulated && <Badge variant="violet">{t('transcript.sim.badge')}</Badge>}
         </div>
         {r ? (
           <dl className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
             <div className="flex gap-1.5">
               <dt className="text-muted-foreground">{t('transcript.termGpa')}</dt>
               <dd>
-                <Gpa value={r.term_gpa} />
+                <Compare actual={term.result?.term_gpa} simulated={simulated?.term_gpa} />
               </dd>
             </div>
             <div className="flex gap-1.5">
               <dt className="text-muted-foreground">{t('transcript.gpa')}</dt>
               <dd>
-                <Gpa value={r.cumulative_gpa} />
+                <Compare actual={term.result?.cumulative_gpa} simulated={simulated?.cumulative_gpa} />
               </dd>
             </div>
             <div className="flex gap-1.5">
               <dt className="text-muted-foreground">{t('transcript.termEcts')}</dt>
               <dd className="font-semibold tabular-nums">
-                {r.earned_ects} / {r.attempted_ects}
+                {(shown ?? r).earned_ects} / {(shown ?? r).attempted_ects}
               </dd>
             </div>
             <div className="flex gap-1.5">
               <dt className="text-muted-foreground">{t('transcript.cumulativeEcts')}</dt>
-              <dd className="font-semibold tabular-nums">{r.cumulative_ects}</dd>
+              <dd>
+                <Compare
+                  gpa={false}
+                  actual={term.result?.cumulative_ects}
+                  simulated={simulated?.cumulative_ects}
+                />
+              </dd>
             </div>
           </dl>
         ) : (
@@ -214,7 +274,13 @@ function TermSection({ term, localized }: { term: Term; localized: ReturnType<ty
         </TableHeader>
         <TableBody>
           {term.courses.map((c) => (
-            <TableRow key={c.enrollment_id} className={cn(c.superseded && 'text-muted-foreground')}>
+            <TableRow
+              key={c.enrollment_id}
+              className={cn(
+                c.superseded && 'text-muted-foreground',
+                simulation?.edits[c.enrollment_id] && 'bg-violet-500/6',
+              )}
+            >
               <TableCell className="hidden font-mono text-xs sm:table-cell print:table-cell">
                 {c.course.code}
               </TableCell>
@@ -239,7 +305,26 @@ function TermSection({ term, localized }: { term: Term; localized: ReturnType<ty
               </TableCell>
               <TableCell className="text-right tabular-nums">{c.ects}</TableCell>
               <TableCell className="text-center">
-                {c.letter_grade ? (
+                {simulation ? (
+                  <select
+                    aria-label={t('transcript.sim.choose', { course: c.course.code })}
+                    value={simulation.edits[c.enrollment_id] ?? ''}
+                    onChange={(e) => simulation.onChange(c.enrollment_id, e.target.value || null)}
+                    className={cn(
+                      'h-8 w-full max-w-24 min-w-16 cursor-pointer rounded-lg border border-input bg-card px-1.5 font-mono text-xs font-bold shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
+                      simulation.edits[c.enrollment_id] &&
+                        'border-violet-500 text-violet-700 ring-2 ring-violet-500/25 dark:text-violet-300',
+                    )}
+                  >
+                    {/* Boş seçenek gerçek harftir (süren derste henüz yok). */}
+                    <option value="">{c.letter_grade ?? '—'}</option>
+                    {c.letter_options.map((l) => (
+                      <option key={l} value={l}>
+                        {l}
+                      </option>
+                    ))}
+                  </select>
+                ) : c.letter_grade ? (
                   <LetterGrade
                     letter={c.letter_grade}
                     className={cn(c.superseded && 'line-through opacity-60')}

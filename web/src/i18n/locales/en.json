@@ -1508,6 +1508,21 @@
     "disclaimer": "For information only; the signed, verifiable official transcript will come with the document service. Generated: {{time}}",
     "empty": "No courses yet.",
     "tab": "Transcript",
-    "openPrintable": "Printable view"
+    "openPrintable": "Printable view",
+    "sim": {
+      "open": "What if?",
+      "close": "Close the what-if transcript",
+      "title": "What-if transcript",
+      "hint": "Pick hypothetical grades for courses; GPA and CGPA are recalculated instantly. Nothing is saved.",
+      "changes_one": "Hypothetical grade for {{count}} course",
+      "changes_other": "Hypothetical grades for {{count}} courses",
+      "nothingSaved": "Nothing is saved; your real grades do not change.",
+      "failed": "Could not calculate, check your choices.",
+      "gpa": "What-if CGPA",
+      "earned": "What-if ECTS earned",
+      "reset": "Reset",
+      "choose": "Hypothetical grade for {{course}}",
+      "badge": "What-if"
+    }
   }
 }

@@ -1,8 +1,8 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 
-import type { StudentProgram, Transcript } from '@/shared/api/generated'
+import type { StudentProgram, Transcript, TranscriptSimulation } from '@/shared/api/generated'
 import { grants, tokens } from '@/test/fixtures'
 import { renderApp } from '@/test/render'
 import { server } from '@/test/server'
@@ -54,6 +54,7 @@ const course = (code: string, name: string, letter: string | null, over: object 
   is_repeat: false,
   superseded: false,
   source: 'REGISTRATION' as const,
+  letter_options: ['A', 'B1', 'B2', 'B3', 'C1', 'C2', 'C3', 'F1', 'F2', 'F3', 'F4'],
   ...over,
 })
 
@@ -138,5 +139,59 @@ describe('transkript', () => {
 
     expect(screen.getByRole('meter', { name: 'Kazanılan AKTS' })).toHaveAttribute('aria-valuenow', '36')
     expect(screen.getByRole('button', { name: 'Yazdır' })).toBeEnabled()
+  })
+
+  it('sanal transkriptte derse varsayımsal not seçilince GANO yeniden hesaplanır, bir şey kaydedilmez', async () => {
+    let body: unknown = null
+    const result = (gpa: number): TranscriptSimulation => ({
+      terms: transcript.terms.map((x) => ({
+        term: x.term,
+        actual: x.result,
+        simulated:
+          x.term.id === 't3'
+            ? {
+                attempted_ects: 6,
+                earned_ects: 6,
+                term_gpa: 4,
+                cumulative_ects: 42,
+                cumulative_gpa: gpa,
+                standing: 'NORMAL',
+              }
+            : x.result,
+      })),
+      summary: { actual_gpa: 3.41, simulated_gpa: gpa, actual_earned_ects: 36, simulated_earned_ects: 42 },
+    })
+    server.use(
+      http.post('/api/v1/auth/refresh', () => HttpResponse.json(tokens())),
+      http.get('/api/v1/me/permissions', () => HttpResponse.json(grants('transcript:read_own'))),
+      http.get('/api/v1/me/programs', () => HttpResponse.json({ items: [program] })),
+      http.get('/api/v1/student-programs/:id/transcript', () => HttpResponse.json(transcript)),
+      http.post('/api/v1/student-programs/:id/transcript/simulate', async ({ request }) => {
+        body = await request.json()
+        return HttpResponse.json(result(3.57))
+      }),
+    )
+    const { user } = renderApp('/transkript')
+
+    await screen.findByRole('heading', { name: 'Buse Demirtaş' })
+    await user.click(screen.getByRole('button', { name: 'Ne olur?' }))
+    expect(screen.getByRole('heading', { name: 'Sanal transkript' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Yazdır' })).not.toBeInTheDocument()
+
+    await user.selectOptions(screen.getByRole('combobox', { name: 'COM2001 için varsayımsal not' }), 'A')
+    await waitFor(() =>
+      expect(body).toEqual({ grades: [{ enrollment_id: 'e-COM2001-null', letter_grade: 'A' }] }),
+    )
+    const bar = screen.getByRole('status', { name: 'Sanal transkript' })
+    expect(await within(bar).findByText('+0.16')).toBeInTheDocument()
+    expect(within(bar).getByText('3.57')).toBeInTheDocument()
+    expect(within(bar).getByText('1 derse varsayımsal not verildi')).toBeInTheDocument()
+    const current = screen.getByRole('region', { name: '2026-2027 Güz' })
+    expect(within(current).getByText('Sanal')).toBeInTheDocument()
+
+    await user.click(within(bar).getByRole('button', { name: 'Sıfırla' }))
+    expect(within(bar).queryByText('+0.16')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Sanal transkripti kapat' }))
+    expect(screen.getByRole('button', { name: 'Yazdır' })).toBeInTheDocument()
   })
 })

@@ -17,4 +17,13 @@ test('öğrenci transkriptinde dönem dönem notlarını ve ortalamalarını gö
   await expect(current.getByText('Notlar henüz ilan edilmedi')).toBeVisible()
   await expect(current.getByRole('row', { name: /PHY0105/ }).getByText('tekrar')).toBeAttached()
   await expect(page.getByRole('meter', { name: 'Kazanılan AKTS' })).toBeVisible()
+
+  // Sanal transkript: süren tekrar dersine B1 verilince eski F2 GANO'dan düşer; bir şey kaydedilmez.
+  await page.getByRole('button', { name: 'Ne olur?' }).click()
+  await current.getByRole('combobox', { name: 'PHY0105 için varsayımsal not' }).selectOption('B1')
+  const bar = page.getByRole('status', { name: 'Sanal transkript' })
+  await expect(bar.getByText(/^\+0\.\d\d$/)).toBeVisible()
+  await expect(current.getByText('Sanal', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Sanal transkripti kapat' }).click()
+  await expect(current.getByText('Notlar henüz ilan edilmedi')).toBeVisible()
 })

@@ -1508,6 +1508,21 @@
     "disclaimer": "Bilgi amaçlıdır; imzalı ve doğrulama kodlu resmî transkript belge altyapısıyla gelecek. Oluşturulma: {{time}}",
     "empty": "Henüz ders kaydı yok.",
     "tab": "Transkript",
-    "openPrintable": "Yazdırılabilir görünüm"
+    "openPrintable": "Yazdırılabilir görünüm",
+    "sim": {
+      "open": "Ne olur?",
+      "close": "Sanal transkripti kapat",
+      "title": "Sanal transkript",
+      "hint": "Derslere varsayımsal notlar seçin; YANO ve GANO hemen yeniden hesaplanır. Hiçbir şey kaydedilmez.",
+      "changes_one": "{{count}} derse varsayımsal not verildi",
+      "changes_other": "{{count}} derse varsayımsal not verildi",
+      "nothingSaved": "Hiçbir şey kaydedilmez; gerçek notlarınız değişmez.",
+      "failed": "Hesaplanamadı, seçimleri kontrol edin.",
+      "gpa": "Sanal GANO",
+      "earned": "Sanal kazanılan AKTS",
+      "reset": "Sıfırla",
+      "choose": "{{course}} için varsayımsal not",
+      "badge": "Sanal"
+    }
   }
 }
