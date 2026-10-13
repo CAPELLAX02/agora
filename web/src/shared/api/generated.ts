@@ -3295,8 +3295,10 @@ export type GradeItem = {
   counts_in_gpa: boolean
   /** AKTS kazandırır mı? */
   earns_ects: boolean
-  /** Devamsızlıktan kalma notu (F1) */
+  /** Devamsızlıktan kalma notu (2023 ölçeğinde F4, öncekinde F1); puanla verilmez, ölçekte en fazla bir tane */
   is_attendance_fail: boolean
+  /** Finale girme hakkı olduğu hâlde girmedi notu (2023 ölçeğinde F3); puanla verilmez, ölçekte en fazla bir tane. Yoksa finale girmeyen puanla verilen en düşük harfi alır */
+  is_final_absent: boolean
 }
 export type GradeScale = {
   id: string
@@ -3479,8 +3481,10 @@ export type AssessmentPlan = {
   }[]
   in_term_weight: number
   final_weight: number
-  /** Tek final ve toplam 100 */
+  /** Tek final, toplam 100 ve (varsa) finalin ağırlığı yönetmeliğin öngördüğü kadar */
   is_complete: boolean
+  /** Yönetmeliğin finale (ve yerine geçen bütünlemeye) verdiği ağırlık, dönemin başında geçerli `final_exam_weight` parametresi (2023 değişikliğinden sonra 60: dönem içi değerlendirmeler toplam 40). Boşsa finalin ağırlığı serbesttir. */
+  required_final_weight: number | null
   locked_at: string | null
   /** Kilitleyenin adı */
   locked_by: string | null

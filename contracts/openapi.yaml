@@ -3259,7 +3259,7 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409":
-          description: "`ASSESSMENT_PLAN_INCOMPLETE`: tek final ve toplam 100 değil, `SECTION_CANCELLED`"
+          description: "`ASSESSMENT_PLAN_INCOMPLETE`: tek final ve toplam 100 değil, `ASSESSMENT_PLAN_FINAL_WEIGHT`: finalin ağırlığı yönetmeliğe uymuyor, `SECTION_CANCELLED`"
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Problem" }
@@ -3424,7 +3424,7 @@ paths:
       tags: [Değerlendirme]
       summary: Öğrencilerin devam durumunu yazar
       description: >-
-        `ATTENDANCE_FAIL` (devamsız) öğrencinin harf notu F1 olur. Sadece gönderilen
+        `ATTENDANCE_FAIL` (devamsız) öğrenci ölçeğin devamsızlık harfini (F4) alır. Sadece gönderilen
         öğrenciler değişir. Şubenin sorumlu ya da ortak öğretim elemanı yazar
         (`score:enter`, MFA); harf notları ilan edilmeden önce yapılır.
       operationId: setAttendance
@@ -6616,7 +6616,7 @@ components:
 
     GradeItem:
       type: object
-      required: [letter, coefficient, min_score, max_score, is_passing, counts_in_gpa, earns_ects, is_attendance_fail]
+      required: [letter, coefficient, min_score, max_score, is_passing, counts_in_gpa, earns_ects, is_attendance_fail, is_final_absent]
       properties:
         letter: { type: string, examples: ["B1"] }
         coefficient: { type: [number, "null"], description: "4'lük sistemde katsayı; ortalamaya girmeyen harflerde null", examples: [3.5] }
@@ -6625,7 +6625,8 @@ components:
         is_passing: { type: boolean }
         counts_in_gpa: { type: boolean, description: Ağırlıklı not ortalamasına girer mi? }
         earns_ects: { type: boolean, description: AKTS kazandırır mı? }
-        is_attendance_fail: { type: boolean, description: Devamsızlıktan kalma notu (F1) }
+        is_attendance_fail: { type: boolean, description: "Devamsızlıktan kalma notu (2023 ölçeğinde F4, öncekinde F1); puanla verilmez, ölçekte en fazla bir tane" }
+        is_final_absent: { type: boolean, description: "Finale girme hakkı olduğu hâlde girmedi notu (2023 ölçeğinde F3); puanla verilmez, ölçekte en fazla bir tane. Yoksa finale girmeyen puanla verilen en düşük harfi alır" }
 
     GradeScale:
       type: object
@@ -6864,7 +6865,7 @@ components:
 
     AssessmentPlan:
       type: object
-      required: [section_id, components, in_term_weight, final_weight, is_complete, locked_at, locked_by, editable, can_unlock, version]
+      required: [section_id, components, in_term_weight, final_weight, is_complete, required_final_weight, locked_at, locked_by, editable, can_unlock, version]
       properties:
         section_id: { type: string, format: uuid }
         components:
@@ -6884,7 +6885,14 @@ components:
               scheduled_on: { type: [string, "null"], format: date }
         in_term_weight: { type: number }
         final_weight: { type: number }
-        is_complete: { type: boolean, description: Tek final ve toplam 100 }
+        is_complete: { type: boolean, description: "Tek final, toplam 100 ve (varsa) finalin ağırlığı yönetmeliğin öngördüğü kadar" }
+        required_final_weight:
+          type: [number, "null"]
+          description: >-
+            Yönetmeliğin finale (ve yerine geçen bütünlemeye) verdiği ağırlık, dönemin başında
+            geçerli `final_exam_weight` parametresi (2023 değişikliğinden sonra 60: dönem içi
+            değerlendirmeler toplam 40). Boşsa finalin ağırlığı serbesttir.
+          examples: [60]
         locked_at: { type: [string, "null"], format: date-time }
         locked_by: { type: [string, "null"], description: Kilitleyenin adı }
         editable: { type: boolean, description: İsteği yapan kullanıcı planı şu an düzenleyebilir mi? }
@@ -6894,7 +6902,7 @@ components:
     AttendanceStatus:
       type: string
       enum: [CONTINUING, ATTENDANCE_FAIL]
-      description: "`ATTENDANCE_FAIL`: devamsız, harf notu F1"
+      description: "`ATTENDANCE_FAIL`: devamsız, ölçeğin devamsızlık harfi (2023 ölçeğinde F4)"
 
     GradeEntryWindow:
       type: object
@@ -6998,8 +7006,8 @@ components:
       type: string
       enum: [RANGE, ATTENDANCE_FAIL, FINAL_ABSENT, FINAL_BELOW_MIN, PASS_FAIL, MANUAL]
       description: >-
-        Harf notunun hangi kuralla verildiği: puan aralığı, devamsızlık (F1), finale girmedi,
-        final barajı altı, başarılı/başarısız notlu ders, elle verildi
+        Harf notunun hangi kuralla verildiği: puan aralığı, devamsızlık (F4), finale girmedi (F3),
+        final ya da bütünleme barajı altı (F2), başarılı/başarısız notlu ders, elle verildi
 
     LetterGrades:
       type: object
