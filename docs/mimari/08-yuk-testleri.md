@@ -1,6 +1,6 @@
 # 08 · Yük Testleri
 
-> **Durum:** Faz 3 · `registration-rush` ilk ölçümleri (2026-10-11). Senaryolar ve hedefler için bkz. [06 · §9](06-sistem-mimarisi-ve-teknoloji.md).
+> **Durum:** Faz 3 · `registration-rush` ilk ölçümleri (2026-10-11); Faz 4 · toplu dönem sonucu hesabı (2026-10-13). Senaryolar ve hedefler için bkz. [06 · §9](06-sistem-mimarisi-ve-teknoloji.md).
 
 ## 1. `registration-rush`: ders seçme açılışı
 
@@ -87,6 +87,25 @@ Bunlar dönem içinde neredeyse hiç değişmez; yürürlükteki müfredat zaten
 3. Ders seçme yanıtları kaydın güncel halini yeniden değerlendirir (ikinci bir kural çalıştırması). Yük altında bu, yanıtı işlem sonucundan üretmekle kısaltılabilir.
 4. 10.000 öğrencilik hedef senaryo ([06 · §9](06-sistem-mimarisi-ve-teknoloji.md)) birden çok programın ders açmasını ister. Şu an sadece Bilgisayar Mühendisliği'nin gerçek ders planı ve açılan dersleri var; senaryo diğer programlar için sentetik ders açma seed'iyle büyütülecek.
 
-## 3. Nasıl çalıştırılır
+## 3. Toplu dönem sonucu hesabı (YANO/GANO)
 
-[loadtest/README.md](../../loadtest/README.md).
+Dönem sonuçları türetilmiş veridir: not ilanı olayıyla (`grades.published`) güncellenir. `cmd/termresults` notu olan bütün öğrencilerin sonuçlarını kesin kayıtlardan yeniden hesaplar, kayıtlı sonuçlarla ve GANO önbelleğiyle karşılaştırır, `-apply` ile sadece farkı olanları yazar. Öğrenciler 500'lük gruplara bölünür, gruplar `errgroup` ile paralel işlenir. Worker aynı doğrulamayı günde bir kez 2 paralel işle yapar ve farkı `agora_term_results_drift` metriğiyle bildirir.
+
+**Veri:** 92.010 öğrenci (sentetik veri seti), 3,7 milyon kesin kayıt, 438.847 dönem sonucu; veritabanı 2,3 GB. Sentetik seed'de ders geçmişi sadece müfredatı olan programın öğrencilerine (1.145) üretilir. Ölçüm için diğer öğrencilere bu geçmişlerden biri kopyalandı.
+
+**Ortam:** Apple M serisi, 10 çekirdek, Docker Desktop'ta PostgreSQL 18 (12 GB bellek); komut ve veritabanı aynı makinede.
+
+| İş | Paralel iş | Süre | Öğrenci başına |
+| --- | ---: | ---: | ---: |
+| İlk hesap ve yazma (90.865 öğrencinin sonucu yoktu) | 8 | 11,6 sn | 126 µs |
+| Doğrulama, tutarlı veri | 1 | 17,9 sn | 194 µs |
+| Doğrulama, tutarlı veri | 2 | 10,0 sn | 109 µs |
+| Doğrulama, tutarlı veri | 4 | 8,5 sn | 92 µs |
+| Doğrulama, tutarlı veri | 8 | 8,1 sn | 88 µs |
+| `-apply`, tutarlı veri | 8 | 8,1 sn | yazılan yok |
+
+Dört işten sonra kazanç azalır: dar boğaz, aynı makinedeki PostgreSQL'in grup başına iki okuma sorgusudur (dönemler ve ders geçmişi). Gece doğrulaması 2 işle 10 saniye sürer. Tek bir not ilanının tüketicisi sadece o şubenin öğrencilerini hesaplar ve milisaniyeler sürer.
+
+## 4. Nasıl çalıştırılır
+
+[loadtest/README.md](../../loadtest/README.md). Dönem sonuçları: `make term-results-verify` (fark varsa çıkış kodu 1), `make term-results-recompute`.

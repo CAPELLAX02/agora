@@ -463,7 +463,7 @@ erDiagram
 | **Takvim penceresi çakışması** | `EXCLUDE USING gist (… period WITH &&)` | |
 | **Tek aktif danışman / tek aktif dönem** | Kısmi benzersiz index'ler | Partial index |
 | **Olay yayını tutarlılığı** (kayıt onaylandı → LMS üyeliği + bildirim + ambar) | Transactional outbox → worker. Tüketiciler idempotent | Dual-write problemi |
-| **GANO tutarlılığı** | Not ilanı olayı → `term_results` yeniden hesaplama + `student_programs.gpa_cache`. Gecelik doğrulama işi (tam yeniden hesap, fark varsa alarm) | Türetilmiş veri yönetimi |
+| **GANO tutarlılığı** | Not ilanı olayı → `term_results` yeniden hesaplama + `student_programs.gpa_cache`. Günlük doğrulama (worker: tam yeniden hesap, yazmadan karşılaştırma, `agora_term_results_drift` metriği); düzeltme `make term-results-recompute` | Türetilmiş veri yönetimi |
 
 ## 18. Hacim Tahmini (1 akademik yıl, ~92 bin öğrenci)
 

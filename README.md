@@ -132,6 +132,7 @@ Sentetik hesapların parolası da aynıdır. Öğrenciler `18062001` ... `260673
 | `make contract-lint` | OpenAPI sözleşmesini doğrular                                          |
 | `make web-codegen` | Sözleşmeden web API istemcisini yeniden üretir                           |
 | `make migration name=...` | Yeni migration dosyası                                            |
+| `make term-results-verify` | Dönem sonuçlarını (YANO/GANO) kesin kayıtlardan yeniden hesaplar ve kayıtlılarla karşılaştırır; `make term-results-recompute` farkları yazar |
 
 ## Testler ve CI
 
