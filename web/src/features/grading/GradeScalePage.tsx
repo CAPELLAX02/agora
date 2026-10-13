@@ -127,7 +127,13 @@ function Range({ item }: { item: GradeItem }) {
   }
   return (
     <span className="text-muted-foreground">
-      {t(item.is_attendance_fail ? 'gradeScale.attendance' : 'gradeScale.noScore')}
+      {t(
+        item.is_attendance_fail
+          ? 'gradeScale.attendance'
+          : item.is_final_absent
+            ? 'gradeScale.finalAbsent'
+            : 'gradeScale.noScore',
+      )}
     </span>
   )
 }

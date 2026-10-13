@@ -1013,6 +1013,7 @@
     "title": "Assessment plan",
     "components": "Components",
     "rule": "In-term components and the final must add up to 100% with exactly one final. The make-up exam replaces the final with the same weight.",
+    "regulation": "By regulation the final weighs {{final}}% and in-term assessments {{inTerm}}% in total.",
     "empty": "No plan has been entered yet.",
     "component": "Component",
     "date": "Date",
@@ -1037,6 +1038,7 @@
     "addRow": "Add component",
     "removeRow": "Remove component {{n}}",
     "check": "Total {{total}}% · {{finals}} final",
+    "checkFinal": "final {{final}}% (regulation {{required}}%)",
     "saved": "Plan saved."
   },
   "gradeScale": {
@@ -1052,6 +1054,7 @@
     "ects": "Earns ECTS",
     "attendance": "Attendance",
     "noScore": "Not score-based",
+    "finalAbsent": "Did not sit the final",
     "regulations": "Regulation parameters",
     "regulationsHint": "Values in force today. Rules are kept as dated data; a new value closes the old one.",
     "rule": "Rule",

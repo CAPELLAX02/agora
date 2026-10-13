@@ -1013,6 +1013,7 @@
     "title": "Değerlendirme planı",
     "components": "Bileşenler",
     "rule": "Dönem içi bileşenlerle finalin ağırlıkları toplamı %100 olmalı ve tek final bulunmalı. Bütünleme finalin yerine geçer ve ağırlığı finalinkiyle aynıdır.",
+    "regulation": "Yönetmelik gereği final %{{final}}, dönem içi değerlendirmeler toplam %{{inTerm}} olmalı.",
     "empty": "Plan henüz girilmedi.",
     "component": "Bileşen",
     "date": "Tarih",
@@ -1037,6 +1038,7 @@
     "addRow": "Bileşen ekle",
     "removeRow": "{{n}}. bileşeni kaldır",
     "check": "Toplam %{{total}} · {{finals}} final",
+    "checkFinal": "final %{{final}} (yönetmelik %{{required}})",
     "saved": "Plan kaydedildi."
   },
   "gradeScale": {
@@ -1052,6 +1054,7 @@
     "ects": "AKTS kazandırır",
     "attendance": "Devamsızlık",
     "noScore": "Puanla verilmez",
+    "finalAbsent": "Finale girmedi",
     "regulations": "Yönetmelik parametreleri",
     "regulationsHint": "Bugün geçerli değerler. Kurallar tarihli veri olarak tutulur; değer değişince eskisi kapanır.",
     "rule": "Kural",

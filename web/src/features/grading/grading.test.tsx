@@ -78,6 +78,7 @@ const plan = (over: Partial<AssessmentPlan> = {}): AssessmentPlan => ({
   in_term_weight: 40,
   final_weight: 60,
   is_complete: true,
+  required_final_weight: 60,
   locked_at: null,
   locked_by: null,
   editable: true,
@@ -119,6 +120,9 @@ describe('değerlendirme planı', () => {
     expect(await screen.findByText(/COM2039-1 Ayrık Yapılar · 2026-FALL/)).toBeInTheDocument()
     expect(screen.getByText('finalin yerine')).toBeInTheDocument()
     expect(screen.getByText('%100')).toBeInTheDocument()
+    expect(
+      screen.getByText(/Yönetmelik gereği final %60, dönem içi değerlendirmeler toplam %40/),
+    ).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Planı düzenle' }))
     await user.click(screen.getByRole('button', { name: 'Bileşen ekle' }))
@@ -126,7 +130,7 @@ describe('değerlendirme planı', () => {
     const weights = screen.getAllByLabelText('Ağırlık')
     await user.clear(weights[0]!)
     await user.type(weights[0]!, '30')
-    expect(screen.getByRole('status')).toHaveTextContent('Toplam %100 · 1 final')
+    expect(screen.getByRole('status')).toHaveTextContent('Toplam %100 · 1 final · final %60 (yönetmelik %60)')
     await user.click(screen.getByRole('button', { name: 'Kaydet' }))
 
     await waitFor(() =>
@@ -192,25 +196,37 @@ describe('not ölçeği', () => {
           items: [
             {
               id: 'gs',
-              code: 'AU-LISANS',
-              name_tr: 'Ankara Üniversitesi lisans not ölçeği',
-              name_en: 'Ankara University undergraduate grading scale',
-              effective_from_year: 2016,
+              code: 'AU-LISANS-2023',
+              name_tr: 'Ankara Üniversitesi lisans not ölçeği (2023)',
+              name_en: 'Ankara University undergraduate grading scale (2023)',
+              effective_from_year: 2023,
               is_default: true,
               version: 1,
               items: [
                 {
                   letter: 'B1',
                   coefficient: 3.5,
-                  min_score: 80,
+                  min_score: 85,
                   max_score: 89,
                   is_passing: true,
                   counts_in_gpa: true,
                   earns_ects: true,
                   is_attendance_fail: false,
+                  is_final_absent: false,
                 },
                 {
-                  letter: 'F1',
+                  letter: 'F3',
+                  coefficient: 0,
+                  min_score: null,
+                  max_score: null,
+                  is_passing: false,
+                  counts_in_gpa: true,
+                  earns_ects: false,
+                  is_attendance_fail: false,
+                  is_final_absent: true,
+                },
+                {
+                  letter: 'F4',
                   coefficient: 0,
                   min_score: null,
                   max_score: null,
@@ -218,6 +234,7 @@ describe('not ölçeği', () => {
                   counts_in_gpa: true,
                   earns_ects: false,
                   is_attendance_fail: true,
+                  is_final_absent: false,
                 },
               ],
             },
@@ -243,10 +260,12 @@ describe('not ölçeği', () => {
 
     const b1 = (await screen.findByRole('cell', { name: 'B1' })).closest('tr')!
     expect(within(b1).getByText('3.50')).toBeInTheDocument()
-    expect(within(b1).getByText('80–89')).toBeInTheDocument()
-    const f1 = screen.getByRole('cell', { name: 'F1' }).closest('tr')!
-    expect(within(f1).getByText('Devamsızlık')).toBeInTheDocument()
-    expect(within(f1).getByLabelText('AKTS kazandırır: Hayır')).toBeInTheDocument()
+    expect(within(b1).getByText('85–89')).toBeInTheDocument()
+    const f3 = screen.getByRole('cell', { name: 'F3' }).closest('tr')!
+    expect(within(f3).getByText('Finale girmedi')).toBeInTheDocument()
+    const f4 = screen.getByRole('cell', { name: 'F4' }).closest('tr')!
+    expect(within(f4).getByText('Devamsızlık')).toBeInTheDocument()
+    expect(within(f4).getByLabelText('AKTS kazandırır: Hayır')).toBeInTheDocument()
     expect(screen.getByText('max_gpa: 1.99, ects: 30')).toBeInTheDocument()
   })
 })

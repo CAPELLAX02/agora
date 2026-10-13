@@ -131,7 +131,11 @@ export function AssessmentPlanPage() {
         <Card className="gap-0 py-0">
           <CardHeader className="border-b py-4">
             <CardTitle>{t('plan.components')}</CardTitle>
-            <CardDescription>{t('plan.rule')}</CardDescription>
+            <CardDescription>
+              {t('plan.rule')}
+              {plan.required_final_weight !== null &&
+                ` ${t('plan.regulation', { final: plan.required_final_weight, inTerm: 100 - plan.required_final_weight })}`}
+            </CardDescription>
           </CardHeader>
           {plan.components.length === 0 ? (
             <CardContent className="py-6 text-sm text-muted-foreground">{t('plan.empty')}</CardContent>
@@ -262,8 +266,8 @@ function UnlockDialog({ sectionId, onClose }: { sectionId: string; onClose: () =
 }
 
 /**
- * PlanEditor, planın dönem içi bileşenlerini ve finali düzenler. Toplam ve tek final kuralı
- * yazarken gösterilir; asıl doğrulama sunucudadır.
+ * PlanEditor, planın dönem içi bileşenlerini ve finali düzenler. Toplam, tek final ve
+ * yönetmeliğin final ağırlığı kuralı yazarken gösterilir; asıl doğrulama sunucudadır.
  */
 function PlanEditor({
   sectionId,
@@ -296,6 +300,9 @@ function PlanEditor({
   const choices = types.data?.items.filter((ty) => ty.category !== 'MAKEUP') ?? []
   const total = rows.reduce((s, r) => s + (Number(r.weight) || 0), 0)
   const finals = rows.filter((r) => r.type === 'FINAL').length
+  const finalWeight = rows.filter((r) => r.type === 'FINAL').reduce((s, r) => s + (Number(r.weight) || 0), 0)
+  const required = plan.required_final_weight
+  const valid = total === 100 && finals === 1 && (required === null || finalWeight === required)
   const update = (i: number, patch: Partial<Row>) =>
     setRows(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)))
 
@@ -402,13 +409,9 @@ function PlanEditor({
             <PlusIcon />
             {t('plan.addRow')}
           </Button>
-          <p
-            className={
-              total === 100 && finals === 1 ? 'text-sm text-muted-foreground' : 'text-sm text-destructive'
-            }
-            role="status"
-          >
+          <p className={valid ? 'text-sm text-muted-foreground' : 'text-sm text-destructive'} role="status">
             {t('plan.check', { total, finals })}
+            {required !== null && ` · ${t('plan.checkFinal', { final: finalWeight, required })}`}
           </p>
         </div>
         <div className="flex justify-end gap-2">
