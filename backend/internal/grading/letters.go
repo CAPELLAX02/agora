@@ -588,8 +588,10 @@ type PublishedEvent struct {
 	StudentPrograms []string `json:"student_programs"`
 }
 
-// PublishGrades, harf notlarını ilan eder: kesin kayıtlar tamamlanır, tekrar alınan derste önceki
-// deneme kapanır, grades.published olayı yayımlanır. İlan edilen notların sayısını döndürür.
+// PublishGrades, harf notlarını ilan eder: kesin kayıtlar tamamlanır, tekrar alınan derste (ve
+// kalınan seçmelinin yerine alınan derste) önceki deneme kapanır, grades.published olayı
+// yayımlanır; dönem sonuçlarını olayın tüketicisi (TermResultsUpdater) hesaplar. İlan edilen
+// notların sayısını döndürür.
 func (s *Service) PublishGrades(ctx context.Context, actorID string, sc SectionContext) (int, error) {
 	if sc.LockedAt == nil {
 		return 0, ErrPlanNotLocked
@@ -656,6 +658,29 @@ func (s *Service) PublishGrades(ctx context.Context, actorID string, sc SectionC
 				        WHERE equivalent_course_id = $4 AND is_bidirectional))`,
 				r.EnrollmentID, spID, sc.TermID, sc.CourseID); err != nil {
 				return fmt.Errorf("grading: önceki deneme kapatılamadı: %w", err)
+			}
+			// Kalınan seçmelinin yerine havuzdan başka bir ders alındıysa (yönetmelik md. 39/2) yeni
+			// ders kalınanın yerine geçer: aynı havuzdaki en eski kalınmış ve kapanmamış deneme kapanır.
+			if _, err := tx.Exec(ctx, `
+				UPDATE enrollment.enrollments old
+				SET superseded_by_id = $1, version = old.version + 1, updated_at = now()
+				WHERE old.id = (
+					SELECT o.id FROM enrollment.enrollments o
+					JOIN academic.terms ot ON ot.id = o.term_id
+					JOIN curriculum.grade_scale_items gi ON gi.grade_scale_id = o.grade_scale_id AND gi.letter = o.letter_grade
+					WHERE o.student_program_id = $2 AND o.id <> $1 AND o.status = 'COMPLETED'
+					  AND o.superseded_by_id IS NULL AND NOT gi.is_passing AND o.course_id <> $4
+					  AND ot.starts_on < (SELECT starts_on FROM academic.terms WHERE id = $3)
+					  AND o.course_id IN (
+					        SELECT gc.course_id FROM enrollment.enrollments ne
+					        JOIN enrollment.registration_items ri ON ri.id = ne.registration_item_id
+					        JOIN curriculum.curriculum_items ci ON ci.id = ri.curriculum_item_id
+					        JOIN curriculum.elective_group_courses gc ON gc.elective_group_id = ci.elective_group_id
+					        WHERE ne.id = $1 AND ri.item_kind = 'ELECTIVE_REPLACEMENT')
+					ORDER BY ot.starts_on, o.id
+					LIMIT 1)`,
+				r.EnrollmentID, spID, sc.TermID, sc.CourseID); err != nil {
+				return fmt.Errorf("grading: yerine ders alınan seçmeli kapatılamadı: %w", err)
 			}
 			ev.Enrollments = append(ev.Enrollments, r.EnrollmentID)
 			ev.StudentPrograms = append(ev.StudentPrograms, spID)

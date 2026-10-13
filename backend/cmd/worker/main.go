@@ -24,6 +24,7 @@ import (
 
 	"github.com/CAPELLAX02/agora/backend/internal/audit"
 	"github.com/CAPELLAX02/agora/backend/internal/enrollment"
+	"github.com/CAPELLAX02/agora/backend/internal/grading"
 	"github.com/CAPELLAX02/agora/backend/internal/mail"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/config"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/db"
@@ -133,11 +134,13 @@ func run() error {
 	})
 	reg.MustRegister(expiredDrafts)
 
-	// Tüketiciler: öğrenciye karar bildirimi, dönem geçişinde yarıyıl ilerletmesi. LMS üyeliği
-	// (Faz 5) aynı registration.approved olayına bağlanacak.
+	// Tüketiciler: öğrenciye karar bildirimi, dönem geçişinde yarıyıl ilerletmesi, not ilanında
+	// dönem sonuçları (YANO/GANO). LMS üyeliği (Faz 5) aynı registration.approved olayına
+	// bağlanacak.
 	events := outbox.NewDispatcher(pool, []outbox.Consumer{
 		registration.Notifier{WebBaseURL: cfg.WebBaseURL},
 		enrollment.SemesterAdvancer{},
+		grading.TermResultsUpdater{},
 	}, outbox.DefaultConfig, logger, func(result string) { domainEvents.WithLabelValues(result).Inc() })
 	registrations := registration.NewService(pool, time.Now, nil)
 
