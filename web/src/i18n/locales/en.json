@@ -102,7 +102,8 @@
     "advising": "Advising",
     "addDrop": "Add-drop approvals",
     "students": "Students",
-    "holds": "Registration holds"
+    "holds": "Registration holds",
+    "transcript": "Transcript"
   },
   "auth": {
     "restoring": "Signing you in…",
@@ -1463,5 +1464,50 @@
       "pickStudent": "Search the student by number or name (at least 3 characters).",
       "date": "Date"
     }
+  },
+  "transcript": {
+    "title": "Transcript",
+    "description": "Your courses, grades and averages term by term.",
+    "print": "Print",
+    "noProgram": "You are not enrolled in a programme.",
+    "faculty": "Faculty",
+    "department": "Department",
+    "program": "Programme",
+    "degree": "Degree",
+    "degrees": {
+      "ASSOCIATE": "Associate",
+      "BACHELOR": "Bachelor's",
+      "MASTER": "Master's",
+      "PHD": "Doctorate"
+    },
+    "admission": "Year of entry",
+    "semester": "Semester",
+    "semesterValue": "Semester {{semester}} (year {{level}})",
+    "status": "Status",
+    "advisor": "Advisor",
+    "gpa": "CGPA",
+    "termGpa": "GPA",
+    "earned": "ECTS earned",
+    "completed": "Completed courses",
+    "inProgressCount": "(+{{count}} in progress)",
+    "honors": "Honour terms",
+    "highHonorCount": "(high honour: {{count}})",
+    "termEcts": "ECTS (earned / taken)",
+    "cumulativeEcts": "Total ECTS",
+    "noResult": "Grades not announced yet",
+    "coursesOf": "Courses of {{term}}",
+    "letter": "Grade",
+    "ongoing": "In progress",
+    "repeat": "repeat",
+    "standing": {
+      "HONOR": "Honour",
+      "HIGH_HONOR": "High honour"
+    },
+    "legendRepeat": "Repeated course, or a course taken in place of a failed elective",
+    "legendSuperseded": "Replaced by a later attempt; not counted in later CGPAs",
+    "disclaimer": "For information only; the signed, verifiable official transcript will come with the document service. Generated: {{time}}",
+    "empty": "No courses yet.",
+    "tab": "Transcript",
+    "openPrintable": "Printable view"
   }
 }

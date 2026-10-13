@@ -108,6 +108,19 @@ export const routes: RouteObject[] = [
                     },
                   },
                   {
+                    path: 'transkript/:programId?',
+                    lazy: async () => {
+                      const { TranscriptPage } = await import('@/features/transcript/TranscriptPage')
+                      return {
+                        element: (
+                          <RequirePermission permission={['transcript:read_own', 'transcript:read_scoped']}>
+                            <TranscriptPage />
+                          </RequirePermission>
+                        ),
+                      }
+                    },
+                  },
+                  {
                     path: 'ders-planlari',
                     lazy: async () => {
                       const { CurriculaPage } = await import('@/features/curriculum/CurriculaPage')

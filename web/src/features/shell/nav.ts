@@ -10,6 +10,7 @@ import {
   CalendarDaysIcon,
   CalendarRangeIcon,
   ClipboardListIcon,
+  FileTextIcon,
   GaugeIcon,
   HomeIcon,
   PresentationIcon,
@@ -68,6 +69,13 @@ export const navGroups: NavGroup[] = [
         tone: 'emerald',
         icon: BookMarkedIcon,
         permission: 'registration:manage_own',
+      },
+      {
+        to: '/transkript',
+        label: 'nav.transcript',
+        tone: 'lime',
+        icon: FileTextIcon,
+        permission: 'transcript:read_own',
       },
       { to: '/dersler', label: 'nav.catalog', tone: 'amber', icon: BookOpenIcon, permission: 'course:read' },
       {

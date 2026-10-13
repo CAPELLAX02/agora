@@ -102,7 +102,8 @@
     "advising": "Danışmanlık",
     "addDrop": "Ekle-bırak onayları",
     "students": "Öğrenciler",
-    "holds": "Kayıt engelleri"
+    "holds": "Kayıt engelleri",
+    "transcript": "Transkript"
   },
   "auth": {
     "restoring": "Oturum açılıyor…",
@@ -1463,5 +1464,50 @@
       "pickStudent": "Engel konacak öğrenciyi numarası ya da adıyla arayın (en az 3 karakter).",
       "date": "Tarih"
     }
+  },
+  "transcript": {
+    "title": "Transkript",
+    "description": "Dönem dönem dersleriniz, notlarınız ve ortalamalarınız.",
+    "print": "Yazdır",
+    "noProgram": "Kayıtlı olduğunuz bir program yok.",
+    "faculty": "Fakülte",
+    "department": "Bölüm",
+    "program": "Program",
+    "degree": "Derece",
+    "degrees": {
+      "ASSOCIATE": "Ön lisans",
+      "BACHELOR": "Lisans",
+      "MASTER": "Yüksek lisans",
+      "PHD": "Doktora"
+    },
+    "admission": "Giriş yılı",
+    "semester": "Yarıyıl",
+    "semesterValue": "{{semester}}. yarıyıl ({{level}}. sınıf)",
+    "status": "Durum",
+    "advisor": "Danışman",
+    "gpa": "GANO",
+    "termGpa": "YANO",
+    "earned": "Kazanılan AKTS",
+    "completed": "Tamamlanan ders",
+    "inProgressCount": "(+{{count}} sürüyor)",
+    "honors": "Onur dönemleri",
+    "highHonorCount": "(yüksek onur: {{count}})",
+    "termEcts": "AKTS (kazanılan / alınan)",
+    "cumulativeEcts": "Toplam AKTS",
+    "noResult": "Notlar henüz ilan edilmedi",
+    "coursesOf": "{{term}} dersleri",
+    "letter": "Not",
+    "ongoing": "Sürüyor",
+    "repeat": "tekrar",
+    "standing": {
+      "HONOR": "Onur",
+      "HIGH_HONOR": "Yüksek onur"
+    },
+    "legendRepeat": "Tekrar alınan ya da kalınan seçmelinin yerine alınan ders",
+    "legendSuperseded": "Yerini sonraki deneme aldı; sonraki dönemlerin GANO'suna girmez",
+    "disclaimer": "Bilgi amaçlıdır; imzalı ve doğrulama kodlu resmî transkript belge altyapısıyla gelecek. Oluşturulma: {{time}}",
+    "empty": "Henüz ders kaydı yok.",
+    "tab": "Transkript",
+    "openPrintable": "Yazdırılabilir görünüm"
   }
 }
