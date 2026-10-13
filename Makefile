@@ -22,6 +22,7 @@ export
 .DEFAULT_GOAL := help
 
 .PHONY: help up down ps logs psql redis api worker migrate-up migrate-down migrate-status migration seed seed-synthetic \
+        term-results-verify term-results-recompute \
         test test-unit cover vet lint vuln fmt contract-lint check \
         web-install web-dev web-codegen web-check web-e2e \
         loadtest-data loadtest-reset loadtest-registration loadtest-verify
@@ -82,6 +83,12 @@ seed: ## Geliştirme seed verisini yükler: organizasyon (SQL) + kullanıcılar 
 
 seed-synthetic: seed ## Ek olarak ~92 bin öğrenci ve ~10 bin akademisyen üretir (yük testi ve demo için, ~10 sn)
 	go -C $(BACKEND) run ./cmd/seed -synthetic
+
+term-results-verify: ## Dönem sonuçlarını (YANO/GANO) kesin kayıtlardan yeniden hesaplar ve kayıtlılarla karşılaştırır (yazmaz)
+	go -C $(BACKEND) run ./cmd/termresults
+
+term-results-recompute: ## Dönem sonuçlarını yeniden hesaplar ve farkı olan öğrencilerinkini yazar
+	go -C $(BACKEND) run ./cmd/termresults -apply
 
 # --- Kalite ------------------------------------------------------------------
 
