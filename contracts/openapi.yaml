@@ -3555,8 +3555,9 @@ paths:
         atama penceresi açıkken ilan eder. Bütün öğrencilerin notu hesaplanabilir olmalı (eksik
         bileşen yok) ya da elle harf notu verilmiş olmalı. İlanda kesin kayıtlar tamamlanır
         (harf notu, ders başarı puanı, ilan tarihi), dersi tekrar alan öğrencinin önceki
-        denemesi "son not geçerli" kuralıyla kapanır ve `grades.published` olayı yayımlanır.
-        İlandan sonra notlar sadece not düzeltme talebiyle değişir.
+        denemesi "son not geçerli" kuralıyla kapanır, sınıf istatistikleri hesaplanır ve
+        `grades.published` olayı yayımlanır. İlandan sonra notlar sadece not düzeltme talebiyle
+        değişir.
       operationId: publishLetterGrades
       x-agora-permission: grade:finalize
       security:
@@ -3609,6 +3610,34 @@ paths:
           description: >-
             `MAKEUP_NOT_AVAILABLE` (harf notları henüz ilan edilmedi), `MAKEUP_PUBLISHED` (zaten
             ilan edildi), `MAKEUP_WINDOW_CLOSED`
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/sections/{id}/grade-stats:
+    get:
+      tags: [Değerlendirme]
+      summary: Şubenin sınıf istatistiklerini döndürür
+      description: >-
+        Öğrenci sayısı, ortalama, medyan, standart sapma, başarı oranı ve harf dağılımı. Harf
+        notları ilan edilince oluşur, bütünleme ilanı ve not düzeltmesiyle güncellenir. Şubenin
+        kesin kayıtlı öğrencisi, öğretim elemanları ve kapsamdaki birimler (`grade:read_scoped`)
+        görür.
+      operationId: getSectionGradeStats
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Sınıf istatistikleri
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SectionGradeStats" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404":
+          description: "Şube yok ya da `GRADES_NOT_PUBLISHED`: harf notları henüz ilan edilmedi"
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Problem" }
@@ -7040,24 +7069,49 @@ components:
               makeup_eligible: { type: boolean, description: Bütünleme hakkı var (harf notları ilan edildikten sonra) }
               makeup_letter: { type: [string, "null"], description: "Bütünleme ilanından önce: girilen bütünleme notuyla olacak harf" }
               previous_letter: { type: [string, "null"], description: "Bütünlemeyle değiştiyse bütünlemeden önceki harf" }
-        distribution:
-          type: array
-          description: Geçerli harflerin dağılımı (ölçek sırasıyla, sıfır olanlar dahil)
-          items:
-            type: object
-            required: [letter, count]
-            properties:
-              letter: { type: string }
-              count: { type: integer }
+        distribution: { $ref: "#/components/schemas/LetterDistribution" }
         summary:
           type: object
-          required: [students, complete, mean, median, pass_rate]
+          required: [students, complete, mean, median, stddev, pass_rate]
           properties:
             students: { type: integer }
             complete: { type: integer, description: Harfi belli olan öğrenci sayısı }
             mean: { type: [number, "null"], description: Ders başarı puanlarının ortalaması }
             median: { type: [number, "null"] }
-            pass_rate: { type: [number, "null"], description: "Geçenlerin oranı (0-1)" }
+            stddev: { type: [number, "null"], description: Ders başarı puanlarının standart sapması (sınıfın tamamı üzerinden) }
+            pass_rate: { type: [number, "null"], description: "Harfi belli olanlardan geçenlerin oranı (0-1)" }
+
+    LetterDistribution:
+      type: array
+      description: >-
+        Harf dağılımı, ölçek sırasıyla: dersin notlandırmasına uygun bütün harfler (sıfır olanlar
+        dahil), ayrıca başka bir harf verilmişse o da
+      items:
+        type: object
+        required: [letter, count]
+        properties:
+          letter: { type: string }
+          count: { type: integer }
+
+    SectionGradeStats:
+      type: object
+      description: >-
+        Şubenin ilan edilmiş notlarının özeti. Ortalama, medyan ve standart sapma ders başarı
+        puanı olan öğrencilerden hesaplanır (devamsızlıktan kalanın puanı yoktur); yüzde birliğe
+        yarım yukarı yuvarlanır.
+      required: [section_id, grading_mode, student_count, scored_count, passed_count, pass_rate, mean, median, stddev, distribution, computed_at]
+      properties:
+        section_id: { type: string, format: uuid }
+        grading_mode: { $ref: "#/components/schemas/GradingMode" }
+        student_count: { type: integer, description: Harf notu ilan edilen öğrenci sayısı }
+        scored_count: { type: integer, description: Ders başarı puanı olan öğrenci sayısı }
+        passed_count: { type: integer }
+        pass_rate: { type: [number, "null"], description: "Geçenlerin oranı (0-1)" }
+        mean: { type: [number, "null"], examples: [68.4] }
+        median: { type: [number, "null"] }
+        stddev: { type: [number, "null"] }
+        distribution: { $ref: "#/components/schemas/LetterDistribution" }
+        computed_at: { type: string, format: date-time, description: Son ilan ya da not düzeltmesiyle hesaplandığı an }
 
     HoldType:
       type: string

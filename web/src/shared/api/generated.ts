@@ -891,6 +891,12 @@ const injectedRtkApi = api
         }),
         invalidatesTags: ['De\u011Ferlendirme'],
       }),
+      getSectionGradeStats: build.query<GetSectionGradeStatsApiResponse, GetSectionGradeStatsApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/sections/${queryArg.id}/grade-stats`,
+        }),
+        providesTags: ['De\u011Ferlendirme'],
+      }),
       listBuildings: build.query<ListBuildingsApiResponse, ListBuildingsApiArg>({
         query: (queryArg) => ({
           url: `/api/v1/buildings`,
@@ -2195,6 +2201,11 @@ export type PublishLetterGradesApiArg = {
 }
 export type PublishMakeupApiResponse = /** status 200 Güncel harf notları */ LetterGrades
 export type PublishMakeupApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type GetSectionGradeStatsApiResponse = /** status 200 Sınıf istatistikleri */ SectionGradeStats
+export type GetSectionGradeStatsApiArg = {
   /** Geçerli bir UUID değilse 404 döner. */
   id: string
 }
@@ -3568,6 +3579,10 @@ export type Gradebook = {
 }
 export type LetterReason =
   'RANGE' | 'ATTENDANCE_FAIL' | 'FINAL_ABSENT' | 'FINAL_BELOW_MIN' | 'PASS_FAIL' | 'MANUAL'
+export type LetterDistribution = {
+  letter: string
+  count: number
+}[]
 export type LetterGrades = {
   section_id: string
   grading_mode: 'LETTER' | 'PASS_FAIL'
@@ -3625,11 +3640,7 @@ export type LetterGrades = {
     /** Bütünlemeyle değiştiyse bütünlemeden önceki harf */
     previous_letter: string | null
   }[]
-  /** Geçerli harflerin dağılımı (ölçek sırasıyla, sıfır olanlar dahil) */
-  distribution: {
-    letter: string
-    count: number
-  }[]
+  distribution: LetterDistribution
   summary: {
     students: number
     /** Harfi belli olan öğrenci sayısı */
@@ -3637,9 +3648,28 @@ export type LetterGrades = {
     /** Ders başarı puanlarının ortalaması */
     mean: number | null
     median: number | null
-    /** Geçenlerin oranı (0-1) */
+    /** Ders başarı puanlarının standart sapması (sınıfın tamamı üzerinden) */
+    stddev: number | null
+    /** Harfi belli olanlardan geçenlerin oranı (0-1) */
     pass_rate: number | null
   }
+}
+export type SectionGradeStats = {
+  section_id: string
+  grading_mode: GradingMode
+  /** Harf notu ilan edilen öğrenci sayısı */
+  student_count: number
+  /** Ders başarı puanı olan öğrenci sayısı */
+  scored_count: number
+  passed_count: number
+  /** Geçenlerin oranı (0-1) */
+  pass_rate: number | null
+  mean: number | null
+  median: number | null
+  stddev: number | null
+  distribution: LetterDistribution
+  /** Son ilan ya da not düzeltmesiyle hesaplandığı an */
+  computed_at: string
 }
 export type Ref = {
   id: string
@@ -4357,6 +4387,8 @@ export const {
   useSetLetterOverridesMutation,
   usePublishLetterGradesMutation,
   usePublishMakeupMutation,
+  useGetSectionGradeStatsQuery,
+  useLazyGetSectionGradeStatsQuery,
   useListBuildingsQuery,
   useLazyListBuildingsQuery,
   useCreateBuildingMutation,
