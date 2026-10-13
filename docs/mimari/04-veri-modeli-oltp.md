@@ -161,8 +161,8 @@
 | Tablo | Sütunlar | Not |
 | --- | --- | --- |
 | `grade_scales` | id, code UQ, name_tr, name_en, effective_from_year, is_default, version | Yönetmelik değişikliği → yeni ölçek. Kısmi UQ: tek varsayılan ölçek; varsayılan doğrudan kaldırılamaz, başka ölçek varsayılan yapılır |
-| `grade_scale_items` | id, grade_scale_id FK, letter, coefficient numeric(3,2) null, min_score numeric(5,2) null, max_score numeric(5,2) null, is_passing, counts_in_gpa, earns_ects, is_attendance_fail, sort_order | UQ(scale, letter). Puan aralıkları çakışamaz (`EXCLUDE ... numrange WITH &&`) ve 0-100'ü tam sayılarla boşluksuz kapsamalı (doğrulama). Satırlar: A … C3, F2 (puanla), F1 (`is_attendance_fail`), BŞR/BŞZ (`counts_in_gpa = false`), `MUAF` (muafiyet). Ankara Üniversitesi lisans ölçeği migration'la gelir |
-| `regulation_parameters` | key, value jsonb, effective_from date, effective_to date null (hariç), description_tr, note — PK(key, effective_from) | **Kural parametreleri veri olarak**: `ects_limit_by_gpa` = `[{"max_gpa":1.99,"ects":30},{"max_gpa":2.99,"ects":40},{"max_gpa":4,"ects":45}]`, `semester_ects_load`, `final_min_score` = 50, `pass_min_score` = 50, `attendance_max_absence_pct` = `{"THEORY":30,"PRACTICE":20}`, `max_courses_after_max_duration` = 5, `honor_gpa`. Aynı anahtarın dönemleri çakışamaz (`EXCLUDE ... daterange`); yeni değer eskisini o gün kapatır, JSON türü korunur. Yeni anahtar API'den değil, onu okuyan kodla birlikte migration'la eklenir |
+| `grade_scale_items` | id, grade_scale_id FK, letter, coefficient numeric(3,2) null, min_score numeric(5,2) null, max_score numeric(5,2) null, is_passing, counts_in_gpa, earns_ects, is_attendance_fail, is_final_absent, sort_order | UQ(scale, letter). Puan aralıkları çakışamaz (`EXCLUDE ... numrange WITH &&`) ve 0-100'ü tam sayılarla boşluksuz kapsamalı (doğrulama). Devamsızlık (`is_attendance_fail`) ve finale girmedi (`is_final_absent`) harfleri puanla verilmez, ölçekte her birinden en fazla bir tane (kısmi UQ). Ankara Üniversitesi ölçekleri migration'la gelir: **AU-LISANS-2023** (varsayılan; RG 30/09/2023-32325, md. 35/7-a, 37) A 90-100 4,00 · B1 85-89 3,50 · B2 80-84 3,25 · B3 75-79 3,00 · C1 70-74 2,75 · C2 65-69 2,50 · C3 60-64 2,00 (C3 ve üstü başarılı) · F1 50-59 1,50 · F2 0-49 · F3 finale girmedi · F4 devamsızlık (F'ler başarısız, katsayılarıyla ortalamaya girer) · BŞR/BŞZ (`counts_in_gpa = false`) · MUAF. **AU-LISANS** (2016): 50-59 C3 başarılı, devamsızlık F1, F3/F4 yok; 2023 öncesi notlar bu ölçekte kalır. Notu henüz verilmemiş kesin kayıtlar 2023 değişikliğiyle yeni ölçeğe taşındı |
+| `regulation_parameters` | key, value jsonb, effective_from date, effective_to date null (hariç), description_tr, note — PK(key, effective_from) | **Kural parametreleri veri olarak**: `ects_limit_by_gpa` = `[{"max_gpa":1.99,"ects":30},{"max_gpa":2.99,"ects":40},{"max_gpa":4,"ects":45}]`, `semester_ects_load`, `final_min_score` = 50, `pass_min_score` = 50 → 60 (2023-09-30, md. 37/4), `attendance_max_absence_pct` = `{"THEORY":30,"PRACTICE":20}`, `max_courses_after_max_duration` = 5, `honor_gpa` = `{"HONOR":3.00,"HIGH_HONOR":3.50}` → 3,70 (2022-11-04, md. 42), `makeup_eligible_letters` = `["F2","BŞZ"]` → `["F1","F2","F3","BŞZ"]` (2023-09-30, md. 29/1-a), `final_exam_weight` = 60 (2023-09-30, md. 35/3: dönem içi %40, final ya da bütünleme %60; plan doğrulaması dönemin başındaki değeri kullanır). Aynı anahtarın dönemleri çakışamaz (`EXCLUDE ... daterange`); yeni değer eskisini o gün kapatır, JSON türü korunur. Yeni anahtar API'den değil, onu okuyan kodla birlikte migration'la eklenir |
 
 ---
 
@@ -232,11 +232,11 @@ stateDiagram-v2
 | `risk_scores` | student_program_id, term_id, score smallint CK(0–100), level CK(`LOW, MEDIUM, HIGH`), signals jsonb, computed_at — PK(student_program_id, term_id) | DW'deki gece işi hesaplar ve buraya geri yazar. Sadece danışman ve fakülte kapsamı okur ([05 · OLAP §8](05-analitik-olap.md)) |
 
 **YANO/GANO kuralları** (`internal/grading/gpa`, saf Go, tamsayı aritmetik; Ankara Üniversitesi Ön Lisans ve Lisans Eğitim-Öğretim Yönetmeliği md. 36, 39, 42):
-1. YANO = dönemde notu verilen derslerin Σ(katsayı × AKTS) / Σ AKTS. Ortalamaya girmeyen harfler (`counts_in_gpa = false`: BŞR, BŞZ, MUAF) katılmaz; F1 ve F2 sıfır katsayıyla katılır. Ortalamaya giren ders yoksa YANO boştur.
+1. YANO = dönemde notu verilen derslerin Σ(katsayı × AKTS) / Σ AKTS. Ortalamaya girmeyen harfler (`counts_in_gpa = false`: BŞR, BŞZ, MUAF) katılmaz; F'ler katsayılarıyla katılır (2023 ölçeğinde F1 1,50, F2-F4 0). Ortalamaya giren ders yoksa YANO boştur.
 2. GANO aynı hesaptır, o döneme kadar alınan bütün derslerle. **Son not geçerli**: yerini sonraki bir deneme almış ders (`superseded_by_id`, deneme o dönemde ya da önce alınmışsa) katılmaz. Yerine geçme ilanda kurulur: aynı ders, eşdeğer ders (eski ders yeninin yerine sadece çift yönlü eşdeğerlikte) ve kalınan seçmelinin yerine aynı havuzdan alınan ders (kayıt kalemi `ELECTIVE_REPLACEMENT`; havuzdaki en eski kalınmış deneme kapanır).
 3. Alınan AKTS dönemde notu verilen derslerin, kazanılan AKTS bunlardan `earns_ects` olanların toplamıdır; kümülatif AKTS geçerli denemelerden kazanılanlardır.
 4. Ortalamalar virgülden sonra iki haneye yarım yukarı yuvarlanır.
-5. Onur (üstün başarı) ve yüksek onur (çok üstün başarı): güz ya da bahar yarıyılında dönemin bütün dersleri notlanmış, alınan AKTS en az `semester_ects_load`, bütün dersler geçilmiş ve hiçbiri bütünlemeyle geçilmemiş (not geçmişinde `MAKEUP` yok), dönem içinde disiplin cezası (`DISCIPLINE_SUSPENSION` engeli) yok; YANO `honor_gpa` eşiklerine göre. Yaz okulunda onur verilmez.
+5. Onur (üstün başarı) ve yüksek onur (çok üstün başarı): güz ya da bahar yarıyılında dönemin bütün dersleri notlanmış, alınan AKTS en az `semester_ects_load`, bütün dersler geçilmiş ve hiçbiri bütünlemeyle geçilmemiş (not geçmişinde `MAKEUP` yok), dönem içinde disiplin cezası (`DISCIPLINE_SUSPENSION` engeli) yok; YANO `honor_gpa` eşiklerine göre (dönemin bitişinde geçerli değer: 2022-11-04'ten beri onur 3,00-3,69, yüksek onur 3,70 ve üstü). Yaz okulunda onur verilmez.
 
 ---
 
@@ -252,12 +252,13 @@ stateDiagram-v2
 | `exams` | id, component_id FK, starts_at, ends_at, mode CK(`IN_PERSON, ONLINE`), lms_quiz_activity_id null | P1 sınav takvimi |
 | `exam_rooms` / `exam_proctors` | exam_id + classroom_id / staff_id | P1 |
 
-**Harf notu hesaplama** (servis kuralı, kod + test):
+**Harf notu hesaplama** (`internal/grading/letter`, saf Go, kod + test; yönetmelik md. 29, 35, 37):
 1. Bileşen yoksa (`NOT_ENTERED`) → hesaplanmaz.
-2. `attendance_status = ATTENDANCE_FAIL` → **F1**.
+2. `attendance_status = ATTENDANCE_FAIL` → ölçeğin devamsızlık harfi (**F4**; eski ölçekte F1).
 3. Bütünleme notu varsa final yerine geçer.
-4. Ağırlıklı ortalama → ölçekteki aralık. Ek kural: final/bütünleme puanı `final_min_score` altındaysa → **F2** (parametre, yönetmelikten doğrulanacak).
-5. `MANUAL_LETTER_GRADE` penceresinde eğitmen harf notunu elle de belirleyebilir (denetim izine gerekçe yazılır).
+4. Finale (ya da yerine geçen bütünlemeye) girmedi → ölçeğin finale girmedi harfi (**F3**; ölçekte yoksa F2). Final ya da bütünleme puanı `final_min_score` (50) altındaysa → **F2**.
+5. Ders başarı notu (2023'ten sonra dönem içi %40 + final %60) iki ondalığa, aralık için tam sayıya yarım yukarı yuvarlanır → ölçekteki aralık (50-59 F1). Başarılı/başarısız notlu derste `pass_min_score` (60) ve üstü BŞR.
+6. `MANUAL_LETTER_GRADE` penceresinde eğitmen harf notunu elle de belirleyebilir (denetim izine gerekçe yazılır).
 
 ---
 
