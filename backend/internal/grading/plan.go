@@ -4,6 +4,7 @@ package grading
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -22,6 +23,7 @@ var (
 	ErrVersionMismatch = errors.New("grading: plan bu arada değişti")
 	ErrPlanLocked      = errors.New("grading: değerlendirme planı kilitli")
 	ErrPlanIncomplete  = errors.New("grading: değerlendirme planı tamamlanmamış")
+	ErrFinalWeight     = errors.New("grading: finalin ağırlığı yönetmeliğe uymuyor")
 	ErrSectionInactive = errors.New("grading: şube iptal edilmiş")
 	// ErrComponentHasScores: plan yeniden yazılırken notu girilmiş bir bileşen çıkarılmak istendi.
 	ErrComponentHasScores = errors.New("grading: notu girilmiş bileşen plandan çıkarılamaz")
@@ -102,6 +104,29 @@ type SectionContext struct {
 type Plan struct {
 	SectionContext
 	Components []Component
+	// RequiredFinalWeight, yönetmeliğin finale verdiği ağırlıktır (final_exam_weight, dönemin
+	// başında geçerli olan); tanımlı değilse nil ve finalin ağırlığı serbesttir.
+	RequiredFinalWeight *float64
+}
+
+// requiredFinalWeight, at gününde geçerli final ağırlığıdır (yüzde); tanımlı değilse nil.
+func requiredFinalWeight(ctx context.Context, q db.Querier, at time.Time) (*float64, error) {
+	var raw []byte
+	err := q.QueryRow(ctx, `
+		SELECT value FROM curriculum.regulation_parameters
+		WHERE key = 'final_exam_weight' AND effective_from <= $1 AND (effective_to IS NULL OR effective_to > $1)`,
+		at).Scan(&raw)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("grading: final ağırlığı okunamadı: %w", err)
+	}
+	var v float64
+	if err := json.Unmarshal(raw, &v); err != nil {
+		return nil, fmt.Errorf("grading: final_exam_weight: %w", err)
+	}
+	return &v, nil
 }
 
 // Repository, değerlendirme verisine erişir.
@@ -179,7 +204,11 @@ func (r *Repository) Plan(ctx context.Context, sectionID, viewerID string) (Plan
 	if err != nil {
 		return Plan{}, err
 	}
-	return Plan{SectionContext: sc, Components: components}, nil
+	required, err := requiredFinalWeight(ctx, r.db, sc.TermStartsOn)
+	if err != nil {
+		return Plan{}, err
+	}
+	return Plan{SectionContext: sc, Components: components, RequiredFinalWeight: required}, nil
 }
 
 func (r *Repository) components(ctx context.Context, q db.Querier, sectionID string) ([]Component, error) {
@@ -300,16 +329,25 @@ func (r *Repository) Lock(ctx context.Context, actorID, sectionID string) error 
 		if sc.SectionStatus != "ACTIVE" {
 			return ErrSectionInactive
 		}
-		var total float64
+		var total, final float64
 		var finals int
 		if err := tx.QueryRow(ctx, `
-			SELECT coalesce(sum(ac.weight) FILTER (WHERE t.category <> 'MAKEUP'), 0)::float8, count(*) FILTER (WHERE t.category = 'FINAL')
+			SELECT coalesce(sum(ac.weight) FILTER (WHERE t.category <> 'MAKEUP'), 0)::float8,
+			       coalesce(sum(ac.weight) FILTER (WHERE t.category = 'FINAL'), 0)::float8,
+			       count(*) FILTER (WHERE t.category = 'FINAL')
 			FROM grading.assessment_components ac JOIN grading.assessment_types t ON t.code = ac.type_code
-			WHERE ac.section_id = $1`, sectionID).Scan(&total, &finals); err != nil {
+			WHERE ac.section_id = $1`, sectionID).Scan(&total, &final, &finals); err != nil {
 			return fmt.Errorf("grading: plan okunamadı: %w", err)
 		}
 		if finals != 1 || total != 100 {
 			return ErrPlanIncomplete
+		}
+		required, err := requiredFinalWeight(ctx, tx, sc.TermStartsOn)
+		if err != nil {
+			return err
+		}
+		if required != nil && final != *required {
+			return ErrFinalWeight
 		}
 		if _, err := tx.Exec(ctx, `
 			UPDATE offering.sections

@@ -55,11 +55,12 @@ type Attempt struct {
 type Term struct {
 	ID         string
 	Order      int
-	Regular    bool // güz ya da bahar yarıyılı; yaz okulunda onur verilmez
-	Discipline bool // öğrenci bu dönemde disiplin cezası aldı
+	Regular    bool  // güz ya da bahar yarıyılı; yaz okulunda onur verilmez
+	Discipline bool  // öğrenci bu dönemde disiplin cezası aldı
+	Rules      Rules // dönemde geçerli yönetmelik parametreleri
 }
 
-// Rules, yönetmelik parametreleridir.
+// Rules, onur kararının yönetmelik parametreleridir.
 type Rules struct {
 	FullLoad  ECTS       // bir yarıyılın ders yükü (semester_ects_load)
 	Honor     Hundredths // onur için en düşük YANO (honor_gpa.HONOR)
@@ -100,7 +101,7 @@ func (a average) value() *Hundredths {
 
 // Compute, notu verilmiş dersi olan her dönemin sonucunu dönem sırasıyla döndürür. Bilinmeyen
 // bir döneme ait denemeler yok sayılır.
-func Compute(terms []Term, attempts []Attempt, rules Rules) []Result {
+func Compute(terms []Term, attempts []Attempt) []Result {
 	order := make(map[string]int, len(terms))
 	byID := make(map[string]Term, len(terms))
 	for _, t := range terms {
@@ -153,7 +154,7 @@ func Compute(terms []Term, attempts []Attempt, rules Rules) []Result {
 			continue
 		}
 		res.TermGPA, res.CumulativeGPA = term.value(), cumulative.value()
-		res.Standing = standing(res, eligible && !pending, rules)
+		res.Standing = standing(res, eligible && !pending, t.Rules)
 		out = append(out, res)
 	}
 	return out

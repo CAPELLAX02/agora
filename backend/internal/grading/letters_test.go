@@ -342,7 +342,7 @@ func TestHTTPMakeup(t *testing.T) {
 	if res := s.do("POST", section+"/assessment-plan/lock", fx.ayseUser, nil, nil); res.status != 200 {
 		t.Fatalf("kilit: %d %s", res.status, res.raw)
 	}
-	// Ali geçer (B1), Ece final barajında kalır (F2), Can devamsız (F1).
+	// Ali geçer (B1), Ece final barajında kalır (F2), Can devamsız (F4).
 	for code, items := range map[string][]map[string]any{
 		"MIDTERM":  {item(0, 80), item(1, 60), item(2, 90)},
 		"HOMEWORK": {item(0, 100), item(1, 50), item(2, 90)},
@@ -400,9 +400,9 @@ func TestHTTPMakeup(t *testing.T) {
 		t.Fatalf("bütünleme notu: %d %s", res.status, res.raw)
 	}
 
-	// Önizleme: bütünlemeyle olacak harf (18 + 5 + 42 = 65 → C1), ilan edilen harf henüz F2.
+	// Önizleme: bütünlemeyle olacak harf (18 + 5 + 42 = 65 → C2), ilan edilen harf henüz F2.
 	letters := s.do("GET", section+"/letter-grades", fx.ayseUser, mfa, nil)
-	if r := letterRow(letters, fx.enrollments[1]); r["letter"] != "F2" || r["makeup_letter"] != "C1" || r["makeup_eligible"] != true {
+	if r := letterRow(letters, fx.enrollments[1]); r["letter"] != "F2" || r["makeup_letter"] != "C2" || r["makeup_eligible"] != true {
 		t.Errorf("bütünleme önizlemesi: %v", r)
 	}
 	if letters.body["can_publish_makeup"] != true {
@@ -412,7 +412,7 @@ func TestHTTPMakeup(t *testing.T) {
 	if res.status != 200 || res.body["makeup_published_at"] == nil || res.body["can_publish_makeup"] != false {
 		t.Fatalf("bütünleme ilanı: %d %s", res.status, res.raw)
 	}
-	if r := letterRow(res, fx.enrollments[1]); r["letter"] != "C1" || r["previous_letter"] != "F2" || r["makeup_letter"] != nil {
+	if r := letterRow(res, fx.enrollments[1]); r["letter"] != "C2" || r["previous_letter"] != "F2" || r["makeup_letter"] != nil {
 		t.Errorf("bütünleme sonrası: %v", r)
 	}
 	if r := letterRow(res, fx.enrollments[0]); r["letter"] != "B1" || r["previous_letter"] != nil {
@@ -421,7 +421,7 @@ func TestHTTPMakeup(t *testing.T) {
 
 	var letter, reason string
 	_ = s.pool.QueryRow(ctx, `SELECT letter_grade, letter_reason FROM enrollment.enrollments WHERE id = $1`, fx.enrollments[1]).Scan(&letter, &reason)
-	if letter != "C1" || reason != "RANGE" {
+	if letter != "C2" || reason != "RANGE" {
 		t.Errorf("kesin kayıt = %s (%s)", letter, reason)
 	}
 	var history []string
@@ -436,7 +436,7 @@ func TestHTTPMakeup(t *testing.T) {
 		history = append(history, h)
 	}
 	rows.Close()
-	if strings.Join(history, " ") != "PUBLISHED:F2 MAKEUP:C1" {
+	if strings.Join(history, " ") != "PUBLISHED:F2 MAKEUP:C2" {
 		t.Errorf("not geçmişi = %v", history)
 	}
 	var phases string

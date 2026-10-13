@@ -17,29 +17,43 @@ func TestDefaultGradeScale(t *testing.T) {
 	repo := curriculum.NewRepository(pool)
 	ctx := context.Background()
 
+	// Varsayılan: yönetmeliğin 2023 değişikliğiyle gelen ölçek; eski ölçek eski notlar için kalır.
 	scales, err := repo.GradeScales(ctx)
-	if err != nil || len(scales) != 1 {
+	if err != nil || len(scales) != 2 {
 		t.Fatalf("ölçekler = %d, %v", len(scales), err)
 	}
 	au := scales[0]
-	if au.Code != "AU-LISANS" || !au.IsDefault || len(au.Items) != 12 {
-		t.Fatalf("varsayılan ölçek = %+v", au)
+	if au.Code != "AU-LISANS-2023" || !au.IsDefault || len(au.Items) != 14 || scales[1].Code != "AU-LISANS" || scales[1].IsDefault {
+		t.Fatalf("ölçekler = %+v", scales)
 	}
-	letters := map[string]curriculum.GradeItem{}
-	for _, it := range au.Items {
-		letters[it.Letter] = it
+	letters := func(g curriculum.GradeScale) map[string]curriculum.GradeItem {
+		out := map[string]curriculum.GradeItem{}
+		for _, it := range g.Items {
+			out[it.Letter] = it
+		}
+		return out
 	}
-	if b1 := letters["B1"]; *b1.Coefficient != 3.5 || *b1.MinScore != 80 || *b1.MaxScore != 89 || !b1.IsPassing {
+	current, old := letters(au), letters(scales[1])
+	if b1 := current["B1"]; *b1.Coefficient != 3.5 || *b1.MinScore != 85 || *b1.MaxScore != 89 || !b1.IsPassing {
 		t.Errorf("B1 = %+v", b1)
 	}
-	if f1 := letters["F1"]; !f1.IsAttendanceFail || f1.MinScore != nil || !f1.CountsInGPA || f1.EarnsECTS {
+	if f1 := current["F1"]; *f1.Coefficient != 1.5 || *f1.MinScore != 50 || *f1.MaxScore != 59 || f1.IsPassing || !f1.CountsInGPA || f1.EarnsECTS {
 		t.Errorf("F1 = %+v", f1)
 	}
-	if bsr := letters["BŞR"]; bsr.CountsInGPA || !bsr.EarnsECTS || bsr.Coefficient != nil {
+	if f3 := current["F3"]; !f3.IsFinalAbsent || f3.IsAttendanceFail || f3.MinScore != nil || !f3.CountsInGPA {
+		t.Errorf("F3 = %+v", f3)
+	}
+	if f4 := current["F4"]; !f4.IsAttendanceFail || f4.MinScore != nil || !f4.CountsInGPA || f4.EarnsECTS {
+		t.Errorf("F4 = %+v", f4)
+	}
+	if f1 := old["F1"]; !f1.IsAttendanceFail || f1.MinScore != nil {
+		t.Errorf("eski ölçekte F1 devamsızlık = %+v", f1)
+	}
+	if bsr := current["BŞR"]; bsr.CountsInGPA || !bsr.EarnsECTS || bsr.Coefficient != nil {
 		t.Errorf("BŞR = %+v", bsr)
 	}
-	if au.Items[0].Letter != "A" || au.Items[11].Letter != "MUAF" {
-		t.Errorf("sıra: %s … %s", au.Items[0].Letter, au.Items[11].Letter)
+	if au.Items[0].Letter != "A" || au.Items[13].Letter != "MUAF" {
+		t.Errorf("sıra: %s … %s", au.Items[0].Letter, au.Items[13].Letter)
 	}
 
 	// Yeni ölçek varsayılan yapılınca eskisi varsayılanlıktan çıkar.
@@ -49,7 +63,7 @@ func TestDefaultGradeScale(t *testing.T) {
 		t.Fatal(err)
 	}
 	scales, _ = repo.GradeScales(ctx)
-	if scales[0].ID != id || scales[1].IsDefault {
+	if scales[0].ID != id || scales[1].IsDefault || scales[2].IsDefault {
 		t.Errorf("tek varsayılan ölçek olmalı: %+v", scales)
 	}
 	in.IsDefault = false
@@ -71,7 +85,7 @@ func TestRegulationParameters(t *testing.T) {
 		return d
 	}
 	params, err := repo.RegulationParameters(ctx, day("2026-10-01"))
-	if err != nil || len(params) != 8 {
+	if err != nil || len(params) != 9 {
 		t.Fatalf("parametreler = %d, %v", len(params), err)
 	}
 	if err := repo.SetRegulationParameter(ctx, "", "final_min_score", json.RawMessage(`45`), day("2027-02-01"), "Senato kararı"); err != nil {
@@ -111,7 +125,7 @@ func TestHTTPGradeScales(t *testing.T) {
 	s.grants[deptMg] = append(s.grants[deptMg], authz.Grant{Permission: "gradescale:manage", ScopeType: authz.ScopeDepartment, ScopeID: s.fx.bil})
 
 	res := s.do("GET", "/api/v1/grade-scales", student, nil, nil)
-	if res.status != 200 || len(res.items()) != 1 {
+	if res.status != 200 || len(res.items()) != 2 {
 		t.Fatalf("ölçekler: %d %s", res.status, res.raw)
 	}
 	au := res.items()[0].(map[string]any)
@@ -136,6 +150,22 @@ func TestHTTPGradeScales(t *testing.T) {
 	if res := s.do("POST", "/api/v1/grade-scales", registrar, nil, gap); res.status != 400 {
 		t.Errorf("50-59 boşluğu: %d %s", res.status, res.raw)
 	}
+	for name, items := range map[string][]any{
+		"aralıklı finale girmedi": {item("G", f(4), f(50), f(100), true),
+			map[string]any{"letter": "K", "coefficient": 0, "min_score": 0, "max_score": 49, "is_passing": false, "counts_in_gpa": true, "is_final_absent": true}},
+		"iki devamsızlık harfi": {item("G", f(4), f(0), f(100), true),
+			map[string]any{"letter": "D1", "coefficient": 0, "is_passing": false, "counts_in_gpa": true, "is_attendance_fail": true},
+			map[string]any{"letter": "D2", "coefficient": 0, "is_passing": false, "counts_in_gpa": true, "is_attendance_fail": true}},
+	} {
+		bad := map[string]any{}
+		for k, v := range body {
+			bad[k] = v
+		}
+		bad["items"] = items
+		if res := s.do("POST", "/api/v1/grade-scales", registrar, nil, bad); res.status != 400 {
+			t.Errorf("%s: %d %s", name, res.status, res.raw)
+		}
+	}
 	res = s.do("POST", "/api/v1/grade-scales", registrar, nil, body)
 	if res.status != 201 || res.body["code"] != "BASIT" || len(res.body["items"].([]any)) != 3 || res.body["is_default"] != false {
 		t.Fatalf("ölçek: %d %s", res.status, res.raw)
@@ -152,7 +182,7 @@ func TestHTTPGradeScales(t *testing.T) {
 
 	// Yönetmelik parametreleri.
 	res = s.do("GET", "/api/v1/regulation-parameters?at=2026-10-01", student, nil, nil)
-	if res.status != 200 || len(res.items()) != 8 {
+	if res.status != 200 || len(res.items()) != 9 {
 		t.Fatalf("parametreler: %d %s", res.status, res.raw)
 	}
 	if res := s.do("POST", "/api/v1/regulation-parameters/final_min_score", deptMg, nil, map[string]any{"value": 45, "effective_from": "2027-02-01"}); res.status != 403 {

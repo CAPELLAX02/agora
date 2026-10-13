@@ -42,6 +42,7 @@ type gradeItemJSON struct {
 	CountsInGPA      bool     `json:"counts_in_gpa"`
 	EarnsECTS        bool     `json:"earns_ects"`
 	IsAttendanceFail bool     `json:"is_attendance_fail"`
+	IsFinalAbsent    bool     `json:"is_final_absent"`
 }
 
 type gradeScaleResponse struct {
@@ -157,6 +158,7 @@ func (req gradeScaleRequest) validate(creating bool) (GradeScaleInput, []httpx.F
 
 	seen := map[string]bool{}
 	var ranged []GradeItem
+	attendance, finalAbsent := 0, 0
 	for _, it := range req.Items {
 		item := GradeItem(it)
 		item.Letter = strings.ToUpper(strings.TrimSpace(item.Letter))
@@ -185,9 +187,27 @@ func (req gradeScaleRequest) validate(creating bool) (GradeScaleInput, []httpx.F
 			if item.IsAttendanceFail {
 				errs = append(errs, httpx.FieldError{Field: "items.is_attendance_fail", Message: "Devamsızlık notu puanla verilmez."})
 			}
+			if item.IsFinalAbsent {
+				errs = append(errs, httpx.FieldError{Field: "items.is_final_absent", Message: "Finale girmedi notu puanla verilmez."})
+			}
 			ranged = append(ranged, item)
 		}
+		if item.IsAttendanceFail && item.IsFinalAbsent {
+			errs = append(errs, httpx.FieldError{Field: "items.is_final_absent", Message: "Bir harf hem devamsızlık hem finale girmedi notu olamaz."})
+		}
+		if item.IsAttendanceFail {
+			attendance++
+		}
+		if item.IsFinalAbsent {
+			finalAbsent++
+		}
 		in.Items = append(in.Items, item)
+	}
+	if attendance > 1 {
+		errs = append(errs, httpx.FieldError{Field: "items.is_attendance_fail", Message: "Ölçekte en fazla bir devamsızlık notu olabilir."})
+	}
+	if finalAbsent > 1 {
+		errs = append(errs, httpx.FieldError{Field: "items.is_final_absent", Message: "Ölçekte en fazla bir finale girmedi notu olabilir."})
 	}
 	if len(errs) == 0 {
 		slices.SortFunc(ranged, func(a, b GradeItem) int { return cmp.Compare(*a.MinScore, *b.MinScore) })

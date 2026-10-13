@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -16,9 +15,7 @@ import (
 // TermResultsUpdater, not ilanında (grades.published) öğrencilerin dönem sonuçlarını yeniden
 // hesaplayan outbox tüketicisidir. Sonuçlar kesin kayıtlardan baştan üretildiği için olay
 // birden fazla kez işlense de sonuç aynıdır.
-type TermResultsUpdater struct {
-	Now func() time.Time // yönetmelik parametrelerinin geçerlilik günü; nil ise time.Now
-}
+type TermResultsUpdater struct{}
 
 // Name, tüketicinin kalıcı adıdır.
 func (TermResultsUpdater) Name() string { return "term-results" }
@@ -27,55 +24,34 @@ func (TermResultsUpdater) Name() string { return "term-results" }
 func (TermResultsUpdater) Handles(eventType string) bool { return eventType == "grades.published" }
 
 // Handle, olaydaki öğrencilerin dönem sonuçlarını yeniden hesaplar.
-func (u TermResultsUpdater) Handle(ctx context.Context, tx pgx.Tx, e outbox.Event) error {
+func (TermResultsUpdater) Handle(ctx context.Context, tx pgx.Tx, e outbox.Event) error {
 	var ev PublishedEvent
 	if err := e.Decode(&ev); err != nil {
 		return fmt.Errorf("grading: olay verisi çözülemedi: %w", err)
 	}
-	now := time.Now
-	if u.Now != nil {
-		now = u.Now
-	}
-	return RecomputeTermResults(ctx, tx, ev.StudentPrograms, now())
+	return RecomputeTermResults(ctx, tx, ev.StudentPrograms)
 }
 
-// loadGPARules, onur ve ders yükü parametreleridir (at gününde geçerli olanlar). Tanımlı
-// değilse yönetmeliğin genel değerleri: 30 AKTS, onur 3,00, yüksek onur 3,50.
-func loadGPARules(ctx context.Context, q db.Querier, at time.Time) (gpa.Rules, error) {
-	r := gpa.Rules{FullLoad: 300, Honor: 300, HighHonor: 350}
-	rows, err := q.Query(ctx, `
-		SELECT key, value FROM curriculum.regulation_parameters
-		WHERE key IN ('semester_ects_load', 'honor_gpa')
-		  AND effective_from <= $1 AND (effective_to IS NULL OR effective_to > $1)`, at)
-	if err != nil {
-		return r, fmt.Errorf("grading: yönetmelik parametreleri okunamadı: %w", err)
-	}
-	var (
-		key   string
-		value []byte
-	)
-	_, err = pgx.ForEachRow(rows, []any{&key, &value}, func() error {
-		switch key {
-		case "semester_ects_load":
-			var v float64
-			if err := json.Unmarshal(value, &v); err != nil {
-				return fmt.Errorf("%s: %w", key, err)
-			}
-			r.FullLoad = gpa.ECTS(cents(v) / 10)
-		case "honor_gpa":
-			var v struct {
-				Honor     float64 `json:"HONOR"`
-				HighHonor float64 `json:"HIGH_HONOR"`
-			}
-			if err := json.Unmarshal(value, &v); err != nil {
-				return fmt.Errorf("%s: %w", key, err)
-			}
-			r.Honor, r.HighHonor = gpa.Hundredths(cents(v.Honor)), gpa.Hundredths(cents(v.HighHonor))
+// gpaRules, onur kararının parametrelerini çözer (semester_ects_load ve honor_gpa değerleri).
+// Tanımlı değilse yönetmeliğin genel değerleri: 30 AKTS, onur 3,00, yüksek onur 3,70.
+func gpaRules(load, honor []byte) (gpa.Rules, error) {
+	r := gpa.Rules{FullLoad: 300, Honor: 300, HighHonor: 370}
+	if load != nil {
+		var v float64
+		if err := json.Unmarshal(load, &v); err != nil {
+			return r, fmt.Errorf("grading: semester_ects_load: %w", err)
 		}
-		return nil
-	})
-	if err != nil {
-		return r, fmt.Errorf("grading: yönetmelik parametreleri okunamadı: %w", err)
+		r.FullLoad = gpa.ECTS(cents(v) / 10)
+	}
+	if honor != nil {
+		var v struct {
+			Honor     float64 `json:"HONOR"`
+			HighHonor float64 `json:"HIGH_HONOR"`
+		}
+		if err := json.Unmarshal(honor, &v); err != nil {
+			return r, fmt.Errorf("grading: honor_gpa: %w", err)
+		}
+		r.Honor, r.HighHonor = gpa.Hundredths(cents(v.Honor)), gpa.Hundredths(cents(v.HighHonor))
 	}
 	return r, nil
 }
@@ -83,34 +59,44 @@ func loadGPARules(ctx context.Context, q db.Querier, at time.Time) (gpa.Rules, e
 // RecomputeTermResults, program kayıtlarının dönem sonuçlarını kesin kayıtlardan yeniden
 // üretir, artık notu kalmayan dönemlerin sonucunu siler ve GANO ile kazanılan AKTS
 // önbelleklerini (son dönemin sonucu) günceller. Önbellek sadece değiştiyse yazılır: kaydın
-// sürümü boş yere artmaz. at, yönetmelik parametrelerinin geçerlilik günüdür.
-func RecomputeTermResults(ctx context.Context, q db.Querier, studentProgramIDs []string, at time.Time) error {
+// sürümü boş yere artmaz. Her dönemin onur kararı, dönemin bitişinde geçerli yönetmelik
+// parametreleriyle verilir.
+func RecomputeTermResults(ctx context.Context, q db.Querier, studentProgramIDs []string) error {
 	if len(studentProgramIDs) == 0 {
 		return nil
 	}
-	rules, err := loadGPARules(ctx, q, at)
-	if err != nil {
-		return err
-	}
 
 	// Dönemler: dönem sırası başlangıç gününden; disiplin cezası, dönem içinde konmuş
-	// uzaklaştırma engelidir.
+	// uzaklaştırma engelidir; parametreler dönemin bitişinde geçerli olanlardır.
 	terms := map[string]map[string]gpa.Term{}
 	rows, err := q.Query(ctx, `
-		SELECT DISTINCT e.student_program_id, t.id, t.starts_on - date '2000-01-01', t.term_type IN ('FALL', 'SPRING'),
+		WITH t AS (
+			SELECT DISTINCT e.student_program_id, t.id, t.starts_on, t.ends_on, t.term_type
+			FROM enrollment.enrollments e JOIN academic.terms t ON t.id = e.term_id
+			WHERE e.student_program_id = ANY($1) AND e.status <> 'DROPPED'
+		)
+		SELECT t.student_program_id, t.id, t.starts_on - date '2000-01-01', t.term_type IN ('FALL', 'SPRING'),
 		       EXISTS (SELECT 1 FROM enrollment.holds h
-		               WHERE h.student_program_id = e.student_program_id AND h.hold_type = 'DISCIPLINE_SUSPENSION'
-		                 AND h.placed_at::date BETWEEN t.starts_on AND t.ends_on)
-		FROM enrollment.enrollments e JOIN academic.terms t ON t.id = e.term_id
-		WHERE e.student_program_id = ANY($1) AND e.status <> 'DROPPED'`, studentProgramIDs)
+		               WHERE h.student_program_id = t.student_program_id AND h.hold_type = 'DISCIPLINE_SUSPENSION'
+		                 AND h.placed_at::date BETWEEN t.starts_on AND t.ends_on),
+		       (SELECT p.value FROM curriculum.regulation_parameters p WHERE p.key = 'semester_ects_load'
+		          AND p.effective_from <= t.ends_on AND (p.effective_to IS NULL OR p.effective_to > t.ends_on)),
+		       (SELECT p.value FROM curriculum.regulation_parameters p WHERE p.key = 'honor_gpa'
+		          AND p.effective_from <= t.ends_on AND (p.effective_to IS NULL OR p.effective_to > t.ends_on))
+		FROM t`, studentProgramIDs)
 	if err != nil {
 		return fmt.Errorf("grading: dönemler okunamadı: %w", err)
 	}
 	var (
-		spID string
-		t    gpa.Term
+		spID        string
+		t           gpa.Term
+		load, honor []byte
 	)
-	_, err = pgx.ForEachRow(rows, []any{&spID, &t.ID, &t.Order, &t.Regular, &t.Discipline}, func() error {
+	_, err = pgx.ForEachRow(rows, []any{&spID, &t.ID, &t.Order, &t.Regular, &t.Discipline, &load, &honor}, func() error {
+		var err error
+		if t.Rules, err = gpaRules(load, honor); err != nil {
+			return err
+		}
 		if terms[spID] == nil {
 			terms[spID] = map[string]gpa.Term{}
 		}
@@ -169,7 +155,7 @@ func RecomputeTermResults(ctx context.Context, q db.Querier, studentProgramIDs [
 		for _, t := range terms[id] {
 			list = append(list, t)
 		}
-		results := gpa.Compute(list, attempts[id], rules)
+		results := gpa.Compute(list, attempts[id])
 		for _, r := range results {
 			sps, termIDs, standings = append(sps, id), append(termIDs, r.TermID), append(standings, string(r.Standing))
 			attempted, earned = append(attempted, tenths(r.AttemptedECTS)), append(earned, tenths(r.EarnedECTS))

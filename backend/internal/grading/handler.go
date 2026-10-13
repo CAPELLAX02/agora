@@ -80,11 +80,13 @@ type planResponse struct {
 	InTermWeight float64             `json:"in_term_weight"`
 	FinalWeight  float64             `json:"final_weight"`
 	IsComplete   bool                `json:"is_complete"`
-	LockedAt     *time.Time          `json:"locked_at"`
-	LockedBy     *string             `json:"locked_by"`
-	Editable     bool                `json:"editable"`
-	CanUnlock    bool                `json:"can_unlock"`
-	Version      int                 `json:"version"`
+	// RequiredFinalWeight, yönetmeliğin finale verdiği ağırlıktır; boşsa serbest.
+	RequiredFinalWeight *float64   `json:"required_final_weight"`
+	LockedAt            *time.Time `json:"locked_at"`
+	LockedBy            *string    `json:"locked_by"`
+	Editable            bool       `json:"editable"`
+	CanUnlock           bool       `json:"can_unlock"`
+	Version             int        `json:"version"`
 }
 
 func toTypeResponse(t AssessmentType) typeResponse {
@@ -121,7 +123,9 @@ func (h *Handler) toPlanResponse(r *http.Request, p Plan) planResponse {
 		res.Components = append(res.Components, cr)
 	}
 	res.InTermWeight, res.FinalWeight = float64(inTerm)/100, float64(final)/100
-	res.IsComplete = finals == 1 && inTerm+final == 10000
+	res.RequiredFinalWeight = p.RequiredFinalWeight
+	res.IsComplete = finals == 1 && inTerm+final == 10000 &&
+		(p.RequiredFinalWeight == nil || final == cents(*p.RequiredFinalWeight))
 	res.CanUnlock = p.LockedAt != nil && mayManageSection(r, p.SectionContext)
 	res.Editable = p.LockedAt == nil && p.SectionStatus == "ACTIVE" && mayEdit(r, p.SectionContext)
 	return res
@@ -212,8 +216,9 @@ type planRequest struct {
 }
 
 // validate, planı doğrular: dönem içi bileşenlerin ve finalin ağırlıkları toplamı 100,
-// tek final; bütünleme istemciden gelmez (finalden türetilir).
-func (req planRequest) validate(types map[string]AssessmentType, sc SectionContext) ([]ComponentInput, []httpx.FieldError) {
+// tek final, finalin ağırlığı yönetmeliğin öngördüğü (requiredFinal, varsa); bütünleme
+// istemciden gelmez (finalden türetilir).
+func (req planRequest) validate(types map[string]AssessmentType, sc SectionContext, requiredFinal *float64) ([]ComponentInput, []httpx.FieldError) {
 	var errs []httpx.FieldError
 	if len(req.Components) == 0 || len(req.Components) > 20 {
 		errs = append(errs, httpx.FieldError{Field: "components", Message: "1 ile 20 arasında bileşen olmalı."})
@@ -221,7 +226,7 @@ func (req planRequest) validate(types map[string]AssessmentType, sc SectionConte
 	items := make([]ComponentInput, 0, len(req.Components))
 	nextSeq := map[string]int{}
 	seen := map[string]bool{}
-	var total int64
+	var total, final int64
 	finals := 0
 	for _, c := range req.Components {
 		t, ok := types[c.Type]
@@ -253,6 +258,9 @@ func (req planRequest) validate(types map[string]AssessmentType, sc SectionConte
 			errs = append(errs, httpx.FieldError{Field: "components.weight", Message: "0'dan büyük, en fazla 100 ve en fazla iki ondalık basamaklı olmalı."})
 		}
 		total += cents(in.Weight)
+		if t.Category == CategoryFinal {
+			final += cents(in.Weight)
+		}
 		for field, v := range map[string]string{"components.name_tr": in.NameTR, "components.name_en": in.NameEN} {
 			if utf8.RuneCountInString(v) > 100 {
 				errs = append(errs, httpx.FieldError{Field: field, Message: "En fazla 100 karakter."})
@@ -276,6 +284,10 @@ func (req planRequest) validate(types map[string]AssessmentType, sc SectionConte
 	}
 	if len(errs) == 0 && total != 10000 {
 		errs = append(errs, httpx.FieldError{Field: "components.weight", Message: fmt.Sprintf("Ağırlıkların toplamı 100 olmalı (şu an %.2f).", float64(total)/100)})
+	}
+	if len(errs) == 0 && requiredFinal != nil && final != cents(*requiredFinal) {
+		errs = append(errs, httpx.FieldError{Field: "components.weight", Message: fmt.Sprintf(
+			"Yönetmelik gereği finalin ağırlığı %%%g, dönem içi değerlendirmelerin toplamı %%%g olmalı.", *requiredFinal, 100-*requiredFinal)})
 	}
 	return items, errs
 }
@@ -308,7 +320,7 @@ func (h *Handler) setPlan(w http.ResponseWriter, r *http.Request) {
 	for _, t := range types {
 		byCode[t.Code] = t
 	}
-	items, errs := req.validate(byCode, p.SectionContext)
+	items, errs := req.validate(byCode, p.SectionContext, p.RequiredFinalWeight)
 	if len(errs) > 0 {
 		httpx.ValidationFailed(w, r, errs)
 		return
@@ -373,6 +385,8 @@ func (h *Handler) failed(w http.ResponseWriter, r *http.Request, err error) bool
 		httpx.PreconditionFailed(w, r)
 	case errors.Is(err, ErrPlanLocked):
 		h.problem(w, r, http.StatusConflict, "ASSESSMENT_PLAN_LOCKED", "Değerlendirme planı kilitli; değişiklik için bölümden kilidin açılmasını isteyin.")
+	case errors.Is(err, ErrFinalWeight):
+		h.problem(w, r, http.StatusConflict, "ASSESSMENT_PLAN_FINAL_WEIGHT", "Plan kilitlenmeden önce finalin ağırlığı yönetmeliğin öngördüğü değere getirilmeli.")
 	case errors.Is(err, ErrPlanIncomplete):
 		h.problem(w, r, http.StatusConflict, "ASSESSMENT_PLAN_INCOMPLETE", "Plan kilitlenmeden önce tamamlanmalı: tek final ve toplam ağırlık 100.")
 	case errors.Is(err, ErrSectionInactive):

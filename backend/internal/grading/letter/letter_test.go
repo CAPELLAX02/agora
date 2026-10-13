@@ -107,6 +107,56 @@ func TestCompute(t *testing.T) {
 	}
 }
 
+// au2023Scale, yönetmeliğin 2023 değişikliğiyle gelen ölçektir (migration 00034 ile aynı):
+// F1 (50-59) başarısız ama katsayılı, F3 finale girmedi, F4 devamsızlık.
+func au2023Scale() letter.Scale {
+	ranged := func(l string, coef, lo, hi float64) letter.Grade {
+		return letter.Grade{Letter: l, Coefficient: pts(coef), Min: pts(lo), Max: pts(hi), Passing: lo >= 60, CountsInGPA: true, EarnsECTS: lo >= 60}
+	}
+	return letter.Scale{
+		ranged("A", 4, 90, 100), ranged("B1", 3.5, 85, 89), ranged("B2", 3.25, 80, 84), ranged("B3", 3, 75, 79),
+		ranged("C1", 2.75, 70, 74), ranged("C2", 2.5, 65, 69), ranged("C3", 2, 60, 64), ranged("F1", 1.5, 50, 59),
+		ranged("F2", 0, 0, 49),
+		{Letter: "F3", Coefficient: pts(0), CountsInGPA: true, FinalAbsent: true},
+		{Letter: "F4", Coefficient: pts(0), CountsInGPA: true, AttendanceFail: true},
+		{Letter: "BŞR", Passing: true, EarnsECTS: true},
+		{Letter: "BŞZ"},
+		{Letter: "MUAF", Passing: true, EarnsECTS: true},
+	}
+}
+
+// TestCompute2023: başarı için final ya da bütünlemeden en az 50 ve ders başarı notu en az 60
+// (md. 37); 50-59 F1, finale girmeyen F3, devamsız F4.
+func TestCompute2023(t *testing.T) {
+	p := letter.Params{FinalMinScore: 5000, PassMinScore: 6000}
+	for _, tc := range []struct {
+		name   string
+		in     letter.Input
+		letter string
+		reason letter.Reason
+	}{
+		{name: "60 geçer", in: letter.Input{Components: plan(f(60), f(60), f(60), nil)}, letter: "C3", reason: letter.ReasonRange},
+		{name: "50-59 F1", in: letter.Input{Components: plan(f(50), f(60), f(55), nil)}, letter: "F1", reason: letter.ReasonRange},
+		{name: "final barajı F2", in: letter.Input{Components: plan(f(100), f(100), f(49.99), nil)}, letter: "F2", reason: letter.ReasonFinalBelowMin},
+		{name: "finale girmedi F3", in: letter.Input{Components: plan(f(100), f(100), absent, nil)}, letter: "F3", reason: letter.ReasonFinalAbsent},
+		{name: "bütünlemeyle F1'den geçer", in: letter.Input{Components: plan(f(50), f(60), f(55), f(70))}, letter: "C3", reason: letter.ReasonRange}, // 15 + 6 + 42 = 63
+		{name: "devamsız F4", in: letter.Input{Components: plan(f(100), f(100), f(100), nil), AttendanceFail: true}, letter: "F4", reason: letter.ReasonAttendanceFail},
+		{name: "başarılı/başarısız: 55 kalır", in: letter.Input{Components: plan(f(50), f(60), f(55), nil), PassFail: true}, letter: "BŞZ", reason: letter.ReasonPassFail},
+		{name: "başarılı/başarısız: 60 geçer", in: letter.Input{Components: plan(f(60), f(60), f(60), nil), PassFail: true}, letter: "BŞR", reason: letter.ReasonPassFail},
+		{name: "başarılı/başarısız: finale girmedi", in: letter.Input{Components: plan(f(100), f(100), absent, nil), PassFail: true}, letter: "BŞZ", reason: letter.ReasonFinalAbsent},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			res, err := letter.Compute(au2023Scale(), p, tc.in)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if res.Letter != tc.letter || res.Reason != tc.reason {
+				t.Errorf("sonuç = %s (%s), beklenen %s (%s)", res.Letter, res.Reason, tc.letter, tc.reason)
+			}
+		})
+	}
+}
+
 // TestRoundingConsistency: ağırlıklı toplam 49,495 ise gösterilen puan 49,50 olur ve harf
 // notu bu puana göre verilir (C3); gösterilen puanla harf notu çelişmez.
 func TestRoundingConsistency(t *testing.T) {

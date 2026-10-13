@@ -35,7 +35,7 @@ type GradeScale struct {
 }
 
 // GradeItem, ölçekteki bir harf notudur. Puan aralığı olmayan harfler puanla değil
-// durumla verilir (F1 devamsızlık, BŞR/BŞZ, MUAF).
+// durumla verilir (devamsızlık, finale girmedi, BŞR/BŞZ, MUAF).
 type GradeItem struct {
 	Letter           string
 	Coefficient      *float64
@@ -45,6 +45,7 @@ type GradeItem struct {
 	CountsInGPA      bool
 	EarnsECTS        bool
 	IsAttendanceFail bool
+	IsFinalAbsent    bool
 }
 
 // RegulationParameter, bir yönetmelik parametresinin bir dönemdeki değeridir.
@@ -109,7 +110,7 @@ func (r *Repository) gradeScales(ctx context.Context, q db.Querier, id string) (
 	}
 	rows, err = q.Query(ctx, `
 		SELECT grade_scale_id, letter, coefficient::float8, min_score::float8, max_score::float8,
-		       is_passing, counts_in_gpa, earns_ects, is_attendance_fail
+		       is_passing, counts_in_gpa, earns_ects, is_attendance_fail, is_final_absent
 		FROM curriculum.grade_scale_items
 		WHERE grade_scale_id = ANY($1::uuid[])
 		ORDER BY grade_scale_id, sort_order`, ids)
@@ -123,7 +124,7 @@ func (r *Repository) gradeScales(ctx context.Context, q db.Querier, id string) (
 			it      GradeItem
 		)
 		if err := rows.Scan(&scaleID, &it.Letter, &it.Coefficient, &it.MinScore, &it.MaxScore,
-			&it.IsPassing, &it.CountsInGPA, &it.EarnsECTS, &it.IsAttendanceFail); err != nil {
+			&it.IsPassing, &it.CountsInGPA, &it.EarnsECTS, &it.IsAttendanceFail, &it.IsFinalAbsent); err != nil {
 			return nil, fmt.Errorf("curriculum: harf notları okunamadı: %w", err)
 		}
 		g := &scales[index[scaleID]]
@@ -256,10 +257,10 @@ func insertGradeItems(ctx context.Context, tx pgx.Tx, scaleID string, items []Gr
 		_, err := tx.Exec(ctx, `
 			INSERT INTO curriculum.grade_scale_items
 			    (grade_scale_id, letter, coefficient, min_score, max_score, is_passing, counts_in_gpa, earns_ects,
-			     is_attendance_fail, sort_order)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+			     is_attendance_fail, is_final_absent, sort_order)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
 			scaleID, it.Letter, it.Coefficient, it.MinScore, it.MaxScore, it.IsPassing, it.CountsInGPA, it.EarnsECTS,
-			it.IsAttendanceFail, i+1)
+			it.IsAttendanceFail, it.IsFinalAbsent, i+1)
 		switch {
 		case db.IsExclusionViolation(err):
 			return ErrScoreRangeOverlap

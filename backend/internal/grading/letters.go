@@ -336,7 +336,7 @@ func loadParams(ctx context.Context, q db.Querier, at time.Time) (letter.Params,
 func loadScale(ctx context.Context, q db.Querier, scaleID string) (letter.Scale, error) {
 	rows, err := q.Query(ctx, `
 		SELECT letter, (coefficient * 100)::int8, (min_score * 100)::int8, (max_score * 100)::int8,
-		       is_passing, counts_in_gpa, earns_ects, is_attendance_fail
+		       is_passing, counts_in_gpa, earns_ects, is_attendance_fail, is_final_absent
 		FROM curriculum.grade_scale_items WHERE grade_scale_id = $1 ORDER BY sort_order`, scaleID)
 	if err != nil {
 		return nil, fmt.Errorf("grading: not ölçeği okunamadı: %w", err)
@@ -353,23 +353,23 @@ func loadScale(ctx context.Context, q db.Querier, scaleID string) (letter.Scale,
 			g            letter.Grade
 			coef, lo, hi *int64
 		)
-		err := row.Scan(&g.Letter, &coef, &lo, &hi, &g.Passing, &g.CountsInGPA, &g.EarnsECTS, &g.AttendanceFail)
+		err := row.Scan(&g.Letter, &coef, &lo, &hi, &g.Passing, &g.CountsInGPA, &g.EarnsECTS, &g.AttendanceFail, &g.FinalAbsent)
 		g.Coefficient, g.Min, g.Max = ptr(coef), ptr(lo), ptr(hi)
 		return g, err
 	})
 }
 
-// ManualLetters, derse elle verilebilecek harflerdir: harf notlu derste puanla verilen harfler
-// ve devamsızlık harfi, başarılı/başarısız notlu derste geçti/kaldı harfleri. Muafiyet ders
-// içi değerlendirmeyle verilmez.
+// ManualLetters, derse elle verilebilecek harflerdir: harf notlu derste puanla verilen harfler,
+// devamsızlık ve finale girmedi harfleri; başarılı/başarısız notlu derste geçti/kaldı harfleri.
+// Muafiyet ders içi değerlendirmeyle verilmez.
 func ManualLetters(scale letter.Scale, passFail bool) letter.Scale {
 	var out letter.Scale
 	for _, g := range scale {
 		switch {
 		case g.Letter == ExemptionLetter:
-		case passFail && g.Min == nil && !g.CountsInGPA && !g.AttendanceFail:
+		case passFail && g.Min == nil && !g.CountsInGPA && !g.AttendanceFail && !g.FinalAbsent:
 			out = append(out, g)
-		case !passFail && (g.Min != nil || g.AttendanceFail):
+		case !passFail && (g.Min != nil || g.AttendanceFail || g.FinalAbsent):
 			out = append(out, g)
 		}
 	}
@@ -447,7 +447,7 @@ func loadMakeupLetters(ctx context.Context, q db.Querier, at time.Time) ([]strin
 		WHERE key = 'makeup_eligible_letters' AND effective_from <= $1 AND (effective_to IS NULL OR effective_to > $1)`,
 		at).Scan(&raw)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return []string{"F2", "BŞZ"}, nil
+		return []string{"F1", "F2", "F3", "BŞZ"}, nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("grading: bütünleme parametresi okunamadı: %w", err)

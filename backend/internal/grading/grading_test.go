@@ -114,6 +114,9 @@ func TestPlanLifecycle(t *testing.T) {
 		{TypeCode: "MIDTERM", SequenceNo: 1, Weight: 30, NameTR: "Vize"},
 		{TypeCode: "FINAL", SequenceNo: 1, Weight: 70},
 	}
+	if p.RequiredFinalWeight == nil || *p.RequiredFinalWeight != 60 {
+		t.Errorf("yönetmeliğin final ağırlığı = %v", p.RequiredFinalWeight)
+	}
 	if err := repo.SetPlan(ctx, "", fx.section, 1, items); !errors.Is(err, grading.ErrVersionMismatch) {
 		t.Errorf("eski sürüm: %v", err)
 	}
@@ -123,6 +126,15 @@ func TestPlanLifecycle(t *testing.T) {
 	p, _ = repo.Plan(ctx, fx.section, "")
 	if len(p.Components) != 3 || p.Components[0].ID != midterm1 || p.Components[0].Label(false, false) != "Vize" || p.Components[2].Weight != 70 {
 		t.Errorf("güncel plan = %+v", p.Components)
+	}
+
+	// Final %70: yönetmelik (md. 35/3) finale %60 verir, kilitlenemez.
+	if err := repo.Lock(ctx, fx.ayseUser, fx.section); !errors.Is(err, grading.ErrFinalWeight) {
+		t.Errorf("final ağırlığı: %v", err)
+	}
+	items[0].Weight, items[1].Weight = 40, 60
+	if err := repo.SetPlan(ctx, "", fx.section, 3, items); err != nil {
+		t.Fatal(err)
 	}
 
 	// Kilit: plan donar; kilidi bölüm açar.
@@ -228,7 +240,8 @@ func TestHTTPAssessmentPlan(t *testing.T) {
 	c := func(typ string, weight float64) map[string]any { return map[string]any{"type": typ, "weight": weight} }
 
 	res := s.do("GET", path, s.fx.ayseUser, nil, nil)
-	if res.status != 200 || res.body["editable"] != true || res.body["is_complete"] != false || res.header.Get("ETag") != `"1"` {
+	if res.status != 200 || res.body["editable"] != true || res.body["is_complete"] != false || res.header.Get("ETag") != `"1"` ||
+		res.body["required_final_weight"] != 60.0 {
 		t.Fatalf("boş plan: %d %s", res.status, res.raw)
 	}
 	if res := s.do("GET", path, student, nil, nil); res.body["editable"] != false {
@@ -253,6 +266,7 @@ func TestHTTPAssessmentPlan(t *testing.T) {
 		"bütünleme verilmiş": plan(c("MIDTERM", 40), c("FINAL", 60), c("MAKEUP", 60)),
 		"üç ondalık":         plan(c("MIDTERM", 39.999), c("FINAL", 60.001)),
 		"tanımsız tür":       plan(c("ESSAY", 40), c("FINAL", 60)),
+		"final %50":          plan(c("MIDTERM", 50), c("FINAL", 50)),
 	} {
 		if res := s.do("PUT", path, s.fx.ayseUser, ifMatch, bad); res.status != 400 {
 			t.Errorf("%s: %d %s", name, res.status, res.raw)

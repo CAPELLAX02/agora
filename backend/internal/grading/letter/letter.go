@@ -34,8 +34,8 @@ type Component struct {
 
 func (c Component) entered() bool { return c.Score != nil || c.Absent }
 
-// Grade, not ölçeğinin bir satırıdır. Puan aralığı olmayan harfler (F1, BŞR, BŞZ, MUAF)
-// puanla değil durumla verilir.
+// Grade, not ölçeğinin bir satırıdır. Puan aralığı olmayan harfler (devamsızlık, finale
+// girmedi, BŞR, BŞZ, MUAF) puanla değil durumla verilir.
 type Grade struct {
 	Letter         string
 	Coefficient    *Points // GANO katsayısı (yüzde birlik: 3,50 → 350); BŞR gibi harflerde yok
@@ -43,7 +43,8 @@ type Grade struct {
 	Passing        bool
 	CountsInGPA    bool
 	EarnsECTS      bool
-	AttendanceFail bool // devamsızlık harfi (F1)
+	AttendanceFail bool // devamsızlık harfi (2023 ölçeğinde F4, öncekinde F1)
+	FinalAbsent    bool // finale girmedi harfi (2023 ölçeğinde F3); ölçekte yoksa puanla verilen en düşük harf
 }
 
 // Scale, not ölçeğidir: başarıdan başarısızlığa sıralı harfler.
@@ -99,12 +100,13 @@ var (
 )
 
 // Compute, harf notunu hesaplar. Kurallar sırasıyla:
-//  1. Devamsız öğrenci F1 alır (başarılı/başarısız notlu derste BŞZ).
+//  1. Devamsız öğrenci ölçeğin devamsızlık harfini alır (F4; eski ölçekte F1), başarılı/başarısız
+//     notlu derste BŞZ.
 //  2. Bütünleme notu (puan olarak) girilmişse finalin yerine geçer; bütünlemeye girmeyenin
 //     notu final notuyla hesaplanır.
 //  3. Dönem içi bileşenlerden ya da finalden biri girilmemişse hesaplanmaz.
-//  4. Final (ya da yerine geçen bütünleme) girmedi ise F2; final barajının altındaysa F2
-//     (ders başarı puanı yine hesaplanır).
+//  4. Final (ya da yerine geçen bütünleme) girmedi ise ölçeğin finale girmedi harfi (F3; yoksa
+//     F2); final barajının altındaysa F2 (ders başarı puanı yine hesaplanır).
 //  5. Ders başarı puanı = Σ puan × ağırlık / 100, iki ondalığa yarım yukarı yuvarlanır;
 //     harf notu bu puanın tam sayıya yarım yukarı yuvarlanmışının ölçekteki aralığıdır. Başarılı/başarısız notlu derste geçme puanı ve üstü BŞR,
 //     altı BŞZ.
@@ -162,6 +164,10 @@ func Compute(scale Scale, params Params, in Input) (Result, error) {
 
 	if in.Components[exam].Absent {
 		res.Reason = ReasonFinalAbsent
+		if g, ok := scale.finalAbsent(); ok && !in.PassFail {
+			res.Letter = g.Letter
+			return res, nil
+		}
 		return failed(scale, in.PassFail, res)
 	}
 
@@ -211,7 +217,7 @@ func failed(scale Scale, passFailCourse bool, res Result) (Result, error) {
 // kazandırır ama başarılı ders gibi davranır) ayrıca ayırt edilmez: ölçekte BŞR'den sonra gelir.
 func passFail(scale Scale, passed bool, res Result) (Result, error) {
 	for _, g := range scale {
-		if g.Min == nil && !g.CountsInGPA && !g.AttendanceFail && g.Passing == passed {
+		if g.Min == nil && !g.CountsInGPA && !g.AttendanceFail && !g.FinalAbsent && g.Passing == passed {
 			res.Letter = g.Letter
 			return res, nil
 		}
@@ -232,6 +238,15 @@ func (s Scale) byScore(rounded int64) (Grade, bool) {
 func (s Scale) attendanceFail() (Grade, bool) {
 	for _, g := range s {
 		if g.AttendanceFail {
+			return g, true
+		}
+	}
+	return Grade{}, false
+}
+
+func (s Scale) finalAbsent() (Grade, bool) {
+	for _, g := range s {
+		if g.FinalAbsent {
 			return g, true
 		}
 	}

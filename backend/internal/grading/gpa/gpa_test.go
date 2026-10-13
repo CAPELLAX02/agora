@@ -12,10 +12,10 @@ import (
 var rules = gpa.Rules{FullLoad: 300, Honor: 300, HighHonor: 350}
 
 var terms = []gpa.Term{
-	{ID: "2024-FALL", Order: 1, Regular: true},
-	{ID: "2024-SUMMER", Order: 3, Regular: false},
-	{ID: "2025-SPRING", Order: 2, Regular: true},
-	{ID: "2025-FALL", Order: 4, Regular: true},
+	{ID: "2024-FALL", Order: 1, Regular: true, Rules: rules},
+	{ID: "2024-SUMMER", Order: 3, Regular: false, Rules: rules},
+	{ID: "2025-SPRING", Order: 2, Regular: true, Rules: rules},
+	{ID: "2025-FALL", Order: 4, Regular: true, Rules: rules},
 }
 
 // Not ölçeği (katsayı, ortalamaya girer, AKTS kazandırır, geçer).
@@ -161,9 +161,25 @@ func TestCompute(t *testing.T) {
 		{
 			name:     "disiplin cezası alan öğrenciye onur yok",
 			attempts: full("2024-FALL", "A", "A", "A", "A", "A"),
-			terms:    []gpa.Term{{ID: "2024-FALL", Order: 1, Regular: true, Discipline: true}},
+			terms:    []gpa.Term{{ID: "2024-FALL", Order: 1, Regular: true, Discipline: true, Rules: rules}},
 			want: []gpa.Result{{TermID: "2024-FALL", AttemptedECTS: 300, EarnedECTS: 300, TermGPA: h(400),
 				CumulativeECTS: 300, CumulativeGPA: h(400), Standing: gpa.Normal}},
+		},
+		{
+			// Eşik dönemin kuralıyla: 3,60 eski kuralda (3,50) yüksek onur, yenisinde (3,70) onur.
+			name: "dönemin yönetmeliği",
+			attempts: append(full("2024-FALL", "A", "A", "B1", "B1", "B3"),
+				full("2025-SPRING", "A", "A", "B1", "B1", "B3")...),
+			terms: []gpa.Term{
+				{ID: "2024-FALL", Order: 1, Regular: true, Rules: rules},
+				{ID: "2025-SPRING", Order: 2, Regular: true, Rules: gpa.Rules{FullLoad: 300, Honor: 300, HighHonor: 370}},
+			},
+			want: []gpa.Result{
+				{TermID: "2024-FALL", AttemptedECTS: 300, EarnedECTS: 300, TermGPA: h(360),
+					CumulativeECTS: 300, CumulativeGPA: h(360), Standing: gpa.HighHonor},
+				{TermID: "2025-SPRING", AttemptedECTS: 300, EarnedECTS: 300, TermGPA: h(360),
+					CumulativeECTS: 600, CumulativeGPA: h(360), Standing: gpa.Honor},
+			},
 		},
 		{
 			// Yaz okulu yarıyıl değildir: onur verilmez ama dersleri ortalamalara girer. Sıra
@@ -185,7 +201,7 @@ func TestCompute(t *testing.T) {
 			if ts == nil {
 				ts = terms
 			}
-			got := gpa.Compute(ts, c.attempts, rules)
+			got := gpa.Compute(ts, c.attempts)
 			if !reflect.DeepEqual(got, c.want) {
 				t.Errorf("\n got  %s\n want %s", show(got), show(c.want))
 			}
@@ -223,10 +239,10 @@ func TestProperties(t *testing.T) {
 			}
 			attempts = append(attempts, a)
 		}
-		got := gpa.Compute(terms, attempts, rules)
+		got := gpa.Compute(terms, attempts)
 		shuffled := append([]gpa.Attempt(nil), attempts...)
 		rng.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
-		if again := gpa.Compute(terms, shuffled, rules); !reflect.DeepEqual(got, again) {
+		if again := gpa.Compute(terms, shuffled); !reflect.DeepEqual(got, again) {
 			t.Fatalf("sıraya bağlı sonuç:\n%s\n%s", show(got), show(again))
 		}
 		for _, r := range got {

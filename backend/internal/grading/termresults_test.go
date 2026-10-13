@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/CAPELLAX02/agora/backend/internal/grading"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authz"
@@ -100,7 +99,7 @@ func TestTermResults(t *testing.T) {
 		t.Fatalf("kilit: %d %s", res.status, res.raw)
 	}
 	s.calendar.set(grading.WindowFinalEntry, true)
-	// Ali 88 (B1), Ece 50 (F2), Can devamsız (F1).
+	// Ali 88 (B1), Ece 50 (F2), Can devamsız (F4).
 	put(scores("MIDTERM"), `"1"`, item(0, 80), item(1, 60), item(2, 90))
 	put(scores("HOMEWORK"), `"1"`, item(0, 100), item(1, 50), item(2, 90))
 	put(scores("FINAL"), `"1"`, item(0, 90), item(1, 45), item(2, 90))
@@ -178,13 +177,14 @@ func TestTermResults(t *testing.T) {
 	}
 
 	process()
-	// Ali: güzün sonucu tekrardan etkilenmez; 2026 güzde F2 kapandı, GANO sadece B1.
-	check("22290101", "2025-FALL 6.0/0.0 0.00 0.0 0.00 NORMAL; 2026-FALL 6.0/6.0 3.50 6.0 3.50 HIGH_HONOR", "3.50 6.0")
+	// Ali: güzün sonucu tekrardan etkilenmez; 2026 güzde F2 kapandı, GANO sadece B1. YANO 3,50:
+	// 2022'den beri yüksek onur 3,70 (md. 42), onur.
+	check("22290101", "2025-FALL 6.0/0.0 0.00 0.0 0.00 NORMAL; 2026-FALL 6.0/6.0 3.50 6.0 3.50 HONOR", "3.50 6.0")
 	// Ece: kalınan seçmeli (COM1009) kapandı, yerine alınan COM1001'den de kaldı.
 	check("22290102", "2025-FALL 6.0/0.0 0.00 0.0 0.00 NORMAL; 2026-FALL 6.0/0.0 0.00 0.0 0.00 NORMAL", "0.00 0.0")
 	check("22290103", "2026-FALL 6.0/0.0 0.00 0.0 0.00 NORMAL", "0.00 0.0")
 
-	// Bütünleme: Ece 70 → C1. Bütünlemeyle geçilen dönemde onur yok.
+	// Bütünleme: Ece 70 → C2. Bütünlemeyle geçilen dönemde onur yok.
 	s.calendar.set(grading.WindowMakeupEntry, true)
 	makeup := ""
 	for _, c := range s.do("GET", section+"/gradebook", fx.ayseUser, mfa, nil).body["components"].([]any) {
@@ -197,7 +197,7 @@ func TestTermResults(t *testing.T) {
 		t.Fatalf("bütünleme ilanı: %d %s", res.status, res.raw)
 	}
 	process()
-	check("22290102", "2025-FALL 6.0/0.0 0.00 0.0 0.00 NORMAL; 2026-FALL 6.0/6.0 2.75 6.0 2.75 NORMAL", "2.75 6.0")
+	check("22290102", "2025-FALL 6.0/0.0 0.00 0.0 0.00 NORMAL; 2026-FALL 6.0/6.0 2.50 6.0 2.50 NORMAL", "2.50 6.0")
 
 	// Disiplin cezası (dönem içinde konan uzaklaştırma) onuru kaldırır. Yeniden hesap
 	// idempotenttir ve değişmeyen önbelleğin sürümünü artırmaz.
@@ -213,7 +213,7 @@ func TestTermResults(t *testing.T) {
 		t.Fatal(err)
 	}
 	for range 2 {
-		if err := grading.RecomputeTermResults(ctx, s.pool, []string{spID}, time.Now()); err != nil {
+		if err := grading.RecomputeTermResults(ctx, s.pool, []string{spID}); err != nil {
 			t.Fatal(err)
 		}
 	}

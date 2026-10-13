@@ -138,7 +138,7 @@ func TestHTTPGradeStats(t *testing.T) {
 		t.Fatalf("kilit: %d %s", res.status, res.raw)
 	}
 	s.calendar.set(grading.WindowFinalEntry, true)
-	// Ali 88 (B1), Ece 50 (final barajı altı → F2), Can devamsız (F1, puanı yok).
+	// Ali 88 (B1), Ece 50 (final barajı altı → F2), Can devamsız (F4, puanı yok).
 	put(fx.components["MIDTERM"], `"1"`, item(0, 80), item(1, 60), item(2, 90))
 	put(fx.components["HOMEWORK"], `"1"`, item(0, 100), item(1, 50), item(2, 90))
 	put(fx.components["FINAL"], `"1"`, item(0, 90), item(1, 45), item(2, 90))
@@ -182,7 +182,7 @@ func TestHTTPGradeStats(t *testing.T) {
 		}
 	}
 	// (88 + 50) / 2 = 69; σ = 19. Önizlemedeki özet aynı hesaptan gelir.
-	check("öğrenci", s.do("GET", stats, aliUser, nil, nil), 69, 69, 19, 1, map[string]float64{"B1": 1, "F2": 1, "F1": 1, "A": 0})
+	check("öğrenci", s.do("GET", stats, aliUser, nil, nil), 69, 69, 19, 1, map[string]float64{"B1": 1, "F2": 1, "F4": 1, "A": 0})
 	check("bölüm", s.do("GET", stats, head, nil, nil), 69, 69, 19, 1, nil)
 	if sum := letters.body["summary"].(map[string]any); sum["stddev"] != 19.0 || sum["mean"] != 69.0 {
 		t.Errorf("önizleme özeti: %v", sum)
@@ -194,7 +194,7 @@ func TestHTTPGradeStats(t *testing.T) {
 		t.Errorf("olmayan şube: %d", res.status)
 	}
 
-	// Bütünleme: Ece 70 → 18 + 5 + 42 = 65 (C1). (88 + 65) / 2 = 76,5; σ = 11,5.
+	// Bütünleme: Ece 70 → 18 + 5 + 42 = 65 (C2). (88 + 65) / 2 = 76,5; σ = 11,5.
 	s.calendar.set(grading.WindowMakeupEntry, true)
 	makeup := ""
 	for _, c := range s.do("GET", section+"/gradebook", fx.ayseUser, mfa, nil).body["components"].([]any) {
@@ -206,7 +206,7 @@ func TestHTTPGradeStats(t *testing.T) {
 	if res := s.do("POST", section+"/makeup/publish", fx.ayseUser, mfa, nil); res.status != 200 {
 		t.Fatalf("bütünleme ilanı: %d %s", res.status, res.raw)
 	}
-	check("bütünlemeden sonra", s.do("GET", stats, aliUser, nil, nil), 76.5, 76.5, 11.5, 2, map[string]float64{"B1": 1, "C1": 1, "F2": 0, "F1": 1})
+	check("bütünlemeden sonra", s.do("GET", stats, aliUser, nil, nil), 76.5, 76.5, 11.5, 2, map[string]float64{"B1": 1, "C2": 1, "F2": 0, "F4": 1})
 
 	var stored string
 	if err := s.pool.QueryRow(ctx, `
