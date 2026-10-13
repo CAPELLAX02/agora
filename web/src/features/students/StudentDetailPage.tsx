@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, LockIcon, RefreshCcwIcon } from 'lucide-react'
+import { ArrowLeftIcon, LockIcon, PrinterIcon, RefreshCcwIcon } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
@@ -7,11 +7,13 @@ import { usePermissions } from '@/features/auth/usePermissions'
 import { RegistrationStatusBadge } from '@/features/registration/badges'
 import { HistoryTable, ProgressView } from '@/features/registration/ProgressView'
 import { navTheme } from '@/features/shell/nav'
+import { TranscriptDocument } from '@/features/transcript/TranscriptDocument'
 import { formatDate, formatDateTime } from '@/i18n/format'
 import {
   useGetRegistrationQuery,
   useGetStudentProgressQuery,
   useGetStudentQuery,
+  useGetTranscriptQuery,
   useListCourseHistoryQuery,
   useListStudentProgramHoldsQuery,
   useListStudentProgramStatusHistoryQuery,
@@ -71,6 +73,7 @@ function Program({ program: sp }: { program: StudentProgram }) {
   const { has } = usePermissions()
   const [dialog, setDialog] = useState<'status' | 'hold' | null>(null)
   const ongoing = ['PREP', 'ACTIVE', 'FROZEN', 'SUSPENDED'].includes(sp.status)
+  const canTranscript = has('transcript:read_scoped')
   return (
     <section className="space-y-4" aria-label={sp.program.name_tr}>
       <Card>
@@ -144,6 +147,7 @@ function Program({ program: sp }: { program: StudentProgram }) {
           <TabsTrigger value="registration">{t('registration.title')}</TabsTrigger>
           <TabsTrigger value="progress">{t('registration.progress.title')}</TabsTrigger>
           <TabsTrigger value="history">{t('registration.history.title')}</TabsTrigger>
+          {canTranscript && <TabsTrigger value="transcript">{t('transcript.tab')}</TabsTrigger>}
           <TabsTrigger value="status">{t('students.statusHistory')}</TabsTrigger>
         </TabsList>
         <TabsContent value="holds" className="pt-4">
@@ -158,6 +162,11 @@ function Program({ program: sp }: { program: StudentProgram }) {
         <TabsContent value="history" className="pt-4">
           <HistoryTab programId={sp.id} />
         </TabsContent>
+        {canTranscript && (
+          <TabsContent value="transcript" className="pt-4">
+            <TranscriptTab programId={sp.id} />
+          </TabsContent>
+        )}
         <TabsContent value="status" className="pt-4">
           <StatusHistory programId={sp.id} />
         </TabsContent>
@@ -246,6 +255,30 @@ function ProgressTab({ programId }: { programId: string }) {
 function HistoryTab({ programId }: { programId: string }) {
   const { data } = useListCourseHistoryQuery({ id: programId })
   return data ? <HistoryTable items={data.items} /> : <Skeleton className="h-64" />
+}
+
+function TranscriptTab({ programId }: { programId: string }) {
+  const { t } = useTranslation()
+  const { data, error, refetch } = useGetTranscriptQuery({ id: programId })
+  if (error) {
+    return <ErrorState error={error} onRetry={() => void refetch()} />
+  }
+  if (!data) {
+    return <Skeleton className="h-64" />
+  }
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button asChild variant="soft" size="sm">
+          <Link to={`/transkript/${programId}`}>
+            <PrinterIcon />
+            {t('transcript.openPrintable')}
+          </Link>
+        </Button>
+      </div>
+      <TranscriptDocument transcript={data} />
+    </div>
+  )
 }
 
 function StatusHistory({ programId }: { programId: string }) {
