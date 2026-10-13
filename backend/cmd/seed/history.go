@@ -12,6 +12,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/CAPELLAX02/agora/backend/internal/grading"
 )
 
 // Geçmiş dönem ders sonuçları. Ders seçme kuralları (GANO'ya göre AKTS sınırı, alttan
@@ -158,6 +160,31 @@ func seedHistory(ctx context.Context, pool *pgxpool.Pool, seed uint64) error {
 		return err
 	}
 	fmt.Printf("GEÇMİŞ     %d öğrenciye %d geçmiş ders sonucu aktarıldı (%d şube)\n", len(d.students), len(records), len(sections))
+	return nil
+}
+
+// seedGradeStats, notları verilmiş ama sınıf istatistiği olmayan şubelerin (aktarılan geçmiş
+// dönemler) istatistiklerini hesaplar. Gerçek sistemde ilan bunu kendisi yapar; aktarılan
+// notlar ilan edilmeden gelir. Daha önce aktarılmış bir geçmiş için de çalışır.
+func seedGradeStats(ctx context.Context, pool *pgxpool.Pool) error {
+	rows, err := pool.Query(ctx, `
+		SELECT DISTINCT e.section_id FROM enrollment.enrollments e
+		WHERE e.status = 'COMPLETED'
+		  AND NOT EXISTS (SELECT 1 FROM grading.section_grade_stats g WHERE g.section_id = e.section_id)`)
+	if err != nil {
+		return fmt.Errorf("şubeler okunamadı: %w", err)
+	}
+	ids, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return fmt.Errorf("şubeler okunamadı: %w", err)
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	if err := pgx.BeginFunc(ctx, pool, func(tx pgx.Tx) error { return grading.RefreshStats(ctx, tx, ids) }); err != nil {
+		return err
+	}
+	fmt.Printf("İSTATİSTİK %d şubenin sınıf istatistiği hesaplandı\n", len(ids))
 	return nil
 }
 

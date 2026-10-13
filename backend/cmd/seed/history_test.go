@@ -36,6 +36,9 @@ func TestHistory(t *testing.T) {
 		if err := seedHistory(ctx, pool, 20261008); err != nil {
 			t.Fatal(err)
 		}
+		if err := seedGradeStats(ctx, pool); err != nil {
+			t.Fatal(err)
+		}
 		if err := openDemoWindows(ctx, pool, time.Now()); err != nil {
 			t.Fatal(err)
 		}
@@ -124,6 +127,14 @@ func TestHistory(t *testing.T) {
 		WHERE NOT t.is_current
 		  AND s.enrolled_count <> (SELECT count(*) FROM enrollment.enrollments e WHERE e.section_id = s.id AND e.status <> 'DROPPED')`); n != 0 {
 		t.Errorf("%d şubenin mevcudu kayıtlarla tutmuyor", n)
+	}
+	// Notu verilmiş her şubenin sınıf istatistiği vardır ve kayıtlarla tutar.
+	if n := count(t, pool, `
+		SELECT count(*) FROM (SELECT DISTINCT section_id FROM enrollment.enrollments WHERE status = 'COMPLETED') e
+		LEFT JOIN grading.section_grade_stats g ON g.section_id = e.section_id
+		WHERE g.section_id IS NULL
+		   OR g.student_count <> (SELECT count(*) FROM enrollment.enrollments x WHERE x.section_id = e.section_id AND x.status = 'COMPLETED')`); n != 0 {
+		t.Errorf("%d şubenin sınıf istatistiği eksik ya da tutmuyor", n)
 	}
 	if n := count(t, pool, `SELECT count(*) FROM enrollment.student_programs WHERE current_semester = 7 AND class_level = 4`); n != 4 {
 		t.Errorf("7. yarıyıldaki demo öğrencisi sayısı = %d, 4 olmalı", n)

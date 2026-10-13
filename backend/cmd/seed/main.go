@@ -241,6 +241,9 @@ func run() error {
 	if err := seedHistory(ctx, pool, *seed); err != nil {
 		return fmt.Errorf("ders geçmişi: %w", err)
 	}
+	if err := seedGradeStats(ctx, pool); err != nil {
+		return fmt.Errorf("sınıf istatistikleri: %w", err)
+	}
 	if err := openDemoWindows(ctx, pool, time.Now()); err != nil {
 		return err
 	}
