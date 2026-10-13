@@ -1074,6 +1074,12 @@ const injectedRtkApi = api
         }),
         invalidatesTags: ['\u00D6\u011Frenciler'],
       }),
+      getTranscript: build.query<GetTranscriptApiResponse, GetTranscriptApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/student-programs/${queryArg.id}/transcript`,
+        }),
+        providesTags: ['\u00D6\u011Frenciler'],
+      }),
       listCourseHistory: build.query<ListCourseHistoryApiResponse, ListCourseHistoryApiArg>({
         query: (queryArg) => ({
           url: `/api/v1/student-programs/${queryArg.id}/history`,
@@ -2401,6 +2407,11 @@ export type ReleaseHoldApiArg = {
   body: {
     reason: string
   }
+}
+export type GetTranscriptApiResponse = /** status 200 Transkript */ Transcript
+export type GetTranscriptApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
 }
 export type ListCourseHistoryApiResponse = /** status 200 Ders kayıtları */ {
   items: CourseAttempt[]
@@ -3832,6 +3843,70 @@ export type Hold = {
   release_reason: string | null
   active: boolean
 }
+export type TermStanding = 'NORMAL' | 'HONOR' | 'HIGH_HONOR'
+export type TermResult = {
+  /** Dönemde notu verilen derslerin AKTS'si */
+  attempted_ects: number
+  /** Bunlardan kazanılan AKTS */
+  earned_ects: number
+  /** YANO; ortalamaya giren ders yoksa null */
+  term_gpa: number | null
+  /** Dönem sonunda geçerli notlarla kazanılan toplam AKTS */
+  cumulative_ects: number
+  /** GANO (dönem sonundaki) */
+  cumulative_gpa: number | null
+  standing: TermStanding
+}
+export type Transcript = {
+  student_program: StudentProgram
+  program_name_en: string
+  degree_level: 'ASSOCIATE' | 'BACHELOR' | 'MASTER' | 'PHD'
+  terms: {
+    term: {
+      id: string
+      code: string
+      term_type: 'FALL' | 'SPRING' | 'SUMMER'
+    }
+    courses: {
+      enrollment_id: string
+      course: {
+        id: string
+        code: string
+        name_tr: string
+        name_en: string
+      }
+      ects: number
+      credit: number
+      /** ENROLLED: dönem sürüyor, notu yok */
+      status: 'ENROLLED' | 'COMPLETED'
+      letter_grade: string | null
+      coefficient: number | null
+      is_passing: boolean
+      counts_in_gpa: boolean
+      attempt_no: number
+      /** Tekrar alınan ders (dersin ya da eşdeğerinin önceki denemesi var) ya da kalınan seçmelinin yerine alınan ders */
+      is_repeat: boolean
+      /** Yerini sonraki bir deneme aldı; sonraki dönemlerin GANO'suna girmez */
+      superseded: boolean
+      source: 'REGISTRATION' | 'ADD_DROP' | 'IMPORT'
+    }[]
+    /** Dönem sonucu; notu verilmiş dersi olmayan dönemde null */
+    result: TermResult | null
+  }[]
+  summary: {
+    /** Güncel GANO (son dönem sonucu) */
+    gpa: number | null
+    earned_ects: number
+    /** İzlenen müfredatın (yoksa programın) mezuniyet için istediği AKTS */
+    required_ects: number
+    completed_courses: number
+    /** Notu henüz verilmemiş ders */
+    in_progress: number
+    honor_terms: number
+    high_honor_terms: number
+  }
+  generated_at: string
+}
 export type CourseAttempt = {
   id: string
   term: {
@@ -4422,6 +4497,8 @@ export const {
   useListHoldsQuery,
   useLazyListHoldsQuery,
   useReleaseHoldMutation,
+  useGetTranscriptQuery,
+  useLazyGetTranscriptQuery,
   useListCourseHistoryQuery,
   useLazyListCourseHistoryQuery,
   useGetStudentProgressQuery,

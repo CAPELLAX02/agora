@@ -4283,6 +4283,32 @@ paths:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Problem" }
 
+  /api/v1/student-programs/{id}/transcript:
+    get:
+      tags: [Öğrenciler]
+      summary: Transkript
+      description: |
+        Program kaydının dönem dönem dersleri (AKTS, kredi, harf notu, katsayı), tekrar
+        işaretleri, dönem sonuçları (YANO, GANO, alınan ve kazanılan AKTS, onur) ve genel özet.
+        Dönem sonucu, o dönemin sonundaki durumdur: sonraki bir tekrar geçmiş dönemin
+        ortalamalarını değiştirmez; yerini sonraki denemeye bırakmış satır `superseded` ile
+        işaretlidir. Notu henüz verilmemiş dersler `ENROLLED` durumunda, dönemi sonuçsuz görünür.
+        Öğrenci kendisininkini (`transcript:read_own`), danışmanı ve kapsamdaki birimler
+        (`transcript:read_scoped`) görür; görme yetkisi olmayana kayıt yokmuş gibi 404 döner.
+      operationId: getTranscript
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Transkript
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Transcript" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/v1/student-programs/{id}/history:
     get:
       tags: [Öğrenciler]
@@ -7177,6 +7203,86 @@ components:
         decision_ref: { type: [string, "null"] }
         changed_by: { type: [string, "null"], description: Değişikliği yapanın adı }
         changed_at: { type: string, format: date-time }
+
+    TermStanding:
+      type: string
+      enum: [NORMAL, HONOR, HIGH_HONOR]
+      description: "Dönemin onur durumu: HONOR üstün başarı (YANO 3,00-3,69), HIGH_HONOR çok üstün başarı (3,70 ve üstü)"
+
+    TermResult:
+      type: object
+      required: [attempted_ects, earned_ects, term_gpa, cumulative_ects, cumulative_gpa, standing]
+      properties:
+        attempted_ects: { type: number, description: Dönemde notu verilen derslerin AKTS'si }
+        earned_ects: { type: number, description: Bunlardan kazanılan AKTS }
+        term_gpa: { type: [number, "null"], description: "YANO; ortalamaya giren ders yoksa null" }
+        cumulative_ects: { type: number, description: Dönem sonunda geçerli notlarla kazanılan toplam AKTS }
+        cumulative_gpa: { type: [number, "null"], description: GANO (dönem sonundaki) }
+        standing: { $ref: "#/components/schemas/TermStanding" }
+
+    Transcript:
+      type: object
+      required: [student_program, program_name_en, degree_level, terms, summary, generated_at]
+      properties:
+        student_program: { $ref: "#/components/schemas/StudentProgram" }
+        program_name_en: { type: string }
+        degree_level: { type: string, enum: [ASSOCIATE, BACHELOR, MASTER, PHD] }
+        terms:
+          type: array
+          items:
+            type: object
+            required: [term, courses, result]
+            properties:
+              term:
+                type: object
+                required: [id, code, term_type]
+                properties:
+                  id: { type: string, format: uuid }
+                  code: { type: string, examples: ["2025-FALL"] }
+                  term_type: { type: string, enum: [FALL, SPRING, SUMMER] }
+              courses:
+                type: array
+                items:
+                  type: object
+                  required: [enrollment_id, course, ects, credit, status, letter_grade, coefficient, is_passing, counts_in_gpa, attempt_no, is_repeat, superseded, source]
+                  properties:
+                    enrollment_id: { type: string, format: uuid }
+                    course:
+                      type: object
+                      required: [id, code, name_tr, name_en]
+                      properties:
+                        id: { type: string, format: uuid }
+                        code: { type: string }
+                        name_tr: { type: string }
+                        name_en: { type: string }
+                    ects: { type: number }
+                    credit: { type: number }
+                    status: { type: string, enum: [ENROLLED, COMPLETED], description: "ENROLLED: dönem sürüyor, notu yok" }
+                    letter_grade: { type: [string, "null"] }
+                    coefficient: { type: [number, "null"] }
+                    is_passing: { type: boolean }
+                    counts_in_gpa: { type: boolean }
+                    attempt_no: { type: integer }
+                    is_repeat: { type: boolean, description: "Tekrar alınan ders (dersin ya da eşdeğerinin önceki denemesi var) ya da kalınan seçmelinin yerine alınan ders" }
+                    superseded: { type: boolean, description: Yerini sonraki bir deneme aldı; sonraki dönemlerin GANO'suna girmez }
+                    source: { type: string, enum: [REGISTRATION, ADD_DROP, IMPORT] }
+              result:
+                description: Dönem sonucu; notu verilmiş dersi olmayan dönemde null
+                oneOf:
+                  - { $ref: "#/components/schemas/TermResult" }
+                  - { type: "null" }
+        summary:
+          type: object
+          required: [gpa, earned_ects, required_ects, completed_courses, in_progress, honor_terms, high_honor_terms]
+          properties:
+            gpa: { type: [number, "null"], description: Güncel GANO (son dönem sonucu) }
+            earned_ects: { type: number }
+            required_ects: { type: number, description: İzlenen müfredatın (yoksa programın) mezuniyet için istediği AKTS }
+            completed_courses: { type: integer }
+            in_progress: { type: integer, description: Notu henüz verilmemiş ders }
+            honor_terms: { type: integer }
+            high_honor_terms: { type: integer }
+        generated_at: { type: string, format: date-time }
 
     CourseAttempt:
       type: object
