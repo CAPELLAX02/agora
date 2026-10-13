@@ -79,8 +79,9 @@ type historyData struct {
 }
 
 // seedHistory, müfredata bağlı ve henüz geçmişi olmayan öğrencilere geçmiş dönem ders
-// sonuçlarını üretir, geçmiş dönemlerin ders açmalarını ve şubelerini oluşturur, GANO ve
-// kazanılan AKTS önbelleklerini hesaplar. Geçmişi olan öğrenciye dokunmaz.
+// sonuçlarını üretir, geçmiş dönemlerin ders açmalarını ve şubelerini oluşturur, dönem
+// sonuçlarını (YANO/GANO) ve önbellekleri not ilanının kullandığı hesapla üretir. Geçmişi olan
+// öğrenciye dokunmaz.
 func seedHistory(ctx context.Context, pool *pgxpool.Pool, seed uint64) error {
 	d, err := loadHistoryData(ctx, pool)
 	if err != nil {
@@ -154,7 +155,7 @@ func seedHistory(ctx context.Context, pool *pgxpool.Pool, seed uint64) error {
 			WHERE s.id = c.section_id`, sectionIDs); err != nil {
 			return fmt.Errorf("şube mevcutları güncellenemedi: %w", err)
 		}
-		return refreshCaches(ctx, tx, spIDs)
+		return grading.RecomputeTermResults(ctx, tx, spIDs, time.Now())
 	})
 	if err != nil {
 		return err
@@ -188,31 +189,29 @@ func seedGradeStats(ctx context.Context, pool *pgxpool.Pool) error {
 	return nil
 }
 
-// refreshCaches, öğrencilerin GANO ve kazanılan AKTS önbelleklerini ders geçmişinden
-// hesaplar: her dersin son notu geçerli, GANO AKTS ağırlıklı.
-func refreshCaches(ctx context.Context, tx pgx.Tx, spIDs []string) error {
-	_, err := tx.Exec(ctx, `
-		WITH latest AS (
-			SELECT DISTINCT ON (e.student_program_id, e.course_id)
-			       e.student_program_id, e.ects_snapshot, gi.coefficient, gi.counts_in_gpa, gi.earns_ects
-			FROM enrollment.enrollments e
-			JOIN academic.terms t ON t.id = e.term_id
-			JOIN curriculum.grade_scale_items gi ON gi.grade_scale_id = e.grade_scale_id AND gi.letter = e.letter_grade
-			WHERE e.status = 'COMPLETED' AND e.student_program_id = ANY($1)
-			ORDER BY e.student_program_id, e.course_id, t.starts_on DESC
-		), totals AS (
-			SELECT student_program_id,
-			       round(sum(coefficient * ects_snapshot) FILTER (WHERE counts_in_gpa)
-			             / nullif(sum(ects_snapshot) FILTER (WHERE counts_in_gpa), 0), 2) AS gpa,
-			       coalesce(sum(ects_snapshot) FILTER (WHERE earns_ects), 0) AS earned
-			FROM latest GROUP BY student_program_id
-		)
-		UPDATE enrollment.student_programs sp
-		SET gpa_cache = totals.gpa, earned_ects_cache = totals.earned, version = sp.version + 1, updated_at = now()
-		FROM totals WHERE sp.id = totals.student_program_id`, spIDs)
+// seedTermResults, notu verilmiş dersi olup dönem sonucu olmayan öğrencilerin (önceden
+// aktarılmış geçmiş) dönem sonuçlarını, GANO ve kazanılan AKTS önbelleklerini hesaplar.
+func seedTermResults(ctx context.Context, pool *pgxpool.Pool) error {
+	rows, err := pool.Query(ctx, `
+		SELECT DISTINCT e.student_program_id FROM enrollment.enrollments e
+		WHERE e.status = 'COMPLETED'
+		  AND NOT EXISTS (SELECT 1 FROM enrollment.term_results r WHERE r.student_program_id = e.student_program_id)`)
 	if err != nil {
-		return fmt.Errorf("GANO önbellekleri hesaplanamadı: %w", err)
+		return fmt.Errorf("öğrenciler okunamadı: %w", err)
 	}
+	ids, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return fmt.Errorf("öğrenciler okunamadı: %w", err)
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	if err := pgx.BeginFunc(ctx, pool, func(tx pgx.Tx) error {
+		return grading.RecomputeTermResults(ctx, tx, ids, time.Now())
+	}); err != nil {
+		return err
+	}
+	fmt.Printf("DÖNEM      %d öğrencinin dönem sonuçları (YANO/GANO) hesaplandı\n", len(ids))
 	return nil
 }
 

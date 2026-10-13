@@ -39,6 +39,9 @@ func TestHistory(t *testing.T) {
 		if err := seedGradeStats(ctx, pool); err != nil {
 			t.Fatal(err)
 		}
+		if err := seedTermResults(ctx, pool); err != nil {
+			t.Fatal(err)
+		}
 		if err := openDemoWindows(ctx, pool, time.Now()); err != nil {
 			t.Fatal(err)
 		}
@@ -135,6 +138,23 @@ func TestHistory(t *testing.T) {
 		WHERE g.section_id IS NULL
 		   OR g.student_count <> (SELECT count(*) FROM enrollment.enrollments x WHERE x.section_id = e.section_id AND x.status = 'COMPLETED')`); n != 0 {
 		t.Errorf("%d şubenin sınıf istatistiği eksik ya da tutmuyor", n)
+	}
+	// Dönem sonuçları: 7. yarıyıldaki öğrencinin altı dönemi var; önbellek son dönemin GANO'su.
+	if n := count(t, pool, `
+		SELECT count(*) FROM enrollment.term_results r
+		JOIN enrollment.student_programs sp ON sp.id = r.student_program_id JOIN people.students s ON s.id = sp.student_id
+		WHERE s.student_no = '23290013'`); n != 6 {
+		t.Errorf("7. yarıyıldaki öğrencinin %d dönem sonucu var, 6 olmalı", n)
+	}
+	if n := count(t, pool, `
+		SELECT count(*) FROM enrollment.student_programs sp
+		WHERE EXISTS (SELECT 1 FROM enrollment.enrollments e WHERE e.student_program_id = sp.id AND e.status = 'COMPLETED')
+		  AND NOT EXISTS (
+		        SELECT 1 FROM (SELECT r.cumulative_gpa, r.cumulative_ects FROM enrollment.term_results r
+		                       JOIN academic.terms t ON t.id = r.term_id
+		                       WHERE r.student_program_id = sp.id ORDER BY t.starts_on DESC LIMIT 1) last
+		        WHERE last.cumulative_gpa IS NOT DISTINCT FROM sp.gpa_cache AND last.cumulative_ects = sp.earned_ects_cache)`); n != 0 {
+		t.Errorf("%d öğrencinin GANO önbelleği son dönem sonucuyla tutmuyor", n)
 	}
 	if n := count(t, pool, `SELECT count(*) FROM enrollment.student_programs WHERE current_semester = 7 AND class_level = 4`); n != 4 {
 		t.Errorf("7. yarıyıldaki demo öğrencisi sayısı = %d, 4 olmalı", n)
