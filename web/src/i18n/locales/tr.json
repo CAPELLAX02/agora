@@ -103,7 +103,8 @@
     "addDrop": "Ekle-bırak onayları",
     "students": "Öğrenciler",
     "holds": "Kayıt engelleri",
-    "transcript": "Transkript"
+    "transcript": "Transkript",
+    "grades": "Notlarım"
   },
   "auth": {
     "restoring": "Oturum açılıyor…",
@@ -1524,5 +1525,25 @@
       "choose": "{{course}} için varsayımsal not",
       "badge": "Sanal"
     }
+  },
+  "grades": {
+    "title": "Notlarım",
+    "description": "Dönem dönem derslerinizin notları.",
+    "noProgram": "Kayıtlı olduğunuz bir program yok.",
+    "none": "Henüz ders kaydınız yok.",
+    "emptyTerm": "Bu dönem ders kaydınız yok.",
+    "terms": "Dönemler",
+    "transcript": "Transkript",
+    "absent": "Devamsız",
+    "publishedOn": "İlan: {{date}}",
+    "classMean": "Sınıf ortalaması",
+    "classSize_one": "{{count}} öğrenci",
+    "classSize_other": "{{count}} öğrenci",
+    "noPlan": "Bu dersin değerlendirme planı henüz girilmedi.",
+    "components": "Değerlendirme bileşenleri",
+    "notPublished": "Henüz yayımlanmadı",
+    "didNotSit": "Girmedi",
+    "average": "Sınıf ort. {{value}}",
+    "scoreBar": "Puan ve sınıf ortalaması"
   }
 }

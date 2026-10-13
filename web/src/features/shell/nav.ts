@@ -6,6 +6,7 @@ import {
   GraduationCapIcon,
   ListChecksIcon,
   LockIcon,
+  NotebookTextIcon,
   UsersRoundIcon,
   CalendarDaysIcon,
   CalendarRangeIcon,
@@ -69,6 +70,13 @@ export const navGroups: NavGroup[] = [
         tone: 'emerald',
         icon: BookMarkedIcon,
         permission: 'registration:manage_own',
+      },
+      {
+        to: '/notlarim',
+        label: 'nav.grades',
+        tone: 'pink',
+        icon: NotebookTextIcon,
+        permission: 'grade:read_own',
       },
       {
         to: '/transkript',

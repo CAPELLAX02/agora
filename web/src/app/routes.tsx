@@ -108,6 +108,19 @@ export const routes: RouteObject[] = [
                     },
                   },
                   {
+                    path: 'notlarim',
+                    lazy: async () => {
+                      const { GradesPage } = await import('@/features/grades/GradesPage')
+                      return {
+                        element: (
+                          <RequirePermission permission="grade:read_own">
+                            <GradesPage />
+                          </RequirePermission>
+                        ),
+                      }
+                    },
+                  },
+                  {
                     path: 'transkript/:programId?',
                     lazy: async () => {
                       const { TranscriptPage } = await import('@/features/transcript/TranscriptPage')

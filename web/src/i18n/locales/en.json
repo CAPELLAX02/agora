@@ -103,7 +103,8 @@
     "addDrop": "Add-drop approvals",
     "students": "Students",
     "holds": "Registration holds",
-    "transcript": "Transcript"
+    "transcript": "Transcript",
+    "grades": "My grades"
   },
   "auth": {
     "restoring": "Signing you in…",
@@ -1524,5 +1525,25 @@
       "choose": "Hypothetical grade for {{course}}",
       "badge": "What-if"
     }
+  },
+  "grades": {
+    "title": "My grades",
+    "description": "Your course grades term by term.",
+    "noProgram": "You are not enrolled in a programme.",
+    "none": "No courses yet.",
+    "emptyTerm": "No courses this term.",
+    "terms": "Terms",
+    "transcript": "Transcript",
+    "absent": "Attendance fail",
+    "publishedOn": "Announced: {{date}}",
+    "classMean": "Class average",
+    "classSize_one": "{{count}} student",
+    "classSize_other": "{{count}} students",
+    "noPlan": "The assessment plan of this course has not been entered yet.",
+    "components": "Assessment components",
+    "notPublished": "Not published yet",
+    "didNotSit": "Did not sit",
+    "average": "Class avg. {{value}}",
+    "scoreBar": "Score and class average"
   }
 }

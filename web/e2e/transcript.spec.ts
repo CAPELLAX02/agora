@@ -27,3 +27,16 @@ test('öğrenci transkriptinde dönem dönem notlarını ve ortalamalarını gö
   await page.getByRole('button', { name: 'Sanal transkripti kapat' }).click()
   await expect(current.getByText('Notlar henüz ilan edilmedi')).toBeVisible()
 })
+
+test('öğrenci notlarını dönem dönem görür: harf notu ve sınıf ortalaması', async ({ page }) => {
+  await login(page, '22290002')
+  await nav(page, 'Notlarım').click()
+
+  const terms = page.getByRole('navigation', { name: 'Dönemler' })
+  await terms.getByRole('button', { name: '2025-2026 Bahar' }).click()
+  await expect(terms.getByRole('button', { name: '2025-2026 Bahar' })).toHaveAttribute('aria-current', 'page')
+  const course = page.getByRole('article', { name: /COM3064/ })
+  await expect(course.getByText('F4')).toBeVisible()
+  await expect(course.getByText('Devamsız')).toBeVisible()
+  await expect(page.getByText('Sınıf ortalaması').first()).toBeVisible()
+})
