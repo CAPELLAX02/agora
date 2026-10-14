@@ -1800,5 +1800,23 @@
     "publishDescription_other": "{{count}} öğrencinin harf notu kesinleşir ve öğrenciler görür; dönem sonuçları (YANO/GANO) güncellenir. İlandan sonra notlar sadece not düzeltme talebiyle değişir.",
     "publishMakeupDescription_one": "Bütünleme notu girilen {{count}} öğrencinin harfi yeniden hesaplanır; bütünlemeye girmeyenin notu değişmez. Bir kez yapılır.",
     "publishMakeupDescription_other": "Bütünleme notu girilen {{count}} öğrencinin harfi yeniden hesaplanır; bütünlemeye girmeyenin notu değişmez. Bir kez yapılır."
+  },
+  "richText": {
+    "toolbar": "Biçimlendirme",
+    "h2": "Başlık (H2)",
+    "h3": "Alt başlık (H3)",
+    "bold": "Kalın",
+    "italic": "İtalik",
+    "underline": "Altı çizili",
+    "strike": "Üstü çizili",
+    "bullet": "Madde işaretli liste",
+    "ordered": "Numaralı liste",
+    "quote": "Alıntı",
+    "code": "Kod bloğu",
+    "link": "Bağlantı ekle",
+    "unlink": "Bağlantıyı kaldır",
+    "undo": "Geri al",
+    "redo": "Yinele",
+    "linkPrompt": "Bağlantı adresi (boş bırakılırsa kaldırılır)"
   }
 }

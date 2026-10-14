@@ -1,2 +1,5 @@
 allowBuilds:
   msw: false
+# @tiptap/react ^5.3.3 ister; 5.4.4 ve sonrası 14 günden yeni (yeni sürümler en az 14 günlük olmalı).
+overrides:
+  fast-equals: 5.4.3
