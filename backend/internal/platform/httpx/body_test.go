@@ -91,6 +91,7 @@ func TestReadBody(t *testing.T) {
 	}{
 		{"geçerli", "text/csv", "no;puan\n1;70", 0},
 		{"charset parametresi kabul edilir", "text/csv; charset=utf-8", "no;puan", 0},
+		{"ikinci tür", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "PK", 0},
 		{"Content-Type yok", "", "no;puan", 415},
 		{"form ile gönderilebilen tür", "text/plain", "no;puan", 415},
 		{"boş gövde", "text/csv", "", 400},
@@ -102,10 +103,10 @@ func TestReadBody(t *testing.T) {
 			if tt.contentType != "" {
 				req.Header.Set("Content-Type", tt.contentType)
 			}
-			data, err := ReadBody(httptest.NewRecorder(), req, "text/csv")
+			data, mediaType, err := ReadBody(httptest.NewRecorder(), req, "text/csv", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 			if tt.wantStatus == 0 {
-				if err != nil || string(data) != tt.body {
-					t.Fatalf("gövde = %q, hata = %v", data, err)
+				if err != nil || string(data) != tt.body || !strings.HasPrefix(tt.contentType, mediaType) {
+					t.Fatalf("gövde = %q (%s), hata = %v", data, mediaType, err)
 				}
 				return
 			}

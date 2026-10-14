@@ -7,6 +7,7 @@ import (
 	"io"
 	"mime"
 	"net/http"
+	"slices"
 	"strings"
 )
 
@@ -57,26 +58,27 @@ func ReadJSON(w http.ResponseWriter, r *http.Request, dst any) error {
 	return nil
 }
 
-// ReadBody, JSON dışı bir gövdeyi (ör. CSV) olduğu gibi okur. Gövde mediaType türünde
-// olmalı ve MaxBodyBytes'ı aşmamalı. Tür zorunluluğu ReadJSON'daki gibi CSRF korumasıdır:
-// HTML formları text/csv gönderemez. Hatalar *BodyError olarak döner.
-func ReadBody(w http.ResponseWriter, r *http.Request, mediaType string) ([]byte, error) {
+// ReadBody, JSON dışı bir gövdeyi (CSV, Excel ...) olduğu gibi okur ve türünü döndürür.
+// Gövde mediaTypes'tan biri olmalı ve MaxBodyBytes'ı aşmamalı. Tür zorunluluğu ReadJSON'daki
+// gibi CSRF korumasıdır: HTML formları text/csv ya da Excel türü gönderemez. Hatalar
+// *BodyError olarak döner.
+func ReadBody(w http.ResponseWriter, r *http.Request, mediaTypes ...string) ([]byte, string, error) {
 	got, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
-	if err != nil || got != mediaType {
-		return nil, &BodyError{
+	if err != nil || !slices.Contains(mediaTypes, got) {
+		return nil, "", &BodyError{
 			Status: http.StatusUnsupportedMediaType,
 			Code:   "UNSUPPORTED_MEDIA_TYPE",
-			Detail: "İstek gövdesi " + mediaType + " olmalı.",
+			Detail: "İstek gövdesi şu türlerden biri olmalı: " + strings.Join(mediaTypes, ", ") + ".",
 		}
 	}
 	data, err := io.ReadAll(http.MaxBytesReader(w, r.Body, MaxBodyBytes))
 	if err != nil {
-		return nil, decodeError(err)
+		return nil, "", decodeError(err)
 	}
 	if len(data) == 0 {
-		return nil, invalidBody("İstek gövdesi boş.")
+		return nil, "", invalidBody("İstek gövdesi boş.")
 	}
-	return data, nil
+	return data, got, nil
 }
 
 func decodeError(err error) error {
