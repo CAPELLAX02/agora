@@ -8,6 +8,7 @@ import (
 	"github.com/CAPELLAX02/agora/backend/internal/audit"
 	"github.com/CAPELLAX02/agora/backend/internal/curriculum"
 	"github.com/CAPELLAX02/agora/backend/internal/enrollment"
+	"github.com/CAPELLAX02/agora/backend/internal/files"
 	"github.com/CAPELLAX02/agora/backend/internal/grading"
 	"github.com/CAPELLAX02/agora/backend/internal/iam"
 	"github.com/CAPELLAX02/agora/backend/internal/offering"
@@ -42,6 +43,9 @@ func (app *application) routes() http.Handler {
 	curriculum.NewHandler(curriculum.NewRepository(app.db), org.NewTargets(app.db), app.logger).Register(rt)
 	offering.NewHandler(offering.NewRepository(app.db), org.NewTargets(app.db), app.logger).Register(rt)
 	grading.NewHandler(grading.NewRepository(app.db), app.logger).Register(rt)
+	if app.files != nil {
+		files.NewHandler(app.files, app.logger).Register(rt)
+	}
 	grades := grading.NewService(app.db, academic.NewRepository(app.db), time.Now)
 	if app.gradingMetrics != nil {
 		grades.SetMetrics(app.gradingMetrics)

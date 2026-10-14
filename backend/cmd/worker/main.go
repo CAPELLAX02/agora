@@ -25,6 +25,7 @@ import (
 
 	"github.com/CAPELLAX02/agora/backend/internal/audit"
 	"github.com/CAPELLAX02/agora/backend/internal/enrollment"
+	"github.com/CAPELLAX02/agora/backend/internal/files"
 	"github.com/CAPELLAX02/agora/backend/internal/grading"
 	"github.com/CAPELLAX02/agora/backend/internal/mail"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/config"
@@ -41,8 +42,11 @@ const (
 	eventsInterval      = 2 * time.Second
 	expireInterval      = 10 * time.Minute
 	maintenanceInterval = 24 * time.Hour
-	sentEmailRetention  = 30 * 24 * time.Hour
-	resetTokenRetention = 7 * 24 * time.Hour
+	// Bağlanmayan dosyaların temizliği: saatte bir, bir günden eski olanlar.
+	fileCleanupInterval     = time.Hour
+	unattachedFileRetention = 24 * time.Hour
+	sentEmailRetention      = 30 * 24 * time.Hour
+	resetTokenRetention     = 7 * 24 * time.Hour
 	// İdempotentlik anahtarları: istemcinin yeniden denemelerini kapsayan süre.
 	idempotencyRetention = 24 * time.Hour
 )
@@ -139,6 +143,20 @@ func run() error {
 		Help: "Son günlük doğrulamada dönem sonuçları ya da GANO önbelleği kesin kayıtlarla tutmayan öğrenci sayısı (0 olmalı).",
 	})
 	reg.MustRegister(termDrift)
+	cleanedFiles := prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "agora_files_cleaned_total",
+		Help: "Bir kayda bağlanmadığı için silinen yüklenmiş dosyalar.",
+	})
+	reg.MustRegister(cleanedFiles)
+	var fileService *files.Service
+	if store, err := files.NewS3Store(files.S3Config{
+		Endpoint: cfg.S3Endpoint, PublicEndpoint: cfg.S3PublicEndpoint, UseSSL: cfg.S3UseSSL, Region: cfg.S3Region,
+		Bucket: cfg.S3Bucket, AccessKey: cfg.S3AccessKey, SecretKey: cfg.S3SecretKey,
+	}); err != nil {
+		logger.Error("dosya deposu yapılandırılamadı; temizlik çalışmayacak", "err", err)
+	} else {
+		fileService = files.NewService(pool, store, cfg.MaxUploadBytes, time.Now)
+	}
 
 	// Tüketiciler: öğrenciye karar bildirimi, dönem geçişinde yarıyıl ilerletmesi, not ilanında
 	// dönem sonuçları (YANO/GANO). LMS üyeliği (Faz 5) aynı registration.approved olayına
@@ -192,6 +210,24 @@ func run() error {
 			maintain(ctx, pool, logger)
 		})
 	})
+	// Yüklenip bir kayda (ödev teslimi, ders içeriği) bağlanmayan dosyalar bir gün sonra silinir.
+	if fileService != nil {
+		wg.Go(func() {
+			every(ctx, fileCleanupInterval, func(ctx context.Context) {
+				n, err := fileService.CleanupUnattached(ctx, unattachedFileRetention, 500)
+				if err != nil {
+					if ctx.Err() == nil {
+						logger.Error("bağlanmayan dosyalar temizlenemedi", "err", err)
+					}
+					return
+				}
+				if n > 0 {
+					cleanedFiles.Add(float64(n))
+					logger.Info("bağlanmayan dosyalar silindi", "count", n)
+				}
+			})
+		})
+	}
 	// Dönem sonuçlarının doğrulaması: türetilmiş veri kesin kayıtlardan yeniden hesaplanır ve
 	// karşılaştırılır; yazılmaz. Fark, not ilanı olayının işlenmediğini ya da kesin kayıtların
 	// olay dışında değiştiğini gösterir: metrik alarmı tetikler, düzeltme `make term-results-recompute`.

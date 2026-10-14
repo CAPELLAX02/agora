@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/CAPELLAX02/agora/backend/internal/audit"
+	"github.com/CAPELLAX02/agora/backend/internal/files"
 	"github.com/CAPELLAX02/agora/backend/internal/iam"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authn"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authz"
@@ -42,6 +43,7 @@ type application struct {
 
 	registrationMetrics *metrics.Registration
 	gradingMetrics      *metrics.Grading
+	files               *files.Service
 	registrationLimit   httpx.Middleware // ders seçme değiştirici uçlarının kullanıcı başına hız sınırı
 	permissions         authz.Resolver
 }
@@ -91,6 +93,11 @@ func run() error {
 	defer rdb.Close()
 	logger.Info("Redis bağlantısı hazır")
 
+	fileService, err := newFiles(ctx, cfg, pool, logger)
+	if err != nil {
+		return err
+	}
+
 	auth, authenticator, err := newAuth(ctx, cfg, pool, rdb, logger)
 	if err != nil {
 		return err
@@ -103,6 +110,7 @@ func run() error {
 
 	reg := metrics.NewRegistry()
 	reg.MustRegister(metrics.NewPoolCollector(pool))
+	fileService.SetMetrics(metrics.NewFiles(reg))
 	authMetrics := metrics.NewAuth(reg)
 	auth.SetMetrics(authMetrics)
 	loginLimiter.OnReject(authMetrics.RateLimited)
@@ -129,6 +137,7 @@ func run() error {
 		},
 		registrationMetrics: metrics.NewRegistration(reg),
 		gradingMetrics:      metrics.NewGrading(reg),
+		files:               fileService,
 		registrationLimit:   registrationLimiter.ByUser(logger),
 	}
 
@@ -187,4 +196,25 @@ func newServer(addr string, h http.Handler, cfg config.Config, writeTimeout time
 		IdleTimeout:       cfg.IdleTimeout,
 		ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelError),
 	}
+}
+
+// newFiles, dosya servisini kurar. Depoya açılışta ulaşılamazsa API yine açılır (dosya
+// uçları 503 döner) ve kova ilk yüklemeden önce tekrar denenir: depo kesintisi giriş, ders
+// seçme gibi dosyasız işleri durdurmaz.
+func newFiles(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, logger *slog.Logger) (*files.Service, error) {
+	store, err := files.NewS3Store(files.S3Config{
+		Endpoint: cfg.S3Endpoint, PublicEndpoint: cfg.S3PublicEndpoint, UseSSL: cfg.S3UseSSL, Region: cfg.S3Region,
+		Bucket: cfg.S3Bucket, AccessKey: cfg.S3AccessKey, SecretKey: cfg.S3SecretKey,
+	})
+	if err != nil {
+		return nil, err
+	}
+	bctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	if err := store.EnsureBucket(bctx); err != nil {
+		logger.Warn("dosya deposuna ulaşılamadı; dosya uçları depo gelene kadar 503 döner", "err", err, "endpoint", cfg.S3Endpoint)
+	} else {
+		logger.Info("dosya deposu hazır", "endpoint", cfg.S3Endpoint, "bucket", cfg.S3Bucket)
+	}
+	return files.NewService(pool, store, cfg.MaxUploadBytes, time.Now), nil
 }
