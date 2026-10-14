@@ -10,6 +10,7 @@ export const addTagTypes = [
   'M\u00FCfredat',
   'Not \u00F6l\u00E7e\u011Fi ve y\u00F6netmelik',
   'Ders a\u00E7ma',
+  'Dosyalar',
   'De\u011Ferlendirme',
   'Organizasyon',
   '\u00D6\u011Frenciler',
@@ -790,6 +791,31 @@ const injectedRtkApi = api
           },
         }),
         providesTags: ['Ders a\u00E7ma'],
+      }),
+      uploadFile: build.mutation<UploadFileApiResponse, UploadFileApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/files`,
+          method: 'POST',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['Dosyalar'],
+      }),
+      getFile: build.query<GetFileApiResponse, GetFileApiArg>({
+        query: (queryArg) => ({ url: `/api/v1/files/${queryArg.id}` }),
+        providesTags: ['Dosyalar'],
+      }),
+      deleteFile: build.mutation<DeleteFileApiResponse, DeleteFileApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/files/${queryArg.id}`,
+          method: 'DELETE',
+        }),
+        invalidatesTags: ['Dosyalar'],
+      }),
+      getFileDownloadUrl: build.query<GetFileDownloadUrlApiResponse, GetFileDownloadUrlApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/files/${queryArg.id}/download-url`,
+        }),
+        providesTags: ['Dosyalar'],
       }),
       searchInstructors: build.query<SearchInstructorsApiResponse, SearchInstructorsApiArg>({
         query: (queryArg) => ({
@@ -2219,6 +2245,27 @@ export type MySectionsApiResponse = /** status 200 Ders koduna ve şube koduna g
 export type MySectionsApiArg = {
   /** Varsayılan aktif dönem */
   termId?: string
+}
+export type UploadFileApiResponse = /** status 201 Yüklenen dosya */ FileInfo
+export type UploadFileApiArg = {
+  body: {
+    file: Blob
+  }
+}
+export type GetFileApiResponse = /** status 200 Dosya */ FileInfo
+export type GetFileApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type DeleteFileApiResponse = unknown
+export type DeleteFileApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type GetFileDownloadUrlApiResponse = /** status 200 İmzalı URL */ DownloadUrl
+export type GetFileDownloadUrlApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
 }
 export type SearchInstructorsApiResponse = /** status 200 Liste */ {
   items: StaffSummary[]
@@ -3688,6 +3735,22 @@ export type TeachingSection = {
   /** Haftalık programda oturumu var */
   has_schedule: boolean
 }
+export type FileInfo = {
+  id: string
+  /** Temizlenmiş özgün ad (yol ve kontrol karakterleri atılır) */
+  name: string
+  /** İçerikten doğrulanmış tür */
+  mime_type: string
+  /** Bayt */
+  size: number
+  /** İçeriğin SHA-256 özeti (onaltılık) */
+  sha256: string
+  uploaded_at: string
+}
+export type DownloadUrl = {
+  url: string
+  expires_at: string
+}
 export type StaffSummary = {
   staff_id: string
   staff_no: string
@@ -4864,6 +4927,12 @@ export const {
   useLazyMyTeachingQuery,
   useMySectionsQuery,
   useLazyMySectionsQuery,
+  useUploadFileMutation,
+  useGetFileQuery,
+  useLazyGetFileQuery,
+  useDeleteFileMutation,
+  useGetFileDownloadUrlQuery,
+  useLazyGetFileDownloadUrlQuery,
   useSearchInstructorsQuery,
   useLazySearchInstructorsQuery,
   useListAssessmentTypesQuery,

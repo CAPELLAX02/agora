@@ -69,6 +69,8 @@ tags:
     description: Şubelerin değerlendirme planları (ara sınav, ödev, final ... ağırlıkları)
   - name: Ders seçme
     description: Ders durumu, alınabilir dersler, sepet, kural denetimi, danışman onayı ve ekle-bırak
+  - name: Dosyalar
+    description: Dosya yükleme (akışla, tür ve boyut denetimli) ve imzalı indirme URL'si
 
 paths:
   /healthz:
@@ -3132,6 +3134,119 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
+  /api/v1/files:
+    post:
+      tags: [Dosyalar]
+      summary: Dosya yükler
+      description: >-
+        `multipart/form-data` gövdesinin `file` alanındaki dosya akışla nesne deposuna yazılır;
+        diğer alanlar yok sayılır. Tür uzantıdan seçilir ve içeriğin ilk baytlarıyla uyuşmalıdır
+        (istemcinin bildirdiği tür kullanılmaz); izin verilenler belgeler (pdf, Office, OpenDocument),
+        metin ve kaynak kod, arşivler (zip, rar, 7z, gz), görseller (png, jpg, gif, webp), video ve
+        ses. HTML ve XML düz metin olarak saklanır. Boyut sınırı yapılandırmadadır (varsayılan
+        50 MB). Dosya bir kayda (ödev teslimi, ders içeriği) bağlanana kadar sadece yükleyen
+        görür ve silebilir; bir gün içinde bağlanmayan dosya silinir.
+      operationId: uploadFile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        "201":
+          description: Yüklenen dosya
+          headers:
+            Location:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FileInfo" }
+        "400":
+          description: "`NO_FILE` (gövdede dosya yok), `FILE_EMPTY`, `INVALID_BODY`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "413":
+          description: "`FILE_TOO_LARGE`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "415":
+          description: >-
+            `FILE_TYPE_NOT_ALLOWED` (uzantı izin listesinde değil), `FILE_CONTENT_MISMATCH` (içerik
+            uzantıyla uyuşmuyor), `UNSUPPORTED_MEDIA_TYPE` (gövde multipart değil)
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "503": { $ref: "#/components/responses/StorageUnavailable" }
+
+  /api/v1/files/{id}:
+    get:
+      tags: [Dosyalar]
+      summary: Yüklediğim dosyanın bilgisi
+      description: Sadece yükleyen görür; başkasının dosyası 404.
+      operationId: getFile
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Dosya
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FileInfo" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Dosyalar]
+      summary: Yüklediğim, henüz bir kayda bağlanmamış dosyayı siler
+      operationId: deleteFile
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "204": { description: Silindi }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`FILE_IN_USE`: dosya bir kayda bağlı"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "503": { $ref: "#/components/responses/StorageUnavailable" }
+
+  /api/v1/files/{id}/download-url:
+    get:
+      tags: [Dosyalar]
+      summary: Yüklediğim dosyanın imzalı indirme URL'si
+      description: >-
+        Nesne deposundan 5 dakika geçerli, imzalı bir indirme URL'si. Dosya her zaman ek
+        (attachment) olarak iner; Türkçe ad korunur. Kayda bağlı dosyaların URL'sini o kaydın
+        uçları verir; bu uç sadece yükleyen içindir.
+      operationId: getFileDownloadUrl
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: İmzalı URL
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DownloadUrl" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/StorageUnavailable" }
+
   /api/v1/instructors:
     get:
       tags: [Ders açma]
@@ -6111,6 +6226,11 @@ components:
       content:
         application/problem+json:
           schema: { $ref: "#/components/schemas/Problem" }
+    StorageUnavailable:
+      description: "`STORAGE_UNAVAILABLE`: dosya deposuna şu an ulaşılamıyor"
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
     NotFound:
       description: "`NOT_FOUND`"
       content:
@@ -7746,6 +7866,24 @@ components:
         role: { type: string, enum: [PRIMARY, CO_INSTRUCTOR, ASSISTANT] }
         students: { type: integer, description: Kesin kayıtlı (bırakmamış) öğrenci sayısı }
         has_schedule: { type: boolean, description: Haftalık programda oturumu var }
+
+    FileInfo:
+      type: object
+      required: [id, name, mime_type, size, sha256, uploaded_at]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, description: "Temizlenmiş özgün ad (yol ve kontrol karakterleri atılır)" }
+        mime_type: { type: string, description: İçerikten doğrulanmış tür }
+        size: { type: integer, format: int64, description: Bayt }
+        sha256: { type: string, description: İçeriğin SHA-256 özeti (onaltılık) }
+        uploaded_at: { type: string, format: date-time }
+
+    DownloadUrl:
+      type: object
+      required: [url, expires_at]
+      properties:
+        url: { type: string, format: uri }
+        expires_at: { type: string, format: date-time }
 
     StudentRef:
       type: object
