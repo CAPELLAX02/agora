@@ -3642,6 +3642,229 @@ paths:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Problem" }
 
+  /api/v1/grade-change-requests/preview:
+    post:
+      tags: [Değerlendirme]
+      summary: Not düzeltmesinin önizlemesi
+      description: >-
+        Düzeltme talebinin sonucunu hesaplar; hiçbir şey kaydedilmez. Bileşen notu düzeltilirse
+        harf notu motorla yeniden hesaplanır; harf doğrudan değiştirilirse ders başarı puanı
+        aynı kalır. Talep, şubenin sorumlu ya da ortak öğretim elemanından gelir.
+      operationId: previewGradeChange
+      x-agora-permission: grade_change:request
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GradeChangeInput" }
+      responses:
+        "200":
+          description: Önizleme
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GradeChangePreview" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: >-
+            `GRADES_NOT_PUBLISHED` (ilandan önce notlar not tablosundan değişir),
+            `ENROLLMENT_NOT_GRADED`, `MAKEUP_NOT_PUBLISHED`, `GRADE_INCOMPLETE`
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/grade-change-requests:
+    post:
+      tags: [Değerlendirme]
+      summary: Not düzeltme talebi oluşturur
+      description: >-
+        Harf notları ilan edildikten sonra not sadece bu yolla değişir. Şubenin sorumlu ya da
+        ortak öğretim elemanı (`grade_change:request`) gerekçesiyle talep eder; bir kesin kayıtta
+        aynı anda tek bekleyen talep olur. Denetim izine yazılır.
+      operationId: requestGradeChange
+      x-agora-permission: grade_change:request
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GradeChangeInput" }
+      responses:
+        "201":
+          description: Talep
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GradeChangeRequest" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`GRADE_CHANGE_PENDING` ve önizlemenin hataları"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+    get:
+      tags: [Değerlendirme]
+      summary: Not düzeltme taleplerini listeler
+      description: >-
+        `view=mine` isteği yapanın talepleri; `view=review` (varsayılan) onaylama yetkisinin
+        (`grade_change:approve`, MFA'lı oturumda) kapsadığı şubelerin talepleri. En yeni önce.
+      operationId: listGradeChanges
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: view
+          in: query
+          schema: { type: string, enum: [mine, review], default: review }
+        - name: status
+          in: query
+          description: Virgülle ayrılmış durumlar; verilmezse hepsi
+          schema: { type: string, examples: ["PENDING"] }
+      responses:
+        "200":
+          description: Talepler
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/GradeChangeRequest" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/grade-change-requests/{id}:
+    get:
+      tags: [Değerlendirme]
+      summary: Bir not düzeltme talebi
+      description: Talep eden ve onaylayabilecekler görür; başkasına 404.
+      operationId: getGradeChange
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Talep
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GradeChangeRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/grade-change-requests/{id}/approve:
+    post:
+      tags: [Değerlendirme]
+      summary: Not düzeltme talebini onaylar ve uygular
+      description: >-
+        Bölüm başkanı ya da fakülte öğrenci işleri (`grade_change:approve`, MFA) onaylar; talep
+        eden onaylayamaz. Onay notu uygular: bileşen notu ve harf, not geçmişine düzeltme
+        satırı, sınıf istatistiği; `grades.published` olayı (`phase: CORRECTION`) dönem
+        sonuçlarını yeniden hesaplatır. Not talepten sonra değiştiyse uygulanmaz.
+      operationId: approveGradeChange
+      x-agora-permission: grade_change:approve
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                note: { type: string, maxLength: 500, description: "İsteğe bağlı; verilirse en az 5 karakter" }
+      responses:
+        "200":
+          description: Uygulanan talep
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GradeChangeRequest" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: "`SELF_APPROVAL`: talep eden onaylayamaz; `MFA_REQUIRED`; kapsam dışı"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`GRADE_CHANGE_DECIDED`, `GRADE_CHANGED` (not talepten sonra değişti)"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/grade-change-requests/{id}/reject:
+    post:
+      tags: [Değerlendirme]
+      summary: Not düzeltme talebini reddeder
+      description: Onaylayabilecek biri gerekçesiyle reddeder; talep eden reddedemez.
+      operationId: rejectGradeChange
+      x-agora-permission: grade_change:approve
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [note]
+              properties:
+                note: { type: string, minLength: 5, maxLength: 500 }
+      responses:
+        "200":
+          description: Reddedilen talep
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GradeChangeRequest" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`GRADE_CHANGE_DECIDED`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/grade-change-requests/{id}/withdraw:
+    post:
+      tags: [Değerlendirme]
+      summary: Bekleyen not düzeltme talebini geri çeker
+      description: Sadece talep eden, talep beklemedeyken.
+      operationId: withdrawGradeChange
+      x-agora-permission: grade_change:request
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Geri çekilen talep
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GradeChangeRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`GRADE_CHANGE_DECIDED`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
   /api/v1/buildings:
     get:
       tags: [Organizasyon]
@@ -7470,6 +7693,91 @@ components:
                       mean: { type: [number, "null"] }
                       median: { type: [number, "null"] }
                   - { type: "null" }
+
+    GradeValue:
+      type: object
+      required: [letter, weighted_score, reason, score, absent]
+      properties:
+        letter: { type: string }
+        weighted_score: { type: [number, "null"] }
+        reason: { type: string, description: "Harfin kuralı (LetterReason); elle değişiklikte MANUAL" }
+        score: { type: [number, "null"], description: Bileşen notu düzeltmesinde bileşenin puanı }
+        absent: { type: boolean, description: Bileşen notu düzeltmesinde girmedi }
+
+    GradeChangeInput:
+      type: object
+      additionalProperties: false
+      required: [enrollment_id]
+      description: >-
+        Bileşen notu düzeltmesi (`component_id` ve `score` ya da `absent`) ya da doğrudan harf
+        (`letter`); ikisi birlikte verilmez.
+      properties:
+        enrollment_id: { type: string, format: uuid }
+        component_id: { type: [string, "null"], format: uuid }
+        score: { type: [number, "null"], minimum: 0, maximum: 100 }
+        absent: { type: boolean }
+        letter: { type: [string, "null"], examples: ["C2"] }
+        reason: { type: string, maxLength: 500, description: "Talepte zorunlu, 10-500 karakter; önizlemede verilmeyebilir" }
+
+    GradeChangeComponent:
+      type: object
+      required: [id, label_tr, label_en, weight]
+      properties:
+        id: { type: string, format: uuid }
+        label_tr: { type: string, examples: ["Final sınavı"] }
+        label_en: { type: string }
+        weight: { type: number }
+
+    GradeChangePreview:
+      type: object
+      required: [kind, component, old, new]
+      properties:
+        kind: { type: string, enum: [SCORE, LETTER] }
+        component:
+          oneOf:
+            - { $ref: "#/components/schemas/GradeChangeComponent" }
+            - { type: "null" }
+        old: { $ref: "#/components/schemas/GradeValue" }
+        new: { $ref: "#/components/schemas/GradeValue" }
+
+    GradeChangeRequest:
+      type: object
+      required: [id, status, kind, enrollment_id, student, course, section, term_code, component, old, new, reason,
+                 requested_by, requested_at, reviewed_by, review_note, decided_at, can_approve, can_withdraw]
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [PENDING, APPLIED, REJECTED, WITHDRAWN], description: "APPLIED: onaylandı ve uygulandı" }
+        kind: { type: string, enum: [SCORE, LETTER] }
+        enrollment_id: { type: string, format: uuid }
+        student: { $ref: "#/components/schemas/StudentRef" }
+        course:
+          type: object
+          required: [code, name_tr, name_en]
+          properties:
+            code: { type: string }
+            name_tr: { type: string }
+            name_en: { type: string }
+        section:
+          type: object
+          required: [id, code]
+          properties:
+            id: { type: string, format: uuid }
+            code: { type: string }
+        term_code: { type: string }
+        component:
+          oneOf:
+            - { $ref: "#/components/schemas/GradeChangeComponent" }
+            - { type: "null" }
+        old: { $ref: "#/components/schemas/GradeValue" }
+        new: { $ref: "#/components/schemas/GradeValue" }
+        reason: { type: string }
+        requested_by: { type: string, description: Talep edenin adı }
+        requested_at: { type: string, format: date-time }
+        reviewed_by: { type: [string, "null"], description: Onaylayan ya da reddedenin adı }
+        review_note: { type: [string, "null"] }
+        decided_at: { type: [string, "null"], format: date-time }
+        can_approve: { type: boolean, description: İsteği yapan bu talebi onaylayıp reddedebilir }
+        can_withdraw: { type: boolean, description: İsteği yapan bu talebi geri çekebilir }
 
     CourseAttempt:
       type: object

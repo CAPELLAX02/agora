@@ -897,6 +897,61 @@ const injectedRtkApi = api
         }),
         providesTags: ['De\u011Ferlendirme'],
       }),
+      previewGradeChange: build.query<PreviewGradeChangeApiResponse, PreviewGradeChangeApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/grade-change-requests/preview`,
+          method: 'POST',
+          body: queryArg.gradeChangeInput,
+        }),
+        providesTags: ['De\u011Ferlendirme'],
+      }),
+      requestGradeChange: build.mutation<RequestGradeChangeApiResponse, RequestGradeChangeApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/grade-change-requests`,
+          method: 'POST',
+          body: queryArg.gradeChangeInput,
+        }),
+        invalidatesTags: ['De\u011Ferlendirme'],
+      }),
+      listGradeChanges: build.query<ListGradeChangesApiResponse, ListGradeChangesApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/grade-change-requests`,
+          params: {
+            view: queryArg.view,
+            status: queryArg.status,
+          },
+        }),
+        providesTags: ['De\u011Ferlendirme'],
+      }),
+      getGradeChange: build.query<GetGradeChangeApiResponse, GetGradeChangeApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/grade-change-requests/${queryArg.id}`,
+        }),
+        providesTags: ['De\u011Ferlendirme'],
+      }),
+      approveGradeChange: build.mutation<ApproveGradeChangeApiResponse, ApproveGradeChangeApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/grade-change-requests/${queryArg.id}/approve`,
+          method: 'POST',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['De\u011Ferlendirme'],
+      }),
+      rejectGradeChange: build.mutation<RejectGradeChangeApiResponse, RejectGradeChangeApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/grade-change-requests/${queryArg.id}/reject`,
+          method: 'POST',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['De\u011Ferlendirme'],
+      }),
+      withdrawGradeChange: build.mutation<WithdrawGradeChangeApiResponse, WithdrawGradeChangeApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/grade-change-requests/${queryArg.id}/withdraw`,
+          method: 'POST',
+        }),
+        invalidatesTags: ['De\u011Ferlendirme'],
+      }),
       listBuildings: build.query<ListBuildingsApiResponse, ListBuildingsApiArg>({
         query: (queryArg) => ({
           url: `/api/v1/buildings`,
@@ -2229,6 +2284,49 @@ export type PublishMakeupApiArg = {
 }
 export type GetSectionGradeStatsApiResponse = /** status 200 Sınıf istatistikleri */ SectionGradeStats
 export type GetSectionGradeStatsApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type PreviewGradeChangeApiResponse = /** status 200 Önizleme */ GradeChangePreview
+export type PreviewGradeChangeApiArg = {
+  gradeChangeInput: GradeChangeInput
+}
+export type RequestGradeChangeApiResponse = /** status 201 Talep */ GradeChangeRequest
+export type RequestGradeChangeApiArg = {
+  gradeChangeInput: GradeChangeInput
+}
+export type ListGradeChangesApiResponse = /** status 200 Talepler */ {
+  items: GradeChangeRequest[]
+}
+export type ListGradeChangesApiArg = {
+  view?: 'mine' | 'review'
+  /** Virgülle ayrılmış durumlar; verilmezse hepsi */
+  status?: string
+}
+export type GetGradeChangeApiResponse = /** status 200 Talep */ GradeChangeRequest
+export type GetGradeChangeApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type ApproveGradeChangeApiResponse = /** status 200 Uygulanan talep */ GradeChangeRequest
+export type ApproveGradeChangeApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: {
+    /** İsteğe bağlı; verilirse en az 5 karakter */
+    note?: string
+  }
+}
+export type RejectGradeChangeApiResponse = /** status 200 Reddedilen talep */ GradeChangeRequest
+export type RejectGradeChangeApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: {
+    note: string
+  }
+}
+export type WithdrawGradeChangeApiResponse = /** status 200 Geri çekilen talep */ GradeChangeRequest
+export type WithdrawGradeChangeApiArg = {
   /** Geçerli bir UUID değilse 404 döner. */
   id: string
 }
@@ -3722,6 +3820,70 @@ export type SectionGradeStats = {
   /** Son ilan ya da not düzeltmesiyle hesaplandığı an */
   computed_at: string
 }
+export type GradeChangeComponent = {
+  id: string
+  label_tr: string
+  label_en: string
+  weight: number
+}
+export type GradeValue = {
+  letter: string
+  weighted_score: number | null
+  /** Harfin kuralı (LetterReason); elle değişiklikte MANUAL */
+  reason: string
+  /** Bileşen notu düzeltmesinde bileşenin puanı */
+  score: number | null
+  /** Bileşen notu düzeltmesinde girmedi */
+  absent: boolean
+}
+export type GradeChangePreview = {
+  kind: 'SCORE' | 'LETTER'
+  component: GradeChangeComponent | null
+  old: GradeValue
+  new: GradeValue
+}
+export type GradeChangeInput = {
+  enrollment_id: string
+  component_id?: string | null
+  score?: number | null
+  absent?: boolean
+  letter?: string | null
+  /** Talepte zorunlu, 10-500 karakter; önizlemede verilmeyebilir */
+  reason?: string
+}
+export type GradeChangeRequest = {
+  id: string
+  /** APPLIED: onaylandı ve uygulandı */
+  status: 'PENDING' | 'APPLIED' | 'REJECTED' | 'WITHDRAWN'
+  kind: 'SCORE' | 'LETTER'
+  enrollment_id: string
+  student: StudentRef
+  course: {
+    code: string
+    name_tr: string
+    name_en: string
+  }
+  section: {
+    id: string
+    code: string
+  }
+  term_code: string
+  component: GradeChangeComponent | null
+  old: GradeValue
+  new: GradeValue
+  reason: string
+  /** Talep edenin adı */
+  requested_by: string
+  requested_at: string
+  /** Onaylayan ya da reddedenin adı */
+  reviewed_by: string | null
+  review_note: string | null
+  decided_at: string | null
+  /** İsteği yapan bu talebi onaylayıp reddedebilir */
+  can_approve: boolean
+  /** İsteği yapan bu talebi geri çekebilir */
+  can_withdraw: boolean
+}
 export type Ref = {
   id: string
   code: string
@@ -4577,6 +4739,16 @@ export const {
   usePublishMakeupMutation,
   useGetSectionGradeStatsQuery,
   useLazyGetSectionGradeStatsQuery,
+  usePreviewGradeChangeQuery,
+  useLazyPreviewGradeChangeQuery,
+  useRequestGradeChangeMutation,
+  useListGradeChangesQuery,
+  useLazyListGradeChangesQuery,
+  useGetGradeChangeQuery,
+  useLazyGetGradeChangeQuery,
+  useApproveGradeChangeMutation,
+  useRejectGradeChangeMutation,
+  useWithdrawGradeChangeMutation,
   useListBuildingsQuery,
   useLazyListBuildingsQuery,
   useCreateBuildingMutation,

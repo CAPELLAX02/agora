@@ -10,9 +10,12 @@ const config = {
   exportName: 'agoraApi',
   hooks: { queries: true, lazyQueries: true, mutations: true },
   tag: true,
-  // Sanal transkript POST'tur ama bir şey değiştirmez: sorgu olarak üretilir, önbelleği
-  // geçersiz kılmaz, sonuçlar harflere göre önbellekte tutulur.
-  endpointOverrides: [{ pattern: 'simulateTranscript', type: 'query' }],
+  // Sanal transkript ve not düzeltme önizlemesi POST'tur ama bir şey değiştirmez: sorgu olarak
+  // üretilir, önbelleği geçersiz kılmaz, sonuçlar girdilere göre önbellekte tutulur.
+  endpointOverrides: [
+    { pattern: 'simulateTranscript', type: 'query' },
+    { pattern: 'previewGradeChange', type: 'query' },
+  ],
 }
 
 export default config
