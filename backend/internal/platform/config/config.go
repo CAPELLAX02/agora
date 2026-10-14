@@ -33,6 +33,13 @@ const (
 	devWebBaseURL = "http://localhost:5173"
 )
 
+// Development ortamında dosyalar compose.yaml'daki SeaweedFS'e gider (infra/seaweedfs/s3.json).
+const (
+	devS3Endpoint  = "localhost:8333"
+	devS3AccessKey = "agora"
+	devS3SecretKey = "agora_dev_password"
+)
+
 // devMFAKey, sadece development ortamında, AGORA_MFA_ENCRYPTION_KEY verilmediğinde
 // kullanılan TOTP sırrı şifreleme anahtarıdır. Herkesin bildiği bir anahtardır: geliştirme
 // veritabanındaki sırlar korunmuş sayılmaz. Sabit olmasının sebebi, API yeniden
@@ -78,6 +85,16 @@ type Config struct {
 	SMTPUsername      string
 	SMTPPassword      string // gizli
 	WorkerMetricsAddr string // worker'ın /metrics adresi
+
+	// Dosya depolama (S3 uyumlu)
+	S3Endpoint       string // host:port; API ve worker'ın depoya eriştiği adres
+	S3PublicEndpoint string // imzalı indirme URL'lerinin adresi (tarayıcının erişebildiği); boşsa S3Endpoint
+	S3UseSSL         bool
+	S3Region         string
+	S3Bucket         string
+	S3AccessKey      string
+	S3SecretKey      string // gizli
+	MaxUploadBytes   int64  // bir dosyanın en büyük boyutu
 }
 
 // Load, ortam değişkenlerini okur, varsayılanları uygular ve sonucu doğrular.
@@ -130,6 +147,15 @@ func Load() (Config, error) {
 		SMTPUsername:      lookup("AGORA_SMTP_USERNAME", ""),
 		SMTPPassword:      lookup("AGORA_SMTP_PASSWORD", ""),
 		WorkerMetricsAddr: lookup("AGORA_WORKER_METRICS_ADDR", ":9092"),
+
+		S3Endpoint:       lookup("AGORA_S3_ENDPOINT", ""),
+		S3PublicEndpoint: lookup("AGORA_S3_PUBLIC_ENDPOINT", ""),
+		S3UseSSL:         lookup("AGORA_S3_USE_SSL", "false") == "true",
+		S3Region:         lookup("AGORA_S3_REGION", "us-east-1"),
+		S3Bucket:         lookup("AGORA_S3_BUCKET", "agora"),
+		S3AccessKey:      lookup("AGORA_S3_ACCESS_KEY", ""),
+		S3SecretKey:      lookup("AGORA_S3_SECRET_KEY", ""),
+		MaxUploadBytes:   int64(integer("AGORA_MAX_UPLOAD_BYTES", 50<<20)),
 	}
 
 	if cfg.DatabaseURL == "" && cfg.Env == "development" {
@@ -145,6 +171,12 @@ func Load() (Config, error) {
 		if cfg.WebBaseURL == "" {
 			cfg.WebBaseURL = devWebBaseURL
 		}
+		if cfg.S3Endpoint == "" {
+			cfg.S3Endpoint, cfg.S3AccessKey, cfg.S3SecretKey = devS3Endpoint, devS3AccessKey, devS3SecretKey
+		}
+	}
+	if cfg.S3PublicEndpoint == "" {
+		cfg.S3PublicEndpoint = cfg.S3Endpoint
 	}
 	mfaKey := lookup("AGORA_MFA_ENCRYPTION_KEY", "")
 	if mfaKey == "" && cfg.Env == "development" {
@@ -218,6 +250,13 @@ func (c Config) LogValue() slog.Value {
 		slog.String("smtp_username", c.SMTPUsername),
 		slog.Bool("smtp_password_set", c.SMTPPassword != ""),
 		slog.String("worker_metrics_addr", c.WorkerMetricsAddr),
+		slog.String("s3_endpoint", c.S3Endpoint),
+		slog.String("s3_public_endpoint", c.S3PublicEndpoint),
+		slog.Bool("s3_use_ssl", c.S3UseSSL),
+		slog.String("s3_bucket", c.S3Bucket),
+		slog.String("s3_access_key", c.S3AccessKey),
+		slog.Bool("s3_secret_key_set", c.S3SecretKey != ""),
+		slog.Int64("max_upload_bytes", c.MaxUploadBytes),
 	)
 }
 
@@ -301,6 +340,19 @@ func (c Config) validate() []error {
 	}
 	if c.WorkerMetricsAddr == c.HTTPAddr || c.WorkerMetricsAddr == c.MetricsAddr {
 		errs = append(errs, fmt.Errorf("AGORA_WORKER_METRICS_ADDR diğer adreslerle aynı olamaz: %q", c.WorkerMetricsAddr))
+	}
+
+	if c.S3Endpoint == "" || c.S3AccessKey == "" || c.S3SecretKey == "" {
+		errs = append(errs, errors.New("AGORA_S3_ENDPOINT, AGORA_S3_ACCESS_KEY ve AGORA_S3_SECRET_KEY development dışında zorunlu"))
+	}
+	if strings.Contains(c.S3Endpoint, "://") || strings.Contains(c.S3PublicEndpoint, "://") {
+		errs = append(errs, errors.New("AGORA_S3_ENDPOINT ve AGORA_S3_PUBLIC_ENDPOINT host:port biçiminde olmalı (şema AGORA_S3_USE_SSL ile)"))
+	}
+	if c.S3Bucket == "" {
+		errs = append(errs, errors.New("AGORA_S3_BUCKET boş olamaz"))
+	}
+	if c.MaxUploadBytes < 1<<20 || c.MaxUploadBytes > 2<<30 {
+		errs = append(errs, fmt.Errorf("AGORA_MAX_UPLOAD_BYTES 1 MiB ile 2 GiB arasında olmalı: %d", c.MaxUploadBytes))
 	}
 
 	if c.RegistrationRateLimit < 1 {

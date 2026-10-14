@@ -23,6 +23,8 @@ func clearAgoraEnv(t *testing.T) {
 		"AGORA_REDIS_URL", "AGORA_LOGIN_RATE_LIMIT", "AGORA_REGISTRATION_RATE_LIMIT", "AGORA_CORS_ALLOWED_ORIGINS",
 		"AGORA_WEB_BASE_URL", "AGORA_SMTP_ADDR", "AGORA_SMTP_FROM", "AGORA_SMTP_USERNAME",
 		"AGORA_SMTP_PASSWORD", "AGORA_WORKER_METRICS_ADDR", "AGORA_MFA_ENCRYPTION_KEY",
+		"AGORA_S3_ENDPOINT", "AGORA_S3_PUBLIC_ENDPOINT", "AGORA_S3_USE_SSL", "AGORA_S3_REGION", "AGORA_S3_BUCKET",
+		"AGORA_S3_ACCESS_KEY", "AGORA_S3_SECRET_KEY", "AGORA_MAX_UPLOAD_BYTES",
 	} {
 		t.Setenv(key, "")
 	}
@@ -60,6 +62,14 @@ func defaultsWith(modify func(c *Config)) Config {
 		SMTPAddr:          devSMTPAddr,
 		SMTPFrom:          "Agora <no-reply@agora.test>",
 		WorkerMetricsAddr: ":9092",
+
+		S3Endpoint:       devS3Endpoint,
+		S3PublicEndpoint: devS3Endpoint,
+		S3Region:         "us-east-1",
+		S3Bucket:         "agora",
+		S3AccessKey:      devS3AccessKey,
+		S3SecretKey:      devS3SecretKey,
+		MaxUploadBytes:   50 << 20,
 	}
 	if modify != nil {
 		modify(&c)
@@ -104,6 +114,12 @@ func TestLoad(t *testing.T) {
 				"AGORA_SMTP_PASSWORD":            "smtp-gizli",
 				"AGORA_WORKER_METRICS_ADDR":      ":9100",
 				"AGORA_MFA_ENCRYPTION_KEY":       "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=",
+				"AGORA_S3_ENDPOINT":              "s3.internal:8333",
+				"AGORA_S3_PUBLIC_ENDPOINT":       "dosya.agora.example.edu.tr",
+				"AGORA_S3_USE_SSL":               "true",
+				"AGORA_S3_ACCESS_KEY":            "agora-api",
+				"AGORA_S3_SECRET_KEY":            "s3-gizli",
+				"AGORA_MAX_UPLOAD_BYTES":         "104857600",
 			},
 			want: defaultsWith(func(c *Config) {
 				c.Env = "production"
@@ -129,12 +145,15 @@ func TestLoad(t *testing.T) {
 				c.SMTPPassword = "smtp-gizli"
 				c.WorkerMetricsAddr = ":9100"
 				c.MFAKey = []byte("0123456789abcdef0123456789abcdef")
+				c.S3Endpoint, c.S3PublicEndpoint, c.S3UseSSL = "s3.internal:8333", "dosya.agora.example.edu.tr", true
+				c.S3AccessKey, c.S3SecretKey, c.MaxUploadBytes = "agora-api", "s3-gizli", 100<<20
 			}),
 		},
 		{
-			name:    "development dışında JWT anahtarı zorunlu",
-			env:     map[string]string{"AGORA_ENV": "test", "AGORA_DATABASE_URL": "postgres://u:p@db/agora"},
-			wantErr: []string{"AGORA_JWT_PRIVATE_KEY_FILE development dışında zorunlu", "AGORA_MFA_ENCRYPTION_KEY development dışında zorunlu"},
+			name: "development dışında JWT anahtarı zorunlu",
+			env:  map[string]string{"AGORA_ENV": "test", "AGORA_DATABASE_URL": "postgres://u:p@db/agora"},
+			wantErr: []string{"AGORA_JWT_PRIVATE_KEY_FILE development dışında zorunlu", "AGORA_MFA_ENCRYPTION_KEY development dışında zorunlu",
+				"AGORA_S3_ENDPOINT, AGORA_S3_ACCESS_KEY ve AGORA_S3_SECRET_KEY development dışında zorunlu"},
 		},
 		{
 			name:    "MFA anahtarı 32 bayt olmalı",
@@ -183,6 +202,11 @@ func TestLoad(t *testing.T) {
 				`AGORA_SMTP_FROM geçersiz "adres değil"`,
 				"AGORA_SMTP_USERNAME ve AGORA_SMTP_PASSWORD birlikte verilmeli",
 			},
+		},
+		{
+			name:    "S3 adresi şemasız, dosya boyutu sınırlı",
+			env:     map[string]string{"AGORA_S3_ENDPOINT": "http://depo:8333", "AGORA_MAX_UPLOAD_BYTES": "1000"},
+			wantErr: []string{"host:port biçiminde olmalı", "AGORA_MAX_UPLOAD_BYTES 1 MiB ile 2 GiB arasında olmalı"},
 		},
 		{
 			name:    "worker metrik adresi çakışmamalı",
@@ -276,6 +300,7 @@ func TestConfigLogValueRedactsSecrets(t *testing.T) {
 		c.DatabaseURL = "postgres://agora:s3cr3t-parola@db:5432/agora"
 		c.RedisURL = "redis://:r3d1s-parola@cache:6379/0"
 		c.SMTPPassword = "smtp-c0k-gizli"
+		c.S3SecretKey = "s3-c0k-gizli"
 	})
 
 	var buf bytes.Buffer
@@ -283,7 +308,7 @@ func TestConfigLogValueRedactsSecrets(t *testing.T) {
 	out := buf.String()
 
 	if strings.Contains(out, "s3cr3t-parola") || strings.Contains(out, "r3d1s-parola") ||
-		strings.Contains(out, "smtp-c0k-gizli") {
+		strings.Contains(out, "smtp-c0k-gizli") || strings.Contains(out, "s3-c0k-gizli") {
 		t.Errorf("parola log'a sızdı:\n%s", out)
 	}
 	if !strings.Contains(out, "config.database_url=postgres://agora:xxxxx@db:5432/agora") {
