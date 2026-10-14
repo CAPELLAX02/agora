@@ -21,7 +21,7 @@ import (
 
 const demoWindowNote = "Geliştirme ortamı demo penceresi: seed'in çalıştığı andan itibaren üç hafta açık kalır."
 
-var demoWindowTypes = []struct{ code, titleTR, titleEN string }{
+var demoWindowTypes = []demoWindowType{
 	{"COURSE_REGISTRATION", "Ders seçme (demo)", "Course registration (demo)"},
 	{"ADVISOR_APPROVAL", "Danışman onayı (demo)", "Advisor approval (demo)"},
 	{"ADD_DROP_STUDENT", "Ekle-bırak (demo)", "Add-drop (demo)"},
@@ -29,25 +29,38 @@ var demoWindowTypes = []struct{ code, titleTR, titleEN string }{
 	{"ADD_DROP_DEPT_HEAD", "Ekle-bırak bölüm başkanı onayı (demo)", "Add-drop head of department approval (demo)"},
 }
 
-// openDemoWindows, BM programı için demo pencerelerini açar ya da süresi azalmışsa yeniler.
+// openDemoWindows, demo pencerelerini açar ya da süresi azalmışsa yeniler: BM programı için
+// ders seçme pencereleri, Mühendislik Fakültesi için not girişi pencereleri (bkz. grades.go).
 func openDemoWindows(ctx context.Context, pool *pgxpool.Pool, now time.Time) error {
-	var termID, programID string
-	err := pool.QueryRow(ctx, `SELECT t.id, p.id FROM academic.terms t, org.programs p WHERE t.is_current AND p.code = 'BIL-EN-NO'`).
-		Scan(&termID, &programID)
+	var termID, programID, facultyID string
+	err := pool.QueryRow(ctx, `
+		SELECT t.id, p.id, f.id FROM academic.terms t, org.programs p, org.faculties f
+		WHERE t.is_current AND p.code = 'BIL-EN-NO' AND f.code = 'MUH'`).Scan(&termID, &programID, &facultyID)
 	if errors.Is(err, pgx.ErrNoRows) {
-		fmt.Println("ATLANDI    demo pencereleri: aktif dönem ya da BIL-EN-NO yok")
+		fmt.Println("ATLANDI    demo pencereleri: aktif dönem, BIL-EN-NO ya da MUH yok")
 		return nil
 	}
 	if err != nil {
 		return fmt.Errorf("demo pencereleri: %w", err)
 	}
+	if err := openWindows(ctx, pool, now, termID, "PROGRAM", programID, demoWindowTypes); err != nil {
+		return err
+	}
+	return openWindows(ctx, pool, now, termID, "FACULTY", facultyID, demoGradeWindowTypes)
+}
+
+type demoWindowType struct{ code, titleTR, titleEN string }
+
+// openWindows, verilen kapsamda her tür için üç hafta açık kalan bir demo penceresi açar; bir
+// haftadan az kalmışsa yeniler. Aynı kapsamda o türün başka bir olayı varsa dokunmaz.
+func openWindows(ctx context.Context, pool *pgxpool.Pool, now time.Time, termID, scopeType, scopeID string, types []demoWindowType) error {
 	start, end := now.Add(-time.Hour).Truncate(time.Hour), now.Add(21*24*time.Hour).Truncate(time.Hour)
-	for _, t := range demoWindowTypes {
+	for _, t := range types {
 		tag, err := pool.Exec(ctx, `
 			UPDATE academic.calendar_events SET period = tstzrange($4, $5, '[)'), version = version + 1, updated_at = now()
-			WHERE term_id = $1 AND event_type_code = $2 AND scope_type = 'PROGRAM' AND scope_id = $3 AND note = $6
+			WHERE term_id = $1 AND event_type_code = $2 AND scope_type = $8 AND scope_id = $3 AND note = $6
 			  AND upper(period) < $7`,
-			termID, t.code, programID, start, end, demoWindowNote, now.Add(7*24*time.Hour))
+			termID, t.code, scopeID, start, end, demoWindowNote, now.Add(7*24*time.Hour), scopeType)
 		if err != nil {
 			return fmt.Errorf("demo penceresi %s yenilenemedi: %w", t.code, err)
 		}
@@ -57,11 +70,11 @@ func openDemoWindows(ctx context.Context, pool *pgxpool.Pool, now time.Time) err
 		}
 		tag, err = pool.Exec(ctx, `
 			INSERT INTO academic.calendar_events (term_id, event_type_code, title_tr, title_en, period, scope_type, scope_id, note)
-			SELECT $1, $2, $3, $4, tstzrange($6, $7, '[)'), 'PROGRAM', $5, $8
+			SELECT $1, $2, $3, $4, tstzrange($6, $7, '[)'), $9, $5, $8
 			WHERE NOT EXISTS (
 				SELECT 1 FROM academic.calendar_events
-				WHERE term_id = $1 AND event_type_code = $2 AND scope_type = 'PROGRAM' AND scope_id = $5)`,
-			termID, t.code, t.titleTR, t.titleEN, programID, start, end, demoWindowNote)
+				WHERE term_id = $1 AND event_type_code = $2 AND scope_type = $9 AND scope_id = $5)`,
+			termID, t.code, t.titleTR, t.titleEN, scopeID, start, end, demoWindowNote, scopeType)
 		if err != nil {
 			return fmt.Errorf("demo penceresi %s açılamadı: %w", t.code, err)
 		}
@@ -72,18 +85,21 @@ func openDemoWindows(ctx context.Context, pool *pgxpool.Pool, now time.Time) err
 	return nil
 }
 
-// demoRegistrations: P10001'in danışman kuyruğunda farklı durumlar. Sepetler ders seçme
-// servisiyle (kurallar ve kontenjan denetimiyle) kurulur.
-var demoRegistrations = []struct {
-	no      string
-	submit  bool
-	approve bool
-}{
+// demoRegistrations: P10001'in danışman kuyruğunda farklı durumlar ve 1. sınıf demo grubunun
+// onaylanmış kayıtları. Sepetler ders seçme servisiyle (kurallar ve kontenjan denetimiyle)
+// kurulur; onayı öğrencinin danışmanı verir.
+var demoRegistrations = append([]demoRegistration{
 	{"23290013", true, false},  // onay bekliyor
 	{"25290016", true, false},  // onay bekliyor
 	{"26290017", true, false},  // onay bekliyor (1. sınıf: dönemin bütün zorunlu dersleri)
 	{"23290015", true, true},   // onaylanmış: ekle-bırak denenebilir
 	{"24290012", false, false}, // taslak (30 AKTS sınırı, alttan ders)
+}, cohortRegistrations()...)
+
+type demoRegistration struct {
+	no      string
+	submit  bool
+	approve bool
 }
 
 // seedRegistrations, demo öğrencilerinin 2026 güz ders seçme kayıtlarını oluşturur. Kaydı
@@ -95,10 +111,6 @@ func seedRegistrations(ctx context.Context, pool *pgxpool.Pool) error {
 	}
 	if err != nil {
 		return err
-	}
-	var advisorUser string
-	if err := pool.QueryRow(ctx, `SELECT id FROM iam.users WHERE username = 'P10001'`).Scan(&advisorUser); err != nil {
-		return fmt.Errorf("P10001 bulunamadı: %w", err)
 	}
 	svc := registration.NewService(pool, time.Now, nil)
 	students := enrollment.NewRepository(pool)
@@ -142,6 +154,13 @@ func seedRegistrations(ctx context.Context, pool *pgxpool.Pool) error {
 				reg, err = registration.NewRepository(pool).Registration(ctx, sp.ID, sp.Program.ID, termID)
 				if err != nil {
 					return err
+				}
+				var advisorUser string
+				if err := pool.QueryRow(ctx, `
+					SELECT u.id FROM enrollment.advisor_assignments aa
+					JOIN people.staff st ON st.id = aa.advisor_staff_id JOIN iam.users u ON u.person_id = st.person_id
+					WHERE aa.student_program_id = $1 AND aa.valid_until IS NULL`, sp.ID).Scan(&advisorUser); err != nil {
+					return fmt.Errorf("%s danışmanı bulunamadı: %w", d.no, err)
 				}
 				if err := svc.Decide(ctx, registration.Decider{UserID: advisorUser}, sp, reg.ID, reg.Version, registration.Approve, "Başarılar."); err != nil {
 					return fmt.Errorf("%s onaylanamadı: %w", d.no, err)
