@@ -6,6 +6,7 @@ import {
   GraduationCapIcon,
   ListChecksIcon,
   LockIcon,
+  MonitorPlayIcon,
   NotebookTextIcon,
   UsersRoundIcon,
   CalendarDaysIcon,
@@ -72,6 +73,13 @@ export const navGroups: NavGroup[] = [
         tone: 'emerald',
         icon: BookMarkedIcon,
         permission: 'registration:manage_own',
+      },
+      {
+        to: '/derslerim',
+        label: 'nav.mySpaces',
+        tone: 'indigo',
+        icon: MonitorPlayIcon,
+        permission: ['registration:manage_own', 'assessment_plan:manage'],
       },
       {
         to: '/notlarim',

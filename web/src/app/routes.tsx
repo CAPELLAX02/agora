@@ -172,6 +172,28 @@ export const routes: RouteObject[] = [
                       }
                     },
                   },
+                  // Ders alanında yetki sunucuda, alan başına (üyelik) denetlenir.
+                  {
+                    path: 'derslerim',
+                    lazy: async () => {
+                      const { MySpacesPage } = await import('@/features/lms/MySpacesPage')
+                      return { element: <MySpacesPage /> }
+                    },
+                  },
+                  {
+                    path: 'derslerim/:id',
+                    lazy: async () => {
+                      const { SpacePage } = await import('@/features/lms/SpacePage')
+                      return { element: <SpacePage /> }
+                    },
+                  },
+                  {
+                    path: 'derslerim/:id/etkinlik/:activityId',
+                    lazy: async () => {
+                      const { ActivityPage } = await import('@/features/lms/ActivityPage')
+                      return { element: <ActivityPage /> }
+                    },
+                  },
                   {
                     path: 'not-duzeltme',
                     lazy: async () => {

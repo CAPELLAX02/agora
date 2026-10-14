@@ -104,6 +104,7 @@
     "students": "Students",
     "holds": "Registration holds",
     "transcript": "Transcript",
+    "mySpaces": "My courses",
     "grades": "My grades",
     "gradeChanges": "Grade corrections",
     "gradeChangeReview": "Correction approvals"
@@ -1800,6 +1801,109 @@
     "publishDescription_other": "The letter grades of {{count}} students become final and visible; term results (GPA) are updated. Afterwards grades change only through a grade change request.",
     "publishMakeupDescription_one": "The letter of {{count}} student with a make-up score is recomputed; others keep their grade. This is done once.",
     "publishMakeupDescription_other": "The letters of {{count}} students with a make-up score are recomputed; others keep their grade. This is done once."
+  },
+  "lms": {
+    "mySpaces": {
+      "title": "My courses",
+      "description": "Spaces of the courses you take or teach this term: announcements, content, files.",
+      "empty": "You have no course spaces for this term. Your courses appear here once your registration is approved.",
+      "activities_one": "{{count}} activity",
+      "activities_other": "{{count}} activities"
+    },
+    "roles": {
+      "STUDENT": "Student",
+      "PRIMARY": "Instructor",
+      "CO_INSTRUCTOR": "Co-instructor",
+      "ASSISTANT": "Assistant",
+      "VIEWER": "Viewer"
+    },
+    "types": {
+      "RESOURCE": "File",
+      "FOLDER": "Folder",
+      "URL": "Link",
+      "PAGE": "Page",
+      "LABEL": "Text and media",
+      "ASSIGNMENT": "Assignment",
+      "FORUM": "Forum"
+    },
+    "space": {
+      "edit": "Turn editing on",
+      "editing": "Editing on",
+      "info": "About the course",
+      "noSummary": "No course introduction yet.",
+      "instructors": "Instructors",
+      "email": "Email {{name}}",
+      "summaryTitle": "Edit course introduction",
+      "summaryHint": "The first thing students see in the course space: aims, how the course runs, contact.",
+      "summary": "Course introduction",
+      "empty": "This course space has no content yet.",
+      "emptyEditor": "The course space is empty. Turn editing on and add the first section; a “Genel” (general) section is created along with the first content."
+    },
+    "topic": {
+      "add": "Add section",
+      "addTitle": "New section",
+      "editTitle": "Edit section",
+      "titleHint": "For example “Week 1: Introduction” or “Midterm preparation”.",
+      "summary": "Section summary",
+      "added": "Section added.",
+      "saved": "Section saved.",
+      "deleteTitle": "Delete “{{title}}”?",
+      "deleteDescription": "The section and all of its activities are deleted, along with uploaded files. This cannot be undone."
+    },
+    "activity": {
+      "add": "Add an activity or resource",
+      "addTitle": "New {{type}}",
+      "editTitle": "Edit {{type}}",
+      "added": "Activity added.",
+      "saved": "Activity saved.",
+      "hide": "Hide from students",
+      "show": "Show to students",
+      "deleteTitle": "Delete “{{title}}”?",
+      "deleteDescription": "The activity and its files are deleted. This cannot be undone."
+    },
+    "form": {
+      "title": "Title",
+      "titleRequired": "Enter a title.",
+      "filesRequired": "Upload at least one file.",
+      "url": "Link address",
+      "newTab": "Open in a new tab",
+      "page": "Page content",
+      "labelText": "Text",
+      "description": "Description",
+      "access": "Access",
+      "visible": "Visible to students",
+      "from": "Opens",
+      "until": "Closes"
+    },
+    "upload": {
+      "dropOne": "Drop the file here or choose one",
+      "dropMany": "Drop files here or choose",
+      "limits": "PDF, Office, images, archives, text; up to 50 MB per file",
+      "choose": "Choose file",
+      "remove": "Remove {{name}}",
+      "dismiss": "Dismiss",
+      "failed": "The file could not be uploaded."
+    },
+    "hidden": "Hidden",
+    "closed": "Closed",
+    "opensAt": "Opens {{time}}",
+    "closesAt": "Closes {{time}}",
+    "moveUp": "Move {{name}} up",
+    "moveDown": "Move {{name}} down",
+    "delete": "Delete",
+    "download": "Download",
+    "openLink": "Open link",
+    "files_one": "{{count}} file",
+    "files_other": "{{count}} files",
+    "topicEmpty": "No content in this section yet.",
+    "topicNotYet": "This section has not opened yet.",
+    "topicClosed": "This section is closed.",
+    "activityNotYet": "This activity opens on {{time}}.",
+    "activityClosed": "This activity is closed.",
+    "pageEmpty": "The page is empty.",
+    "folderEmpty": "The folder has no files.",
+    "edit": "Edit",
+    "actions": "Actions for {{name}}"
   },
   "richText": {
     "toolbar": "Formatting",

@@ -104,6 +104,7 @@
     "students": "Öğrenciler",
     "holds": "Kayıt engelleri",
     "transcript": "Transkript",
+    "mySpaces": "Derslerim",
     "grades": "Notlarım",
     "gradeChanges": "Not düzeltme",
     "gradeChangeReview": "Not düzeltme onayları"
@@ -1800,6 +1801,109 @@
     "publishDescription_other": "{{count}} öğrencinin harf notu kesinleşir ve öğrenciler görür; dönem sonuçları (YANO/GANO) güncellenir. İlandan sonra notlar sadece not düzeltme talebiyle değişir.",
     "publishMakeupDescription_one": "Bütünleme notu girilen {{count}} öğrencinin harfi yeniden hesaplanır; bütünlemeye girmeyenin notu değişmez. Bir kez yapılır.",
     "publishMakeupDescription_other": "Bütünleme notu girilen {{count}} öğrencinin harfi yeniden hesaplanır; bütünlemeye girmeyenin notu değişmez. Bir kez yapılır."
+  },
+  "lms": {
+    "mySpaces": {
+      "title": "Derslerim",
+      "description": "Dönemde aldığınız ya da verdiğiniz derslerin alanları: duyurular, içerikler, dosyalar.",
+      "empty": "Bu dönem için bir ders alanınız yok. Kaydınız onaylandığında dersleriniz burada görünür.",
+      "activities_one": "{{count}} etkinlik",
+      "activities_other": "{{count}} etkinlik"
+    },
+    "roles": {
+      "STUDENT": "Öğrenci",
+      "PRIMARY": "Sorumlu öğretim elemanı",
+      "CO_INSTRUCTOR": "Ortak öğretim elemanı",
+      "ASSISTANT": "Asistan",
+      "VIEWER": "Görüntüleyici"
+    },
+    "types": {
+      "RESOURCE": "Dosya",
+      "FOLDER": "Klasör",
+      "URL": "Bağlantı",
+      "PAGE": "Sayfa",
+      "LABEL": "Metin ve medya",
+      "ASSIGNMENT": "Ödev",
+      "FORUM": "Forum"
+    },
+    "space": {
+      "edit": "Düzenlemeyi aç",
+      "editing": "Düzenleme açık",
+      "info": "Ders bilgisi",
+      "noSummary": "Dersin tanıtımı henüz yazılmadı.",
+      "instructors": "Öğretim elemanları",
+      "email": "E-posta gönder: {{name}}",
+      "summaryTitle": "Ders bilgisini düzenle",
+      "summaryHint": "Öğrencilerin ders alanında ilk gördüğü tanıtım: dersin amacı, işleyişi, iletişim.",
+      "summary": "Ders bilgisi",
+      "empty": "Bu ders alanında henüz içerik yok.",
+      "emptyEditor": "Ders alanı boş. Düzenlemeyi açıp ilk bölümü ekleyin; ilk içerikle birlikte “Genel” bölümü de oluşur."
+    },
+    "topic": {
+      "add": "Bölüm ekle",
+      "addTitle": "Yeni bölüm",
+      "editTitle": "Bölümü düzenle",
+      "titleHint": "Örneğin “1. Hafta: Giriş” ya da “Ara sınava hazırlık”.",
+      "summary": "Bölüm özeti",
+      "added": "Bölüm eklendi.",
+      "saved": "Bölüm kaydedildi.",
+      "deleteTitle": "“{{title}}” silinsin mi?",
+      "deleteDescription": "Bölüm ve içindeki bütün etkinlikler silinir; yüklenen dosyalar da kaldırılır. Bu işlem geri alınamaz."
+    },
+    "activity": {
+      "add": "Etkinlik ya da kaynak ekle",
+      "addTitle": "Yeni {{type}}",
+      "editTitle": "{{type}} düzenle",
+      "added": "Etkinlik eklendi.",
+      "saved": "Etkinlik kaydedildi.",
+      "hide": "Öğrencilerden gizle",
+      "show": "Öğrencilere göster",
+      "deleteTitle": "“{{title}}” silinsin mi?",
+      "deleteDescription": "Etkinlik ve dosyaları silinir. Bu işlem geri alınamaz."
+    },
+    "form": {
+      "title": "Başlık",
+      "titleRequired": "Başlık girin.",
+      "filesRequired": "En az bir dosya yükleyin.",
+      "url": "Bağlantı adresi",
+      "newTab": "Yeni sekmede aç",
+      "page": "Sayfa içeriği",
+      "labelText": "Metin",
+      "description": "Açıklama",
+      "access": "Erişim",
+      "visible": "Öğrencilere görünür",
+      "from": "Açılış",
+      "until": "Kapanış"
+    },
+    "upload": {
+      "dropOne": "Dosyayı buraya bırakın ya da seçin",
+      "dropMany": "Dosyaları buraya bırakın ya da seçin",
+      "limits": "PDF, Office, görsel, arşiv, metin; dosya başına en çok 50 MB",
+      "choose": "Dosya seç",
+      "remove": "{{name}} dosyasını kaldır",
+      "dismiss": "Kapat",
+      "failed": "Dosya yüklenemedi."
+    },
+    "hidden": "Gizli",
+    "closed": "Kapandı",
+    "opensAt": "Açılış {{time}}",
+    "closesAt": "Kapanış {{time}}",
+    "moveUp": "{{name}} öğesini yukarı taşı",
+    "moveDown": "{{name}} öğesini aşağı taşı",
+    "delete": "Sil",
+    "download": "İndir",
+    "openLink": "Bağlantıyı aç",
+    "files_one": "{{count}} dosya",
+    "files_other": "{{count}} dosya",
+    "topicEmpty": "Bu bölümde henüz içerik yok.",
+    "topicNotYet": "Bu bölüm henüz açılmadı.",
+    "topicClosed": "Bu bölüm kapandı.",
+    "activityNotYet": "Bu etkinlik {{time}} tarihinde açılacak.",
+    "activityClosed": "Bu etkinlik kapandı.",
+    "pageEmpty": "Sayfa boş.",
+    "folderEmpty": "Klasörde dosya yok.",
+    "edit": "Düzenle",
+    "actions": "{{name}} için işlemler"
   },
   "richText": {
     "toolbar": "Biçimlendirme",
