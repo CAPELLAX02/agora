@@ -104,7 +104,9 @@
     "students": "Students",
     "holds": "Registration holds",
     "transcript": "Transcript",
-    "grades": "My grades"
+    "grades": "My grades",
+    "gradeChanges": "Grade corrections",
+    "gradeChangeReview": "Correction approvals"
   },
   "auth": {
     "restoring": "Signing you in…",
@@ -1545,5 +1547,65 @@
     "didNotSit": "Did not sit",
     "average": "Class avg. {{value}}",
     "scoreBar": "Score and class average"
+  },
+  "gradeChanges": {
+    "title": "Grade corrections",
+    "description": "Announced grades change only through an approved correction request.",
+    "empty": "You have no grade correction requests yet.",
+    "student": "Student",
+    "becomes": "becomes",
+    "kinds": {
+      "SCORE": "Component score",
+      "LETTER": "Letter grade"
+    },
+    "status": {
+      "PENDING": "Awaiting approval",
+      "APPLIED": "Applied",
+      "REJECTED": "Rejected",
+      "WITHDRAWN": "Withdrawn"
+    },
+    "requestedBy": "Requested: {{name}} · {{time}}",
+    "decidedBy": "Decided: {{name}} · {{time}}",
+    "withdraw": "Withdraw",
+    "withdrawTitle": "Withdraw the request",
+    "withdrawDescription": "The request will not go to approval; you can create it again if needed.",
+    "withdrawn": "Request withdrawn.",
+    "new": {
+      "open": "New request",
+      "title": "Grade correction request",
+      "description": "Correct a component score (the letter is recalculated) or change the letter. The request is applied once the head of department approves.",
+      "term": "Term",
+      "section": "Section",
+      "choose": "Choose",
+      "notPublished": "Grades of this section are not announced yet; change them in the gradebook.",
+      "kind": "Correction type",
+      "component": "Component",
+      "score": "Correct score",
+      "absent": "Did not sit the exam",
+      "letter": "New letter grade",
+      "preview": "Result",
+      "reason": "Reason",
+      "reasonHint": "E.g. addition error on the final paper; question 2 is 20 points, not 10.",
+      "incomplete": "Complete the correction.",
+      "reasonRequired": "Write a reason of at least 10 characters.",
+      "submit": "Request",
+      "sent": "Request sent for approval."
+    },
+    "review": {
+      "title": "Grade correction approvals",
+      "description": "Grade correction requests of sections in your scope. Approval applies the grade immediately.",
+      "pending_one": "Awaiting approval ({{count}})",
+      "pending_other": "Awaiting approval ({{count}})",
+      "empty": "No requests awaiting approval.",
+      "decided": "Recent decisions",
+      "approve": "Approve and apply",
+      "reject": "Reject",
+      "approveTitle": "Approve the correction",
+      "rejectTitle": "Reject the request",
+      "approveDescription": "The grade is corrected now; the student's term results and the class statistics are recalculated.",
+      "rejectDescription": "The instructor sees your reason.",
+      "approved": "Correction applied.",
+      "rejected": "Request rejected."
+    }
   }
 }

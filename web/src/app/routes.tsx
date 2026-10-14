@@ -173,6 +173,32 @@ export const routes: RouteObject[] = [
                     },
                   },
                   {
+                    path: 'not-duzeltme',
+                    lazy: async () => {
+                      const { GradeChangesPage } = await import('@/features/gradechanges/GradeChangesPage')
+                      return {
+                        element: (
+                          <RequirePermission permission="grade_change:request">
+                            <GradeChangesPage />
+                          </RequirePermission>
+                        ),
+                      }
+                    },
+                  },
+                  {
+                    path: 'not-duzeltme-onaylari',
+                    lazy: async () => {
+                      const { ReviewPage } = await import('@/features/gradechanges/ReviewPage')
+                      return {
+                        element: (
+                          <RequirePermission permission="grade_change:approve">
+                            <ReviewPage />
+                          </RequirePermission>
+                        ),
+                      }
+                    },
+                  },
+                  {
                     path: 'ders-acma',
                     lazy: async () => {
                       const { OfferingsPage } = await import('@/features/offering/OfferingsPage')

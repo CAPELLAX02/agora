@@ -104,7 +104,9 @@
     "students": "Öğrenciler",
     "holds": "Kayıt engelleri",
     "transcript": "Transkript",
-    "grades": "Notlarım"
+    "grades": "Notlarım",
+    "gradeChanges": "Not düzeltme",
+    "gradeChangeReview": "Not düzeltme onayları"
   },
   "auth": {
     "restoring": "Oturum açılıyor…",
@@ -1545,5 +1547,65 @@
     "didNotSit": "Girmedi",
     "average": "Sınıf ort. {{value}}",
     "scoreBar": "Puan ve sınıf ortalaması"
+  },
+  "gradeChanges": {
+    "title": "Not düzeltme",
+    "description": "İlan edilmiş notlar sadece onaylanan düzeltme talebiyle değişir.",
+    "empty": "Henüz not düzeltme talebiniz yok.",
+    "student": "Öğrenci",
+    "becomes": "olur",
+    "kinds": {
+      "SCORE": "Bileşen notu",
+      "LETTER": "Harf notu"
+    },
+    "status": {
+      "PENDING": "Onay bekliyor",
+      "APPLIED": "Uygulandı",
+      "REJECTED": "Reddedildi",
+      "WITHDRAWN": "Geri çekildi"
+    },
+    "requestedBy": "Talep: {{name}} · {{time}}",
+    "decidedBy": "Karar: {{name}} · {{time}}",
+    "withdraw": "Geri çek",
+    "withdrawTitle": "Talebi geri çek",
+    "withdrawDescription": "Talep onaya gitmeyecek; gerekirse yeniden oluşturabilirsiniz.",
+    "withdrawn": "Talep geri çekildi.",
+    "new": {
+      "open": "Yeni talep",
+      "title": "Not düzeltme talebi",
+      "description": "Bir bileşenin puanını düzeltin (harf yeniden hesaplanır) ya da harfi değiştirin. Talep bölüm başkanının onayıyla uygulanır.",
+      "term": "Dönem",
+      "section": "Şube",
+      "choose": "Seçin",
+      "notPublished": "Bu şubenin harf notları ilan edilmedi; notlar not tablosundan değişir.",
+      "kind": "Düzeltme türü",
+      "component": "Bileşen",
+      "score": "Doğru puan",
+      "absent": "Sınava girmedi",
+      "letter": "Yeni harf notu",
+      "preview": "Sonuç",
+      "reason": "Gerekçe",
+      "reasonHint": "Ör. final kâğıdında toplama hatası; 2. soru 10 değil 20 puan.",
+      "incomplete": "Düzeltmeyi tamamlayın.",
+      "reasonRequired": "En az 10 karakterlik bir gerekçe yazın.",
+      "submit": "Talep et",
+      "sent": "Talep onaya gönderildi."
+    },
+    "review": {
+      "title": "Not düzeltme onayları",
+      "description": "Kapsamınızdaki şubelerin not düzeltme talepleri. Onay notu hemen uygular.",
+      "pending_one": "Onay bekleyen ({{count}})",
+      "pending_other": "Onay bekleyen ({{count}})",
+      "empty": "Onay bekleyen talep yok.",
+      "decided": "Son kararlar",
+      "approve": "Onayla ve uygula",
+      "reject": "Reddet",
+      "approveTitle": "Düzeltmeyi onayla",
+      "rejectTitle": "Talebi reddet",
+      "approveDescription": "Not hemen düzelir; öğrencinin dönem sonuçları ve sınıf istatistiği yeniden hesaplanır.",
+      "rejectDescription": "Öğretim elemanı gerekçenizi görür.",
+      "approved": "Düzeltme uygulandı.",
+      "rejected": "Talep reddedildi."
+    }
   }
 }
