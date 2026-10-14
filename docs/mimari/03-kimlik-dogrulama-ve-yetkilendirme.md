@@ -235,7 +235,7 @@ helpdesk       ticket:create_own  ticket:handle
 Her hassas eylem, servis katmanında açıkça isimlendirilmiş bir **politika fonksiyonu** ile korunur. Örnekler (dil bağımsız sözde kod):
 
 ```text
-canEnterScore(actor, assessment, now):
+canEnterScore(actor, assessment, now):                          # uygulandı (Faz 4): elle giriş ve CSV içe aktarma
     has(actor, "score:enter")
     AND isInstructorOf(actor, assessment.section)                  # ilişki
     AND calendarWindowOpen(windowFor(assessment.category),          # bağlam: ara sınav / final / bütünleme
