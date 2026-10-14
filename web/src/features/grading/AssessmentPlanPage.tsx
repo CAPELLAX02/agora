@@ -1,7 +1,7 @@
-import { LockIcon, LockOpenIcon, PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react'
+import { LockIcon, LockOpenIcon, PencilIcon, PlusIcon, TableIcon, Trash2Icon } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useParams } from 'react-router'
+import { Link, useParams } from 'react-router'
 import { toast } from 'sonner'
 
 import { navTheme } from '@/features/shell/nav'
@@ -35,26 +35,9 @@ import { ErrorState } from '@/shared/ui/states'
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
 import { Textarea } from '@/shared/ui/textarea'
 
+import { componentColors } from './colors'
+
 type Row = { type: string; name: string; weight: string; date: string }
-
-const inTermColors = [
-  'bg-sky-500',
-  'bg-violet-500',
-  'bg-teal-500',
-  'bg-amber-500',
-  'bg-pink-500',
-  'bg-indigo-500',
-]
-
-/** componentColors, bileşenlerin rengidir: dönem içi bileşenler sırayla, final ve bütünleme gül rengi. */
-function componentColors(components: { id: string; type: { category: string } }[]) {
-  const colors = new Map(
-    components
-      .filter((c) => c.type.category === 'IN_TERM')
-      .map((c, i) => [c.id, inTermColors[i % inTermColors.length]!]),
-  )
-  return (c: { id: string }) => colors.get(c.id) ?? 'bg-rose-500'
-}
 
 /**
  * AssessmentPlanPage, bir şubenin değerlendirme planıdır. Şubenin öğretim elemanı (ya da
@@ -109,6 +92,14 @@ export function AssessmentPlanPage() {
               <Button variant="outline" onClick={() => setConfirm('unlock')}>
                 <LockOpenIcon />
                 {t('plan.unlock')}
+              </Button>
+            )}
+            {plan.locked_at && !editing && (
+              <Button variant="soft" asChild>
+                <Link to={`/subeler/${id}/notlar`}>
+                  <TableIcon />
+                  {t('teaching.gradebook')}
+                </Link>
               </Button>
             )}
           </div>
