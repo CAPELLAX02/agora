@@ -1,4 +1,5 @@
 import {
+  AwardIcon,
   ClipboardListIcon,
   DownloadIcon,
   FileSpreadsheetIcon,
@@ -221,6 +222,12 @@ export function GradebookPage() {
               <Link to={`/subeler/${id}/degerlendirme`}>
                 <ClipboardListIcon />
                 {t('teaching.plan')}
+              </Link>
+            </Button>
+            <Button variant="ghost" asChild>
+              <Link to={`/subeler/${id}/harf-notlari`}>
+                <AwardIcon />
+                {t('gradebook.letters')}
               </Link>
             </Button>
           </div>

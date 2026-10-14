@@ -251,6 +251,19 @@ export const routes: RouteObject[] = [
                     },
                   },
                   {
+                    path: 'subeler/:id/harf-notlari',
+                    lazy: async () => {
+                      const { LetterGradesPage } = await import('@/features/grading/LetterGradesPage')
+                      return {
+                        element: (
+                          <RequirePermission permission="course:read">
+                            <LetterGradesPage />
+                          </RequirePermission>
+                        ),
+                      }
+                    },
+                  },
+                  {
                     path: 'not-olcegi',
                     lazy: async () => {
                       const { GradeScalePage } = await import('@/features/grading/GradeScalePage')
