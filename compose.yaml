@@ -59,6 +59,26 @@ services:
       timeout: 3s
       retries: 10
 
+  # S3 uyumlu nesne deposu (dosyalar, Faz 5): http://localhost:8333. Kimlik bilgileri
+  # infra/seaweedfs/s3.json'da (geliştirme ortamı, gizli değil). MinIO'nun topluluk imajları
+  # yayımlanmadığı için SeaweedFS (yol haritası §5 #20).
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.48
+    restart: unless-stopped
+    command:
+      - server
+      - -dir=/data
+      - -s3
+      - -s3.port=8333
+      - -s3.config=/etc/seaweedfs/s3.json
+      - -master.volumeSizeLimitMB=256
+      - -volume.max=0
+    ports:
+      - "8333:8333"
+    volumes:
+      - ./infra/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
+      - seaweedfs-data:/data
+
   prometheus:
     image: prom/prometheus:v3.15.0
     restart: unless-stopped
@@ -98,6 +118,7 @@ services:
 
 volumes:
   postgres-data:
+  seaweedfs-data:
   redis-data:
   prometheus-data:
   grafana-data:

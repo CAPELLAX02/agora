@@ -1,0 +1,9 @@
+{
+  "identities": [
+    {
+      "name": "agora",
+      "credentials": [{ "accessKey": "agora", "secretKey": "agora_dev_password" }],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+    }
+  ]
+}

@@ -33,7 +33,7 @@ help: ## Komutları listeler
 
 # --- Altyapı -----------------------------------------------------------------
 
-up: ## Docker servislerini başlatır (PostgreSQL, Redis, Mailpit, Prometheus, Grafana)
+up: ## Docker servislerini başlatır (PostgreSQL, Redis, SeaweedFS, Mailpit, Prometheus, Grafana)
 	docker compose up -d
 
 down: ## Docker servislerini durdurur (veriler volume'larda korunur)
