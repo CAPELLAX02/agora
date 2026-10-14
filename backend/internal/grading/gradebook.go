@@ -379,32 +379,57 @@ type ScoreInput struct {
 	Absent       bool
 }
 
+// scoreSource, notun nereden geldiğidir (assessment_scores.source).
+type scoreSource string
+
+const (
+	sourceManual scoreSource = "MANUAL"
+	sourceCSV    scoreSource = "CSV"
+)
+
+// checkEntry, bileşene şu an not girilebildiğini doğrular: notun aşaması (ilandan önce
+// bütünleme dışındakiler, ilandan sonra bütünleme), kilitli plan ve açık not girişi penceresi.
+// Transaction dışında çağrılmalıdır.
+func (s *Service) checkEntry(ctx context.Context, ref ComponentRef) error {
+	makeup := ref.Category == CategoryMakeup
+	switch {
+	case makeup && ref.Section.GradesPublishedAt == nil:
+		return ErrMakeupNotAvailable
+	case makeup && ref.Section.MakeupPublishedAt != nil:
+		return ErrMakeupPublished
+	case !makeup && ref.Section.GradesPublishedAt != nil:
+		return ErrGradesPublished
+	}
+	if ref.Section.LockedAt == nil {
+		return ErrPlanNotLocked
+	}
+	w, err := s.window(ctx, ref.Section, ref.Category)
+	if err != nil {
+		return err
+	}
+	if !w.Open {
+		return ErrEntryWindowClosed
+	}
+	return nil
+}
+
 // SetScores, bileşenin notlarını yazar: sadece verilen öğrencilerin notu değişir. Plan
 // kilitli ve bileşenin not girişi penceresi açık olmalıdır; version bileşenin not sürümüdür
 // (iyimser kilit). Değişen not yoksa sürüm artmaz: aynı isteğin tekrarı zararsızdır.
 // Değişen not sayısını döndürür.
 func (s *Service) SetScores(ctx context.Context, actorID string, ref ComponentRef, version int, items []ScoreInput) (int, error) {
-	makeup := ref.Category == CategoryMakeup
-	switch {
-	case makeup && ref.Section.GradesPublishedAt == nil:
-		return 0, ErrMakeupNotAvailable
-	case makeup && ref.Section.MakeupPublishedAt != nil:
-		return 0, ErrMakeupPublished
-	case !makeup && ref.Section.GradesPublishedAt != nil:
-		return 0, ErrGradesPublished
-	}
-	if ref.Section.LockedAt == nil {
-		return 0, ErrPlanNotLocked
-	}
-	w, err := s.window(ctx, ref.Section, ref.Category)
-	if err != nil {
+	return s.writeScores(ctx, actorID, ref, version, items, sourceManual)
+}
+
+func (s *Service) writeScores(ctx context.Context, actorID string, ref ComponentRef, version int, items []ScoreInput, source scoreSource) (int, error) {
+	if err := s.checkEntry(ctx, ref); err != nil {
 		return 0, err
 	}
-	if !w.Open {
-		return 0, ErrEntryWindowClosed
-	}
-
-	var allowed []string
+	makeup := ref.Category == CategoryMakeup
+	var (
+		allowed []string
+		err     error
+	)
 	if makeup {
 		if allowed, err = loadMakeupLetters(ctx, s.pool, s.now()); err != nil {
 			return 0, err
@@ -487,12 +512,12 @@ func (s *Service) SetScores(ctx context.Context, actorID string, ref ComponentRe
 				status, score = "ABSENT", nil
 			}
 			if _, err := tx.Exec(ctx, `
-				INSERT INTO grading.assessment_scores (component_id, enrollment_id, status, score, entered_by)
-				VALUES ($1, $2, $3, $4::numeric, $5)
+				INSERT INTO grading.assessment_scores (component_id, enrollment_id, status, score, entered_by, source)
+				VALUES ($1, $2, $3, $4::numeric, $5, $6)
 				ON CONFLICT (component_id, enrollment_id) DO UPDATE
-				SET status = excluded.status, score = excluded.score, source = 'MANUAL',
+				SET status = excluded.status, score = excluded.score, source = excluded.source,
 				    entered_by = excluded.entered_by, entered_at = now()`,
-				ref.ID, it.EnrollmentID, status, score, nullable(actorID)); err != nil {
+				ref.ID, it.EnrollmentID, status, score, nullable(actorID), string(source)); err != nil {
 				return fmt.Errorf("grading: not yazılamadı: %w", err)
 			}
 		}
@@ -502,8 +527,12 @@ func (s *Service) SetScores(ctx context.Context, actorID string, ref ComponentRe
 		if _, err := tx.Exec(ctx, `UPDATE grading.assessment_components SET scores_version = scores_version + 1 WHERE id = $1`, ref.ID); err != nil {
 			return fmt.Errorf("grading: not sürümü artırılamadı: %w", err)
 		}
+		action := "assessment_scores.set"
+		if source == sourceCSV {
+			action = "assessment_scores.import"
+		}
 		return audit.Record(ctx, tx, audit.Entry{
-			ActorUserID: actorID, Action: "assessment_scores.set", EntityType: "assessment_component", EntityID: ref.ID,
+			ActorUserID: actorID, Action: action, EntityType: "assessment_component", EntityID: ref.ID,
 			Before: map[string]any{"scores": before}, After: map[string]any{"scores": after},
 		})
 	})
