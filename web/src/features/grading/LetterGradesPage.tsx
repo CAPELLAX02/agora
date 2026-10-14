@@ -67,7 +67,7 @@ export function LetterGradesPage() {
   const { id = '' } = useParams()
   const localized = useLocalized()
   const message = useErrorMessage()
-  const { data, error, refetch } = useGetLetterGradesQuery({ id })
+  const { data, error, refetch } = useGetLetterGradesQuery({ id }, { refetchOnMountOrArgChange: true })
   const book = useGetGradebookQuery({ id })
   const [publish] = usePublishLetterGradesMutation()
   const [publishMakeup] = usePublishMakeupMutation()

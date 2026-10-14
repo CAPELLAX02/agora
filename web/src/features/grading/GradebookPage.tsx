@@ -65,7 +65,8 @@ export function GradebookPage() {
   const localized = useLocalized()
   const message = useErrorMessage()
   const dispatch = useAppDispatch()
-  const { data: book, error, refetch } = useGetGradebookQuery({ id })
+  // Veri girişi ekranı: her açılışta güncel tablo (ortak öğretim elemanının girdikleri, pencereler).
+  const { data: book, error, refetch } = useGetGradebookQuery({ id }, { refetchOnMountOrArgChange: true })
   const [drafts, setDrafts] = useState(new Map<string, string>())
   const [saving, setSaving] = useState(false)
   const [importing, setImporting] = useState(false)
@@ -411,7 +412,7 @@ function pendingDrafts(book: Gradebook, drafts: Map<string, string>): Pending[] 
     for (const c of book.components) {
       const key = cellKey(st.enrollment_id, c.id)
       const text = drafts.get(key)
-      if (text === undefined || !c.editable) {
+      if (text === undefined || !c.editable || (c.type.category === 'MAKEUP' && !st.makeup_eligible)) {
         continue
       }
       const value = parseCell(text)

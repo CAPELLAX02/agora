@@ -11,6 +11,7 @@ import { errorCode, type AnyError } from '@/shared/api/errors'
 import {
   agoraApi,
   useDisableMfaMutation,
+  addTagTypes,
   useEnableMfaMutation,
   useGetMeQuery,
   useGetMyMfaQuery,
@@ -41,8 +42,9 @@ import { ErrorState } from '@/shared/ui/states'
 
 /**
  * useSessionUpgrade, MFA açılıp kapanınca oturumun access token'ını yeniler: sunucu
- * oturumun doğrulama yöntemlerini (AMR) değiştirdi, yeni token onu taşır. Ardından
- * hesap bilgileri ve yetkiler yeni token'la yeniden okunur.
+ * oturumun doğrulama yöntemlerini (AMR) değiştirdi, yeni token onu taşır. Ardından bütün
+ * veriler yeni token'la yeniden okunur: yetkiler ve hesap bilgisinin yanında yanıtlardaki
+ * oturuma bağlı alanlar da değişir (not tablosunda not girebilme, ilan ve onay düğmeleri).
  */
 function useSessionUpgrade() {
   const dispatch = useAppDispatch()
@@ -51,7 +53,7 @@ function useSessionUpgrade() {
     // Mutasyonun kendi geçersiz kılmasıyla başlamış istekler eski token'la gidiyor:
     // onlar bitmeden geçersiz kılınırsa RTK Query devam edenleri yeniden çekmez.
     await Promise.all(dispatch(agoraApi.util.getRunningQueriesThunk()))
-    dispatch(agoraApi.util.invalidateTags(['Hesap']))
+    dispatch(agoraApi.util.invalidateTags([...addTagTypes]))
   }
 }
 
