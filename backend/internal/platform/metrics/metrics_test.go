@@ -51,3 +51,27 @@ func TestNewRegistryIncludesRuntimeMetrics(t *testing.T) {
 		}
 	}
 }
+
+func TestGrading(t *testing.T) {
+	reg := prometheus.NewRegistry()
+	m := NewGrading(reg)
+
+	// Bilinen etiketler olaydan önce sıfırla görünür.
+	if n := testutil.CollectAndCount(m.changes); n != 4 {
+		t.Errorf("düzeltme serileri = %d, want 4", n)
+	}
+	m.ScoresEntered("csv", 25)
+	m.ScoresEntered("manual", 3)
+	m.ScoresEntered("csv", 5)
+	m.GradesPublished("final", 40)
+	m.GradeChange("applied")
+	if got := testutil.ToFloat64(m.scores.WithLabelValues("csv")); got != 30 {
+		t.Errorf("csv notları = %v, want 30", got)
+	}
+	if got := testutil.ToFloat64(m.published.WithLabelValues("makeup")); got != 0 {
+		t.Errorf("bütünleme = %v, want 0", got)
+	}
+	if got := testutil.ToFloat64(m.changes.WithLabelValues("applied")); got != 1 {
+		t.Errorf("uygulanan düzeltme = %v, want 1", got)
+	}
+}
