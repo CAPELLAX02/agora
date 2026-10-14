@@ -57,7 +57,7 @@ type seedUser struct {
 }
 
 // Kurgusal kişiler. Gerçek kişilerle ilgisi yoktur.
-var users = []seedUser{
+var users = append([]seedUser{
 	{
 		username: "22290001", firstName: "Deniz", lastName: "Aksoy",
 		email: "deniz.aksoy@ogrenci.agora.test", student: true,
@@ -106,6 +106,15 @@ var users = []seedUser{
 	instructor("P10007", "Zehra", "Kurt", "zehra.kurt", "RESEARCH_ASSISTANT", "BIL"),
 	instructor("P10010", "Ahmet", "Güneş", "ahmet.gunes", "ASSOC_PROF", "MAT"),
 	instructor("P10011", "Gizem", "Erdoğan", "gizem.erdogan", "ASSIST_PROF", "FIZ"),
+	// 1. sınıf demo grubunun danışmanı (bkz. grades.go).
+	{
+		username: "P10008", firstName: "Cem", lastName: "Aksu",
+		email: "cem.aksu@agora.test", staffType: people.StaffAcademic, title: "ASSIST_PROF", deptCode: "BIL",
+		roles: []role{
+			{code: "INSTRUCTOR", scope: iam.ScopeDepartment, scopeCode: "BIL"},
+			{code: "ADVISOR", scope: iam.ScopeDepartment, scopeCode: "BIL"},
+		},
+	},
 	{
 		username: "P20001", firstName: "Fatma", lastName: "Çelik",
 		email: "fatma.celik@agora.test", staffType: people.StaffAdministrative,
@@ -121,7 +130,7 @@ var users = []seedUser{
 		email: "admin@agora.test", staffType: people.StaffAdministrative,
 		roles: []role{{code: "SYSTEM_ADMIN", scope: iam.ScopeUniversity}},
 	},
-}
+}, cohortUsers()...)
 
 // student, bir demo öğrencisidir. E-posta adresi ad ve soyaddan türetilir.
 func student(no, first, last string) seedUser {
@@ -252,6 +261,9 @@ func run() error {
 	}
 	if err := seedRegistrations(ctx, pool); err != nil {
 		return fmt.Errorf("ders seçme: %w", err)
+	}
+	if err := seedDemoScores(ctx, pool, *seed); err != nil {
+		return fmt.Errorf("not girişi demosu: %w", err)
 	}
 
 	fmt.Printf("\nTüm seed kullanıcılarının parolası: %s\n", plain)

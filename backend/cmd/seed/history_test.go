@@ -48,6 +48,9 @@ func TestHistory(t *testing.T) {
 		if err := seedRegistrations(ctx, pool); err != nil {
 			t.Fatal(err)
 		}
+		if err := seedDemoScores(ctx, pool, 20261008); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	letters := func(no, course string) []string {
@@ -174,6 +177,11 @@ func TestHistory(t *testing.T) {
 	if n := count(t, pool, `SELECT count(*) FROM academic.calendar_events WHERE scope_type = 'PROGRAM' AND note LIKE 'Geliştirme ortamı demo%'`); n != 5 {
 		t.Errorf("%d demo penceresi, 5 olmalı", n)
 	}
+	if n := count(t, pool, `
+		SELECT count(*) FROM academic.calendar_events WHERE scope_type = 'FACULTY' AND note LIKE 'Geliştirme ortamı demo%'
+		  AND event_type_code LIKE '%GRADE%' AND period @> now()`); n != 4 {
+		t.Errorf("%d açık not girişi demo penceresi, 4 olmalı", n)
+	}
 	for no, want := range map[string]string{
 		"23290013": "SUBMITTED", "25290016": "SUBMITTED", "26290017": "SUBMITTED", "23290015": "APPROVED", "24290012": "DRAFT",
 	} {
@@ -216,5 +224,53 @@ func TestHistory(t *testing.T) {
 		WHERE t.is_current AND s.enrolled_count <> (SELECT count(*) FROM enrollment.registration_items i
 		                                            WHERE i.section_id = s.id AND i.status = 'ACTIVE')`); n != 0 {
 		t.Errorf("%d şubenin mevcudu sepetlerle tutmuyor", n)
+	}
+	// Not girişi demosu: 1. sınıf grubu danışmanının onayıyla demo sınıfında; ara sınav notları
+	// girilmiş ve yayımlanmış (biri girmedi), laboratuvarda iki not eksik, final girilmemiş.
+	if n := count(t, pool, `
+		SELECT count(*) FROM enrollment.enrollments e
+		JOIN offering.sections s ON s.id = e.section_id JOIN offering.course_offerings o ON o.id = s.offering_id
+		JOIN curriculum.courses c ON c.id = o.course_id
+		JOIN enrollment.student_programs sp ON sp.id = e.student_program_id JOIN people.students st ON st.id = sp.student_id
+		WHERE c.code = 'COM1007' AND s.section_code = '1' AND st.student_no LIKE '262901%' AND e.status = 'ENROLLED'`); n != len(cohort) {
+		t.Errorf("demo sınıfında %d grup öğrencisi, %d olmalı", n, len(cohort))
+	}
+	type componentState struct {
+		scored, absent int
+		published      bool
+	}
+	got := map[string]componentState{}
+	rows, err := pool.Query(ctx, `
+		SELECT ac.type_code, count(sc.id) FILTER (WHERE sc.status = 'SCORED'), count(sc.id) FILTER (WHERE sc.status = 'ABSENT'),
+		       ac.published_at IS NOT NULL
+		FROM grading.assessment_components ac
+		JOIN offering.sections s ON s.id = ac.section_id JOIN offering.course_offerings o ON o.id = s.offering_id
+		JOIN curriculum.courses c ON c.id = o.course_id
+		LEFT JOIN grading.assessment_scores sc ON sc.component_id = ac.id
+		WHERE c.code = 'COM1007' AND s.section_code = '1'
+		GROUP BY ac.id`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for rows.Next() {
+		var code string
+		var st componentState
+		if err := rows.Scan(&code, &st.scored, &st.absent, &st.published); err != nil {
+			t.Fatal(err)
+		}
+		got[code] = st
+	}
+	students := len(cohort)
+	for code, want := range map[string]componentState{
+		"MIDTERM": {students - 1, 1, true}, "LAB": {students - 2, 0, false}, "FINAL": {}, "MAKEUP": {},
+	} {
+		if got[code] != want {
+			t.Errorf("%s: %+v, beklenen %+v", code, got[code], want)
+		}
+	}
+	if n := count(t, pool, `
+		SELECT count(*) FROM enrollment.advisor_assignments aa JOIN people.staff st ON st.id = aa.advisor_staff_id
+		WHERE st.staff_no = 'P10001' AND aa.valid_until IS NULL`); n != 10 {
+		t.Errorf("P10001'in %d danışmanlığı var, 10 olmalı (grup başka danışmanda)", n)
 	}
 }

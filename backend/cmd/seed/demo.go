@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -29,10 +30,11 @@ type demoStudent struct {
 	letters    map[string][]string
 	hold       enrollment.HoldType // ders seçmeyi kapatan engel
 	holdReason string
+	advisor    string // danışmanın personel numarası; boşsa P10001
 }
 
 // Demo öğrencileri. 2022 girişliler hazırlık okumuştur (2026 güzünde 7. yarıyıl).
-var demoStudents = []demoStudent{
+var demoStudents = append([]demoStudent{
 	{no: "22290001", admission: 2022, semester: 7, classLevel: 4, ability: 1.4, clean: true},
 	// Alttan ders ve eşdeğerlik: Fizik I'den iki kez kaldı (artık yeni kodu PHY0105 açılıyor),
 	// İşletim Sistemleri'nden kaldı ama derse devam etti (çakışma uyarı olur).
@@ -52,7 +54,7 @@ var demoStudents = []demoStudent{
 	{no: "23290015", admission: 2023, semester: 7, classLevel: 4, ability: 0.6},
 	{no: "25290016", admission: 2025, semester: 3, classLevel: 2, ability: 0.3, clean: true},
 	{no: "26290017", admission: 2026, semester: 1, classLevel: 1},
-}
+}, cohortStudents()...)
 
 func demoByNo(no string) (demoStudent, bool) {
 	for _, d := range demoStudents {
@@ -63,21 +65,31 @@ func demoByNo(no string) (demoStudent, bool) {
 	return demoStudent{}, false
 }
 
-// enrollDemoStudents, demo öğrencilerini Bilgisayar Mühendisliği programına kaydeder, P10001'i
-// (bölüm danışmanı) danışmanları yapar ve engellerini koyar. Kayıtlı öğrencinin yarıyılı ve
-// sınıfı demo tanımına çekilir; tekrar çalıştırılabilir.
+// enrollDemoStudents, demo öğrencilerini Bilgisayar Mühendisliği programına kaydeder,
+// danışmanlarını (varsayılan P10001, bölüm danışmanı) atar ve engellerini koyar. Kayıtlı
+// öğrencinin yarıyılı ve sınıfı demo tanımına çekilir; tekrar çalıştırılabilir.
 func enrollDemoStudents(ctx context.Context, pool *pgxpool.Pool) error {
 	svc := enrollment.NewService(pool)
 
-	var programID, advisorStaffID string
+	var programID string
 	if err := pool.QueryRow(ctx, `SELECT id FROM org.programs WHERE code = 'BIL-EN-NO'`).Scan(&programID); err != nil {
 		return fmt.Errorf("BIL-EN-NO programı bulunamadı (önce SQL seed'leri yükleyin): %w", err)
 	}
-	if err := pool.QueryRow(ctx, `SELECT id FROM people.staff WHERE staff_no = 'P10001'`).Scan(&advisorStaffID); err != nil {
-		return fmt.Errorf("P10001 bulunamadı: %w", err)
+	advisors := map[string]string{} // personel no → personel kimliği
+	for _, d := range demoStudents {
+		no := cmp.Or(d.advisor, "P10001")
+		if _, ok := advisors[no]; ok {
+			continue
+		}
+		var id string
+		if err := pool.QueryRow(ctx, `SELECT id FROM people.staff WHERE staff_no = $1`, no).Scan(&id); err != nil {
+			return fmt.Errorf("%s bulunamadı: %w", no, err)
+		}
+		advisors[no] = id
 	}
 
 	for _, d := range demoStudents {
+		advisor := cmp.Or(d.advisor, "P10001")
 		var studentID string
 		if err := pool.QueryRow(ctx, `SELECT id FROM people.students WHERE student_no = $1`, d.no).Scan(&studentID); err != nil {
 			return fmt.Errorf("%s bulunamadı: %w", d.no, err)
@@ -108,10 +120,10 @@ func enrollDemoStudents(ctx context.Context, pool *pgxpool.Pool) error {
 		case err != nil:
 			return fmt.Errorf("%s programa kaydedilemedi: %w", d.no, err)
 		default:
-			if err := svc.AssignAdvisor(ctx, "", spID, advisorStaffID, "Demo danışmanı"); err != nil {
+			if err := svc.AssignAdvisor(ctx, "", spID, advisors[advisor], "Demo danışmanı"); err != nil {
 				return fmt.Errorf("%s danışman atanamadı: %w", d.no, err)
 			}
-			fmt.Printf("KAYDEDİLDİ %-9s BIL-EN-NO, %d. yarıyıl, danışman P10001\n", d.no, d.semester)
+			fmt.Printf("KAYDEDİLDİ %-9s BIL-EN-NO, %d. yarıyıl, danışman %s\n", d.no, d.semester, advisor)
 		}
 
 		if d.hold != "" {
