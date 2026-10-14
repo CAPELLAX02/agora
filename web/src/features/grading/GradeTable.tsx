@@ -165,7 +165,8 @@ export function GradeTable({
                   const key = cellKey(st.enrollment_id, c.id)
                   const draft = drafts.get(key)
                   const label = `${name} · ${en ? c.label_en : c.label_tr}`
-                  if (!editable(c)) {
+                  // Bütünleme notu sadece hakkı olan öğrenciye girilir.
+                  if (!editable(c) || (c.type.category === 'MAKEUP' && !st.makeup_eligible)) {
                     return (
                       <td key={c.id} className="px-2 py-2 text-center tabular-nums">
                         {saved?.absent ? (
