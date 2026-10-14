@@ -148,6 +148,8 @@ flowchart LR
 | 16 | Bütünleme hakkı (2026-10-11) | Hangi harf notlarının bütünleme hakkı verdiği yönetmelik parametresidir (`makeup_eligible_letters`, varsayılan `["F2", "BŞZ"]`: harf notlu derste F2, başarılı/başarısız notlu derste BŞZ); devamsız öğrenci (F1 ya da devamsızlıktan BŞZ) bütünlemeye giremez. Bütünleme notu, puan olarak girilmişse final notunun yerine geçer; bütünlemeye girmeyenin notu değişmez. Bütünleme sonuçları bir kez ilan edilir, önceki harf not geçmişinde kalır |
 | 17 | Transkript belgesi (2026-10-11) | Faz 4'te ekran ve yazdırılabilir görünüm. İmzalı PDF, doğrulama kodu ve belge talebi Faz 7'nin belge altyapısıyla |
 | 18 | Toplu içe aktarmada Excel şablonları (2026-10-14) | Her toplu içe aktarma senaryosu (ilk örnek bileşen notları) sunucunun ürettiği profesyonel bir Excel şablonuyla gelir ve aynı dosya geri yüklenir; CSV de kabul edilir. Ortak katman `internal/platform/sheet` (excelize): marka renkli başlık, başlık bloğu, düzenlenecek hücreler sarı ve kilitsiz, diğerleri gri ve kilitli (parolasız sayfa koruması), Excel'de hücre doğrulaması, açıklama sayfası, yazdırma ayarları ve çok gizli kimlik sayfası (dosyanın kaydı ve sütunların anlamı: başka kaydın şablonu reddedilir, başlık değişse de sütun bulunur). Okuma hoşgörülü ve tek yoldan: satır numaraları dosyadaki, başlık satırı aranır, önce satır satır önizleme, sonra tek transaction |
+| 19 | Ders alanı = şube, üyelik türetilir (2026-10-14) | e-Kampüs'te her ders bir OBS şubesine 1:1 karşılık gelir ve onaylanan dersler "belirli aralıklarla" aktarılır. Agora'da ders alanının anahtarı şubedir (`lms.course_spaces.section_id` PK, ilk içerikle oluşur); üyelik kopyalanmaz, sorgu anında türetilir: öğrenci = şubede bırakmamış kesin kaydı olan, öğretim elemanı = şubeye atanmış (sorumlu, ortak, asistan). Kayıt onaylandığı transaction'da öğrenci derse erişir; senkronizasyon, gecikme ve kopukluk yoktur ("tek kaynak"). Gözlemci gibi elle üyelikler P2 |
+| 20 | Dosya depolama (2026-10-14) | Dosyalar MinIO'da (S3), üst verisi `platform.files`'ta. Yükleme API'den akışla geçer (bellekte tutulmaz): boyut sınırı, içerikten tür tespiti ve uzantı izin listesi, yüklerken SHA-256. İndirmede yetki dosyanın sahibi olan varlık üzerinden denetlenir, ardından kısa ömürlü (5 dk) imzalı URL verilir: büyük dosyalar API'den ve tarayıcı belleğinden geçmez. Bir varlığa bağlanmayan dosyalar worker'da temizlenir |
 
 ## 6. İlerleme ve "Bitti" Kontrol Listesi
 
@@ -327,6 +329,42 @@ flowchart LR
 | ✅ | Playwright e2e: öğretim elemanı MFA kurup not girer ve yayımlar → harf notlarını ilan eder → öğrenci notunu, sınıf ortalamasını ve transkriptini görür; bütünleme; not düzeltme talebi ve onayı; sanal transkript — `grading.spec` seed'in demo sınıfında (COM1007-1, 20 öğrenci): MFA'sız tablo salt okunur, MFA kurulunca finaller ve eksik laboratuvar notları girilir, bileşen yayımlanır, harf notları ilan edilir (final barajı altı → bütünleme hakkı); öğrenci ana sayfada, "Notlarım"da ve transkriptte görür (YANO worker'da hesaplanır); bütünleme notu sadece hakkı olana, bütünleme ilanıyla harf değişir; not düzeltme talebi bölüm başkanının MFA'lı onayıyla uygulanır. Hesaplara MFA kurduğu için ayrı Playwright projesinde diğer senaryolardan sonra çalışır. Sanal transkript `transcript.spec`'te |
 | ✅ | Sözleşme ve dokümanlar güncel (veri modeli, harf notu ve GANO kuralları, yetkilendirme politikaları, README'de demo rehberi), CI yeşil (backend, web kontrolü ve Playwright) |
 
-### Faz 5 ve sonrası
+### Faz 5 — LMS Çekirdeği
+
+**Backend**
+
+| Durum | Madde | Not |
+| --- | --- | --- |
+| ⬜ | Dosya depolama | MinIO (compose ve CI'da testcontainers), `platform.files`, akışla yükleme (`multipart` okuyucu, boyut sınırı, içerikten tür tespiti, uzantı izin listesi, SHA-256), yetkili kısa ömürlü imzalı indirme URL'si, sahipsiz dosya temizliği, metrikler (§5 #20) |
+| ⬜ | Ders alanı ve üyelik | Şube = ders alanı, üyelik kesin kayıt ve öğretim elemanı atamasından türetilir (§5 #19). `GET /me/spaces` (dönem seçimli), `GET /spaces/{id}`: ders bilgisi, öğretim elemanları, rolüm. Görme: üye ya da kapsamdaki birim; düzenleme: şubenin öğretim elemanları |
+| ⬜ | Bölümler ve etkinlikler | Bölümler (hafta/konu: sıra, görünürlük, erişim zamanları), etkinlikler (ortak tablo + türe özgü tablolar): dosya, klasör, bağlantı, sayfa, etiket. HTML temizleme (izin listesi), sıralama, yumuşak silme, denetim izi |
+| ⬜ | Ödev | Açılış, son tarih, kesin kapanış; deneme hakkı; teslim türleri (dosya, çevrimiçi metin), dosya sayısı, boyut ve tür sınırları; geç teslim politikası. Taslak ve gönderme, durum (deneme, kalan süre, geç); puanlama, geri bildirim ve yayımlama; gönderim yorumları |
+| ⬜ | Not öğesi ↔ değerlendirme bileşeni köprüsü | Not öğeleri (ödevden ya da elle), bileşene ağırlıkla bağlama; bağlı öğelerin puanları bileşen notunu üretir (`source = LMS`); not tablosunda "LMS'ten" işareti, LMS'in beslediği bileşene elle giriş kapalı; harf notu ilanından sonra donar |
+| ⬜ | Forum | Her alanda Duyurular forumu (konuyu öğretim elemanı açar) ve genel forum; konu ve yanıtlar (temiz HTML), sabitleme ve kilitleme. Abonelik bildirimleri Faz 6'da |
+| ⬜ | Zaman çizelgesi | Kullanıcının alanlarındaki yaklaşan ve geciken teslimler (`GET /me/timeline`) |
+| ⬜ | Etkinlik tamamlama ve ilerleme | Görüntüleme, teslim ya da elle tamamlama; alan başına ilerleme yüzdesi |
+| ⬜ | İş metrikleri | Yüklenen dosyalar ve baytlar, teslimler (geç dahil), forum gönderileri; Grafana satırı |
+| ⬜ | Seed: ders alanı demosu | COM1007-1 için haftalık bölümler, dosyalar, sayfa, bağlantı, ödev ve teslimler, forum; ödev ara sınav bileşenine bağlı değil, laboratuvara bağlı |
+
+**Web**
+
+| Durum | Madde |
+| --- | --- |
+| ⬜ | Derslerim (öğrenci ve öğretim elemanı): ders kartları, ilerleme, dönem seçici |
+| ⬜ | Ders alanı: bölümler ve etkinlikler, ders bilgisi ve öğretim elemanları, düzenleme modu (ekle, sırala, gizle, erişim zamanı) |
+| ⬜ | Etkinlikler: dosya (önizleme, indirme), klasör, sayfa (zengin metin), bağlantı |
+| ⬜ | Ödev: öğrenci teslimi (sürükle-bırak yükleme, ilerleme, taslak ve gönder, durum tablosu); öğretim elemanı teslim listesi, puanlama ve geri bildirim, yayımlama, Excel ile toplu puan (§5 #18) |
+| ⬜ | Forum ekranları |
+| ⬜ | Not defteri: ödevi bileşene bağlama, not tablosunda LMS işareti |
+| ⬜ | Ana sayfa: zaman çizelgesi (yaklaşan teslimler) |
+
+**Kapanış**
+
+| Durum | Madde |
+| --- | --- |
+| ⬜ | Playwright e2e: kayıt onaylanınca öğrenci ders alanını görür; öğretim elemanı bölüm, dosya ve ödev ekler; öğrenci dosya yükleyip teslim eder; öğretim elemanı puanlar, puan bileşene akar; forum |
+| ⬜ | Sözleşme ve dokümanlar güncel (veri modeli, yetkilendirme politikaları, README'de demo rehberi), CI yeşil |
+
+### Faz 6 ve sonrası
 
 Her faz başlarken §2'deki kapsamdan aynı biçimde ayrıntılı bir liste çıkarılır.
