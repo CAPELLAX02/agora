@@ -226,12 +226,12 @@
     },
     "upcoming": {
       "title": "Akademik modüller",
-      "description": "Not ve transkript, devamsızlık ve öğrenme ortamı modülleri sırayla burada yer alacak.",
+      "description": "Öğrenme ortamı, duyurular ve bildirimler, yoklama ve belgeler modülleri sırayla burada yer alacak.",
       "modules": {
-        "grades": "Notlar",
-        "transcript": "Transkript",
-        "attendance": "Devamsızlık",
-        "lms": "Öğrenme ortamı"
+        "lms": "Öğrenme ortamı",
+        "announcements": "Duyurular",
+        "attendance": "Yoklama",
+        "documents": "Belgeler"
       }
     },
     "windows": {
@@ -266,6 +266,24 @@
       "ects": "AKTS",
       "classLevel": "{{level}}. sınıf",
       "prep": "Hazırlık"
+    },
+    "grades": {
+      "title": "Son notlarım",
+      "description": "Bu dönem ilan edilen notlar",
+      "empty": "Bu dönem henüz ilan edilmiş notunuz yok.",
+      "letter": "Harf notu",
+      "classAverage": "sınıf ort. {{value}}",
+      "all": "Bütün notlarım"
+    },
+    "teaching": {
+      "title": "Not girişi",
+      "description": "Penceresi açık bileşenlerde eksik notlar",
+      "none": "Bu dönem verdiğiniz bir şube yok.",
+      "upToDate": "Bekleyen not girişi yok",
+      "mfa": "MFA gerekli",
+      "pending_one": "{{component}}: {{count}} eksik (bitiş {{time}})",
+      "pending_other": "{{component}}: {{count}} eksik (bitiş {{time}})",
+      "planNotLocked": "Değerlendirme planı kilitlenmedi: not girişi için önce planı kilitleyin"
     }
   },
   "profile": {

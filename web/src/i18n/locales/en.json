@@ -226,12 +226,12 @@
     },
     "upcoming": {
       "title": "Academic modules",
-      "description": "Grades and transcripts, attendance and the learning environment will appear here in turn.",
+      "description": "Learning environment, announcements and notifications, attendance and documents will appear here in turn.",
       "modules": {
-        "grades": "Grades",
-        "transcript": "Transcript",
+        "lms": "Learning environment",
+        "announcements": "Announcements",
         "attendance": "Attendance",
-        "lms": "Learning"
+        "documents": "Documents"
       }
     },
     "windows": {
@@ -266,6 +266,24 @@
       "ects": "ECTS",
       "classLevel": "Year {{level}}",
       "prep": "Preparatory"
+    },
+    "grades": {
+      "title": "My latest grades",
+      "description": "Grades published this term",
+      "empty": "No grades have been published for you this term yet.",
+      "letter": "Letter grade",
+      "classAverage": "class avg. {{value}}",
+      "all": "All my grades"
+    },
+    "teaching": {
+      "title": "Grade entry",
+      "description": "Missing scores in components open for entry",
+      "none": "You are not teaching any section this term.",
+      "upToDate": "No pending grade entry",
+      "mfa": "MFA required",
+      "pending_one": "{{component}}: {{count}} missing (until {{time}})",
+      "pending_other": "{{component}}: {{count}} missing (until {{time}})",
+      "planNotLocked": "Assessment plan not locked: lock it before entering scores"
     }
   },
   "profile": {

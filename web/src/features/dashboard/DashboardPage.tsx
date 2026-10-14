@@ -1,9 +1,9 @@
 import {
   ArrowRightIcon,
-  BookOpenCheckIcon,
   CalendarCheck2Icon,
-  FileTextIcon,
+  FileBadgeIcon,
   GraduationCapIcon,
+  MegaphoneIcon,
   MonitorPlayIcon,
   ShieldCheckIcon,
   ShieldOffIcon,
@@ -25,13 +25,15 @@ import { ErrorState } from '@/shared/ui/states'
 
 import { AdvisingCard } from './AdvisingCard'
 import { DashCard } from './DashCard'
+import { GradesCard } from './GradesCard'
 import { RegistrationCard } from './RegistrationCard'
+import { TeachingCard } from './TeachingCard'
 import { WindowsCard } from './WindowsCard'
 
 /**
  * DashboardPage, oturum açan kullanıcının ana sayfasıdır: karşılama bandı (roller, öğrenci
- * için GANO ve yarıyıl), hızlı erişim kutuları, ders kaydı, danışmanlık, işlem pencereleri
- * ve hesap güvenliği.
+ * için GANO ve yarıyıl), hızlı erişim kutuları, öğrencinin son notları, öğretim elemanının
+ * not girişi bekleyen şubeleri, ders kaydı, danışmanlık, işlem pencereleri ve hesap güvenliği.
  */
 export function DashboardPage() {
   const { t } = useTranslation()
@@ -94,6 +96,8 @@ export function DashboardPage() {
       )}
 
       <div className="grid gap-5 lg:grid-cols-2">
+        {has('grade:read_own') && <GradesCard />}
+        {has('assessment_plan:manage') && <TeachingCard />}
         {has('registration:manage_own') && <RegistrationCard />}
         {hasAny(['registration:approve', 'registration:approve_add_drop']) && <AdvisingCard />}
         {has('calendar:read') && <WindowsCard />}
@@ -131,10 +135,10 @@ export function DashboardPage() {
           <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {(
               [
-                ['grades', BookOpenCheckIcon, 'violet'],
-                ['transcript', FileTextIcon, 'sky'],
-                ['attendance', CalendarCheck2Icon, 'emerald'],
                 ['lms', MonitorPlayIcon, 'orange'],
+                ['announcements', MegaphoneIcon, 'sky'],
+                ['attendance', CalendarCheck2Icon, 'emerald'],
+                ['documents', FileBadgeIcon, 'violet'],
               ] as const
             ).map(([key, icon, tone]) => (
               <li
