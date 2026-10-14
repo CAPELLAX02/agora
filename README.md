@@ -19,7 +19,7 @@ Ankara Üniversitesi'nin Öğrenci Bilgi Sistemi (OBS) ve e-Kampüs sistemlerini
 Gerekenler: Docker, Go (sürüm `backend/go.mod`'da), Node.js 22 (pnpm ayrıca kurulmaz, corepack ile gelir).
 
 ```bash
-make up            # PostgreSQL, Redis, Mailpit, Prometheus, Grafana
+make up            # PostgreSQL, Redis, SeaweedFS (dosyalar), Mailpit, Prometheus, Grafana
 make migrate-up    # şema
 make seed          # organizasyon, takvim, ders planları, ders açma ve demo hesaplar (tekrar çalıştırılabilir)
 make api           # API: http://localhost:8080
@@ -43,6 +43,7 @@ make web-dev       # web: http://localhost:5173
 | Prometheus   | http://localhost:9090                                     |                                                                     |
 | PostgreSQL   | `localhost:5432`                                          | `agora` / `agora_dev_password`, `make psql`                         |
 | Redis        | `localhost:6379`                                          | `make redis`                                                        |
+| SeaweedFS (S3) | `localhost:8333`                                        | Dosyalar (Faz 5). `agora` / `agora_dev_password` ([`infra/seaweedfs/s3.json`](infra/seaweedfs/s3.json)); MinIO yerine, bkz. yol haritası §5 #20 |
 
 ## Demo Hesaplar
 

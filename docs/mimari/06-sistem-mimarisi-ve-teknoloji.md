@@ -19,7 +19,7 @@ flowchart TB
   PG[(PostgreSQL 18<br/>agora · OLTP)]
   DW[(PostgreSQL 18<br/>agora_dw · OLAP)]
   RD[(Redis<br/>önbellek, rate limit,<br/>oturum iptali, pub/sub)]
-  S3[(MinIO · S3<br/>dosyalar)]
+  S3[(SeaweedFS · S3<br/>dosyalar)]
   MAIL[Mailpit<br/>geliştirme SMTP]
   subgraph Obs[Gözlemlenebilirlik]
     PROM[Prometheus]

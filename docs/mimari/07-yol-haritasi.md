@@ -47,7 +47,7 @@ flowchart LR
 | --- | --- |
 | `go mod init`, klasör yapısı, `cmd/api` ile `/healthz` | Vite + React + TS + Tailwind + shadcn kurulumu |
 | Config struct'ı, `slog`, graceful shutdown | Tasarım sistemi: renkler, tipografi, açık/koyu tema, temel bileşenler |
-| `docker compose`: PostgreSQL, Redis, MinIO, Mailpit | Uygulama kabuğu: layout, sidebar, üst bar, program bağlamı seçici, i18n |
+| `docker compose`: PostgreSQL, Redis, nesne deposu (Faz 5'te SeaweedFS), Mailpit | Uygulama kabuğu: layout, sidebar, üst bar, program bağlamı seçici, i18n |
 | İlk migration + `pgxpool` + `/readyz` | Redux store, RTK Query iskeleti, MSW kurulumu |
 | `/metrics` + Prometheus + Grafana (compose'a eklenir) | ESLint/Prettier/Vitest, CI (GitHub Actions) |
 
@@ -84,7 +84,7 @@ flowchart LR
 ### Faz 5 — LMS Çekirdeği (≈ 4 hafta)
 - Ders alanı (kayıt onayında otomatik üyelik), bölümler, dosya/klasör/link/sayfa, ödev + teslim + puanlama + geri bildirim, **not öğesi ↔ değerlendirme bileşeni köprüsü**, forum, zaman çizelgesi, ilerleme.
 
-**Go konuları:** multipart upload'u stream etme, `io.Reader`/`Writer` kompozisyonu, S3/MinIO, imzalı URL, HTML temizleme, dosya tipi tespiti.
+**Go konuları:** multipart upload'u stream etme, `io.Reader`/`Writer` kompozisyonu, S3 (SeaweedFS, `minio-go`), imzalı URL, HTML temizleme, dosya tipi tespiti.
 
 ### Faz 6 — İletişim (≈ 2–3 hafta)
 - Duyurular (hedef kitle), bildirim merkezi + tercih matrisi, **SSE** ile canlı bildirim, e-posta (outbox + worker), mesajlaşma.
@@ -149,7 +149,7 @@ flowchart LR
 | 17 | Transkript belgesi (2026-10-11) | Faz 4'te ekran ve yazdırılabilir görünüm. İmzalı PDF, doğrulama kodu ve belge talebi Faz 7'nin belge altyapısıyla |
 | 18 | Toplu içe aktarmada Excel şablonları (2026-10-14) | Her toplu içe aktarma senaryosu (ilk örnek bileşen notları) sunucunun ürettiği profesyonel bir Excel şablonuyla gelir ve aynı dosya geri yüklenir; CSV de kabul edilir. Ortak katman `internal/platform/sheet` (excelize): marka renkli başlık, başlık bloğu, düzenlenecek hücreler sarı ve kilitsiz, diğerleri gri ve kilitli (parolasız sayfa koruması), Excel'de hücre doğrulaması, açıklama sayfası, yazdırma ayarları ve çok gizli kimlik sayfası (dosyanın kaydı ve sütunların anlamı: başka kaydın şablonu reddedilir, başlık değişse de sütun bulunur). Okuma hoşgörülü ve tek yoldan: satır numaraları dosyadaki, başlık satırı aranır, önce satır satır önizleme, sonra tek transaction |
 | 19 | Ders alanı = şube, üyelik türetilir (2026-10-14) | e-Kampüs'te her ders bir OBS şubesine 1:1 karşılık gelir ve onaylanan dersler "belirli aralıklarla" aktarılır. Agora'da ders alanının anahtarı şubedir (`lms.course_spaces.section_id` PK, ilk içerikle oluşur); üyelik kopyalanmaz, sorgu anında türetilir: öğrenci = şubede bırakmamış kesin kaydı olan, öğretim elemanı = şubeye atanmış (sorumlu, ortak, asistan). Kayıt onaylandığı transaction'da öğrenci derse erişir; senkronizasyon, gecikme ve kopukluk yoktur ("tek kaynak"). Gözlemci gibi elle üyelikler P2 |
-| 20 | Dosya depolama (2026-10-14) | Dosyalar MinIO'da (S3), üst verisi `platform.files`'ta. Yükleme API'den akışla geçer (bellekte tutulmaz): boyut sınırı, içerikten tür tespiti ve uzantı izin listesi, yüklerken SHA-256. İndirmede yetki dosyanın sahibi olan varlık üzerinden denetlenir, ardından kısa ömürlü (5 dk) imzalı URL verilir: büyük dosyalar API'den ve tarayıcı belleğinden geçmez. Bir varlığa bağlanmayan dosyalar worker'da temizlenir |
+| 20 | Dosya depolama (2026-10-14) | Dosyalar S3 uyumlu nesne deposunda, üst verisi `platform.files`'ta. Sunucu **SeaweedFS** (Apache 2.0): MinIO'nun topluluk imajları 2025'ten beri yayımlanmıyor (Docker Hub ve quay.io'da erişilemiyor). İstemci S3'e özgü olmayan `minio-go`; S3 uyumlu her sunucuyla (ileride bulut depolama) çalışır. Yükleme API'den akışla geçer (bellekte tutulmaz): boyut sınırı, içerikten tür tespiti ve uzantı izin listesi, yüklerken SHA-256. İndirmede yetki dosyanın sahibi olan varlık üzerinden denetlenir, ardından kısa ömürlü (5 dk) imzalı URL verilir: büyük dosyalar API'den ve tarayıcı belleğinden geçmez. Bir varlığa bağlanmayan dosyalar worker'da temizlenir |
 
 ## 6. İlerleme ve "Bitti" Kontrol Listesi
 
@@ -165,7 +165,7 @@ flowchart LR
 | ✅ | Backend CI (gofmt, vet, staticcheck, govulncheck, race testleri) | |
 | ✅ | Redis | Ders 16 |
 | ✅ | Mailpit (geliştirme SMTP) | `http://localhost:8025` |
-| ⏭️ | MinIO | Faz 5'te dosya yüklemeyle birlikte eklenecek: kullanılmayan servis compose'da durmasın |
+| ⏭️ | Nesne deposu | Faz 5'te dosya yüklemeyle birlikte eklenecek: kullanılmayan servis compose'da durmasın (SeaweedFS, §5 #20) |
 | ✅ | Web: Vite + React + TS + Tailwind + shadcn, ESLint/Prettier/Vitest | pnpm (corepack), TypeScript strict, tip bilgili ESLint |
 | ✅ | Web: tasarım sistemi, açık/koyu tema, uygulama kabuğu, i18n | Radix tabanlı bileşenler, OKLCH renk belirteçleri, TR/EN (anahtarlar tip kontrollü, iki dilin eşliği testli) |
 | ✅ | Web: Redux store, OpenAPI'den RTK Query istemcisi, MSW | Access token sadece bellekte, 401'de tek uçuşlu sessiz yenileme, MSW ile bütünleşik testler |
@@ -335,7 +335,7 @@ flowchart LR
 
 | Durum | Madde | Not |
 | --- | --- | --- |
-| ⬜ | Dosya depolama | MinIO (compose ve CI'da testcontainers), `platform.files`, akışla yükleme (`multipart` okuyucu, boyut sınırı, içerikten tür tespiti, uzantı izin listesi, SHA-256), yetkili kısa ömürlü imzalı indirme URL'si, sahipsiz dosya temizliği, metrikler (§5 #20) |
+| ✅ | Dosya depolama | SeaweedFS (compose, CI ve testlerde testcontainers), `platform.files`, akışla yükleme (`multipart` okuyucu, boyut sınırı, içerikten tür tespiti, uzantı izin listesi, SHA-256), yetkili kısa ömürlü imzalı indirme URL'si, sahipsiz dosya temizliği, metrikler (§5 #20). `POST /files` (multipart parça okuyucu, istek başına uzatılan okuma süresi), kaydedilen tür içerikten doğrulanır, HTML/XML düz metin, indirme her zaman ek; bağlama (`Attach`) varlığın transaction'ında, temizlik önce kaydı işaretler sonra nesneyi siler (bağlamayla yarışmaz). Depoya ulaşılamazsa API açılır, dosya uçları 503 |
 | ⬜ | Ders alanı ve üyelik | Şube = ders alanı, üyelik kesin kayıt ve öğretim elemanı atamasından türetilir (§5 #19). `GET /me/spaces` (dönem seçimli), `GET /spaces/{id}`: ders bilgisi, öğretim elemanları, rolüm. Görme: üye ya da kapsamdaki birim; düzenleme: şubenin öğretim elemanları |
 | ⬜ | Bölümler ve etkinlikler | Bölümler (hafta/konu: sıra, görünürlük, erişim zamanları), etkinlikler (ortak tablo + türe özgü tablolar): dosya, klasör, bağlantı, sayfa, etiket. HTML temizleme (izin listesi), sıralama, yumuşak silme, denetim izi |
 | ⬜ | Ödev | Açılış, son tarih, kesin kapanış; deneme hakkı; teslim türleri (dosya, çevrimiçi metin), dosya sayısı, boyut ve tür sınırları; geç teslim politikası. Taslak ve gönderme, durum (deneme, kalan süre, geç); puanlama, geri bildirim ve yayımlama; gönderim yorumları |

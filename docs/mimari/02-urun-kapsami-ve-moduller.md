@@ -217,7 +217,7 @@ flowchart LR
 ### 4.15 Platform
 | Özellik | Öncelik |
 | --- | --- |
-| Dosya deposu (S3 uyumlu — MinIO), imzalı URL, boyut/tür doğrulama | P0 |
+| Dosya deposu (S3 uyumlu — SeaweedFS), imzalı URL, boyut/tür doğrulama | P0 |
 | Denetim izi (kim, neyi, ne zaman, önce/sonra) | P0 |
 | Kullanıcı tercihleri: dil, tema, dashboard widget'ları, favoriler | P1 |
 | Yardım masası (talep + mesajlaşma) | P2 |
