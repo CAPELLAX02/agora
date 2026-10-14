@@ -835,10 +835,38 @@ const injectedRtkApi = api
         }),
         providesTags: ['De\u011Ferlendirme'],
       }),
+      exportGradebook: build.query<ExportGradebookApiResponse, ExportGradebookApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/sections/${queryArg.id}/gradebook.csv`,
+          params: {
+            lang: queryArg.lang,
+          },
+        }),
+        providesTags: ['De\u011Ferlendirme'],
+      }),
       setComponentScores: build.mutation<SetComponentScoresApiResponse, SetComponentScoresApiArg>({
         query: (queryArg) => ({
           url: `/api/v1/assessment-components/${queryArg.id}/scores`,
           method: 'PUT',
+          body: queryArg.body,
+          headers: {
+            'If-Match': queryArg['If-Match'],
+          },
+        }),
+        invalidatesTags: ['De\u011Ferlendirme'],
+      }),
+      previewScoreImport: build.mutation<PreviewScoreImportApiResponse, PreviewScoreImportApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/assessment-components/${queryArg.id}/scores/import/preview`,
+          method: 'POST',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['De\u011Ferlendirme'],
+      }),
+      importScores: build.mutation<ImportScoresApiResponse, ImportScoresApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/assessment-components/${queryArg.id}/scores/import`,
+          method: 'POST',
           body: queryArg.body,
           headers: {
             'If-Match': queryArg['If-Match'],
@@ -2224,6 +2252,13 @@ export type GetGradebookApiArg = {
   /** Geçerli bir UUID değilse 404 döner. */
   id: string
 }
+export type ExportGradebookApiResponse = /** status 200 Not tablosu (CSV) */ string
+export type ExportGradebookApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Sütun başlıkları ve sayı biçimi */
+  lang?: 'tr' | 'en'
+}
 export type SetComponentScoresApiResponse = /** status 200 Güncel not tablosu */ Gradebook
 export type SetComponentScoresApiArg = {
   /** Geçerli bir UUID değilse 404 döner. */
@@ -2237,6 +2272,20 @@ export type SetComponentScoresApiArg = {
       absent?: boolean
     }[]
   }
+}
+export type PreviewScoreImportApiResponse = /** status 200 Satır satır önizleme */ ScoreImportPreview
+export type PreviewScoreImportApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: string
+}
+export type ImportScoresApiResponse = /** status 200 Güncel not tablosu */ Gradebook
+export type ImportScoresApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
+  'If-Match': string
+  body: string
 }
 export type PublishComponentScoresApiResponse = /** status 200 Güncel not tablosu */ Gradebook
 export type PublishComponentScoresApiArg = {
@@ -3726,6 +3775,57 @@ export type Gradebook = {
   /** Not girebilecek ama oturum iki adımlı doğrulamayla açılmamış */
   mfa_required: boolean
 }
+export type ScoreImportRow = {
+  /** Dosyadaki satır numarası (başlık 1. satır) */
+  line: number
+  /** Dosyada yazdığı gibi */
+  student_no: string
+  student: null | StudentRef
+  enrollment_id: string | null
+  /** EMPTY: puan hücresi boş, not değişmez */
+  status: 'CHANGED' | 'UNCHANGED' | 'EMPTY' | 'ERROR'
+  /** Şu anki not; girilmemişse boş */
+  current: null | ComponentScore
+  /** Dosyadaki not; boş hücrede ve hatalı satırda boş */
+  next: null | ComponentScore
+  /** NOT_IN_SECTION: şubenin kesin kayıtlı öğrencisi değil; DUPLICATE_STUDENT: öğrenci dosyada birden fazla kez geçiyor; NOT_ELIGIBLE: bütünleme hakkı yok */
+  error_code:
+    | (
+        | 'MISSING_STUDENT_NO'
+        | 'NOT_IN_SECTION'
+        | 'DUPLICATE_STUDENT'
+        | 'INVALID_SCORE'
+        | 'NOT_ELIGIBLE'
+        | null
+      )
+    | (
+        | 'MISSING_STUDENT_NO'
+        | 'NOT_IN_SECTION'
+        | 'DUPLICATE_STUDENT'
+        | 'INVALID_SCORE'
+        | 'NOT_ELIGIBLE'
+        | null
+      )
+  /** Hatanın Türkçe açıklaması */
+  error: string | null
+}
+export type ScoreImportPreview = {
+  component_id: string
+  /** Uygularken If-Match: önizlemedeki not sürümü */
+  version: number
+  /** Puanların okunduğu sütunun başlığı; başlıksız dosyada boş */
+  column: string | null
+  /** Dosyadaki sırayla; tamamen boş satırlar yer almaz */
+  rows: ScoreImportRow[]
+  /** Şubenin dosyada olmayan öğrencileri; notları değişmez */
+  missing: StudentRef[]
+  summary: {
+    changed: number
+    unchanged: number
+    empty: number
+    errors: number
+  }
+}
 export type LetterReason =
   'RANGE' | 'ATTENDANCE_FAIL' | 'FINAL_ABSENT' | 'FINAL_BELOW_MIN' | 'PASS_FAIL' | 'MANUAL'
 export type LetterDistribution = {
@@ -4729,7 +4829,11 @@ export const {
   useUnlockAssessmentPlanMutation,
   useGetGradebookQuery,
   useLazyGetGradebookQuery,
+  useExportGradebookQuery,
+  useLazyExportGradebookQuery,
   useSetComponentScoresMutation,
+  usePreviewScoreImportMutation,
+  useImportScoresMutation,
   usePublishComponentScoresMutation,
   useSetAttendanceMutation,
   useGetLetterGradesQuery,

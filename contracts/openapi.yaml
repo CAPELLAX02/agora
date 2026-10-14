@@ -3327,6 +3327,36 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/v1/sections/{id}/gradebook.csv:
+    get:
+      tags: [Değerlendirme]
+      summary: Şubenin not tablosunu CSV olarak dışa aktarır
+      description: >-
+        Not tablosuyla aynı veri ve aynı görme yetkisi: öğrenci no, soyadı, adı, program,
+        devam durumu, her bileşen için bir sütun (başlığı bileşenin adı), ilan edilmişse harf
+        notu. Dosya UTF-8 (BOM'lu); Türkçe (`lang=tr`) dosya Excel'in Türkçe ayarına uygun
+        `;` ayraçlı ve ondalık virgüllü, İngilizce dosya `,` ayraçlı ve ondalık noktalıdır.
+        "Girmedi" Türkçe dosyada `G`, İngilizcede `ABSENT` yazılır. Aynı dosya bir bileşenin
+        notlarını içe aktarmak için şablon olarak kullanılabilir.
+      operationId: exportGradebook
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - name: lang
+          in: query
+          description: Sütun başlıkları ve sayı biçimi
+          schema: { type: string, enum: [tr, en], default: tr }
+      responses:
+        "200":
+          description: Not tablosu (CSV)
+          content:
+            text/csv:
+              schema: { type: string }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/v1/assessment-components/{id}/scores:
     put:
       tags: [Değerlendirme]
@@ -3388,6 +3418,102 @@ paths:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Problem" }
         "412": { $ref: "#/components/responses/VersionMismatch" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
+
+  /api/v1/assessment-components/{id}/scores/import/preview:
+    post:
+      tags: [Değerlendirme]
+      summary: CSV'den not içe aktarmayı önizler
+      description: >-
+        Hiçbir şey kaydedilmez. Dosyanın ilk satırı başlıktır: öğrenci numarası sütunu
+        (`Öğrenci No`, `Student No` ...) ve puan sütunu aranır. Puan sütunu başlığı bileşenin
+        adı olan sütundur (dışa aktarılan dosya olduğu gibi kullanılabilir), yoksa `Puan` /
+        `Score` başlıklı sütun, o da yoksa iki sütunlu dosyada ikinci sütun. Başlıksız iki
+        sütunlu dosya (öğrenci no, puan) da kabul edilir. Ayraç `;`, `,` ya da sekme; ondalık
+        ayracı virgül ya da nokta olabilir. Puan 0-100 arası (en fazla iki ondalık), girmedi
+        için `G`, `GR`, `GİRMEDİ` ya da `ABSENT`. Boş hücre notu değiştirmez (silmez); dosyada
+        olmayan öğrencinin notu da değişmez. Her satır ayrı doğrulanır, hatalar satırda
+        döner. Not girme koşulları (yetki, MFA, kilitli plan, açık pencere, not aşaması)
+        yazmadakiyle aynıdır.
+      operationId: previewScoreImport
+      x-agora-permission: score:enter
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          text/csv:
+            schema: { type: string, maxLength: 1048576 }
+      responses:
+        "200":
+          description: Satır satır önizleme
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ScoreImportPreview" }
+        "400":
+          description: >-
+            `INVALID_CSV`: dosya okunamadı (boş, bozuk tırnak, 1000'den fazla satır, öğrenci
+            numarası ya da bileşenin puan sütunu bulunamadı)
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Not yazmadaki koşullar (`ASSESSMENT_PLAN_NOT_LOCKED`, `GRADE_ENTRY_WINDOW_CLOSED` ...)
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+
+  /api/v1/assessment-components/{id}/scores/import:
+    post:
+      tags: [Değerlendirme]
+      summary: CSV'deki notları tek seferde yazar
+      description: >-
+        Önizlemedeki dosya yeniden okunup doğrulanır; hatalı satır varsa hiçbir not yazılmaz
+        (400 `VALIDATION_FAILED`, satır hataları `errors` dizisinde: `field` = `rows.<satır>`,
+        `code` satır hatasının kodu). Hata yoksa değişen notlar tek transaction'da yazılır
+        (kaynak `CSV`, denetim izinde). `If-Match` önizlemenin `version` değeridir: önizlemeden
+        sonra bu bileşenin notları değiştiyse 412 döner, dosya yeniden önizlenmelidir.
+      operationId: importScores
+      x-agora-permission: score:enter
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          text/csv:
+            schema: { type: string, maxLength: 1048576 }
+      responses:
+        "200":
+          description: Güncel not tablosu
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Gradebook" }
+        "400":
+          description: "`INVALID_CSV` (önizlemedeki gibi) ya da `VALIDATION_FAILED` (hatalı satırlar)"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Not yazmadaki koşullar (`ASSESSMENT_PLAN_NOT_LOCKED`, `GRADE_ENTRY_WINDOW_CLOSED` ...)
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "412": { $ref: "#/components/responses/VersionMismatch" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
         "428": { $ref: "#/components/responses/PreconditionRequired" }
 
   /api/v1/assessment-components/{id}/publish:
@@ -5926,7 +6052,7 @@ components:
         application/problem+json:
           schema: { $ref: "#/components/schemas/Problem" }
     UnsupportedMediaType:
-      description: "`UNSUPPORTED_MEDIA_TYPE`: gövde application/json değil"
+      description: "`UNSUPPORTED_MEDIA_TYPE`: gövde application/json değil (CSV uçlarında text/csv değil)"
       content:
         application/problem+json:
           schema: { $ref: "#/components/schemas/Problem" }
@@ -7480,6 +7606,63 @@ components:
         released_by: { type: [string, "null"], description: Engeli kaldıranın adı }
         release_reason: { type: [string, "null"] }
         active: { type: boolean }
+
+    ScoreImportPreview:
+      type: object
+      required: [component_id, version, column, rows, missing, summary]
+      properties:
+        component_id: { type: string, format: uuid }
+        version: { type: integer, description: "Uygularken If-Match: önizlemedeki not sürümü" }
+        column: { type: [string, "null"], description: "Puanların okunduğu sütunun başlığı; başlıksız dosyada boş" }
+        rows:
+          type: array
+          description: Dosyadaki sırayla; tamamen boş satırlar yer almaz
+          items: { $ref: "#/components/schemas/ScoreImportRow" }
+        missing:
+          type: array
+          description: Şubenin dosyada olmayan öğrencileri; notları değişmez
+          items: { $ref: "#/components/schemas/StudentRef" }
+        summary:
+          type: object
+          required: [changed, unchanged, empty, errors]
+          properties:
+            changed: { type: integer }
+            unchanged: { type: integer }
+            empty: { type: integer }
+            errors: { type: integer }
+
+    ScoreImportRow:
+      type: object
+      required: [line, student_no, student, enrollment_id, status, current, next, error_code, error]
+      properties:
+        line: { type: integer, description: "Dosyadaki satır numarası (başlık 1. satır)" }
+        student_no: { type: string, description: Dosyada yazdığı gibi }
+        student:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StudentRef"
+        enrollment_id: { type: [string, "null"], format: uuid }
+        status:
+          type: string
+          enum: [CHANGED, UNCHANGED, EMPTY, ERROR]
+          description: "EMPTY: puan hücresi boş, not değişmez"
+        current:
+          description: Şu anki not; girilmemişse boş
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/ComponentScore"
+        next:
+          description: Dosyadaki not; boş hücrede ve hatalı satırda boş
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/ComponentScore"
+        error_code:
+          type: [string, "null"]
+          enum: [MISSING_STUDENT_NO, NOT_IN_SECTION, DUPLICATE_STUDENT, INVALID_SCORE, NOT_ELIGIBLE, null]
+          description: >-
+            NOT_IN_SECTION: şubenin kesin kayıtlı öğrencisi değil; DUPLICATE_STUDENT: öğrenci
+            dosyada birden fazla kez geçiyor; NOT_ELIGIBLE: bütünleme hakkı yok
+        error: { type: [string, "null"], description: Hatanın Türkçe açıklaması }
 
     StudentRef:
       type: object
