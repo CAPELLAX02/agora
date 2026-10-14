@@ -2,18 +2,14 @@ import { expect, test, type Page } from '@playwright/test'
 
 import { login, logout, nav, seedPassword, submitLogin } from './support/app'
 import { linkFromLatestEmail } from './support/mailpit'
+import { enableMfa, mfaAccount, mfaLogin } from './support/mfa'
 import { freshTotp } from './support/totp'
 
 // Senaryolar sırayla çalışır: yönetici önce MFA kurar, sonraki adımlar MFA'lı oturum ister.
 test.describe.configure({ mode: 'serial' })
 
-const admin = { username: 'P90001', secret: '', lastStep: { value: 0 } }
-
-async function adminLogin(page: Page) {
-  await submitLogin(page, admin.username, seedPassword)
-  await page.getByLabel('Doğrulama kodu').fill(await freshTotp(admin.secret, admin.lastStep))
-  await expect(page.getByRole('heading', { name: /Hoş geldiniz/ })).toBeVisible()
-}
+const admin = mfaAccount('P90001')
+const adminLogin = (page: Page) => mfaLogin(page, admin)
 
 test('yönetici MFA kurmadan hassas işlemleri yapamaz, kurunca oturumu yükselir', async ({ page }) => {
   await login(page, admin.username)
@@ -21,21 +17,7 @@ test('yönetici MFA kurmadan hassas işlemleri yapamaz, kurunca oturumu yükseli
   await expect(nav(page, 'Kullanıcılar')).toBeVisible() // user:read MFA istemez
   await expect(nav(page, 'Denetim kayıtları')).toHaveCount(0) // audit:read ister
 
-  await page.getByRole('link', { name: 'İki adımlı doğrulamayı aç' }).click()
-  await page.getByRole('button', { name: 'Kurulumu başlat' }).click()
-  const dialog = page.getByRole('dialog')
-  const key = dialog.getByLabel('Kurulum anahtarı')
-  await expect(key).toHaveText(/[A-Z2-7 ]{20,}/)
-  admin.secret = (await key.innerText()).replace(/\s/g, '')
-
-  await dialog.getByLabel('Doğrulama kodu').fill(await freshTotp(admin.secret, admin.lastStep))
-  await dialog.getByLabel('Mevcut parola').fill(seedPassword)
-  await dialog.getByRole('button', { name: 'Etkinleştir' }).click()
-
-  const codes = page.getByRole('dialog', { name: 'Kurtarma kodlarınız' })
-  await expect(codes.getByRole('listitem')).toHaveCount(10)
-  await codes.getByLabel('Kodları güvenli bir yere kaydettim').check()
-  await codes.getByRole('button', { name: 'Kapat' }).click()
+  await enableMfa(page, admin)
 
   // Etkinleştiren oturum yeniden doğrulandı sayılır: hassas yetkiler hemen açılır.
   await expect(nav(page, 'Denetim kayıtları')).toBeVisible()

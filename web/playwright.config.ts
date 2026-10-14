@@ -35,7 +35,17 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: /grading\.spec/ },
+    // Not akışı öğretim elemanına ve bölüm başkanına MFA kurar: o hesaplarla MFA'sız giriş yapan
+    // senaryolardan sonra çalışır.
+    {
+      name: 'grading',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /grading\.spec/,
+      dependencies: ['chromium'],
+    },
+  ],
   webServer: [
     {
       command: 'go -C ../backend run ./cmd/api',
