@@ -71,6 +71,10 @@ tags:
     description: Ders durumu, alınabilir dersler, sepet, kural denetimi, danışman onayı ve ekle-bırak
   - name: Dosyalar
     description: Dosya yükleme (akışla, tür ve boyut denetimli) ve imzalı indirme URL'si
+  - name: Ders alanı
+    description: >-
+      Öğrenme yönetimi: şube başına ders alanı (üyelik kesin kayıt ve öğretim elemanı
+      atamasından türetilir), bölümler ve etkinlikler (dosya, klasör, bağlantı, sayfa, etiket)
 
 paths:
   /healthz:
@@ -3244,6 +3248,320 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/DownloadUrl" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/StorageUnavailable" }
+
+  /api/v1/me/spaces:
+    get:
+      tags: [Ders alanı]
+      summary: Derslerim
+      description: >-
+        Dönemde öğretim elemanı olduğum ve bırakmamış kesin kaydım olan şubelerin ders
+        alanları (öğrencinin kaydı onaylandığı anda listede). Aktif dönem tanımlı değilse boş.
+      operationId: mySpaces
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: term_id
+          in: query
+          description: Varsayılan aktif dönem
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Ders koduna göre sıralı
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/SpaceSummary" } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/spaces/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ID"
+    get:
+      tags: [Ders alanı]
+      summary: Ders alanı (şube kimliğiyle)
+      description: >-
+        Bölümler ve etkinlikler, isteği yapanın rolüne göre: öğretim elemanları her şeyi görür;
+        öğrenci ve izleyici (şubenin bölümünü yöneten personel, `section:manage`) gizli bölüm ve
+        etkinlikleri görmez, henüz açılmamış ya da kapanmış olanların sadece adını ve tarihlerini
+        görür. Üye olmayana 404.
+      operationId: getSpace
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Ders alanı
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Space" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Ders alanı]
+      summary: Ders alanının tanıtım metnini yazar
+      description: Şubenin öğretim elemanları (sorumlu, ortak, asistan). HTML izin listesiyle temizlenir.
+      operationId: setSpaceSummary
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [summary_html]
+              properties:
+                summary_html: { type: string, maxLength: 50000 }
+      responses:
+        "200":
+          description: Ders alanı
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Space" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/spaces/{id}/layout:
+    put:
+      tags: [Ders alanı]
+      summary: Bölüm ve etkinliklerin sırasını yazar
+      description: >-
+        Bütün bölümler ve etkinlikler birer kez, yukarıdan aşağıya; etkinlik bölümler arasında
+        taşınabilir. Arada eklenen ya da silinen bir öğe varsa 412 (sayfayı yenileyin).
+      operationId: setSpaceLayout
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [topics]
+              properties:
+                topics:
+                  type: array
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [id, activity_ids]
+                    properties:
+                      id: { type: string, format: uuid }
+                      activity_ids: { type: array, items: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Ders alanı
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Space" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "412": { $ref: "#/components/responses/VersionMismatch" }
+
+  /api/v1/spaces/{id}/topics:
+    post:
+      tags: [Ders alanı]
+      summary: Bölüm ekler
+      description: Sona eklenir. Ders alanı ilk içerikle oluşur ve ilk bölümü "Genel"dir.
+      operationId: createTopic
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TopicInput" }
+      responses:
+        "201":
+          description: Ders alanı
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Space" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/topics/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ID"
+    put:
+      tags: [Ders alanı]
+      summary: Bölümü günceller
+      operationId: updateTopic
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TopicInput" }
+      responses:
+        "200":
+          description: Ders alanı
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Space" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "412": { $ref: "#/components/responses/VersionMismatch" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
+    delete:
+      tags: [Ders alanı]
+      summary: Bölümü ve etkinliklerini siler
+      description: Etkinliklerin dosyaları serbest kalır ve bir gün sonra silinir. Son bölüm silinemez (400).
+      operationId: deleteTopic
+      security:
+        - bearerAuth: []
+      responses:
+        "204": { description: Silindi }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/topics/{id}/activities:
+    post:
+      tags: [Ders alanı]
+      summary: Bölüme etkinlik ekler
+      description: >-
+        Türe göre: `RESOURCE` tek dosya, `FOLDER` 1-50 dosya (`file_ids`: işlemi yapanın yüklediği,
+        henüz bir kayda bağlanmamış dosyalar; bağlanır), `URL` http/https adresi, `PAGE` zengin
+        metin (`body_html`), `LABEL` bölüm içinde metin (`description_html`). HTML izin listesiyle
+        temizlenir (betik, stil, olay öznitelikleri atılır; bağlantılar yeni sekmede ve noopener).
+      operationId: createActivity
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ActivityInput" }
+      responses:
+        "201":
+          description: Etkinlik
+          headers:
+            Location: { schema: { type: string } }
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Activity" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/activities/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ID"
+    get:
+      tags: [Ders alanı]
+      summary: Etkinlik (sayfa gövdesiyle)
+      description: >-
+        Öğrenci ve izleyici sadece görünür bölümdeki görünür ve açık etkinliği görür: gizliye 404,
+        açılmamış ya da kapanmışa 403 `NOT_AVAILABLE`.
+      operationId: getActivity
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Etkinlik
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Activity" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: "`NOT_AVAILABLE`: henüz açılmadı ya da kapandı"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Ders alanı]
+      summary: Etkinliği günceller
+      description: Tür değişmez. Klasörden çıkarılan dosyalar serbest kalır, yeniler bağlanır.
+      operationId: updateActivity
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ActivityInput" }
+      responses:
+        "200":
+          description: Etkinlik
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Activity" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "412": { $ref: "#/components/responses/VersionMismatch" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
+    delete:
+      tags: [Ders alanı]
+      summary: Etkinliği siler
+      operationId: deleteActivity
+      security:
+        - bearerAuth: []
+      responses:
+        "204": { description: Silindi }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/activities/{id}/files/{fileId}/download-url:
+    get:
+      tags: [Ders alanı]
+      summary: Etkinliğin dosyasının imzalı indirme URL'si
+      description: Etkinliği görebilen (yukarıdaki kurallar) 5 dakika geçerli URL alır.
+      operationId: getActivityFileUrl
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - name: fileId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: İmzalı URL
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DownloadUrl" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: "`NOT_AVAILABLE`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
         "404": { $ref: "#/components/responses/NotFound" }
         "503": { $ref: "#/components/responses/StorageUnavailable" }
 
@@ -7884,6 +8202,137 @@ components:
       properties:
         url: { type: string, format: uri }
         expires_at: { type: string, format: date-time }
+
+    SpaceRole:
+      type: string
+      enum: [STUDENT, PRIMARY, CO_INSTRUCTOR, ASSISTANT, VIEWER]
+      description: "VIEWER: şubenin bölümünü yöneten personel (salt okunur)"
+
+    Availability:
+      type: string
+      enum: [OPEN, NOT_YET, CLOSED]
+
+    SpaceInstructor:
+      type: object
+      required: [user_id, title, first_name, last_name, email, role]
+      properties:
+        user_id: { type: string, format: uuid }
+        title: { type: [string, "null"] }
+        first_name: { type: string }
+        last_name: { type: string }
+        email: { type: string }
+        role: { type: string, enum: [PRIMARY, CO_INSTRUCTOR, ASSISTANT] }
+
+    SpaceSummary:
+      type: object
+      required: [section_id, section_code, course, term, role, instructors, activities]
+      properties:
+        section_id: { type: string, format: uuid }
+        section_code: { type: string }
+        course: { $ref: "#/components/schemas/NamedRef" }
+        term:
+          type: object
+          required: [id, code]
+          properties:
+            id: { type: string, format: uuid }
+            code: { type: string }
+        role: { $ref: "#/components/schemas/SpaceRole" }
+        instructors: { type: array, items: { $ref: "#/components/schemas/SpaceInstructor" } }
+        activities: { type: integer, description: Görünür etkinlik sayısı }
+
+    Space:
+      type: object
+      required: [section_id, section_code, course, term, role, can_edit, summary_html, instructors, topics]
+      properties:
+        section_id: { type: string, format: uuid }
+        section_code: { type: string }
+        course: { $ref: "#/components/schemas/NamedRef" }
+        term:
+          type: object
+          required: [id, code]
+          properties:
+            id: { type: string, format: uuid }
+            code: { type: string }
+        role: { $ref: "#/components/schemas/SpaceRole" }
+        can_edit: { type: boolean }
+        summary_html: { type: string }
+        instructors: { type: array, items: { $ref: "#/components/schemas/SpaceInstructor" } }
+        topics: { type: array, items: { $ref: "#/components/schemas/Topic" } }
+
+    Topic:
+      type: object
+      required: [id, title, summary_html, is_visible, availability, available_from, available_until, version, activities]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        summary_html: { type: string, description: Açık olmayan bölümde boş }
+        is_visible: { type: boolean }
+        availability: { $ref: "#/components/schemas/Availability" }
+        available_from: { type: [string, "null"], format: date-time }
+        available_until: { type: [string, "null"], format: date-time, description: Bitiş anı hariç }
+        version: { type: integer }
+        activities: { type: array, items: { $ref: "#/components/schemas/Activity" } }
+
+    ActivityType:
+      type: string
+      enum: [RESOURCE, FOLDER, URL, PAGE, LABEL, ASSIGNMENT, FORUM]
+
+    Activity:
+      type: object
+      required: [id, topic_id, type, title, description_html, is_visible, availability, available_from, available_until,
+                 version, updated_at, files, url, open_in_new_tab, body_html]
+      properties:
+        id: { type: string, format: uuid }
+        topic_id: { type: string, format: uuid }
+        type: { $ref: "#/components/schemas/ActivityType" }
+        title: { type: string }
+        description_html: { type: string, description: Açık olmayan etkinlikte boş }
+        is_visible: { type: boolean }
+        availability: { $ref: "#/components/schemas/Availability" }
+        available_from: { type: [string, "null"], format: date-time }
+        available_until: { type: [string, "null"], format: date-time }
+        version: { type: integer }
+        updated_at: { type: string, format: date-time }
+        files:
+          type: array
+          items:
+            type: object
+            required: [id, name, mime_type, size]
+            properties:
+              id: { type: string, format: uuid }
+              name: { type: string }
+              mime_type: { type: string }
+              size: { type: integer, format: int64 }
+        url: { type: [string, "null"], description: URL etkinliğinde }
+        open_in_new_tab: { type: [boolean, "null"] }
+        body_html: { type: [string, "null"], description: "Sayfada; sadece etkinlik ayrıntısında" }
+
+    TopicInput:
+      type: object
+      additionalProperties: false
+      required: [title]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        summary_html: { type: string }
+        is_visible: { type: boolean, default: true }
+        available_from: { type: [string, "null"], format: date-time }
+        available_until: { type: [string, "null"], format: date-time }
+
+    ActivityInput:
+      type: object
+      additionalProperties: false
+      required: [type, title]
+      properties:
+        type: { type: string, enum: [RESOURCE, FOLDER, URL, PAGE, LABEL] }
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description_html: { type: string, maxLength: 50000 }
+        is_visible: { type: boolean, default: true }
+        available_from: { type: [string, "null"], format: date-time }
+        available_until: { type: [string, "null"], format: date-time }
+        file_ids: { type: array, items: { type: string, format: uuid }, maxItems: 50 }
+        url: { type: string, maxLength: 2000 }
+        open_in_new_tab: { type: boolean, default: true }
+        body_html: { type: string, maxLength: 200000 }
 
     StudentRef:
       type: object

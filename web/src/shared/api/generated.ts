@@ -11,6 +11,7 @@ export const addTagTypes = [
   'Not \u00F6l\u00E7e\u011Fi ve y\u00F6netmelik',
   'Ders a\u00E7ma',
   'Dosyalar',
+  'Ders alan\u0131',
   'De\u011Ferlendirme',
   'Organizasyon',
   '\u00D6\u011Frenciler',
@@ -816,6 +817,97 @@ const injectedRtkApi = api
           url: `/api/v1/files/${queryArg.id}/download-url`,
         }),
         providesTags: ['Dosyalar'],
+      }),
+      mySpaces: build.query<MySpacesApiResponse, MySpacesApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/me/spaces`,
+          params: {
+            term_id: queryArg.termId,
+          },
+        }),
+        providesTags: ['Ders alan\u0131'],
+      }),
+      getSpace: build.query<GetSpaceApiResponse, GetSpaceApiArg>({
+        query: (queryArg) => ({ url: `/api/v1/spaces/${queryArg.id}` }),
+        providesTags: ['Ders alan\u0131'],
+      }),
+      setSpaceSummary: build.mutation<SetSpaceSummaryApiResponse, SetSpaceSummaryApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/spaces/${queryArg.id}`,
+          method: 'PUT',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['Ders alan\u0131'],
+      }),
+      setSpaceLayout: build.mutation<SetSpaceLayoutApiResponse, SetSpaceLayoutApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/spaces/${queryArg.id}/layout`,
+          method: 'PUT',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['Ders alan\u0131'],
+      }),
+      createTopic: build.mutation<CreateTopicApiResponse, CreateTopicApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/spaces/${queryArg.id}/topics`,
+          method: 'POST',
+          body: queryArg.topicInput,
+        }),
+        invalidatesTags: ['Ders alan\u0131'],
+      }),
+      updateTopic: build.mutation<UpdateTopicApiResponse, UpdateTopicApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/topics/${queryArg.id}`,
+          method: 'PUT',
+          body: queryArg.topicInput,
+          headers: {
+            'If-Match': queryArg['If-Match'],
+          },
+        }),
+        invalidatesTags: ['Ders alan\u0131'],
+      }),
+      deleteTopic: build.mutation<DeleteTopicApiResponse, DeleteTopicApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/topics/${queryArg.id}`,
+          method: 'DELETE',
+        }),
+        invalidatesTags: ['Ders alan\u0131'],
+      }),
+      createActivity: build.mutation<CreateActivityApiResponse, CreateActivityApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/topics/${queryArg.id}/activities`,
+          method: 'POST',
+          body: queryArg.activityInput,
+        }),
+        invalidatesTags: ['Ders alan\u0131'],
+      }),
+      getActivity: build.query<GetActivityApiResponse, GetActivityApiArg>({
+        query: (queryArg) => ({ url: `/api/v1/activities/${queryArg.id}` }),
+        providesTags: ['Ders alan\u0131'],
+      }),
+      updateActivity: build.mutation<UpdateActivityApiResponse, UpdateActivityApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/activities/${queryArg.id}`,
+          method: 'PUT',
+          body: queryArg.activityInput,
+          headers: {
+            'If-Match': queryArg['If-Match'],
+          },
+        }),
+        invalidatesTags: ['Ders alan\u0131'],
+      }),
+      deleteActivity: build.mutation<DeleteActivityApiResponse, DeleteActivityApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/activities/${queryArg.id}`,
+          method: 'DELETE',
+        }),
+        invalidatesTags: ['Ders alan\u0131'],
+      }),
+      getActivityFileUrl: build.query<GetActivityFileUrlApiResponse, GetActivityFileUrlApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/activities/${queryArg.id}/files/${queryArg.fileId}/download-url`,
+        }),
+        providesTags: ['Ders alan\u0131'],
       }),
       searchInstructors: build.query<SearchInstructorsApiResponse, SearchInstructorsApiArg>({
         query: (queryArg) => ({
@@ -2266,6 +2358,86 @@ export type GetFileDownloadUrlApiResponse = /** status 200 İmzalı URL */ Downl
 export type GetFileDownloadUrlApiArg = {
   /** Geçerli bir UUID değilse 404 döner. */
   id: string
+}
+export type MySpacesApiResponse = /** status 200 Ders koduna göre sıralı */ {
+  items: SpaceSummary[]
+}
+export type MySpacesApiArg = {
+  /** Varsayılan aktif dönem */
+  termId?: string
+}
+export type GetSpaceApiResponse = /** status 200 Ders alanı */ Space
+export type GetSpaceApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type SetSpaceSummaryApiResponse = /** status 200 Ders alanı */ Space
+export type SetSpaceSummaryApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: {
+    summary_html: string
+  }
+}
+export type SetSpaceLayoutApiResponse = /** status 200 Ders alanı */ Space
+export type SetSpaceLayoutApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: {
+    topics: {
+      id: string
+      activity_ids: string[]
+    }[]
+  }
+}
+export type CreateTopicApiResponse = /** status 201 Ders alanı */ Space
+export type CreateTopicApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  topicInput: TopicInput
+}
+export type UpdateTopicApiResponse = /** status 200 Ders alanı */ Space
+export type UpdateTopicApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
+  'If-Match': string
+  topicInput: TopicInput
+}
+export type DeleteTopicApiResponse = unknown
+export type DeleteTopicApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type CreateActivityApiResponse = /** status 201 Etkinlik */ Activity
+export type CreateActivityApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  activityInput: ActivityInput
+}
+export type GetActivityApiResponse = /** status 200 Etkinlik */ Activity
+export type GetActivityApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type UpdateActivityApiResponse = /** status 200 Etkinlik */ Activity
+export type UpdateActivityApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
+  'If-Match': string
+  activityInput: ActivityInput
+}
+export type DeleteActivityApiResponse = unknown
+export type DeleteActivityApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type GetActivityFileUrlApiResponse = /** status 200 İmzalı URL */ DownloadUrl
+export type GetActivityFileUrlApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  fileId: string
 }
 export type SearchInstructorsApiResponse = /** status 200 Liste */ {
   items: StaffSummary[]
@@ -3751,6 +3923,101 @@ export type DownloadUrl = {
   url: string
   expires_at: string
 }
+export type SpaceRole = 'STUDENT' | 'PRIMARY' | 'CO_INSTRUCTOR' | 'ASSISTANT' | 'VIEWER'
+export type SpaceInstructor = {
+  user_id: string
+  title: string | null
+  first_name: string
+  last_name: string
+  email: string
+  role: 'PRIMARY' | 'CO_INSTRUCTOR' | 'ASSISTANT'
+}
+export type SpaceSummary = {
+  section_id: string
+  section_code: string
+  course: NamedRef
+  term: {
+    id: string
+    code: string
+  }
+  role: SpaceRole
+  instructors: SpaceInstructor[]
+  /** Görünür etkinlik sayısı */
+  activities: number
+}
+export type Availability = 'OPEN' | 'NOT_YET' | 'CLOSED'
+export type ActivityType = 'RESOURCE' | 'FOLDER' | 'URL' | 'PAGE' | 'LABEL' | 'ASSIGNMENT' | 'FORUM'
+export type Activity = {
+  id: string
+  topic_id: string
+  type: ActivityType
+  title: string
+  /** Açık olmayan etkinlikte boş */
+  description_html: string
+  is_visible: boolean
+  availability: Availability
+  available_from: string | null
+  available_until: string | null
+  version: number
+  updated_at: string
+  files: {
+    id: string
+    name: string
+    mime_type: string
+    size: number
+  }[]
+  /** URL etkinliğinde */
+  url: string | null
+  open_in_new_tab: boolean | null
+  /** Sayfada; sadece etkinlik ayrıntısında */
+  body_html: string | null
+}
+export type Topic = {
+  id: string
+  title: string
+  /** Açık olmayan bölümde boş */
+  summary_html: string
+  is_visible: boolean
+  availability: Availability
+  available_from: string | null
+  /** Bitiş anı hariç */
+  available_until: string | null
+  version: number
+  activities: Activity[]
+}
+export type Space = {
+  section_id: string
+  section_code: string
+  course: NamedRef
+  term: {
+    id: string
+    code: string
+  }
+  role: SpaceRole
+  can_edit: boolean
+  summary_html: string
+  instructors: SpaceInstructor[]
+  topics: Topic[]
+}
+export type TopicInput = {
+  title: string
+  summary_html?: string
+  is_visible?: boolean
+  available_from?: string | null
+  available_until?: string | null
+}
+export type ActivityInput = {
+  type: 'RESOURCE' | 'FOLDER' | 'URL' | 'PAGE' | 'LABEL'
+  title: string
+  description_html?: string
+  is_visible?: boolean
+  available_from?: string | null
+  available_until?: string | null
+  file_ids?: string[]
+  url?: string
+  open_in_new_tab?: boolean
+  body_html?: string
+}
 export type StaffSummary = {
   staff_id: string
   staff_no: string
@@ -4933,6 +5200,22 @@ export const {
   useDeleteFileMutation,
   useGetFileDownloadUrlQuery,
   useLazyGetFileDownloadUrlQuery,
+  useMySpacesQuery,
+  useLazyMySpacesQuery,
+  useGetSpaceQuery,
+  useLazyGetSpaceQuery,
+  useSetSpaceSummaryMutation,
+  useSetSpaceLayoutMutation,
+  useCreateTopicMutation,
+  useUpdateTopicMutation,
+  useDeleteTopicMutation,
+  useCreateActivityMutation,
+  useGetActivityQuery,
+  useLazyGetActivityQuery,
+  useUpdateActivityMutation,
+  useDeleteActivityMutation,
+  useGetActivityFileUrlQuery,
+  useLazyGetActivityFileUrlQuery,
   useSearchInstructorsQuery,
   useLazySearchInstructorsQuery,
   useListAssessmentTypesQuery,
