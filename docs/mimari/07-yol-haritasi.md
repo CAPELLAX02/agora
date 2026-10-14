@@ -318,7 +318,7 @@ flowchart LR
 | ✅ | Öğrenci: notlarım (dönem seçici, ders kartlarında harf notu ve sınıf ortalaması, bileşen puan çubuğunda sınıf ortalaması işareti), transkript (yazdırılabilir, mobilde sadeleşen tablo), sanal transkript ("Ne olur?" modu: derslere harf seçimi, gerçek → sanal YANO/GANO) |
 | ✅ | Danışman ve öğrenci işleri: öğrenci detayında transkript ve dönem sonuçları, yazdırılabilir görünüm |
 | ✅ | Not düzeltme talepleri: öğretim elemanının talepleri ve yeni talep (dönem, şube, öğrenci, bileşen ya da harf, canlı önizleme), onay kuyruğu (onayla ve uygula, gerekçeli ret, son kararlar) |
-| ⬜ | Ana sayfa: öğrenci için son ilan edilen notlar, öğretim elemanı için not girişi bekleyen şubeler |
+| ✅ | Ana sayfa: öğrenci için son ilan edilen notlar, öğretim elemanı için not girişi bekleyen şubeler — öğrencide dönemin son ilan edilen harf notları ve yayımlanan bileşen notları (sınıf ortalamasıyla); öğretim elemanında şube başına penceresi açık bileşenlerdeki eksik not sayısı (bütünlemede hakkı olanlar), kilitlenmemiş plan uyarısı, MFA gerekli işareti. "Yakında" kartı kalan modüllerle güncellendi |
 
 **Kapanış**
 
