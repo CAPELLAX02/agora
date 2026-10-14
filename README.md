@@ -53,10 +53,12 @@ make web-dev       # web: http://localhost:5173
 | `22290001`    | Deniz Aksoy       | Öğrenci, Bilgisayar Mühendisliği (danışmanı `P10001`)                   |
 | `22290002`    | Ece Kaya          | Öğrenci, Bilgisayar Mühendisliği (danışmanı `P10001`)                   |
 | `26290004` … `26290017` | 8 öğrenci | Ders seçme demo grubu, danışmanı `P10001` (bkz. [Ders seçme demosu](#ders-seçme-demosu)) |
+| `26290101` … `26290120` | 20 öğrenci | 1. sınıf not girişi demo grubu, danışmanı `P10008` (bkz. [Not girişi demosu](#not-girişi-demosu)) |
 | `22290003`    | Can Polat         | Öğrenci, **geçici parola**: ilk girişte parolasını değiştirmek zorunda  |
 | `P10001`      | Ayşe Demir        | Öğretim elemanı ve danışman (Bilgisayar Mühendisliği)                   |
 | `P10002`      | Mehmet Yıldız     | Öğretim elemanı ve bölüm başkanı (Bilgisayar Mühendisliği)              |
 | `P10003` … `P10007` | Elif Şahin, Burak Arslan, Selin Koç, Kerem Aydın, Zehra Kurt | Bilgisayar Mühendisliği öğretim elemanları (2026 güz derslerini verir) |
+| `P10008`      | Cem Aksu          | Öğretim elemanı ve 1. sınıf demo grubunun danışmanı (Bilgisayar Mühendisliği) |
 | `P10010`      | Ahmet Güneş       | Öğretim elemanı (Matematik; Matematik I)                                |
 | `P10011`      | Gizem Erdoğan     | Öğretim elemanı (Fizik; Fizik I ve laboratuvarı)                        |
 | `P20001`      | Fatma Çelik       | Fakülte öğrenci işleri (Mühendislik Fakültesi)                          |
@@ -110,6 +112,19 @@ Gerçek takvimde 2026 güz ders seçmesi Eylül'de biter. Ekranlar her gün dene
 | Pencere dışı müdahale, ek süre | `P20001`, `P20002` | `registration:override` MFA ister: önce iki adımlı doğrulamayı kurun |
 
 `make seed` kaydı olan öğrenciye dokunmaz. Demo kayıtlarını baştan kurmak için geliştirme veritabanını sıfırlayın (`docker compose down -v`, ardından hızlı başlangıç adımları).
+
+### Not girişi demosu
+
+Gerçek takvimde 2026 güz not girişi Kasım'da başlar. `make seed`, Mühendislik Fakültesi'ne **seed'in çalıştığı andan itibaren üç hafta** açık kalan fakülte kapsamlı not girişi pencereleri açar: ara sınav, final, elle harf notu ve bütünleme (bütün aşamalar aynı anda açık; takvimde "(demo)").
+
+Demo sınıfı `P10001`'in 1. sınıf dersi **COM1007-1** (Bilgisayar Programlama, ortak öğretim üyesi `P10007` asistan; plan kilitli: ara sınav %25, laboratuvar %15, final %60). 1. sınıf demo grubu (`26290101` … `26290120`) ders seçme servisiyle sepetini kurmuş, danışmanı `P10008` onaylamıştır; kesin kayıtlar gerçek akıştan gelir. Ara sınav notları girilip yayımlanmıştır (`26290108` sınava girmedi), laboratuvar notları girilmiş ama yayımlanmamıştır (iki öğrencinin notu eksik), final girilmemiştir.
+
+| Ne denenir | Hesap | Not |
+| ---------- | ----- | --- |
+| Not tablosu, not girişi, CSV içe ve dışa aktarma | `P10001` | Not girişi `score:enter` ister ve MFA'lı oturumda açılır: önce iki adımlı doğrulamayı kurun |
+| Ara sınav notu ve sınıf ortalaması | `26290101` … `26290120` | "Notlarım"da yayımlanan ara sınav görünür, laboratuvar görünmez |
+
+`make seed` ara sınavına not girilmiş sınıfa dokunmaz.
 
 **Yük testi:** `make loadtest-registration` ders seçme açılışında eşzamanlı giriş yapıp popüler şubelere ders ekleyen sentetik öğrencileri k6 ile canlandırır ve ardından kontenjan aşımının 0 olduğunu SQL ile doğrular (`make seed-synthetic` gerekir). Sonuçlar ve darboğaz analizi: [08 · Yük Testleri](docs/mimari/08-yuk-testleri.md).
 
