@@ -122,6 +122,7 @@ type LetterGrades struct {
 	OverrideWindow EntryWindow
 	MakeupWindow   EntryWindow
 	Params         letter.Params
+	Components     []Component
 	Scales         map[string]letter.Scale
 	DefaultScaleID string
 	Rows           []LetterRow
@@ -194,6 +195,7 @@ func (s *Service) letterGrades(ctx context.Context, q db.Querier, sc SectionCont
 	if err != nil {
 		return LetterGrades{}, err
 	}
+	g.Components = components
 	students, err := s.gradebookStudentsQ(ctx, q, sc.SectionID)
 	if err != nil {
 		return LetterGrades{}, err
@@ -262,19 +264,7 @@ func (s *Service) letterGrades(ctx context.Context, q db.Querier, sc SectionCont
 			p := Points(*x.weighted)
 			row.PublishedWeighted = &p
 		}
-		in := letter.Input{AttendanceFail: st.Attendance == AttendanceFail, PassFail: sc.GradingMode == "PASS_FAIL"}
-		for _, c := range components {
-			comp := letter.Component{Kind: kindOf(c.Type.Category), Weight: letter.Points(cents(c.Weight))}
-			if score, ok := st.Scores[c.ID]; ok {
-				if score.Absent {
-					comp.Absent = true
-				} else {
-					p := letter.Points(score.Points)
-					comp.Score = &p
-				}
-			}
-			in.Components = append(in.Components, comp)
-		}
+		in := letterInput(components, st.Scores, st.Attendance == AttendanceFail, sc.GradingMode == "PASS_FAIL")
 		res, err := letter.Compute(g.Scales[x.scaleID], g.Params, in)
 		if err != nil {
 			return LetterGrades{}, fmt.Errorf("grading: %s harf notu hesaplanamadı: %w", st.StudentNo, err)
@@ -286,6 +276,25 @@ func (s *Service) letterGrades(ctx context.Context, q db.Querier, sc SectionCont
 		g.Rows = append(g.Rows, row)
 	}
 	return g, nil
+}
+
+// letterInput, harf notu motorunun girdisidir: planın bileşenleri ve öğrencinin bunlardaki
+// notları.
+func letterInput(components []Component, scores map[string]Score, attendanceFail, passFail bool) letter.Input {
+	in := letter.Input{AttendanceFail: attendanceFail, PassFail: passFail}
+	for _, c := range components {
+		comp := letter.Component{Kind: kindOf(c.Type.Category), Weight: letter.Points(cents(c.Weight))}
+		if score, ok := scores[c.ID]; ok {
+			if score.Absent {
+				comp.Absent = true
+			} else {
+				p := letter.Points(score.Points)
+				comp.Score = &p
+			}
+		}
+		in.Components = append(in.Components, comp)
+	}
+	return in
 }
 
 func kindOf(c Category) letter.Kind {
