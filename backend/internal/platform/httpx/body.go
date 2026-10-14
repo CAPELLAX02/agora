@@ -57,6 +57,28 @@ func ReadJSON(w http.ResponseWriter, r *http.Request, dst any) error {
 	return nil
 }
 
+// ReadBody, JSON dışı bir gövdeyi (ör. CSV) olduğu gibi okur. Gövde mediaType türünde
+// olmalı ve MaxBodyBytes'ı aşmamalı. Tür zorunluluğu ReadJSON'daki gibi CSRF korumasıdır:
+// HTML formları text/csv gönderemez. Hatalar *BodyError olarak döner.
+func ReadBody(w http.ResponseWriter, r *http.Request, mediaType string) ([]byte, error) {
+	got, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if err != nil || got != mediaType {
+		return nil, &BodyError{
+			Status: http.StatusUnsupportedMediaType,
+			Code:   "UNSUPPORTED_MEDIA_TYPE",
+			Detail: "İstek gövdesi " + mediaType + " olmalı.",
+		}
+	}
+	data, err := io.ReadAll(http.MaxBytesReader(w, r.Body, MaxBodyBytes))
+	if err != nil {
+		return nil, decodeError(err)
+	}
+	if len(data) == 0 {
+		return nil, invalidBody("İstek gövdesi boş.")
+	}
+	return data, nil
+}
+
 func decodeError(err error) error {
 	var (
 		syntaxErr   *json.SyntaxError

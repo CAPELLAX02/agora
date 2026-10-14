@@ -82,6 +82,41 @@ func TestReadJSONPanicsOnNonPointer(t *testing.T) {
 	_ = ReadJSON(httptest.NewRecorder(), req, dst)
 }
 
+func TestReadBody(t *testing.T) {
+	tests := []struct {
+		name        string
+		contentType string
+		body        string
+		wantStatus  int // 0: hata beklenmiyor
+	}{
+		{"geçerli", "text/csv", "no;puan\n1;70", 0},
+		{"charset parametresi kabul edilir", "text/csv; charset=utf-8", "no;puan", 0},
+		{"Content-Type yok", "", "no;puan", 415},
+		{"form ile gönderilebilen tür", "text/plain", "no;puan", 415},
+		{"boş gövde", "text/csv", "", 400},
+		{"çok büyük", "text/csv", strings.Repeat("a", MaxBodyBytes+1), 413},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.body))
+			if tt.contentType != "" {
+				req.Header.Set("Content-Type", tt.contentType)
+			}
+			data, err := ReadBody(httptest.NewRecorder(), req, "text/csv")
+			if tt.wantStatus == 0 {
+				if err != nil || string(data) != tt.body {
+					t.Fatalf("gövde = %q, hata = %v", data, err)
+				}
+				return
+			}
+			var be *BodyError
+			if !errors.As(err, &be) || be.Status != tt.wantStatus {
+				t.Errorf("hata = %v, want %d", err, tt.wantStatus)
+			}
+		})
+	}
+}
+
 func TestInvalidBody(t *testing.T) {
 	tests := []struct {
 		name       string
