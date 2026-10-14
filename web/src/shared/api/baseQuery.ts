@@ -20,8 +20,17 @@ export type ApiError = FetchBaseQueryError & { retryAfter?: number }
 // Mutlak adres: tarayıcıda aynı origin, testlerde (Node fetch) de çözülebilir bir URL.
 const origin = () => window.location.origin
 
+// RTK Query'nin "json" okuyucusuyla aynı: boş gövde null, problem+json hataları da JSON.
+async function readJSON(response: Response): Promise<unknown> {
+  const text = await response.text()
+  return text.length ? JSON.parse(text) : null
+}
+
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: '',
+  // CSV dönen uçlar (not tablosunu dışa aktarma) metin olarak okunur, geri kalan her şey JSON.
+  responseHandler: (response) =>
+    response.headers.get('Content-Type')?.startsWith('text/csv') ? response.text() : readJSON(response),
   prepareHeaders: (headers, { getState }) => {
     // Web istemcisi: refresh token çerezde taşınır. Başlık ayrıca tarayıcının başka
     // sitelerden gelen isteklerde CORS ön kontrolü yapmasını sağlar (CSRF koruması).
@@ -100,8 +109,18 @@ export const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, ApiEr
   api,
   extra,
 ) => {
-  const withOrigin = (a: string | FetchArgs): FetchArgs =>
-    typeof a === 'string' ? { url: origin() + a } : { ...a, url: origin() + a.url }
+  const withOrigin = (a: string | FetchArgs): FetchArgs => {
+    if (typeof a === 'string') {
+      return { url: origin() + a }
+    }
+    const out: FetchArgs = { ...a, url: origin() + a.url }
+    // Sözleşmede JSON dışındaki tek istek gövdesi CSV'dir (not içe aktarma): üretilen istemci
+    // metni olduğu gibi gönderir, türünü burada söyleriz (üretilen başlıklar düz nesnedir).
+    if (typeof a.body === 'string' && !(a.headers instanceof Headers) && !Array.isArray(a.headers)) {
+      out.headers = { 'Content-Type': 'text/csv', ...a.headers }
+    }
+    return out
+  }
   const path = typeof args === 'string' ? args : args.url
 
   let result = await rawBaseQuery(withOrigin(args), api, extra)

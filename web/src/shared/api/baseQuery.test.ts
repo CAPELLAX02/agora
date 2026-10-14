@@ -1,10 +1,12 @@
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 
+import { setupStore } from '@/app/store'
 import { tokens } from '@/test/fixtures'
 import { server } from '@/test/server'
 
 import { refreshSession } from './baseQuery'
+import { agoraApi } from './generated'
 
 describe('refreshSession', () => {
   it('eşzamanlı çağrılar tek bir yenileme isteğini paylaşır', async () => {
@@ -57,5 +59,38 @@ describe('refreshSession', () => {
     )
     expect(await refreshSession(() => undefined, { retry: false })).toBe('invalid')
     expect(calls).toBe(1)
+  })
+})
+
+describe('CSV uçları', () => {
+  it('metin gövde text/csv olarak gider, CSV yanıtı metin olarak okunur', async () => {
+    let sent: { type: string | null; body: string; match: string | null } | null = null
+    server.use(
+      http.post('/api/v1/assessment-components/:id/scores/import', async ({ request }) => {
+        sent = {
+          type: request.headers.get('Content-Type'),
+          body: await request.text(),
+          match: request.headers.get('If-Match'),
+        }
+        return HttpResponse.json({ ok: true })
+      }),
+      http.get('/api/v1/sections/:id/gradebook.csv', () =>
+        HttpResponse.text('Öğrenci No;Ara sınav\r\n22290102;75,5\r\n', {
+          headers: { 'Content-Type': 'text/csv; charset=utf-8' },
+        }),
+      ),
+    )
+    const store = setupStore()
+    await store
+      .dispatch(
+        agoraApi.endpoints.importScores.initiate({ id: 'c1', 'If-Match': '"3"', body: '22290102;70' }),
+      )
+      .unwrap()
+    expect(sent).toEqual({ type: 'text/csv', body: '22290102;70', match: '"3"' })
+
+    const csv = await store
+      .dispatch(agoraApi.endpoints.exportGradebook.initiate({ id: 's1' }, { subscribe: false }))
+      .unwrap()
+    expect(csv).toBe('Öğrenci No;Ara sınav\r\n22290102;75,5\r\n')
   })
 })
