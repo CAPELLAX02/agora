@@ -1,6 +1,6 @@
 # 07 · Yol Haritası ve Geliştirme Sırası
 
-> **Durum:** v0.4 · Kararlar §5'te · İlerleme ve "Bitti" kontrol listesi §6'da.
+> **Durum:** v0.5 · Faz 0–4 tamamlandı (güz dönemi hedefi, 2026-10-14) · Kararlar §5'te · İlerleme ve "Bitti" kontrol listesi §6'da.
 
 ## 1. Kritik Karar: Önce Backend mi, Frontend mi?
 
@@ -324,8 +324,8 @@ flowchart LR
 
 | Durum | Madde |
 | --- | --- |
-| ⬜ | Playwright e2e: öğretim elemanı MFA kurup not girer ve yayımlar → harf notlarını ilan eder → öğrenci notunu, sınıf ortalamasını ve transkriptini görür; bütünleme; not düzeltme talebi ve onayı; sanal transkript |
-| ⬜ | Sözleşme ve dokümanlar güncel (veri modeli, harf notu ve GANO kuralları, yetkilendirme politikaları, README'de demo rehberi), CI yeşil |
+| ✅ | Playwright e2e: öğretim elemanı MFA kurup not girer ve yayımlar → harf notlarını ilan eder → öğrenci notunu, sınıf ortalamasını ve transkriptini görür; bütünleme; not düzeltme talebi ve onayı; sanal transkript — `grading.spec` seed'in demo sınıfında (COM1007-1, 20 öğrenci): MFA'sız tablo salt okunur, MFA kurulunca finaller ve eksik laboratuvar notları girilir, bileşen yayımlanır, harf notları ilan edilir (final barajı altı → bütünleme hakkı); öğrenci ana sayfada, "Notlarım"da ve transkriptte görür (YANO worker'da hesaplanır); bütünleme notu sadece hakkı olana, bütünleme ilanıyla harf değişir; not düzeltme talebi bölüm başkanının MFA'lı onayıyla uygulanır. Hesaplara MFA kurduğu için ayrı Playwright projesinde diğer senaryolardan sonra çalışır. Sanal transkript `transcript.spec`'te |
+| ✅ | Sözleşme ve dokümanlar güncel (veri modeli, harf notu ve GANO kuralları, yetkilendirme politikaları, README'de demo rehberi), CI yeşil (backend, web kontrolü ve Playwright) |
 
 ### Faz 5 ve sonrası
 

@@ -236,11 +236,26 @@ Her hassas eylem, servis katmanında açıkça isimlendirilmiş bir **politika f
 
 ```text
 canEnterScore(actor, assessment, now):                          # uygulandı (Faz 4): elle giriş, Excel ve CSV içe aktarma
-    has(actor, "score:enter")
-    AND isInstructorOf(actor, assessment.section)                  # ilişki
+    has(actor, "score:enter")                                        # MFA'lı oturumda
+    AND roleIn(actor, assessment.section) IN ('PRIMARY', 'CO_INSTRUCTOR')   # ilişki; asistan girmez
+    AND assessment.section.assessment_plan_locked_at IS NOT NULL     # bağlam: kilitli plan
     AND calendarWindowOpen(windowFor(assessment.category),          # bağlam: ara sınav / final / bütünleme
                            scope = assessment.section.faculty, now)
-    AND assessment.section.grades_finalized_at IS NULL              # bağlam: kesinleşmemiş
+    AND (assessment.category <> 'MAKEUP'                             # bağlam: notun aşaması
+           AND assessment.section.grades_published_at IS NULL
+         OR assessment.category = 'MAKEUP'
+           AND assessment.section.grades_published_at IS NOT NULL
+           AND assessment.section.makeup_published_at IS NULL
+           AND makeupEligible(student))                              # bütünleme sadece hakkı olana
+
+canFinalizeGrades(actor, section, now):                          # uygulandı (Faz 4): ilan, elle harf, bütünleme ilanı
+    has(actor, "grade:finalize")                                     # MFA'lı oturumda
+    AND roleIn(actor, section) = 'PRIMARY'                           # ilişki: sorumlu öğretim elemanı
+    AND ( ilan:      calendarWindowOpen('FINAL_GRADE_ENTRY' | 'MANUAL_LETTER_GRADE', faculty, now)
+                     AND herkesin notu hesaplanabilir ya da elle harf verilmiş
+          elle harf: calendarWindowOpen('MANUAL_LETTER_GRADE', faculty, now) AND reason IS NOT NULL
+          bütünleme: calendarWindowOpen('MAKEUP_GRADE_ENTRY', faculty, now) )
+    # İlandan sonra notlar sadece not düzeltme talebiyle değişir (canRequestGradeChange).
 
 canEditRegistration(actor, registration, now):                   # uygulandı (Faz 3)
     has(actor, "registration:manage_own")
@@ -312,10 +327,6 @@ canManageOffering(actor, offering, perm):                        # uygulandı (F
     # Ders kataloğu ve seçmeli havuzlar sahibi bölüme (yoksa üniversiteye), müfredat
     # programa, takvim olayı kapsamına (üniversite/birim/program) göre aynı biçimde denetlenir.
 
-canApproveGradeChange(actor, request):
-    has(actor, "grade_change:approve")
-    AND inScope(actor, request.section.department)
-    AND request.requested_by != actor.id                             # görevler ayrılığı
 ```
 
 ### 4.6 Uygulama mimarisi (enforcement)
