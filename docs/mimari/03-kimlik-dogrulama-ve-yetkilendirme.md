@@ -281,6 +281,15 @@ canManageHold(actor, studentProgram):                            # uygulandı (F
                                                                      # fakülte öğrenci işleri fakülte kapsamı
     # Kaldırmada gerekçe zorunlu; öğrenci kendi engellerini görür, danışman danışmanlığındakileri.
 
+canRequestGradeChange(actor, enrollment):                        # uygulandı (Faz 4)
+    has(actor, "grade_change:request")
+    AND roleIn(actor, enrollment.section) IN ('PRIMARY', 'CO_INSTRUCTOR')   # ilişki
+    AND enrollment.section.grades_published_at IS NOT NULL
+
+canApproveGradeChange(actor, request):                           # uygulandı (Faz 4)
+    inScope(actor, "grade_change:approve", request.section.department)   # MFA'lı oturumda
+    AND actor <> request.requested_by                              # görevler ayrılığı (CK da var)
+
 canReadGrades(actor, studentProgram):                            # uygulandı (Faz 4)
     # canReadTranscript'in aynısı, grade:read_own / grade:read_scoped ile. Bileşen notu ve
     # sınıf ortalaması sadece yayımlanan bileşende görünür.

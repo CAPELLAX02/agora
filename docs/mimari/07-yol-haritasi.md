@@ -304,7 +304,7 @@ flowchart LR
 | ✅ | Transkript | `GET /student-programs/{id}/transcript`: dönem dönem dersler, AKTS, kredi, harf notu ve katsayı, tekrar ve yerini sonraki denemeye bırakmış satır işaretleri, dönem sonuçları (YANO, GANO, AKTS, onur) ve genel özet (GANO, kazanılan / gereken AKTS, onur dönemleri). Öğrenci kendisininkini (`transcript:read_own`), danışman danışmanlığındakileri, kapsamdaki birimler (`transcript:read_scoped`) görür; görme yetkisi olmayana 404 |
 | ✅ | Sanal transkript ("ne olur") | `POST /student-programs/{id}/transcript/simulate`: varsayımsal harflerle YANO/GANO, hiçbir şey kaydedilmez; dönem sonuçlarıyla aynı hesap (`grading/gpa`). Süren derse harf verilince ilandaki gibi yerini aldığı denemeler düşer (tek kaynak: ilan ve simülasyon aynı "son not geçerli" sorgusunu kullanır). Harfler dersin not ölçeğinden (`letter_options`) |
 | ✅ | Öğrencinin notları | `GET /student-programs/{id}/grades?term_id=`: dönem seçimli (varsayılan içinde bulunulan dönem); dersler, bileşenler ve ağırlıkları, yayımlanan bileşende not ve sınıfın bileşen ortalaması (not tablosuyla aynı hesap), harf notu ve ilan tarihi, devam durumu, sınıf istatistiği. Yayımlanmamış notlar görünmez, bütünleme sadece notu olana. Öğrenci kendisininkini (`grade:read_own`), danışmanı ve kapsamdaki birimler (`grade:read_scoped`) görür |
-| ⬜ | Not düzeltme talebi | İlandan sonra öğretim elemanı gerekçeyle talep eder (`grade_change:request`) → bölüm başkanı ya da fakülte öğrenci işleri onaylar (`grade_change:approve`, MFA; talep eden onaylayamaz) → uygulanır, dönem sonuçları yeniden hesaplanır, denetim izi |
+| ✅ | Not düzeltme talebi | İlandan sonra şubenin öğretim elemanı gerekçeyle talep eder (`grade_change:request`): bileşen notu (harf motorla yeniden hesaplanır, talepten önce önizlenir) ya da doğrudan harf; bir kesin kayıtta tek bekleyen talep. Bölüm başkanı ya da fakülte öğrenci işleri onaylar ya da gerekçeyle reddeder (`grade_change:approve`, MFA; talep eden onaylayamaz, veritabanı da denetler). Onay notu uygular: bileşen notu, harf, not geçmişi (CORRECTION), sınıf istatistiği, olayla dönem sonuçları; talepten sonra değişen not uygulanmaz. Talep geri çekilebilir, denetim izi |
 | ⬜ | İş metrikleri | `agora_scores_entered_total`, `agora_grades_published_total`, `agora_grade_changes_total` ve Grafana paneli |
 | ⬜ | Seed: not girişi demosu | 2026 güz için kesin kayıtlı demo sınıfları, P10001'in şubelerinde girilmiş ara sınav notları, Mühendislik Fakültesi için seed anına göre açılan not girişi pencereleri (§5 #13 gibi, açıklamasında demo yazar) |
 
@@ -316,7 +316,7 @@ flowchart LR
 | ⬜ | Harf notu önizleme (istatistikler ve dağılım grafiği), elle harf notu, ilan; bütünleme listesi ve girişi |
 | ✅ | Öğrenci: notlarım (dönem seçici, ders kartlarında harf notu ve sınıf ortalaması, bileşen puan çubuğunda sınıf ortalaması işareti), transkript (yazdırılabilir, mobilde sadeleşen tablo), sanal transkript ("Ne olur?" modu: derslere harf seçimi, gerçek → sanal YANO/GANO) |
 | ✅ | Danışman ve öğrenci işleri: öğrenci detayında transkript ve dönem sonuçları, yazdırılabilir görünüm |
-| ⬜ | Not düzeltme talepleri: öğretim elemanının talebi, onay ekranı |
+| ✅ | Not düzeltme talepleri: öğretim elemanının talepleri ve yeni talep (dönem, şube, öğrenci, bileşen ya da harf, canlı önizleme), onay kuyruğu (onayla ve uygula, gerekçeli ret, son kararlar) |
 | ⬜ | Ana sayfa: öğrenci için son ilan edilen notlar, öğretim elemanı için not girişi bekleyen şubeler |
 
 **Kapanış**
