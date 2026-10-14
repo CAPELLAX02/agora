@@ -11,6 +11,7 @@ import (
 	"github.com/CAPELLAX02/agora/backend/internal/files"
 	"github.com/CAPELLAX02/agora/backend/internal/grading"
 	"github.com/CAPELLAX02/agora/backend/internal/iam"
+	"github.com/CAPELLAX02/agora/backend/internal/lms"
 	"github.com/CAPELLAX02/agora/backend/internal/offering"
 	"github.com/CAPELLAX02/agora/backend/internal/org"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authz"
@@ -45,6 +46,7 @@ func (app *application) routes() http.Handler {
 	grading.NewHandler(grading.NewRepository(app.db), app.logger).Register(rt)
 	if app.files != nil {
 		files.NewHandler(app.files, app.logger).Register(rt)
+		lms.NewHandler(lms.NewService(app.db, app.files, time.Now), app.logger).Register(rt)
 	}
 	grades := grading.NewService(app.db, academic.NewRepository(app.db), time.Now)
 	if app.gradingMetrics != nil {
