@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -211,16 +212,24 @@ func (r result) code() string {
 	return c
 }
 
+// csvBody, isteğin gövdesini text/csv olarak gönderir.
+type csvBody string
+
 func (s *server) do(method, path, user string, headers map[string]string, body any) result {
 	s.t.Helper()
 	var reader io.Reader
-	if body != nil {
-		b, _ := json.Marshal(body)
-		reader = bytes.NewReader(b)
+	contentType := "application/json"
+	switch b := body.(type) {
+	case nil:
+	case csvBody:
+		reader, contentType = strings.NewReader(string(b)), "text/csv"
+	default:
+		j, _ := json.Marshal(body)
+		reader = bytes.NewReader(j)
 	}
 	req := httptest.NewRequest(method, path, reader)
 	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Content-Type", contentType)
 	}
 	req.Header.Set("X-Test-User", user)
 	for k, v := range headers {

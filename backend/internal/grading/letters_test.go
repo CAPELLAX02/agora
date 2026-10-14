@@ -396,6 +396,11 @@ func TestHTTPMakeup(t *testing.T) {
 			t.Errorf("hakkı olmayan öğrenci %d: %d %s", idx, res.status, res.raw)
 		}
 	}
+	// CSV'den bütünleme notu da sadece hakkı olana.
+	res := s.do("POST", makeup+"/scores/import/preview", fx.ayseUser, mfa, csvBody("Öğrenci No;Bütünleme\n22290101;70\n22290102;70\n22290103;\n"))
+	if importRow(res, 2)["error_code"] != "NOT_ELIGIBLE" || importRow(res, 3)["status"] != "CHANGED" || importRow(res, 4)["status"] != "EMPTY" {
+		t.Errorf("bütünleme CSV önizlemesi: %d %s", res.status, res.raw)
+	}
 	if res := put(makeup+"/scores", `"1"`, item(1, 70)); res.status != 200 {
 		t.Fatalf("bütünleme notu: %d %s", res.status, res.raw)
 	}
@@ -408,7 +413,7 @@ func TestHTTPMakeup(t *testing.T) {
 	if letters.body["can_publish_makeup"] != true {
 		t.Errorf("bütünleme ilan edilebilir olmalı: %s", letters.raw)
 	}
-	res := s.do("POST", section+"/makeup/publish", fx.ayseUser, mfa, nil)
+	res = s.do("POST", section+"/makeup/publish", fx.ayseUser, mfa, nil)
 	if res.status != 200 || res.body["makeup_published_at"] == nil || res.body["can_publish_makeup"] != false {
 		t.Fatalf("bütünleme ilanı: %d %s", res.status, res.raw)
 	}

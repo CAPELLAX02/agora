@@ -36,6 +36,7 @@ func (h *GradebookHandler) Register(rt *authz.Router) {
 	rt.HandleFunc("PUT /api/v1/assessment-components/{id}/scores", authz.Permission(permScore), h.setScores)
 	rt.HandleFunc("POST /api/v1/assessment-components/{id}/publish", authz.Permission(permScore), h.publish)
 	rt.HandleFunc("PUT /api/v1/sections/{id}/attendance", authz.Permission(permScore), h.setAttendance)
+	h.registerCSV(rt)
 	h.registerLetters(rt)
 	h.registerChanges(rt)
 }
