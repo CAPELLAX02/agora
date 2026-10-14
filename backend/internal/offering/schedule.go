@@ -527,6 +527,46 @@ func (r *Repository) StaffByUser(ctx context.Context, userID string) (string, er
 	return id, nil
 }
 
+// TeachingSection, öğretim elemanının bir dönemde görev aldığı şubedir.
+type TeachingSection struct {
+	SectionID   string
+	SectionCode string
+	OfferingID  string
+	TermID      string
+	Course      Ref
+	Role        string // PRIMARY, CO_INSTRUCTOR, ASSISTANT
+	Students    int    // kesin kayıtlı (bırakmamış) öğrenci
+	HasSchedule bool   // haftalık programda oturumu var
+}
+
+// TeachingSections, personelin dönemde görev aldığı (iptal edilmemiş) şubelerdir. Haftalık
+// programdan bağımsızdır: oturumu olmayan dersler (bitirme projesi, staj ...) de gelir.
+func (r *Repository) TeachingSections(ctx context.Context, staffID, termID string) ([]TeachingSection, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT s.id, s.section_code, o.id, o.term_id, c.id, c.code, c.name_tr, c.name_en, si.role,
+		       (SELECT count(*) FROM enrollment.enrollments e WHERE e.section_id = s.id AND e.status <> 'DROPPED'),
+		       EXISTS (SELECT 1 FROM offering.schedule_slots sl WHERE sl.section_id = s.id)
+		FROM offering.section_instructors si
+		JOIN offering.sections s ON s.id = si.section_id
+		JOIN offering.course_offerings o ON o.id = s.offering_id
+		JOIN curriculum.courses c ON c.id = o.course_id
+		WHERE si.staff_id = $1 AND o.term_id = $2 AND s.status <> 'CANCELLED' AND o.status <> 'CANCELLED'
+		ORDER BY c.code, s.section_code`, staffID, termID)
+	if err != nil {
+		return nil, fmt.Errorf("offering: şubeler okunamadı: %w", err)
+	}
+	out, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (TeachingSection, error) {
+		var t TeachingSection
+		err := row.Scan(&t.SectionID, &t.SectionCode, &t.OfferingID, &t.TermID,
+			&t.Course.ID, &t.Course.Code, &t.Course.NameTR, &t.Course.NameEN, &t.Role, &t.Students, &t.HasSchedule)
+		return t, err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("offering: şubeler okunamadı: %w", err)
+	}
+	return out, nil
+}
+
 // CurrentTermID, aktif dönemin kimliğini döndürür. Aktif dönem yoksa ErrNotFound döner.
 func (r *Repository) CurrentTermID(ctx context.Context) (string, error) {
 	var id string

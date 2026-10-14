@@ -523,6 +523,24 @@ func TestHTTPOfferings(t *testing.T) {
 	if res := s.do("DELETE", "/api/v1/schedule-slots/"+slotID, head, nil, nil); res.status != 204 {
 		t.Errorf("oturum silme: %d", res.status)
 	}
+	// Oturumu kalmayan şube haftalık programda görünmez ama verdiğim şubelerde kalır.
+	if res := s.do("GET", "/api/v1/me/teaching", s.fx.ayseUser, nil, nil); len(res.items()) != 0 {
+		t.Errorf("oturumsuz şube programda: %s", res.raw)
+	}
+	res = s.do("GET", "/api/v1/me/sections", s.fx.ayseUser, nil, nil)
+	if res.status != 200 || len(res.items()) != 1 {
+		t.Fatalf("verdiğim şubeler: %d %s", res.status, res.raw)
+	}
+	if it := res.items()[0].(map[string]any); it["has_schedule"] != false || it["role"] != "PRIMARY" || it["students"] != 0.0 ||
+		it["course"].(map[string]any)["code"] != "COM1001" {
+		t.Errorf("şube: %v", it)
+	}
+	if res := s.do("GET", "/api/v1/me/sections", student, nil, nil); res.status != 200 || len(res.items()) != 0 {
+		t.Errorf("personel olmayan: %d %s", res.status, res.raw)
+	}
+	if res := s.do("GET", "/api/v1/me/sections?term_id=x", s.fx.ayseUser, nil, nil); res.status != 400 {
+		t.Errorf("geçersiz dönem: %d", res.status)
+	}
 	res = s.do("PUT", "/api/v1/offerings/"+oID, head, map[string]string{"If-Match": `"1"`}, map[string]any{"status": "OPEN", "external_ref": "760535"})
 	if res.status != 200 || res.body["status"] != "OPEN" {
 		t.Errorf("açma: %d %s", res.status, res.raw)

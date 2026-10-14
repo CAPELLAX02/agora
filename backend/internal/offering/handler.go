@@ -48,6 +48,7 @@ type Store interface {
 	DeleteSlot(ctx context.Context, actorID, slotID string) error
 
 	Schedule(ctx context.Context, f ScheduleFilter) ([]ScheduleEntry, error)
+	TeachingSections(ctx context.Context, staffID, termID string) ([]TeachingSection, error)
 	StaffByUser(ctx context.Context, userID string) (string, error)
 	SearchInstructors(ctx context.Context, query, departmentID string, limit int) ([]StaffSummary, error)
 }
@@ -89,6 +90,7 @@ func (h *Handler) Register(rt *authz.Router) {
 
 	rt.HandleFunc("GET /api/v1/terms/{id}/schedule", authz.Permission(permRead), h.termSchedule)
 	rt.HandleFunc("GET /api/v1/me/teaching", authz.Authenticated, h.myTeaching)
+	rt.HandleFunc("GET /api/v1/me/sections", authz.Authenticated, h.mySections)
 	rt.HandleFunc("GET /api/v1/instructors", authz.Permission(permSection), h.searchInstructors)
 }
 
@@ -911,34 +913,82 @@ func (h *Handler) writeSchedule(w http.ResponseWriter, r *http.Request, f Schedu
 // myTeaching, öğretim elemanının dönemdeki (varsayılan aktif dönem) haftalık programıdır.
 // Personel olmayan ya da aktif dönem tanımlı olmayan kullanıcıya boş liste döner.
 func (h *Handler) myTeaching(w http.ResponseWriter, r *http.Request) {
-	empty := httpx.ListResponse[scheduleEntryResponse]{Items: []scheduleEntryResponse{}}
+	staffID, termID, ok := h.teachingTerm(w, r)
+	if !ok {
+		return
+	}
+	if staffID == "" {
+		h.writeJSON(w, r, http.StatusOK, httpx.ListResponse[scheduleEntryResponse]{Items: []scheduleEntryResponse{}})
+		return
+	}
+	h.writeSchedule(w, r, ScheduleFilter{TermID: termID, StaffID: staffID})
+}
+
+type teachingSectionResponse struct {
+	SectionID   string      `json:"section_id"`
+	SectionCode string      `json:"section_code"`
+	OfferingID  string      `json:"offering_id"`
+	TermID      string      `json:"term_id"`
+	Course      refResponse `json:"course"`
+	Role        string      `json:"role"`
+	Students    int         `json:"students"`
+	HasSchedule bool        `json:"has_schedule"`
+}
+
+// teachingTerm, isteğin dönemidir (term_id, varsayılan aktif dönem) ve isteği yapanın personel
+// kaydıdır. Personel değilse ya da aktif dönem yoksa ok true ve staffID boş döner: boş liste.
+func (h *Handler) teachingTerm(w http.ResponseWriter, r *http.Request) (staffID, termID string, ok bool) {
 	p, _ := authn.PrincipalFrom(r.Context())
 	staffID, err := h.store.StaffByUser(r.Context(), p.UserID)
 	if errors.Is(err, ErrNotFound) {
-		h.writeJSON(w, r, http.StatusOK, empty)
+		return "", "", true
+	}
+	if err != nil {
+		h.serverError(w, r, err)
+		return "", "", false
+	}
+	termID = r.URL.Query().Get("term_id")
+	switch {
+	case termID != "" && !httpx.ValidUUID(termID):
+		httpx.ValidationFailed(w, r, []httpx.FieldError{{Field: "term_id", Message: "Geçerli bir UUID olmalı."}})
+		return "", "", false
+	case termID == "":
+		termID, err = h.store.CurrentTermID(r.Context())
+		if errors.Is(err, ErrNotFound) {
+			return "", "", true
+		}
+		if err != nil {
+			h.serverError(w, r, err)
+			return "", "", false
+		}
+	}
+	return staffID, termID, true
+}
+
+// mySections, öğretim elemanının dönemde görev aldığı şubelerdir: rolü ve kesin kayıtlı
+// öğrenci sayısıyla, haftalık programdan bağımsız (oturumu olmayan dersler de).
+func (h *Handler) mySections(w http.ResponseWriter, r *http.Request) {
+	staffID, termID, ok := h.teachingTerm(w, r)
+	if !ok {
 		return
 	}
+	res := httpx.ListResponse[teachingSectionResponse]{Items: []teachingSectionResponse{}}
+	if staffID == "" {
+		h.writeJSON(w, r, http.StatusOK, res)
+		return
+	}
+	list, err := h.store.TeachingSections(r.Context(), staffID, termID)
 	if err != nil {
 		h.serverError(w, r, err)
 		return
 	}
-	termID := r.URL.Query().Get("term_id")
-	switch {
-	case termID != "" && !httpx.ValidUUID(termID):
-		httpx.ValidationFailed(w, r, []httpx.FieldError{{Field: "term_id", Message: "Geçerli bir UUID olmalı."}})
-		return
-	case termID == "":
-		termID, err = h.store.CurrentTermID(r.Context())
-		if errors.Is(err, ErrNotFound) {
-			h.writeJSON(w, r, http.StatusOK, empty)
-			return
-		}
-		if err != nil {
-			h.serverError(w, r, err)
-			return
-		}
+	for _, t := range list {
+		res.Items = append(res.Items, teachingSectionResponse{
+			SectionID: t.SectionID, SectionCode: t.SectionCode, OfferingID: t.OfferingID, TermID: t.TermID,
+			Course: refResponse(t.Course), Role: t.Role, Students: t.Students, HasSchedule: t.HasSchedule,
+		})
 	}
-	h.writeSchedule(w, r, ScheduleFilter{TermID: termID, StaffID: staffID})
+	h.writeJSON(w, r, http.StatusOK, res)
 }
 
 func (h *Handler) searchInstructors(w http.ResponseWriter, r *http.Request) {
