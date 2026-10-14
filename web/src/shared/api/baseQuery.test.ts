@@ -5,7 +5,7 @@ import { setupStore } from '@/app/store'
 import { tokens } from '@/test/fixtures'
 import { server } from '@/test/server'
 
-import { refreshSession } from './baseQuery'
+import { refreshSession, XLSX } from './baseQuery'
 import { agoraApi } from './generated'
 
 describe('refreshSession', () => {
@@ -62,8 +62,8 @@ describe('refreshSession', () => {
   })
 })
 
-describe('CSV uçları', () => {
-  it('metin gövde text/csv olarak gider, CSV yanıtı metin olarak okunur', async () => {
+describe('dosya uçları', () => {
+  it('dosya gövdesi kendi türüyle gider; CSV yanıtı metin, Excel yanıtı Blob olarak okunur', async () => {
     let sent: { type: string | null; body: string; match: string | null } | null = null
     server.use(
       http.post('/api/v1/assessment-components/:id/scores/import', async ({ request }) => {
@@ -79,12 +79,18 @@ describe('CSV uçları', () => {
           headers: { 'Content-Type': 'text/csv; charset=utf-8' },
         }),
       ),
+      http.get('/api/v1/sections/:id/gradebook.xlsx', () =>
+        HttpResponse.arrayBuffer(new Uint8Array([0x50, 0x4b, 3, 4]).buffer, {
+          headers: { 'Content-Type': XLSX },
+        }),
+      ),
     )
     const store = setupStore()
+    // jsdom'un Blob'u Node'un fetch'iyle okunamaz: gövde fetch'in kendi Blob'u (tarayıcıda dosya
+    // seçicinin verdiği File da bir Blob'dur).
+    const body = await new Response('22290102;70', { headers: { 'Content-Type': 'text/csv' } }).blob()
     await store
-      .dispatch(
-        agoraApi.endpoints.importScores.initiate({ id: 'c1', 'If-Match': '"3"', body: '22290102;70' }),
-      )
+      .dispatch(agoraApi.endpoints.importScores.initiate({ id: 'c1', 'If-Match': '"3"', body }))
       .unwrap()
     expect(sent).toEqual({ type: 'text/csv', body: '22290102;70', match: '"3"' })
 
@@ -92,5 +98,11 @@ describe('CSV uçları', () => {
       .dispatch(agoraApi.endpoints.exportGradebook.initiate({ id: 's1' }, { subscribe: false }))
       .unwrap()
     expect(csv).toBe('Öğrenci No;Ara sınav\r\n22290102;75,5\r\n')
+
+    const xlsx = await store
+      .dispatch(agoraApi.endpoints.exportGradebookXlsx.initiate({ id: 's1' }, { subscribe: false }))
+      .unwrap()
+    expect(Object.prototype.toString.call(xlsx)).toBe('[object Blob]')
+    expect([xlsx.size, xlsx.type]).toEqual([4, XLSX])
   })
 })

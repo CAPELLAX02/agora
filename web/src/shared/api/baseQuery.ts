@@ -20,6 +20,9 @@ export type ApiError = FetchBaseQueryError & { retryAfter?: number }
 // Mutlak adres: tarayıcıda aynı origin, testlerde (Node fetch) de çözülebilir bir URL.
 const origin = () => window.location.origin
 
+/** XLSX, Excel dosyalarının türüdür. */
+export const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+
 // RTK Query'nin "json" okuyucusuyla aynı: boş gövde null, problem+json hataları da JSON.
 async function readJSON(response: Response): Promise<unknown> {
   const text = await response.text()
@@ -28,9 +31,15 @@ async function readJSON(response: Response): Promise<unknown> {
 
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: '',
-  // CSV dönen uçlar (not tablosunu dışa aktarma) metin olarak okunur, geri kalan her şey JSON.
-  responseHandler: (response) =>
-    response.headers.get('Content-Type')?.startsWith('text/csv') ? response.text() : readJSON(response),
+  // Dosya dönen uçlar (not listesini dışa aktarma): CSV metin, Excel Blob olarak okunur; geri
+  // kalan her şey JSON.
+  responseHandler: (response) => {
+    const type = response.headers.get('Content-Type') ?? ''
+    if (type.startsWith('text/csv')) {
+      return response.text()
+    }
+    return type.startsWith(XLSX) ? response.blob() : readJSON(response)
+  },
   prepareHeaders: (headers, { getState }) => {
     // Web istemcisi: refresh token çerezde taşınır. Başlık ayrıca tarayıcının başka
     // sitelerden gelen isteklerde CORS ön kontrolü yapmasını sağlar (CSRF koruması).
@@ -109,18 +118,9 @@ export const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, ApiEr
   api,
   extra,
 ) => {
-  const withOrigin = (a: string | FetchArgs): FetchArgs => {
-    if (typeof a === 'string') {
-      return { url: origin() + a }
-    }
-    const out: FetchArgs = { ...a, url: origin() + a.url }
-    // Sözleşmede JSON dışındaki tek istek gövdesi CSV'dir (not içe aktarma): üretilen istemci
-    // metni olduğu gibi gönderir, türünü burada söyleriz (üretilen başlıklar düz nesnedir).
-    if (typeof a.body === 'string' && !(a.headers instanceof Headers) && !Array.isArray(a.headers)) {
-      out.headers = { 'Content-Type': 'text/csv', ...a.headers }
-    }
-    return out
-  }
+  // Dosya gövdeleri (Blob) türlerini kendileri taşır: tarayıcı Content-Type'ı Blob'un türünden yazar.
+  const withOrigin = (a: string | FetchArgs): FetchArgs =>
+    typeof a === 'string' ? { url: origin() + a } : { ...a, url: origin() + a.url }
   const path = typeof args === 'string' ? args : args.url
 
   let result = await rawBaseQuery(withOrigin(args), api, extra)

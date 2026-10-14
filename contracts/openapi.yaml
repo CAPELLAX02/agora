@@ -3337,7 +3337,7 @@ paths:
         notu. Dosya UTF-8 (BOM'lu); Türkçe (`lang=tr`) dosya Excel'in Türkçe ayarına uygun
         `;` ayraçlı ve ondalık virgüllü, İngilizce dosya `,` ayraçlı ve ondalık noktalıdır.
         "Girmedi" Türkçe dosyada `G`, İngilizcede `ABSENT` yazılır. Aynı dosya bir bileşenin
-        notlarını içe aktarmak için şablon olarak kullanılabilir.
+        notlarını içe aktarmak için kullanılabilir; biçimli şablon için `gradebook.xlsx`.
       operationId: exportGradebook
       security:
         - bearerAuth: []
@@ -3353,6 +3353,39 @@ paths:
           content:
             text/csv:
               schema: { type: string }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/sections/{id}/gradebook.xlsx:
+    get:
+      tags: [Değerlendirme]
+      summary: Şubenin not listesini Excel şablonu olarak indirir
+      description: >-
+        Not tablosuyla aynı veri ve aynı görme yetkisi; öğretim elemanının doldurup geri
+        yüklediği profesyonel şablon. "Not Listesi" sayfası: başlık bloğu (ders, dönem,
+        ağırlıklar, oluşturulma), marka renkli başlık satırı, öğrenci bilgileri, her bileşen
+        için bir sütun ve harf notu. İsteği yapanın şu an not girebildiği bileşenler sarı ve
+        kilitsizdir, puan hücreleri Excel'de doğrulanır (0-100, en fazla iki ondalık ya da
+        girmedi); diğer hücreler gri ve kilitlidir (sayfa parolasız korunur). "Açıklamalar"
+        sayfası bileşenleri, not girişi pencerelerini ve doldurma kurallarını anlatır. Çok
+        gizli bir kimlik sayfası dosyanın şubesini ve bileşen sütunlarını taşır: içe aktarmada
+        başka şubenin şablonu reddedilir, sütun başlığı değişse de bileşen bulunur.
+      operationId: exportGradebookXlsx
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - name: lang
+          in: query
+          description: Sayfa ve sütun adları, açıklamalar
+          schema: { type: string, enum: [tr, en], default: tr }
+      responses:
+        "200":
+          description: Not listesi şablonu (XLSX)
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema: { type: string, format: binary }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
@@ -3423,14 +3456,16 @@ paths:
   /api/v1/assessment-components/{id}/scores/import/preview:
     post:
       tags: [Değerlendirme]
-      summary: CSV'den not içe aktarmayı önizler
+      summary: Dosyadan (Excel ya da CSV) not içe aktarmayı önizler
       description: >-
-        Hiçbir şey kaydedilmez. Dosyanın ilk satırı başlıktır: öğrenci numarası sütunu
-        (`Öğrenci No`, `Student No` ...) ve puan sütunu aranır. Puan sütunu başlığı bileşenin
-        adı olan sütundur (dışa aktarılan dosya olduğu gibi kullanılabilir), yoksa `Puan` /
-        `Score` başlıklı sütun, o da yoksa iki sütunlu dosyada ikinci sütun. Başlıksız iki
-        sütunlu dosya (öğrenci no, puan) da kabul edilir. Ayraç `;`, `,` ya da sekme; ondalık
-        ayracı virgül ya da nokta olabilir. Puan 0-100 arası (en fazla iki ondalık), girmedi
+        Hiçbir şey kaydedilmez. Gövde Excel (`.xlsx`) ya da CSV olabilir. Başlık satırı ilk
+        satırlarda aranır (şablonun üstünde başlık bloğu vardır): öğrenci numarası sütunu
+        (`Öğrenci No`, `Student No` ...) ve puan sütunu. Agora şablonunda bileşenin sütunu
+        gizli kimlik sayfasından bulunur ve başka şubenin şablonu reddedilir. Kimlik sayfası
+        yoksa puan sütunu başlığı bileşenin adı olan sütundur (dışa aktarılan dosyalar olduğu
+        gibi kullanılabilir), yoksa `Puan` / `Score` başlıklı sütun, o da yoksa iki sütunlu
+        dosyada ikinci sütun. Başlıksız iki sütunlu dosya (öğrenci no, puan) da kabul edilir.
+        CSV'de ayraç `;`, `,` ya da sekme; ondalık ayracı virgül ya da nokta olabilir. Puan 0-100 arası (en fazla iki ondalık), girmedi
         için `G`, `GR`, `GİRMEDİ` ya da `ABSENT`. Boş hücre notu değiştirmez (silmez); dosyada
         olmayan öğrencinin notu da değişmez. Her satır ayrı doğrulanır, hatalar satırda
         döner. Not girme koşulları (yetki, MFA, kilitli plan, açık pencere, not aşaması)
@@ -3444,8 +3479,10 @@ paths:
       requestBody:
         required: true
         content:
+          application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+            schema: { type: string, format: binary, description: "En fazla 1 MiB" }
           text/csv:
-            schema: { type: string, maxLength: 1048576 }
+            schema: { type: string, format: binary, description: "En fazla 1 MiB" }
       responses:
         "200":
           description: Satır satır önizleme
@@ -3454,8 +3491,9 @@ paths:
               schema: { $ref: "#/components/schemas/ScoreImportPreview" }
         "400":
           description: >-
-            `INVALID_CSV`: dosya okunamadı (boş, bozuk tırnak, 1000'den fazla satır, öğrenci
-            numarası ya da bileşenin puan sütunu bulunamadı)
+            `INVALID_FILE`: dosya okunamadı (boş, bozuk Excel ya da tırnak, 1000'den fazla
+            öğrenci satırı, öğrenci numarası ya da bileşenin puan sütunu bulunamadı, başka
+            şubenin şablonu)
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Problem" }
@@ -3473,12 +3511,12 @@ paths:
   /api/v1/assessment-components/{id}/scores/import:
     post:
       tags: [Değerlendirme]
-      summary: CSV'deki notları tek seferde yazar
+      summary: Dosyadaki (Excel ya da CSV) notları tek seferde yazar
       description: >-
         Önizlemedeki dosya yeniden okunup doğrulanır; hatalı satır varsa hiçbir not yazılmaz
         (400 `VALIDATION_FAILED`, satır hataları `errors` dizisinde: `field` = `rows.<satır>`,
         `code` satır hatasının kodu). Hata yoksa değişen notlar tek transaction'da yazılır
-        (kaynak `CSV`, denetim izinde). `If-Match` önizlemenin `version` değeridir: önizlemeden
+        (kaynak `CSV`: dosyadan içe aktarma, denetim izinde). `If-Match` önizlemenin `version` değeridir: önizlemeden
         sonra bu bileşenin notları değiştiyse 412 döner, dosya yeniden önizlenmelidir.
       operationId: importScores
       x-agora-permission: score:enter
@@ -3490,8 +3528,10 @@ paths:
       requestBody:
         required: true
         content:
+          application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+            schema: { type: string, format: binary, description: "En fazla 1 MiB" }
           text/csv:
-            schema: { type: string, maxLength: 1048576 }
+            schema: { type: string, format: binary, description: "En fazla 1 MiB" }
       responses:
         "200":
           description: Güncel not tablosu
@@ -3499,7 +3539,7 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Gradebook" }
         "400":
-          description: "`INVALID_CSV` (önizlemedeki gibi) ya da `VALIDATION_FAILED` (hatalı satırlar)"
+          description: "`INVALID_FILE` (önizlemedeki gibi) ya da `VALIDATION_FAILED` (hatalı satırlar)"
           content:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Problem" }
@@ -6052,7 +6092,7 @@ components:
         application/problem+json:
           schema: { $ref: "#/components/schemas/Problem" }
     UnsupportedMediaType:
-      description: "`UNSUPPORTED_MEDIA_TYPE`: gövde application/json değil (CSV uçlarında text/csv değil)"
+      description: "`UNSUPPORTED_MEDIA_TYPE`: gövde application/json değil (dosya uçlarında text/csv ya da Excel değil)"
       content:
         application/problem+json:
           schema: { $ref: "#/components/schemas/Problem" }

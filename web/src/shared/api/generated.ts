@@ -844,6 +844,15 @@ const injectedRtkApi = api
         }),
         providesTags: ['De\u011Ferlendirme'],
       }),
+      exportGradebookXlsx: build.query<ExportGradebookXlsxApiResponse, ExportGradebookXlsxApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/sections/${queryArg.id}/gradebook.xlsx`,
+          params: {
+            lang: queryArg.lang,
+          },
+        }),
+        providesTags: ['De\u011Ferlendirme'],
+      }),
       setComponentScores: build.mutation<SetComponentScoresApiResponse, SetComponentScoresApiArg>({
         query: (queryArg) => ({
           url: `/api/v1/assessment-components/${queryArg.id}/scores`,
@@ -2259,6 +2268,13 @@ export type ExportGradebookApiArg = {
   /** Sütun başlıkları ve sayı biçimi */
   lang?: 'tr' | 'en'
 }
+export type ExportGradebookXlsxApiResponse = /** status 200 Not listesi şablonu (XLSX) */ Blob
+export type ExportGradebookXlsxApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Sayfa ve sütun adları, açıklamalar */
+  lang?: 'tr' | 'en'
+}
 export type SetComponentScoresApiResponse = /** status 200 Güncel not tablosu */ Gradebook
 export type SetComponentScoresApiArg = {
   /** Geçerli bir UUID değilse 404 döner. */
@@ -2277,7 +2293,7 @@ export type PreviewScoreImportApiResponse = /** status 200 Satır satır önizle
 export type PreviewScoreImportApiArg = {
   /** Geçerli bir UUID değilse 404 döner. */
   id: string
-  body: string
+  body: Blob
 }
 export type ImportScoresApiResponse = /** status 200 Güncel not tablosu */ Gradebook
 export type ImportScoresApiArg = {
@@ -2285,7 +2301,7 @@ export type ImportScoresApiArg = {
   id: string
   /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
   'If-Match': string
-  body: string
+  body: Blob
 }
 export type PublishComponentScoresApiResponse = /** status 200 Güncel not tablosu */ Gradebook
 export type PublishComponentScoresApiArg = {
@@ -4831,6 +4847,8 @@ export const {
   useLazyGetGradebookQuery,
   useExportGradebookQuery,
   useLazyExportGradebookQuery,
+  useExportGradebookXlsxQuery,
+  useLazyExportGradebookXlsxQuery,
   useSetComponentScoresMutation,
   usePreviewScoreImportMutation,
   useImportScoresMutation,

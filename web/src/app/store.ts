@@ -1,4 +1,4 @@
-import { combineReducers, configureStore } from '@reduxjs/toolkit'
+import { combineReducers, configureStore, isPlain } from '@reduxjs/toolkit'
 
 import { authReducer } from '@/features/auth/authSlice'
 import { baseApi } from '@/shared/api/baseApi'
@@ -10,12 +10,20 @@ const rootReducer = combineReducers({
 
 export type RootState = ReturnType<typeof rootReducer>
 
+// Blob (ve File) etiketiyle tanınır: test ortamında yanıtın Blob'u global Blob'un örneği değildir.
+const isBlob = (v: unknown) => ['[object Blob]', '[object File]'].includes(Object.prototype.toString.call(v))
+
 /** setupStore, uygulamanın Redux deposunu kurar. Testler kendi depolarını bununla kurar. */
 export function setupStore(preloadedState?: Partial<RootState>) {
   return configureStore({
     reducer: rootReducer,
     preloadedState,
-    middleware: (getDefault) => getDefault().concat(baseApi.middleware),
+    // Dosya yükleme ve indirme uçları Blob taşır (istek gövdesi, Excel yanıtı): bilinçli olarak
+    // serileştirilebilir sayılır.
+    middleware: (getDefault) =>
+      getDefault({
+        serializableCheck: { isSerializable: (v: unknown) => isPlain(v) || isBlob(v) },
+      }).concat(baseApi.middleware),
   })
 }
 
