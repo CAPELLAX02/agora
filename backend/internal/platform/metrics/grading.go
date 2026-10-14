@@ -2,8 +2,8 @@ package metrics
 
 import "github.com/prometheus/client_golang/prometheus"
 
-// Grading, değerlendirme ve notun iş metrikleridir: girilen bileşen notları (elle ya da CSV
-// ile), ilan edilen harf notları (ilan ve bütünleme) ve not düzeltme talepleri. Not girişi
+// Grading, değerlendirme ve notun iş metrikleridir: girilen bileşen notları (elle, CSV ya da
+// Excel ile), ilan edilen harf notları (ilan ve bütünleme) ve not düzeltme talepleri. Not girişi
 // pencerelerinin son günlerindeki yoğunluk ve ilandan sonraki düzeltme oranı buradan izlenir.
 //
 // grading.Metrics interface'ini örtük olarak sağlar.
@@ -19,7 +19,7 @@ func NewGrading(reg prometheus.Registerer) *Grading {
 	m := &Grading{
 		scores: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Namespace: namespace, Name: "scores_entered_total",
-			Help: "Yazılan (değişen) bileşen notları, kaynağa göre (manual, csv).",
+			Help: "Yazılan (değişen) bileşen notları, kaynağa göre (manual, csv, xlsx).",
 		}, []string{"source"}),
 		published: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Namespace: namespace, Name: "grades_published_total",
@@ -30,7 +30,7 @@ func NewGrading(reg prometheus.Registerer) *Grading {
 			Help: "Not düzeltme talepleri, sonuca göre (requested, applied, rejected, withdrawn).",
 		}, []string{"outcome"}),
 	}
-	for _, v := range []string{"manual", "csv"} {
+	for _, v := range []string{"manual", "csv", "xlsx"} {
 		m.scores.WithLabelValues(v)
 	}
 	for _, v := range []string{"final", "makeup"} {

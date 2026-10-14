@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/CAPELLAX02/agora/backend/internal/platform/sheet"
 )
 
 // ImportStatus, içe aktarılan bir satırın sonucudur.
@@ -67,9 +69,10 @@ func (e *ImportRowsError) Error() string {
 	return fmt.Sprintf("grading: CSV'de %d hatalı satır", len(e.Rows))
 }
 
-// PreviewImport, dosyadaki notların bileşene nasıl yazılacağını gösterir; hiçbir şey kaydedilmez.
-// Not girme koşulları (aşama, kilitli plan, açık pencere) yazmadakiyle aynıdır.
-func (s *Service) PreviewImport(ctx context.Context, ref ComponentRef, data []byte) (ScoreImport, error) {
+// PreviewImport, dosyadaki (CSV ya da XLSX, mediaType'a göre) notların bileşene nasıl
+// yazılacağını gösterir; hiçbir şey kaydedilmez. Not girme koşulları (aşama, kilitli plan,
+// açık pencere) yazmadakiyle aynıdır.
+func (s *Service) PreviewImport(ctx context.Context, ref ComponentRef, data []byte, mediaType string) (ScoreImport, error) {
 	if err := s.checkEntry(ctx, ref); err != nil {
 		return ScoreImport{}, err
 	}
@@ -81,7 +84,15 @@ func (s *Service) PreviewImport(ctx context.Context, ref ComponentRef, data []by
 	if i < 0 {
 		return ScoreImport{}, ErrNotFound
 	}
-	file, err := readScoreCSV(data, []string{componentLabels(components, false)[i], componentLabels(components, true)[i]})
+	// Dosyanın satırları: başlık bloğu ve şablonun altındaki açıklamalar için pay bırakılır.
+	f, err := sheet.Read(data, mediaType, maxImportRows+headerScan+20)
+	if err != nil {
+		return ScoreImport{}, err
+	}
+	file, err := readScoreFile(f, scoreTarget{
+		sectionID: ref.Section.SectionID, sectionLabel: ref.Section.CourseCode + "-" + ref.Section.SectionCode,
+		componentID: ref.ID, labels: []string{componentLabels(components, false)[i], componentLabels(components, true)[i]},
+	})
 	if err != nil {
 		return ScoreImport{}, err
 	}
@@ -170,9 +181,9 @@ func (s *Service) PreviewImport(ctx context.Context, ref ComponentRef, data []by
 
 // ImportScores, dosyadaki notları bileşene yazar: önce önizlemedeki gibi doğrulanır, hatalı
 // satır varsa hiçbir not yazılmaz (*ImportRowsError). Değişen notlar tek transaction'da
-// yazılır (kaynak CSV); version önizlemenin not sürümüdür.
-func (s *Service) ImportScores(ctx context.Context, actorID string, ref ComponentRef, version int, data []byte) (ScoreImport, error) {
-	res, err := s.PreviewImport(ctx, ref, data)
+// yazılır (kaynak dosyanın türü: CSV ya da XLSX); version önizlemenin not sürümüdür.
+func (s *Service) ImportScores(ctx context.Context, actorID string, ref ComponentRef, version int, data []byte, mediaType string) (ScoreImport, error) {
+	res, err := s.PreviewImport(ctx, ref, data, mediaType)
 	if err != nil {
 		return ScoreImport{}, err
 	}
@@ -203,7 +214,11 @@ func (s *Service) ImportScores(ctx context.Context, actorID string, ref Componen
 		}
 		return res, nil
 	}
-	if _, err := s.writeScores(ctx, actorID, ref, version, items, sourceCSV); err != nil {
+	source := sourceCSV
+	if mediaType == sheet.MediaXLSX {
+		source = sourceXLSX
+	}
+	if _, err := s.writeScores(ctx, actorID, ref, version, items, source); err != nil {
 		return ScoreImport{}, err
 	}
 	return res, nil

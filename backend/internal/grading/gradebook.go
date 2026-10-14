@@ -144,7 +144,7 @@ type Calendar interface {
 }
 
 // Metrics, not işlemlerinin iş metrikleridir; olaylar transaction başarıyla bittikten sonra
-// sayılır. Etiket değerleri küçük harftir: source manual/csv, phase final/makeup, outcome
+// sayılır. Etiket değerleri küçük harftir: source manual/csv/xlsx, phase final/makeup, outcome
 // requested/applied/rejected/withdrawn.
 type Metrics interface {
 	ScoresEntered(source string, n int)
@@ -407,6 +407,7 @@ type scoreSource string
 const (
 	sourceManual scoreSource = "MANUAL"
 	sourceCSV    scoreSource = "CSV"
+	sourceXLSX   scoreSource = "XLSX"
 )
 
 // checkEntry, bileşene şu an not girilebildiğini doğrular: notun aşaması (ilandan önce
@@ -550,7 +551,7 @@ func (s *Service) writeScores(ctx context.Context, actorID string, ref Component
 			return fmt.Errorf("grading: not sürümü artırılamadı: %w", err)
 		}
 		action := "assessment_scores.set"
-		if source == sourceCSV {
+		if source != sourceManual {
 			action = "assessment_scores.import"
 		}
 		return audit.Record(ctx, tx, audit.Entry{

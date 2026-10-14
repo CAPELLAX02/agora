@@ -178,7 +178,7 @@ func toGradebookResponse(r *http.Request, g Gradebook) gradebookResponse {
 			LabelTR: c.Label(false, numbered), LabelEN: c.Label(true, numbered), Weight: c.Weight,
 			Version: c.Version, PublishedAt: c.PublishedAt,
 			EntryWindow: toWindowResponse(c.Window),
-			Editable:    canEnter && sc.LockedAt != nil && c.Window.Open && editablePhase(sc, c.Type.Category),
+			Editable:    componentEditable(canEnter, sc, c),
 			ScoredCount: c.Scored, AbsentCount: c.Absent,
 		}
 		if c.Average != nil {
@@ -207,6 +207,12 @@ func toGradebookResponse(r *http.Request, g Gradebook) gradebookResponse {
 		res.Students = append(res.Students, sr)
 	}
 	return res
+}
+
+// componentEditable, isteği yapanın bileşene şu an not girebilmesidir: not girebilen öğretim
+// elemanı, kilitli plan, açık pencere ve notun aşaması.
+func componentEditable(canEnter bool, sc SectionContext, c GradebookComponent) bool {
+	return canEnter && sc.LockedAt != nil && c.Window.Open && editablePhase(sc, c.Type.Category)
 }
 
 // editablePhase, bileşenin şubenin not aşamasında düzenlenebilir olup olmadığıdır: ilandan

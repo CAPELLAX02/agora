@@ -6,20 +6,44 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authz"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/httpx"
+	"github.com/CAPELLAX02/agora/backend/internal/platform/sheet"
 )
 
-// registerCSV, not tablosunun CSV dışa aktarma ve bir bileşene CSV'den not aktarma uçlarıdır.
-// Dışa aktarma not tablosunu görme yetkisiyle, içe aktarma not yazma yetkisiyle aynıdır.
+// registerCSV, not tablosunun dışa aktarma (CSV ve Excel şablonu) ve bir bileşene dosyadan
+// (CSV ya da Excel) not aktarma uçlarıdır. Dışa aktarma not tablosunu görme yetkisiyle, içe
+// aktarma not yazma yetkisiyle aynıdır.
 func (h *GradebookHandler) registerCSV(rt *authz.Router) {
 	rt.HandleFunc("GET /api/v1/sections/{id}/gradebook.csv", authz.Authenticated, h.exportCSV)
+	rt.HandleFunc("GET /api/v1/sections/{id}/gradebook.xlsx", authz.Authenticated, h.exportXLSX)
 	rt.HandleFunc("POST /api/v1/assessment-components/{id}/scores/import/preview", authz.Permission(permScore), h.previewImport)
 	rt.HandleFunc("POST /api/v1/assessment-components/{id}/scores/import", authz.Permission(permScore), h.importScores)
 }
 
 func (h *GradebookHandler) exportCSV(w http.ResponseWriter, r *http.Request) {
+	h.export(w, r, "text/csv; charset=utf-8", "csv", func(buf *bytes.Buffer, g Gradebook, english bool) error {
+		return WriteGradebookCSV(buf, g, english)
+	})
+}
+
+func (h *GradebookHandler) exportXLSX(w http.ResponseWriter, r *http.Request) {
+	h.export(w, r, sheet.MediaXLSX, "xlsx", func(buf *bytes.Buffer, g Gradebook, english bool) error {
+		canEnter := mayEnterScores(r, g.SectionContext)
+		editable := map[string]bool{}
+		for _, c := range g.Components {
+			editable[c.ID] = componentEditable(canEnter, g.SectionContext, c)
+		}
+		return WriteGradebookXLSX(buf, g, english, editable, time.Now())
+	})
+}
+
+// export, not tablosunu bir dosya olarak indirir: görme yetkisi not tablosuyla aynı, dil
+// (lang=tr|en) başlıkları ve sayı biçimini belirler.
+func (h *GradebookHandler) export(w http.ResponseWriter, r *http.Request, contentType, ext string,
+	write func(*bytes.Buffer, Gradebook, bool) error) {
 	id := r.PathValue("id")
 	if !httpx.ValidUUID(id) {
 		httpx.NotFound(w, r)
@@ -40,7 +64,7 @@ func (h *GradebookHandler) exportCSV(w http.ResponseWriter, r *http.Request) {
 	}
 	// Önce belleğe: yazarken hata olursa yarım dosya yerine 500 dönülür.
 	var buf bytes.Buffer
-	if err := WriteGradebookCSV(&buf, g, lang == "en"); err != nil {
+	if err := write(&buf, g, lang == "en"); err != nil {
 		h.serverError(w, r, err)
 		return
 	}
@@ -48,9 +72,9 @@ func (h *GradebookHandler) exportCSV(w http.ResponseWriter, r *http.Request) {
 	if lang == "en" {
 		suffix = "grades"
 	}
-	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s-%s_%s_%s.csv"`,
-		g.CourseCode, g.SectionCode, g.TermCode, suffix))
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s-%s_%s_%s.%s"`,
+		g.CourseCode, g.SectionCode, g.TermCode, suffix, ext))
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Content-Length", strconv.Itoa(buf.Len()))
 	w.WriteHeader(http.StatusOK)
@@ -137,12 +161,12 @@ func (h *GradebookHandler) previewImport(w http.ResponseWriter, r *http.Request)
 	if !ok {
 		return
 	}
-	data, err := httpx.ReadBody(w, r, "text/csv")
+	data, mediaType, err := httpx.ReadBody(w, r, sheet.MediaCSV, sheet.MediaXLSX)
 	if err != nil {
 		httpx.InvalidBody(w, r, err)
 		return
 	}
-	si, err := h.svc.PreviewImport(r.Context(), ref, data)
+	si, err := h.svc.PreviewImport(r.Context(), ref, data, mediaType)
 	if h.importFailed(w, r, err) {
 		return
 	}
@@ -159,12 +183,12 @@ func (h *GradebookHandler) importScores(w http.ResponseWriter, r *http.Request) 
 	if !ok {
 		return
 	}
-	data, err := httpx.ReadBody(w, r, "text/csv")
+	data, mediaType, err := httpx.ReadBody(w, r, sheet.MediaCSV, sheet.MediaXLSX)
 	if err != nil {
 		httpx.InvalidBody(w, r, err)
 		return
 	}
-	if _, err := h.svc.ImportScores(r.Context(), actorID(r), ref, version, data); h.importFailed(w, r, err) {
+	if _, err := h.svc.ImportScores(r.Context(), actorID(r), ref, version, data, mediaType); h.importFailed(w, r, err) {
 		return
 	}
 	h.writeGradebook(w, r, ref.Section.SectionID)
@@ -172,12 +196,12 @@ func (h *GradebookHandler) importScores(w http.ResponseWriter, r *http.Request) 
 
 func (h *GradebookHandler) importFailed(w http.ResponseWriter, r *http.Request, err error) bool {
 	var (
-		csvErr  *CSVError
+		fileErr *sheet.Error
 		rowsErr *ImportRowsError
 	)
 	switch {
-	case errors.As(err, &csvErr):
-		h.problem(w, r, http.StatusBadRequest, "INVALID_CSV", csvErr.Detail)
+	case errors.As(err, &fileErr):
+		h.problem(w, r, http.StatusBadRequest, "INVALID_FILE", fileErr.Detail)
 	case errors.As(err, &rowsErr):
 		fields := make([]httpx.FieldError, 0, len(rowsErr.Rows))
 		for _, row := range rowsErr.Rows {

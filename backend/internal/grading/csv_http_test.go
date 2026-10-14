@@ -1,10 +1,13 @@
 package grading_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/xuri/excelize/v2"
 
 	"github.com/CAPELLAX02/agora/backend/internal/grading"
 )
@@ -139,8 +142,58 @@ func TestHTTPScoreCSV(t *testing.T) {
 		t.Errorf("dışa aktarılanı önizleme: %d %s", res.status, res.raw)
 	}
 
+	// Excel şablonu: indirilen dosyada bir not değiştirilip .xlsx olarak yüklenir.
+	book := s.do("GET", section+"/gradebook.xlsx", fx.ayseUser, mfa, nil)
+	if book.status != 200 || book.header.Get("Content-Type") != "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+		!strings.Contains(book.header.Get("Content-Disposition"), `_notlar.xlsx"`) {
+		t.Fatalf("Excel şablonu: %d %v", book.status, book.header)
+	}
+	x, err := excelize.OpenReader(strings.NewReader(book.raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows, _ := x.GetRows("Not Listesi")
+	aliRow := 0
+	for i, r := range rows {
+		if len(r) > 1 && r[1] == "22290101" {
+			aliRow = i + 1
+		}
+	}
+	if aliRow == 0 || rows[6][6] != "Ara sınav" {
+		t.Fatalf("şablon satırları: %q", rows)
+	}
+	if dvs, _ := x.GetDataValidations("Not Listesi"); len(dvs) != 2 { // ara sınav ve ödev açık, final kapalı
+		t.Errorf("düzenlenebilir sütun doğrulamaları: %d", len(dvs))
+	}
+	_ = x.SetCellValue("Not Listesi", fmt.Sprintf("G%d", aliRow), 88.5)
+	var edited bytes.Buffer
+	if _, err := x.WriteTo(&edited); err != nil {
+		t.Fatal(err)
+	}
+	res = s.do("POST", midterm+"/preview", fx.ayseUser, mfa, xlsxBody(edited.Bytes()))
+	if sum := res.body["summary"].(map[string]any); res.status != 200 || sum["changed"] != 1.0 || sum["unchanged"] != 2.0 || res.body["column"] != "Ara sınav" {
+		t.Fatalf("Excel önizleme: %d %s", res.status, res.raw)
+	}
+	res = s.do("POST", midterm, fx.ayseUser, with(mfa, "If-Match", fmt.Sprintf(`"%v"`, res.body["version"])), xlsxBody(edited.Bytes()))
+	if sc := studentRow(res, fx.enrollments[0])["scores"].(map[string]any)[fx.components["MIDTERM"]].(map[string]any); res.status != 200 || sc["score"] != 88.5 {
+		t.Errorf("Excel'den içe aktarma: %d %s", res.status, res.raw)
+	}
+	var source string
+	if err := s.pool.QueryRow(ctx, `SELECT source FROM grading.assessment_scores WHERE enrollment_id = $1 AND component_id = $2`,
+		fx.enrollments[0], fx.components["MIDTERM"]).Scan(&source); err != nil || source != "XLSX" || s.metrics.get("scores/xlsx") != 1 {
+		t.Errorf("Excel kaynağı: %q %v, sayaç %d", source, err, s.metrics.get("scores/xlsx"))
+	}
+	// Şablon şubeye özeldir; aynı dosya ödev bileşenine de yüklenebilir (ödev sütunu boş).
+	homework := "/api/v1/assessment-components/" + fx.components["HOMEWORK"] + "/scores/import"
+	if res := s.do("POST", homework+"/preview", fx.ayseUser, mfa, xlsxBody(edited.Bytes())); res.status != 200 || res.body["summary"].(map[string]any)["empty"] != 3.0 {
+		t.Errorf("ödev sütunu: %d %s", res.status, res.raw)
+	}
+	if res := s.do("POST", homework+"/preview", fx.ayseUser, mfa, xlsxBody([]byte("PK bozuk"))); res.status != 400 || res.code() != "INVALID_FILE" {
+		t.Errorf("bozuk Excel: %d %s", res.status, res.raw)
+	}
+
 	// Dosya düzeyinde sorunlar ve not girme koşulları.
-	if res := preview(midterm, "Ad;Soyad\nEce;Arslan\n"); res.status != 400 || res.code() != "INVALID_CSV" {
+	if res := preview(midterm, "Ad;Soyad\nEce;Arslan\n"); res.status != 400 || res.code() != "INVALID_FILE" {
 		t.Errorf("öğrenci no sütunu yok: %d %s", res.status, res.raw)
 	}
 	final := "/api/v1/assessment-components/" + fx.components["FINAL"] + "/scores/import"
@@ -148,7 +201,7 @@ func TestHTTPScoreCSV(t *testing.T) {
 		t.Errorf("kapalı pencere: %d %s", res.status, res.raw)
 	}
 	s.calendar.set(grading.WindowFinalEntry, true)
-	if res := preview(final, good); res.status != 400 || res.code() != "INVALID_CSV" {
+	if res := preview(final, good); res.status != 400 || res.code() != "INVALID_FILE" {
 		t.Errorf("finalin sütunu yok: %d %s", res.status, res.raw)
 	}
 	if res := preview(final, "22290102;45\n"); res.status != 200 || res.body["column"] != nil {

@@ -6,8 +6,17 @@ import (
 	"strings"
 	"testing"
 
-	"golang.org/x/text/encoding/charmap"
+	"github.com/CAPELLAX02/agora/backend/internal/platform/sheet"
 )
+
+// readCSVScores, CSV metnini okuyup bileşen sütununu çıkarır (kimlik sayfası olmayan dosya).
+func readCSVScores(data string, labels []string) (importFile, error) {
+	f, err := sheet.Read([]byte(data), sheet.MediaCSV, maxImportRows+headerScan+20)
+	if err != nil {
+		return importFile{}, err
+	}
+	return readScoreFile(f, scoreTarget{sectionID: "s1", sectionLabel: "COM1007-1", componentID: "c1", labels: labels})
+}
 
 func TestParseScoreCell(t *testing.T) {
 	tests := []struct {
@@ -37,6 +46,9 @@ func TestParseScoreCell(t *testing.T) {
 		{",5", Score{}, false, false},
 		{"7 5", Score{}, false, false},
 		{"=1+1", Score{}, false, false},
+		{"75.49999999999999", Score{Points: 7550}, false, true}, // Excel sayı hücresi
+		{"75.125", Score{}, false, false},
+		{"1e2", Score{}, false, false},
 	}
 	for _, tt := range tests {
 		got, empty, ok := parseScoreCell(tt.in)
@@ -46,22 +58,7 @@ func TestParseScoreCell(t *testing.T) {
 	}
 }
 
-func TestHeaderKey(t *testing.T) {
-	for in, want := range map[string]string{
-		"Öğrenci No":      "ogrencino",
-		"ÖĞRENCİ NO":      "ogrencino",
-		"STUDENT NO":      "studentno",
-		"Ödev 1":          "odev1",
-		"Final sınavı":    "finalsinavi",
-		"Ara Sınav (%40)": "arasinav40",
-	} {
-		if got := headerKey(in); got != want {
-			t.Errorf("headerKey(%q) = %q, want %q", in, got, want)
-		}
-	}
-}
-
-func TestReadScoreCSV(t *testing.T) {
+func TestReadScoreFile(t *testing.T) {
 	labels := []string{"Ara sınav", "Midterm"}
 	type line struct {
 		no, cell string
@@ -109,19 +106,25 @@ func TestReadScoreCSV(t *testing.T) {
 			column: "Ara sınav",
 			want:   []line{{"22290102", "", 2}},
 		},
+		{
+			name:   "başlık bloğu ve altta açıklama (şablon gibi)",
+			data:   "COM1007-1 · Bilgisayar Programlama I;;\n2026-FALL;;\n\nSıra;Öğrenci No;Ara sınav\n1;22290102;70\n\nG: sınava girmedi;;\n",
+			column: "Ara sınav",
+			want:   []line{{"22290102", "70", 5}},
+		},
 		{name: "boş dosya", data: "\ufeff\n\n", err: "boş"},
 		{name: "öğrenci no sütunu yok", data: "Ad;Ara sınav\nEce;70\n", err: "Öğrenci numarası sütunu"},
 		{name: "puan sütunu yok", data: "Öğrenci No;Ad;Final sınavı\n22290102;Ece;70\n", err: "“Ara sınav” sütunu bulunamadı"},
 		{name: "başlıksız çok sütun", data: "22290102;Ece;70\n", err: "iki sütunlu"},
 		{name: "bozuk tırnak", data: "Öğrenci No;Ara sınav\n22290102;\"7\"0\n", err: "2. satır okunamadı"},
-		{name: "çok satır", data: "Öğrenci No;Puan\n" + strings.Repeat("22290102;70\n", maxImportRows+1), err: "en fazla 1000"},
+		{name: "çok satır", data: "Öğrenci No;Puan\n" + strings.Repeat("22290102;70\n", maxImportRows+1), err: "en fazla"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			f, err := readScoreCSV([]byte(tt.data), labels)
+			f, err := readCSVScores(tt.data, labels)
 			if tt.err != "" {
-				var ce *CSVError
-				if !errors.As(err, &ce) || !strings.Contains(ce.Detail, tt.err) {
+				var se *sheet.Error
+				if !errors.As(err, &se) || !strings.Contains(se.Detail, tt.err) {
 					t.Fatalf("hata = %v, %q içermeli", err, tt.err)
 				}
 				return
@@ -145,18 +148,6 @@ func TestReadScoreCSV(t *testing.T) {
 				}
 			}
 		})
-	}
-}
-
-// Türkçe Excel "CSV (virgülle ayrılmış)" kaydını Windows-1254 kodlamasıyla yazar.
-func TestReadScoreCSVWindows1254(t *testing.T) {
-	data, err := charmap.Windows1254.NewEncoder().Bytes([]byte("Öğrenci No;Ara sınav\n22290102;70\n"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	f, err := readScoreCSV(data, []string{"Ara sınav"})
-	if err != nil || f.column != "Ara sınav" || len(f.lines) != 1 || f.lines[0].cell != "70" {
-		t.Fatalf("Windows-1254 dosya: %+v %v", f, err)
 	}
 }
 
@@ -193,7 +184,7 @@ func TestWriteGradebookCSV(t *testing.T) {
 	}
 
 	// Dışa aktarılan dosya her bileşen için şablondur.
-	f, err := readScoreCSV(buf.Bytes(), []string{"Ödev 1", "Homework 1"})
+	f, err := readCSVScores(buf.String(), []string{"Ödev 1", "Homework 1"})
 	if err != nil || f.column != "Homework 1" || f.lines[0].cell != "ABSENT" {
 		t.Errorf("dışa aktarılan dosya geri okunamadı: %+v %v", f, err)
 	}

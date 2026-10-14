@@ -212,8 +212,11 @@ func (r result) code() string {
 	return c
 }
 
-// csvBody, isteğin gövdesini text/csv olarak gönderir.
-type csvBody string
+// csvBody ve xlsxBody, isteğin gövdesini CSV ya da Excel dosyası olarak gönderir.
+type (
+	csvBody  string
+	xlsxBody []byte
+)
 
 func (s *server) do(method, path, user string, headers map[string]string, body any) result {
 	s.t.Helper()
@@ -223,6 +226,8 @@ func (s *server) do(method, path, user string, headers map[string]string, body a
 	case nil:
 	case csvBody:
 		reader, contentType = strings.NewReader(string(b)), "text/csv"
+	case xlsxBody:
+		reader, contentType = bytes.NewReader(b), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 	default:
 		j, _ := json.Marshal(body)
 		reader = bytes.NewReader(j)
