@@ -212,23 +212,20 @@ describe('ana sayfa', () => {
     const entry = (section: string, code: string, name: string) => ({
       section_id: section,
       section_code: '1',
+      offering_id: `o-${section}`,
+      term_id: 't',
       course: { id: code, code, name_tr: name, name_en: name },
-      instructors: [],
-      day_of_week: 1,
-      start_time: '09:00',
-      end_time: '10:50',
+      role: 'PRIMARY',
+      students: 20,
+      has_schedule: true,
     })
     server.use(
       http.post('/api/v1/auth/refresh', () => HttpResponse.json(tokens())),
       http.get('/api/v1/me/permissions', () => HttpResponse.json(grants('assessment_plan:manage'))),
       http.get('/api/v1/terms/current', () => HttpResponse.json({ id: 't', code: '2026-FALL' })),
-      http.get('/api/v1/me/teaching', () =>
+      http.get('/api/v1/me/sections', () =>
         HttpResponse.json({
-          items: [
-            entry('s1', 'COM1007', 'Bilgisayar Programlama I'),
-            entry('s1', 'COM1007', 'Bilgisayar Programlama I'),
-            entry('s2', 'COM3067', 'Algoritmalar'),
-          ],
+          items: [entry('s1', 'COM1007', 'Bilgisayar Programlama I'), entry('s2', 'COM3067', 'Algoritmalar')],
         }),
       ),
       http.get('/api/v1/sections/:id/gradebook', ({ params }) =>

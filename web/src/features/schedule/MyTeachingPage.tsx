@@ -5,7 +5,7 @@ import { Link } from 'react-router'
 import { TermSelect } from '@/features/calendar/TermSelect'
 import { useTermParam } from '@/features/calendar/useTermParam'
 import { navTheme } from '@/features/shell/nav'
-import { useGetMeQuery, useMyTeachingQuery, type ScheduleEntry } from '@/shared/api/generated'
+import { useMySectionsQuery, useMyTeachingQuery } from '@/shared/api/generated'
 import { useLocalized } from '@/shared/lib/localized'
 import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/ui/badge'
@@ -29,15 +29,9 @@ export function MyTeachingPage() {
   const localized = useLocalized()
   const [termId, setTermId] = useTermParam()
   const { data, error, refetch } = useMyTeachingQuery(termId ? { termId } : {}, { skip: !termId })
-  // Personelin kullanıcı adı sicil numarasıdır: şubedeki rolü buradan bulunur.
-  const { data: me } = useGetMeQuery()
-
-  const sections = new Map<string, ScheduleEntry>()
-  for (const e of data?.items ?? []) {
-    if (!sections.has(e.section_id)) {
-      sections.set(e.section_id, e)
-    }
-  }
+  // Şubeler programdan bağımsız gelir: oturumu olmayan dersler (bitirme projesi ...) de listelenir.
+  const mine = useMySectionsQuery(termId ? { termId } : {}, { skip: !termId })
+  const sections = mine.data?.items ?? []
 
   return (
     <>
@@ -47,9 +41,9 @@ export function MyTeachingPage() {
         description={t('teaching.description')}
         actions={<TermSelect value={termId} onChange={setTermId} />}
       />
-      {error ? (
-        <ErrorState error={error} onRetry={() => void refetch()} />
-      ) : !data ? (
+      {error || mine.error ? (
+        <ErrorState error={error ?? mine.error} onRetry={() => void refetch()} />
+      ) : !data || !mine.data ? (
         <Skeleton className="h-96" />
       ) : (
         <div className="space-y-6">
@@ -57,7 +51,7 @@ export function MyTeachingPage() {
             <h2 id="my-sections" className="text-lg font-bold">
               {t('teaching.sections')}
             </h2>
-            {sections.size === 0 ? (
+            {sections.length === 0 ? (
               <Card>
                 <EmptyState icon={PresentationIcon} tone="fuchsia">
                   {t('teaching.empty')}
@@ -65,8 +59,8 @@ export function MyTeachingPage() {
               </Card>
             ) : (
               <ul className="grid gap-3 md:grid-cols-2">
-                {[...sections.values()].map((e) => {
-                  const mine = e.instructors.find((i) => i.staff_no === me?.username)
+                {sections.map((e) => {
+                  const slots = data.items.filter((x) => x.section_id === e.section_id)
                   const tone = toneFor(e.course.code)
                   return (
                     <li
@@ -87,17 +81,23 @@ export function MyTeachingPage() {
                           <span className="font-bold">{localized(e.course)}</span>
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {data.items
-                            .filter((x) => x.section_id === e.section_id)
-                            .map(
-                              (x) =>
-                                `${t(`schedule.daysShort.${day(x.day_of_week)}`)} ${x.start_time}–${x.end_time} ${roomLabel(x) ?? ''}`,
-                            )
-                            .join(' · ')}
+                          {slots.length === 0
+                            ? t('teaching.noSchedule')
+                            : slots
+                                .map(
+                                  (x) =>
+                                    `${t(`schedule.daysShort.${day(x.day_of_week)}`)} ${x.start_time}–${x.end_time} ${roomLabel(x) ?? ''}`,
+                                )
+                                .join(' · ')}
                         </p>
                       </div>
                       <div className="mt-auto flex items-center justify-between gap-2">
-                        {mine ? <Badge variant="violet">{t(`teaching.roles.${mine.role}`)}</Badge> : <span />}
+                        <span className="flex flex-wrap items-center gap-2">
+                          <Badge variant="violet">{t(`teaching.roles.${e.role}`)}</Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {t('teaching.students', { count: e.students })}
+                          </span>
+                        </span>
                         <div className="flex flex-wrap justify-end gap-2">
                           <Button variant="ghost" size="sm" asChild>
                             <Link to={`/subeler/${e.section_id}/degerlendirme`}>

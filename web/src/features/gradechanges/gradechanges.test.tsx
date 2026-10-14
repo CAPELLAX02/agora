@@ -81,14 +81,28 @@ describe('not düzeltme', () => {
       http.get('/api/v1/grade-change-requests', () => HttpResponse.json({ items: mine })),
       http.get('/api/v1/terms', () => HttpResponse.json({ items: [term] })),
       http.get('/api/v1/terms/current', () => HttpResponse.json(term)),
-      http.get('/api/v1/me/teaching', () =>
+      http.get('/api/v1/me/sections', () =>
         HttpResponse.json({
           items: [
             {
               term_id: 't1',
               section_id: 's1',
               section_code: '1',
+              offering_id: 'o1',
               course: { id: 'c', code: 'COM1001', name_tr: 'Bilgisayar Programlama I', name_en: 'P1' },
+              role: 'PRIMARY',
+              students: 1,
+              has_schedule: true,
+            },
+            {
+              term_id: 't1',
+              section_id: 's9',
+              section_code: '1',
+              offering_id: 'o9',
+              course: { id: 'c9', code: 'COM2043', name_tr: 'Asistanlık', name_en: 'TA' },
+              role: 'ASSISTANT',
+              students: 40,
+              has_schedule: true,
             },
           ],
         }),
@@ -117,6 +131,7 @@ describe('not düzeltme', () => {
     await user.click(screen.getByRole('button', { name: 'Yeni talep' }))
     const dialog = await screen.findByRole('dialog')
     await user.click(within(dialog).getByRole('combobox', { name: 'Şube' }))
+    expect(screen.queryByRole('option', { name: /COM2043/ })).not.toBeInTheDocument() // asistan talep etmez
     await user.click(await screen.findByRole('option', { name: /COM1001-1/ }))
     await user.click(await within(dialog).findByRole('combobox', { name: 'Öğrenci' }))
     await user.click(await screen.findByRole('option', { name: /22290102/ }))

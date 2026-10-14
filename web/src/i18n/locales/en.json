@@ -910,7 +910,10 @@
       "CO_INSTRUCTOR": "Co-instructor",
       "ASSISTANT": "Assistant"
     },
-    "gradebook": "Gradebook"
+    "gradebook": "Gradebook",
+    "noSchedule": "No weekly sessions",
+    "students_one": "{{count}} student",
+    "students_other": "{{count}} students"
   },
   "offering": {
     "title": "Course offering",

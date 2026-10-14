@@ -8,7 +8,7 @@ import {
   useGetCurrentTermQuery,
   useGetGradebookQuery,
   useGetLetterGradesQuery,
-  useMyTeachingQuery,
+  useMySectionsQuery,
   usePreviewGradeChangeQuery,
   useRequestGradeChangeMutation,
   type GradeChangeInput,
@@ -39,7 +39,7 @@ export function NewChangeDialog({ onClose }: { onClose: () => void }) {
   const current = useGetCurrentTermQuery()
   const [termId, setTermId] = useState('')
   const term = termId || current.data?.id || ''
-  const teaching = useMyTeachingQuery({ termId: term }, { skip: !term })
+  const teaching = useMySectionsQuery({ termId: term }, { skip: !term })
   const [sectionId, setSectionId] = useState('')
   const book = useGetGradebookQuery({ id: sectionId }, { skip: !sectionId })
   const letters = useGetLetterGradesQuery({ id: sectionId }, { skip: !sectionId })
@@ -54,8 +54,11 @@ export function NewChangeDialog({ onClose }: { onClose: () => void }) {
   const [request, { isLoading }] = useRequestGradeChangeMutation()
 
   const sections = new Map<string, { code: string; name: string }>()
+  // Not düzeltmeyi şubenin sorumlu ve ortak öğretim elemanı talep eder; asistan talep etmez.
   for (const e of teaching.data?.items ?? []) {
-    sections.set(e.section_id, { code: `${e.course.code}-${e.section_code}`, name: localized(e.course) })
+    if (e.role !== 'ASSISTANT') {
+      sections.set(e.section_id, { code: `${e.course.code}-${e.section_code}`, name: localized(e.course) })
+    }
   }
   const published = Boolean(book.data?.section.grades_published_at)
   const students = (book.data?.students ?? []).filter((s) => s.letter)

@@ -141,16 +141,48 @@ describe('haftalık program', () => {
     await waitFor(() => expect(filters.at(-1)).toEqual({ classroom_id: 'r-a105' }))
   })
 
-  it('öğretim elemanı şubelerini ve kendi rolünü görür', async () => {
+  it('öğretim elemanı şubelerini, rolünü ve programda oturumu olmayan şubesini görür', async () => {
+    const section = (
+      id: string,
+      code: string,
+      name: string,
+      role: string,
+      students: number,
+      hasSchedule: boolean,
+    ) => ({
+      section_id: id,
+      section_code: '1',
+      offering_id: `o-${id}`,
+      term_id: term.id,
+      course: { id: `c-${code}`, code, name_tr: name, name_en: name },
+      role,
+      students,
+      has_schedule: hasSchedule,
+    })
     server.use(
       ...session('assessment_plan:manage'),
       http.get('/api/v1/me', () => HttpResponse.json(me({ username: 'P10005' }))),
       http.get('/api/v1/me/teaching', () => HttpResponse.json({ items: entries })),
+      http.get('/api/v1/me/sections', () =>
+        HttpResponse.json({
+          items: [
+            section('s-1', 'COM2039', 'Ayrık Yapılar', 'PRIMARY', 42, true),
+            section('s-2', 'COM2501', 'Bilimsel Programlama', 'PRIMARY', 18, true),
+            section('s-3', 'COM4099', 'Bitirme Projesi', 'CO_INSTRUCTOR', 3, false),
+          ],
+        }),
+      ),
     )
     renderApp('/verdigim-dersler')
 
-    // İki şube listelenir (blokların yanında); kullanıcının her ikisinde de rolü sorumluluk.
+    // Üç şube listelenir; oturumu olmayan bitirme projesi de not tablosuna gidilebilsin diye.
     expect(await screen.findAllByText('Sorumlu')).toHaveLength(2)
+    expect(screen.getByText('Ortak')).toBeInTheDocument()
     expect(screen.getByText(/Pzt 09:00–11:50 MUH-A A105/)).toBeInTheDocument()
+    expect(screen.getByText('42 öğrenci')).toBeInTheDocument()
+    expect(screen.getByText('Haftalık programda oturumu yok')).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: 'Not tablosu' }).map((a) => a.getAttribute('href'))).toContain(
+      '/subeler/s-3/notlar',
+    )
   })
 })

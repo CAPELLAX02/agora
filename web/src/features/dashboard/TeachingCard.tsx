@@ -4,7 +4,7 @@ import { Link } from 'react-router'
 
 import { pendingComponents } from '@/features/grading/pending'
 import { formatDateTime } from '@/i18n/format'
-import { useGetCurrentTermQuery, useGetGradebookQuery, useMyTeachingQuery } from '@/shared/api/generated'
+import { useGetCurrentTermQuery, useGetGradebookQuery, useMySectionsQuery } from '@/shared/api/generated'
 import { useLocalized } from '@/shared/lib/localized'
 import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/ui/badge'
@@ -20,11 +20,11 @@ import { DashCard } from './DashCard'
 export function TeachingCard() {
   const { t } = useTranslation()
   const term = useGetCurrentTermQuery()
-  const teaching = useMyTeachingQuery({ termId: term.data?.id ?? '' }, { skip: !term.data })
+  const teaching = useMySectionsQuery({ termId: term.data?.id ?? '' }, { skip: !term.data })
   if (term.isError || teaching.isError) {
     return null
   }
-  const sections = [...new Map((teaching.data?.items ?? []).map((e) => [e.section_id, e])).values()]
+  const sections = teaching.data?.items ?? []
   return (
     <DashCard
       icon={ClipboardPenLineIcon}

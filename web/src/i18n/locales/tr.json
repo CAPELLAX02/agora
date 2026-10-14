@@ -910,7 +910,10 @@
       "CO_INSTRUCTOR": "Ortak",
       "ASSISTANT": "Yardımcı"
     },
-    "gradebook": "Not tablosu"
+    "gradebook": "Not tablosu",
+    "noSchedule": "Haftalık programda oturumu yok",
+    "students_one": "{{count}} öğrenci",
+    "students_other": "{{count}} öğrenci"
   },
   "offering": {
     "title": "Ders açma",
