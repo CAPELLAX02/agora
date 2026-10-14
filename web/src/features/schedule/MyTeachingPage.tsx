@@ -1,4 +1,4 @@
-import { CalendarRangeIcon, ClipboardListIcon, PresentationIcon } from 'lucide-react'
+import { CalendarRangeIcon, ClipboardListIcon, PresentationIcon, TableIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 
@@ -22,7 +22,7 @@ import { WeeklyGrid } from './WeeklyGrid'
 
 /**
  * MyTeachingPage, öğretim elemanının dönemdeki haftalık programı ve verdiği şubelerdir.
- * Şubeden değerlendirme planına geçilir.
+ * Şubeden değerlendirme planına ve not tablosuna geçilir.
  */
 export function MyTeachingPage() {
   const { t } = useTranslation()
@@ -98,12 +98,20 @@ export function MyTeachingPage() {
                       </div>
                       <div className="mt-auto flex items-center justify-between gap-2">
                         {mine ? <Badge variant="violet">{t(`teaching.roles.${mine.role}`)}</Badge> : <span />}
-                        <Button variant="soft" size="sm" asChild>
-                          <Link to={`/subeler/${e.section_id}/degerlendirme`}>
-                            <ClipboardListIcon />
-                            {t('teaching.plan')}
-                          </Link>
-                        </Button>
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link to={`/subeler/${e.section_id}/degerlendirme`}>
+                              <ClipboardListIcon />
+                              {t('teaching.plan')}
+                            </Link>
+                          </Button>
+                          <Button variant="soft" size="sm" asChild>
+                            <Link to={`/subeler/${e.section_id}/notlar`}>
+                              <TableIcon />
+                              {t('teaching.gradebook')}
+                            </Link>
+                          </Button>
+                        </div>
                       </div>
                     </li>
                   )
