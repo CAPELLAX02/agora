@@ -234,7 +234,15 @@ func (s *Service) RequestGradeChange(ctx context.Context, actorID string, in Gra
 			After: map[string]any{"enrollment_id": in.EnrollmentID, "kind": ch.Kind, "from": ch.Old, "to": ch.New, "reason": in.Reason},
 		})
 	})
-	return id, err
+	return id, s.changeCounted("requested", err)
+}
+
+// changeCounted, işlem başarılıysa not düzeltme talebi olayını sayar.
+func (s *Service) changeCounted(outcome string, err error) error {
+	if err == nil {
+		s.metrics.GradeChange(outcome)
+	}
+	return err
 }
 
 // GradeChangeRequest, bir düzeltme talebidir.
@@ -380,7 +388,7 @@ func pointsText(p *Points) any {
 // sonuçlarını yeniden hesaplatır. Talep edildiğinden beri not değiştiyse uygulanmaz. Talep eden
 // onaylayamaz; onaylayanın kapsamı çağıran tarafta denetlenir.
 func (s *Service) ApproveGradeChange(ctx context.Context, actorID string, r GradeChangeRequest, note string) error {
-	return db.InTx(ctx, s.pool, func(tx pgx.Tx) error {
+	return s.changeCounted("applied", db.InTx(ctx, s.pool, func(tx pgx.Tx) error {
 		requestedBy, err := lockPendingChange(ctx, tx, r.ID)
 		if err != nil {
 			return err
@@ -470,12 +478,12 @@ func (s *Service) ApproveGradeChange(ctx context.Context, actorID string, r Grad
 			Phase: "CORRECTION", SectionID: r.SectionID, TermID: termID, CourseID: courseID,
 			Enrollments: []string{r.EnrollmentID}, StudentPrograms: []string{r.StudentProgramID},
 		})
-	})
+	}))
 }
 
 // RejectGradeChange, talebi gerekçeyle reddeder.
 func (s *Service) RejectGradeChange(ctx context.Context, actorID, id, note string) error {
-	return db.InTx(ctx, s.pool, func(tx pgx.Tx) error {
+	return s.changeCounted("rejected", db.InTx(ctx, s.pool, func(tx pgx.Tx) error {
 		requestedBy, err := lockPendingChange(ctx, tx, id)
 		if err != nil {
 			return err
@@ -493,12 +501,12 @@ func (s *Service) RejectGradeChange(ctx context.Context, actorID, id, note strin
 			ActorUserID: actorID, Action: "grade_change.reject", EntityType: "grade_change_request", EntityID: id,
 			After: map[string]any{"note": note},
 		})
-	})
+	}))
 }
 
 // WithdrawGradeChange, talep edenin bekleyen talebini geri çekmesidir.
 func (s *Service) WithdrawGradeChange(ctx context.Context, actorID, id string) error {
-	return db.InTx(ctx, s.pool, func(tx pgx.Tx) error {
+	return s.changeCounted("withdrawn", db.InTx(ctx, s.pool, func(tx pgx.Tx) error {
 		requestedBy, err := lockPendingChange(ctx, tx, id)
 		if err != nil {
 			return err
@@ -513,5 +521,5 @@ func (s *Service) WithdrawGradeChange(ctx context.Context, actorID, id string) e
 		return audit.Record(ctx, tx, audit.Entry{
 			ActorUserID: actorID, Action: "grade_change.withdraw", EntityType: "grade_change_request", EntityID: id,
 		})
-	})
+	}))
 }

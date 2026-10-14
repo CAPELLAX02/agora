@@ -80,6 +80,9 @@ func TestHTTPScoreCSV(t *testing.T) {
 	if e := bad.body["errors"].([]any)[0].(map[string]any); e["field"] != "rows.2" || e["code"] != "DUPLICATE_STUDENT" {
 		t.Errorf("satır hatası: %v", e)
 	}
+	if n := s.metrics.get("scores/csv"); n != 0 {
+		t.Errorf("hatalı dosyada not sayılmamalı: %d", n)
+	}
 	if res := s.do("POST", midterm, fx.ayseUser, mfa, csvBody(file)); res.status != 428 {
 		t.Errorf("If-Match'siz: %d", res.status)
 	}
@@ -99,6 +102,9 @@ func TestHTTPScoreCSV(t *testing.T) {
 	}
 	if sc := studentRow(res, fx.enrollments[2])["scores"].(map[string]any)[fx.components["MIDTERM"]].(map[string]any); sc["absent"] != true {
 		t.Errorf("Can girmedi: %v", sc)
+	}
+	if csv, manual := s.metrics.get("scores/csv"), s.metrics.get("scores/manual"); csv != 2 || manual != 0 {
+		t.Errorf("not sayaçları: csv %d, manual %d", csv, manual)
 	}
 	var sources, action string
 	if err := s.pool.QueryRow(ctx, `SELECT string_agg(DISTINCT source, ',') FROM grading.assessment_scores`).Scan(&sources); err != nil || sources != "CSV" {

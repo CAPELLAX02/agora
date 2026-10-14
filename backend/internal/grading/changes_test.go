@@ -215,4 +215,12 @@ func TestHTTPGradeChanges(t *testing.T) {
 			t.Errorf("denetim izinde %s yok: %s", a, audits)
 		}
 	}
+	// Sayaçlar sadece başarılı işlemleri sayar: reddedilen onay ve bayat talep sayılmaz.
+	var requested int
+	_ = s.pool.QueryRow(ctx, `SELECT count(*) FROM grading.grade_change_requests`).Scan(&requested)
+	for key, want := range map[string]int{"changes/requested": requested, "changes/applied": 1, "changes/rejected": 1, "changes/withdrawn": 1} {
+		if got := s.metrics.get(key); got != want {
+			t.Errorf("%s = %d, want %d", key, got, want)
+		}
+	}
 }

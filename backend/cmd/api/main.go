@@ -41,6 +41,7 @@ type application struct {
 	limits        iam.Limits
 
 	registrationMetrics *metrics.Registration
+	gradingMetrics      *metrics.Grading
 	registrationLimit   httpx.Middleware // ders seçme değiştirici uçlarının kullanıcı başına hız sınırı
 	permissions         authz.Resolver
 }
@@ -127,6 +128,7 @@ func run() error {
 			PasswordReset: resetLimiter.ByIP(logger),
 		},
 		registrationMetrics: metrics.NewRegistration(reg),
+		gradingMetrics:      metrics.NewGrading(reg),
 		registrationLimit:   registrationLimiter.ByUser(logger),
 	}
 

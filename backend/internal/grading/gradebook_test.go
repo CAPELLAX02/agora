@@ -42,6 +42,28 @@ func (f *fakeCalendar) Window(_ context.Context, _, code string, _ academic.Wind
 	return academic.Window{Next: &next}, nil
 }
 
+// fakeMetrics, sayılan olaylardır: "scores/csv", "published/final", "changes/applied" → toplam.
+type fakeMetrics struct {
+	mu sync.Mutex
+	n  map[string]int
+}
+
+func (f *fakeMetrics) add(key string, n int) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.n[key] += n
+}
+
+func (f *fakeMetrics) get(key string) int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.n[key]
+}
+
+func (f *fakeMetrics) ScoresEntered(source string, n int)  { f.add("scores/"+source, n) }
+func (f *fakeMetrics) GradesPublished(phase string, n int) { f.add("published/"+phase, n) }
+func (f *fakeMetrics) GradeChange(outcome string)          { f.add("changes/"+outcome, 1) }
+
 type gradebookFixture struct {
 	fixture
 	enrollments []string // Ali Yıldız, Ece Arslan, Can Çelik (soyadına göre: Arslan, Çelik, Yıldız)
@@ -105,6 +127,7 @@ type gradebookServer struct {
 	calendar *fakeCalendar
 	grants   grants
 	fx       gradebookFixture
+	metrics  *fakeMetrics
 }
 
 // addGrant, kullanıcıya test sırasında bir yetki daha verir.
@@ -144,8 +167,11 @@ func newGradebookServer(t *testing.T) *gradebookServer {
 	mux := http.NewServeMux()
 	rt := authz.NewRouter(mux, authenticate, resolver, logger)
 	grading.NewHandler(grading.NewRepository(pool), logger).Register(rt)
-	grading.NewGradebookHandler(grading.NewService(pool, calendar, time.Now), logger).Register(rt)
-	return &gradebookServer{server: &server{t: t, h: mux, fx: fx.fixture}, pool: pool, calendar: calendar, grants: resolver, fx: fx}
+	svc := grading.NewService(pool, calendar, time.Now)
+	m := &fakeMetrics{n: map[string]int{}}
+	svc.SetMetrics(m)
+	grading.NewGradebookHandler(svc, logger).Register(rt)
+	return &gradebookServer{server: &server{t: t, h: mux, fx: fx.fixture}, pool: pool, calendar: calendar, grants: resolver, fx: fx, metrics: m}
 }
 
 var mfa = map[string]string{"X-Test-MFA": "1"}

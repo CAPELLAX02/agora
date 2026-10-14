@@ -692,6 +692,7 @@ func (s *Service) PublishGrades(ctx context.Context, actorID string, sc SectionC
 	if err != nil {
 		return 0, err
 	}
+	s.metrics.GradesPublished("final", count)
 	return count, nil
 }
 
@@ -808,5 +809,6 @@ func (s *Service) PublishMakeup(ctx context.Context, actorID string, sc SectionC
 	if err != nil {
 		return 0, err
 	}
+	s.metrics.GradesPublished("makeup", changed)
 	return changed, nil
 }

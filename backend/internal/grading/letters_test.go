@@ -423,6 +423,12 @@ func TestHTTPMakeup(t *testing.T) {
 	if r := letterRow(res, fx.enrollments[0]); r["letter"] != "B1" || r["previous_letter"] != nil {
 		t.Errorf("bütünlemeye girmeyenin notu değişmez: %v", r)
 	}
+	// Sayaçlar: 9 dönem içi ve final notu + 1 bütünleme notu, 3 ilan, bütünlemeyle değişen 1.
+	for key, want := range map[string]int{"scores/manual": 10, "published/final": 3, "published/makeup": 1} {
+		if got := s.metrics.get(key); got != want {
+			t.Errorf("%s = %d, want %d", key, got, want)
+		}
+	}
 
 	var letter, reason string
 	_ = s.pool.QueryRow(ctx, `SELECT letter_grade, letter_reason FROM enrollment.enrollments WHERE id = $1`, fx.enrollments[1]).Scan(&letter, &reason)

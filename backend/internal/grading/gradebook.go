@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -142,17 +143,38 @@ type Calendar interface {
 	Window(ctx context.Context, termID, typeCode string, target academic.WindowTarget, at time.Time) (academic.Window, error)
 }
 
+// Metrics, not işlemlerinin iş metrikleridir; olaylar transaction başarıyla bittikten sonra
+// sayılır. Etiket değerleri küçük harftir: source manual/csv, phase final/makeup, outcome
+// requested/applied/rejected/withdrawn.
+type Metrics interface {
+	ScoresEntered(source string, n int)
+	GradesPublished(phase string, n int)
+	GradeChange(outcome string)
+}
+
+type noopMetrics struct{}
+
+func (noopMetrics) ScoresEntered(string, int)   {}
+func (noopMetrics) GradesPublished(string, int) {}
+func (noopMetrics) GradeChange(string)          {}
+
 // Service, not girişi işlemleridir.
 type Service struct {
 	repo     *Repository
 	pool     *pgxpool.Pool
 	calendar Calendar
 	now      func() time.Time
+	metrics  Metrics
 }
 
 // NewService, bir Service oluşturur.
 func NewService(pool *pgxpool.Pool, calendar Calendar, now func() time.Time) *Service {
-	return &Service{repo: NewRepository(pool), pool: pool, calendar: calendar, now: now}
+	return &Service{repo: NewRepository(pool), pool: pool, calendar: calendar, now: now, metrics: noopMetrics{}}
+}
+
+// SetMetrics, olay sayaçlarını bağlar. Verilmezse olaylar sayılmaz.
+func (s *Service) SetMetrics(m Metrics) {
+	s.metrics = m
 }
 
 // window, bileşen kategorisinin şubenin birimindeki not girişi penceresini çözer: açık olan
@@ -538,6 +560,9 @@ func (s *Service) writeScores(ctx context.Context, actorID string, ref Component
 	})
 	if err != nil {
 		return 0, err
+	}
+	if changed > 0 {
+		s.metrics.ScoresEntered(strings.ToLower(string(source)), changed)
 	}
 	return changed, nil
 }

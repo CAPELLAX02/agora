@@ -42,7 +42,11 @@ func (app *application) routes() http.Handler {
 	curriculum.NewHandler(curriculum.NewRepository(app.db), org.NewTargets(app.db), app.logger).Register(rt)
 	offering.NewHandler(offering.NewRepository(app.db), org.NewTargets(app.db), app.logger).Register(rt)
 	grading.NewHandler(grading.NewRepository(app.db), app.logger).Register(rt)
-	grading.NewGradebookHandler(grading.NewService(app.db, academic.NewRepository(app.db), time.Now), app.logger).Register(rt)
+	grades := grading.NewService(app.db, academic.NewRepository(app.db), time.Now)
+	if app.gradingMetrics != nil {
+		grades.SetMetrics(app.gradingMetrics)
+	}
+	grading.NewGradebookHandler(grades, app.logger).Register(rt)
 	// Ders seçme açılışı: değiştirici uçlarda kullanıcı başına hız sınırı ve Idempotency-Key.
 	var mutations []httpx.Middleware
 	if app.registrationLimit != nil {
