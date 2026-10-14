@@ -313,7 +313,7 @@ flowchart LR
 
 | Durum | Madde |
 | --- | --- |
-| ⬜ | Öğretim elemanı: not girişi tablosu (öğrenciler × bileşenler, klavyeyle gezinme, girmedi ve devamsız işaretleri, kaydedilmemiş değişiklik uyarısı, pencere durumu), bileşen yayımlama, CSV içe ve dışa aktarma |
+| ✅ | Öğretim elemanı: not girişi tablosu (öğrenciler × bileşenler, klavyeyle gezinme, girmedi ve devamsız işaretleri, kaydedilmemiş değişiklik uyarısı, pencere durumu), bileşen yayımlama, Excel ve CSV içe ve dışa aktarma — `/subeler/{id}/notlar`: bileşen kartları (ağırlık, pencere, girilen, ortalama, yayımla), yazılanlar taslaktır (sarı; geçersiz kırmızı, kaydetme kapalı), bileşen bileşen `If-Match`'le kaydedilir; kaydedilmemiş değişiklikle sayfadan ayrılmak onay ister. Excel şablonunu indirme, içe aktarma diyaloğunda satır satır önizleme (değişen / hatalı / tümü, dosyada olmayanlar) ve onay; önizlemeden sonra notlar değiştiyse yeniden denetleme. MFA'sız, asistan ve ilandan sonra salt okunur |
 | ⬜ | Harf notu önizleme (istatistikler ve dağılım grafiği), elle harf notu, ilan; bütünleme listesi ve girişi |
 | ✅ | Öğrenci: notlarım (dönem seçici, ders kartlarında harf notu ve sınıf ortalaması, bileşen puan çubuğunda sınıf ortalaması işareti), transkript (yazdırılabilir, mobilde sadeleşen tablo), sanal transkript ("Ne olur?" modu: derslere harf seçimi, gerçek → sanal YANO/GANO) |
 | ✅ | Danışman ve öğrenci işleri: öğrenci detayında transkript ve dönem sonuçları, yazdırılabilir görünüm |
