@@ -315,6 +315,15 @@ canReadTranscript(actor, studentProgram):                        # uygulandı (F
           inScope(actor, studentProgram.program.department)         # kapsam
           OR isCurrentAdvisorOf(actor, studentProgram)))            # ilişki
 
+canViewSpace(actor, section):                                    # uygulandı (Faz 5)
+    roleIn(actor, section) IN ('PRIMARY', 'CO_INSTRUCTOR', 'ASSISTANT')   # ilişki: öğretim elemanı
+    OR hasActiveEnrollment(actor, section)                           # ilişki: bırakmamış kesin kayıt
+    OR inScope(actor, "section:manage", section.offering.department) # bölüm: salt okunur izleyici
+    # Öğrenci ve izleyici gizli bölüm/etkinliği görmez, açılmamış ya da kapanmışın içeriğine erişemez.
+
+canEditSpace(actor, section):                                    # uygulandı (Faz 5)
+    roleIn(actor, section) IN ('PRIMARY', 'CO_INSTRUCTOR', 'ASSISTANT')   # asistan da içerik ekler
+
 canEditAssessmentPlan(actor, section):                           # uygulandı (Faz 2)
     ( has(actor, "assessment_plan:manage")
       AND roleIn(actor, section) IN ('PRIMARY', 'CO_INSTRUCTOR') )   # ilişki: section_instructors

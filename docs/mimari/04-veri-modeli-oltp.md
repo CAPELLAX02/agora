@@ -276,18 +276,17 @@ stateDiagram-v2
 ### Ders alanı ve yapı
 | Tablo | Sütunlar | Not |
 | --- | --- | --- |
-| `course_spaces` | id, section_id FK UQ, title, summary_html, merged_into_space_id null, created_at | **Şube başına 1 alan** (e-Kampüs'teki `[760535](COM4573) … [B]` ile aynı mantık). Birleştirilmiş şubeler için opsiyonel birleştirme |
-| `space_members` | space_id, user_id, member_role CK(`STUDENT, INSTRUCTOR, ASSISTANT, OBSERVER`), source CK(`REGISTRATION, INSTRUCTOR_ASSIGNMENT, MANUAL`), joined_at, left_at — PK(space_id, user_id) | Kayıt onayı olayıyla **anında** doldurulur |
-| `topics` | id, space_id FK, parent_topic_id null (alt bölüm), title, summary_html, position, is_visible, available_from, available_until | "Bölüm" / "Hafta" |
-| `activities` | id, space_id FK, topic_id FK, activity_type CK(`RESOURCE, FOLDER, URL, PAGE, ASSIGNMENT, QUIZ, FORUM, LIVE_SESSION, LABEL`), title, description_html, position, is_visible, available_from, available_until, completion_rule CK(`NONE, VIEW, SUBMIT, PASS_GRADE, MANUAL`), created_by, created_at, updated_at, deleted_at | **Class-table inheritance**: ortak alanlar burada, türe özgü alanlar alt tablolarda (activity_id PK + FK) |
+| `course_spaces` | section_id PK FK, summary_html, created_at, updated_at | Faz 5'te uygulandı. **Ders alanı = şube** (§5 #19): anahtar şube, ilk içerikle oluşur ve ilk bölümü "Genel"dir. Birleştirilmiş şubeler (P2) ileride |
+| ~~`space_members`~~ | — | Saklanmaz (§5 #19): öğrenci = şubede bırakmamış kesin kaydı olan, öğretim elemanı = şubeye atanmış (sorumlu, ortak, asistan) sorgu anında türetilir; kayıt onaylandığı transaction'da öğrenci derse erişir. Şubenin bölümünü yöneten personel (`section:manage`) salt okunur izleyicidir. Elle üyelik (gözlemci) P2 |
+| `topics` | id, section_id FK, title (1-200), summary_html, position, is_visible, available_from, available_until, version, created_at, updated_at, deleted_at | Faz 5'te uygulandı. "Bölüm" / "Hafta"; alt bölüm ileride. Erişim penceresi CK(from < until) |
+| `activities` | id, section_id FK, topic_id FK, activity_type CK(`RESOURCE, FOLDER, URL, PAGE, LABEL, ASSIGNMENT, FORUM`), title (1-200), description_html, position, is_visible, available_from, available_until, created_by, version, created_at, updated_at, deleted_at | Faz 5'te uygulandı. **Class-table inheritance**: ortak alanlar burada, türe özgü alanlar alt tablolarda (activity_id PK + FK). Zengin metin kaydedilmeden önce izin listesiyle temizlenir (bluemonday). Sınav, canlı oturum ve tamamlama kuralı ileride |
 
 ### Türe özgü tablolar
 | Tablo | Sütunlar |
 | --- | --- |
-| `resources` | activity_id PK, file_id FK→platform.files |
-| `folder_files` | activity_id, file_id, path, position |
-| `urls` | activity_id PK, url, open_in_new_tab |
-| `pages` | activity_id PK, body_html |
+| `activity_files` | activity_id FK, file_id FK→platform.files, position — PK(activity_id, file_id) | Faz 5'te uygulandı: dosya (tek) ve klasör (1-50) etkinliklerinin ortak tablosu. Dosya bağlanınca `files.attached_at` dolar; etkinlikten çıkan ya da silinen etkinliğin dosyası serbest kalır ve bir gün sonra temizlenir |
+| `urls` | activity_id PK, url CK(http/https, ≤2000), open_in_new_tab | Faz 5'te uygulandı |
+| `pages` | activity_id PK, body_html | Faz 5'te uygulandı (temizlenmiş HTML) |
 | `assignments` | activity_id PK, opens_at, due_at, cutoff_at, max_attempts smallint, submission_types text[] (`FILE, ONLINE_TEXT`), max_files, max_file_size_bytes, allowed_mime_types text[], max_score, late_policy CK(`ALLOW, DENY, PENALTY`), late_penalty_pct_per_day |
 | `quizzes` | activity_id PK, opens_at, closes_at, time_limit_seconds, max_attempts, grading_method CK(`HIGHEST, LAST, FIRST, AVERAGE`), shuffle_questions, shuffle_options, results_visibility CK(`IMMEDIATE, AFTER_CLOSE, NEVER`), max_score |
 | `forums` | activity_id PK, forum_kind CK(`ANNOUNCEMENTS, GENERAL, QNA`), students_can_start_threads, subscription_mode CK(`OPTIONAL, FORCED, DISABLED`) |
