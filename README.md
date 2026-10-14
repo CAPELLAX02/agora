@@ -122,6 +122,7 @@ Demo sınıfı `P10001`'in 1. sınıf dersi **COM1007-1** (Bilgisayar Programlam
 | Ne denenir | Hesap | Not |
 | ---------- | ----- | --- |
 | Not tablosu, not girişi, Excel şablonu ve CSV ile içe ve dışa aktarma | `P10001` | Verdiğim dersler → COM1007-1 → Not tablosu. Not girişi `score:enter` ister ve MFA'lı oturumda açılır: önce iki adımlı doğrulamayı kurun (MFA'sız tablo salt okunur) |
+| Harf notu önizleme, elle harf, ilan ve bütünleme | `P10001` | Not tablosu → Harf notları: önce finali girin (eksik varken ilan edilemez). İlandan sonra bütünleme notları not tablosunda girilir |
 | Ara sınav notu ve sınıf ortalaması | `26290101` … `26290120` | "Notlarım"da yayımlanan ara sınav görünür, laboratuvar görünmez |
 
 `make seed` ara sınavına not girilmiş sınıfa dokunmaz.
