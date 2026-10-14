@@ -3102,6 +3102,36 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
+  /api/v1/me/sections:
+    get:
+      tags: [Ders açma]
+      summary: Öğretim elemanının dönemde görev aldığı şubeler
+      description: >-
+        Haftalık programdan bağımsızdır: oturumu olmayan dersler (bitirme projesi, staj ...)
+        de gelir. Şube başına isteği yapanın rolü ve kesin kayıtlı (bırakmamış) öğrenci sayısı.
+        İptal edilen şubeler gelmez. Personel olmayan ya da aktif dönem tanımlı olmayan
+        kullanıcıya boş liste döner.
+      operationId: mySections
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: term_id
+          in: query
+          description: Varsayılan aktif dönem
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Ders koduna ve şube koduna göre sıralı
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/TeachingSection" } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
   /api/v1/instructors:
     get:
       tags: [Ders açma]
@@ -7703,6 +7733,19 @@ components:
             NOT_IN_SECTION: şubenin kesin kayıtlı öğrencisi değil; DUPLICATE_STUDENT: öğrenci
             dosyada birden fazla kez geçiyor; NOT_ELIGIBLE: bütünleme hakkı yok
         error: { type: [string, "null"], description: Hatanın Türkçe açıklaması }
+
+    TeachingSection:
+      type: object
+      required: [section_id, section_code, offering_id, term_id, course, role, students, has_schedule]
+      properties:
+        section_id: { type: string, format: uuid }
+        section_code: { type: string }
+        offering_id: { type: string, format: uuid }
+        term_id: { type: string, format: uuid }
+        course: { $ref: "#/components/schemas/NamedRef" }
+        role: { type: string, enum: [PRIMARY, CO_INSTRUCTOR, ASSISTANT] }
+        students: { type: integer, description: Kesin kayıtlı (bırakmamış) öğrenci sayısı }
+        has_schedule: { type: boolean, description: Haftalık programda oturumu var }
 
     StudentRef:
       type: object

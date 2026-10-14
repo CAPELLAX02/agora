@@ -782,6 +782,15 @@ const injectedRtkApi = api
         }),
         providesTags: ['Ders a\u00E7ma'],
       }),
+      mySections: build.query<MySectionsApiResponse, MySectionsApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/me/sections`,
+          params: {
+            term_id: queryArg.termId,
+          },
+        }),
+        providesTags: ['Ders a\u00E7ma'],
+      }),
       searchInstructors: build.query<SearchInstructorsApiResponse, SearchInstructorsApiArg>({
         query: (queryArg) => ({
           url: `/api/v1/instructors`,
@@ -2201,6 +2210,13 @@ export type MyTeachingApiResponse = /** status 200 Liste */ {
   items: ScheduleEntry[]
 }
 export type MyTeachingApiArg = {
+  /** Varsayılan aktif dönem */
+  termId?: string
+}
+export type MySectionsApiResponse = /** status 200 Ders koduna ve şube koduna göre sıralı */ {
+  items: TeachingSection[]
+}
+export type MySectionsApiArg = {
   /** Varsayılan aktif dönem */
   termId?: string
 }
@@ -3660,6 +3676,18 @@ export type ScheduleEntry = ScheduleSlot & {
   course: NamedRef
   instructors: Instructor[]
 }
+export type TeachingSection = {
+  section_id: string
+  section_code: string
+  offering_id: string
+  term_id: string
+  course: NamedRef
+  role: 'PRIMARY' | 'CO_INSTRUCTOR' | 'ASSISTANT'
+  /** Kesin kayıtlı (bırakmamış) öğrenci sayısı */
+  students: number
+  /** Haftalık programda oturumu var */
+  has_schedule: boolean
+}
 export type StaffSummary = {
   staff_id: string
   staff_no: string
@@ -4834,6 +4862,8 @@ export const {
   useLazyTermScheduleQuery,
   useMyTeachingQuery,
   useLazyMyTeachingQuery,
+  useMySectionsQuery,
+  useLazyMySectionsQuery,
   useSearchInstructorsQuery,
   useLazySearchInstructorsQuery,
   useListAssessmentTypesQuery,
