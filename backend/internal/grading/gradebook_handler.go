@@ -88,6 +88,7 @@ type gradebookComponentResponse struct {
 	ScoredCount int                 `json:"scored_count"`
 	AbsentCount int                 `json:"absent_count"`
 	Average     *float64            `json:"average"`
+	LMSFed      bool                `json:"lms_fed"`
 }
 
 type componentScoreResponse struct {
@@ -179,7 +180,7 @@ func toGradebookResponse(r *http.Request, g Gradebook) gradebookResponse {
 			Version: c.Version, PublishedAt: c.PublishedAt,
 			EntryWindow: toWindowResponse(c.Window),
 			Editable:    componentEditable(canEnter, sc, c),
-			ScoredCount: c.Scored, AbsentCount: c.Absent,
+			ScoredCount: c.Scored, AbsentCount: c.Absent, LMSFed: c.LMSFed,
 		}
 		if c.Average != nil {
 			avg := c.Average.Float()
@@ -212,7 +213,7 @@ func toGradebookResponse(r *http.Request, g Gradebook) gradebookResponse {
 // componentEditable, isteği yapanın bileşene şu an not girebilmesidir: not girebilen öğretim
 // elemanı, kilitli plan, açık pencere ve notun aşaması.
 func componentEditable(canEnter bool, sc SectionContext, c GradebookComponent) bool {
-	return canEnter && sc.LockedAt != nil && c.Window.Open && editablePhase(sc, c.Type.Category)
+	return canEnter && sc.LockedAt != nil && c.Window.Open && editablePhase(sc, c.Type.Category) && !c.LMSFed
 }
 
 // editablePhase, bileşenin şubenin not aşamasında düzenlenebilir olup olmadığıdır: ilandan
@@ -419,6 +420,9 @@ func (h *GradebookHandler) gradebookFailed(w http.ResponseWriter, r *http.Reques
 		}})
 	case errors.Is(err, ErrPlanNotLocked):
 		h.problem(w, r, http.StatusConflict, "ASSESSMENT_PLAN_NOT_LOCKED", "Notlar girilmeden önce değerlendirme planı kilitlenmeli.")
+	case errors.Is(err, ErrFedByLMS):
+		h.problem(w, r, http.StatusConflict, "COMPONENT_FED_BY_LMS",
+			"Bu bileşenin notları ders alanındaki bağlı ödevlerden gelir; puanları ödevden verin.")
 	case errors.Is(err, ErrEntryWindowClosed):
 		h.problem(w, r, http.StatusConflict, "GRADE_ENTRY_WINDOW_CLOSED", "Bu bileşenin not girişi penceresi kapalı.")
 	case errors.Is(err, ErrMakeupNotAvailable):

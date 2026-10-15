@@ -22,6 +22,8 @@ var (
 	ErrMakeupNotAvailable = errors.New("grading: bütünleme notları harf notları ilan edildikten sonra girilir")
 	ErrNoScores           = errors.New("grading: yayımlanacak not yok")
 	ErrMakeupPublished    = errors.New("grading: bütünleme sonuçları ilan edildi")
+	// ErrFedByLMS: bileşenin notları ders alanındaki bağlı ödevlerden gelir, elle girilmez.
+	ErrFedByLMS = errors.New("grading: bileşeni ders alanı besliyor")
 )
 
 // NotEligibleError: bütünleme notu, bütünleme hakkı olmayan öğrencilere girilmek istendi.
@@ -111,6 +113,7 @@ type GradebookComponent struct {
 	Scored      int
 	Absent      int
 	Average     *Points // girilen puanların ortalaması (girmedi hariç)
+	LMSFed      bool    // notlar ders alanındaki bağlı ödevlerden gelir (elle girilmez)
 }
 
 // GradebookStudent, not tablosundaki bir öğrencidir (kesin kaydı).
@@ -144,7 +147,7 @@ type Calendar interface {
 }
 
 // Metrics, not işlemlerinin iş metrikleridir; olaylar transaction başarıyla bittikten sonra
-// sayılır. Etiket değerleri küçük harftir: source manual/csv/xlsx, phase final/makeup, outcome
+// sayılır. Etiket değerleri küçük harftir: source manual/csv/xlsx/lms, phase final/makeup, outcome
 // requested/applied/rejected/withdrawn.
 type Metrics interface {
 	ScoresEntered(source string, n int)
@@ -283,6 +286,10 @@ func (s *Service) gradebookComponents(ctx context.Context, sc SectionContext) ([
 		return nil, fmt.Errorf("grading: bileşen notları okunamadı: %w", err)
 	}
 
+	fed, err := lmsFed(ctx, s.pool, sc.SectionID)
+	if err != nil {
+		return nil, err
+	}
 	windows := map[Category]EntryWindow{}
 	out := make([]GradebookComponent, 0, len(components))
 	for _, c := range components {
@@ -294,7 +301,8 @@ func (s *Service) gradebookComponents(ctx context.Context, sc SectionContext) ([
 			windows[c.Type.Category] = w
 		}
 		st := stats[c.ID]
-		gc := GradebookComponent{Component: c, Version: st.version, PublishedAt: st.published, Window: w, Scored: st.scored, Absent: st.absent}
+		gc := GradebookComponent{Component: c, Version: st.version, PublishedAt: st.published, Window: w, Scored: st.scored, Absent: st.absent,
+			LMSFed: fed[c.ID]}
 		if st.scored > 0 {
 			avg := mean(st.sum, st.scored)
 			gc.Average = &avg
@@ -408,6 +416,7 @@ const (
 	sourceManual scoreSource = "MANUAL"
 	sourceCSV    scoreSource = "CSV"
 	sourceXLSX   scoreSource = "XLSX"
+	sourceLMS    scoreSource = "LMS" // ders alanındaki bağlı ödevlerden
 )
 
 // checkEntry, bileşene şu an not girilebildiğini doğrular: notun aşaması (ilandan önce
@@ -425,6 +434,13 @@ func (s *Service) checkEntry(ctx context.Context, ref ComponentRef) error {
 	}
 	if ref.Section.LockedAt == nil {
 		return ErrPlanNotLocked
+	}
+	fed, err := lmsFed(ctx, s.pool, ref.Section.SectionID)
+	if err != nil {
+		return err
+	}
+	if fed[ref.ID] {
+		return ErrFedByLMS
 	}
 	w, err := s.window(ctx, ref.Section, ref.Category)
 	if err != nil {
