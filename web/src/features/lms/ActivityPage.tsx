@@ -13,6 +13,8 @@ import { RichText } from '@/shared/ui/rich-text'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { ErrorState } from '@/shared/ui/states'
 
+import { AssignmentStudent } from './AssignmentStudent'
+import { AssignmentTeacher } from './AssignmentTeacher'
 import { AvailabilityBadges } from './AvailabilityBadges'
 import { useDownload } from './download'
 import { activityMeta } from './meta'
@@ -122,6 +124,13 @@ export function ActivityPage() {
               </CardContent>
             </Card>
           )}
+          {a.type === 'ASSIGNMENT' &&
+            space &&
+            (space.role === 'STUDENT' ? (
+              <AssignmentStudent activityId={a.id} />
+            ) : (
+              <AssignmentTeacher activityId={a.id} />
+            ))}
           {a.type === 'URL' && a.url && (
             <Button asChild>
               <a href={a.url} target={a.open_in_new_tab ? '_blank' : undefined} rel="noopener noreferrer">
