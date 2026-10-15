@@ -129,7 +129,10 @@ export function ActivityPage() {
             (space.role === 'STUDENT' ? (
               <AssignmentStudent activityId={a.id} />
             ) : (
-              <AssignmentTeacher activityId={a.id} />
+              <AssignmentTeacher
+                activityId={a.id}
+                fileBase={`${space.course.code}-${space.section_code}_${a.title}`}
+              />
             ))}
           {a.type === 'URL' && a.url && (
             <Button asChild>

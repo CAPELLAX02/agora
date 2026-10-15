@@ -2053,6 +2053,57 @@
         "saved": "Puan kaydedildi.",
         "scoreInvalid": "Puan 0 ile {{max}} arasında, en çok iki ondalıklı olmalı.",
         "penaltyNote": "Geç teslim: %{{pct}} kesinti; öğrencinin puanı {{final}}."
+      },
+      "import": {
+        "open": "Excel'den içe aktar",
+        "template": "Excel şablonu",
+        "title": "Puanları Excel'den içe aktar",
+        "description": "Şablonu indirip puanları ve geri bildirimleri doldurun, dosyayı buraya yükleyin. Önce satır satır önizleme gösterilir; onaylayınca puanlar tek seferde yazılır.",
+        "drop": "Excel ya da CSV dosyasını buraya bırakın ya da seçin",
+        "formats": ".xlsx ya da .csv · en fazla 1 MB",
+        "file": "Puan dosyası",
+        "badType": "Sadece .xlsx ya da .csv dosyası yüklenebilir.",
+        "checking": "Dosya denetleniyor…",
+        "stale": "Önizlemeden sonra puanlar değişti; dosyayı yeniden denetleyin.",
+        "again": "Yeniden denetle",
+        "preview": "Önizleme",
+        "summary": {
+          "changed": "Değişecek",
+          "unchanged": "Aynı",
+          "empty": "Boş",
+          "errors": "Hatalı"
+        },
+        "filters": {
+          "changed": "Değişenler",
+          "errors": "Hatalılar",
+          "all": "Hepsi"
+        },
+        "line": "Satır",
+        "change": "Değişiklik",
+        "result": "Sonuç",
+        "noRows": "Gösterilecek satır yok.",
+        "emptyCell": "Boş hücre: değişmez",
+        "feedbackChanged": "Geri bildirim",
+        "status": {
+          "CHANGED": "Değişecek",
+          "UNCHANGED": "Aynı",
+          "EMPTY": "Boş",
+          "ERROR": "Hatalı"
+        },
+        "errors": {
+          "MISSING_STUDENT_NO": "Öğrenci numarası boş",
+          "NOT_IN_SECTION": "Şubede bu numarada öğrenci yok",
+          "DUPLICATE_STUDENT": "Öğrenci dosyada birden çok kez geçiyor",
+          "INVALID_SCORE": "Geçersiz puan",
+          "FEEDBACK_TOO_LONG": "Geri bildirim çok uzun"
+        },
+        "missing_one": "{{count}} öğrenci dosyada yok (puanı değişmez)",
+        "missing_other": "{{count}} öğrenci dosyada yok (puanları değişmez)",
+        "fixFirst": "Önce hatalı satırları düzeltin",
+        "apply_one": "{{count}} puanı yaz",
+        "apply_other": "{{count}} puanı yaz",
+        "done_one": "{{count}} öğrencinin puanı yazıldı.",
+        "done_other": "{{count}} öğrencinin puanı yazıldı."
       }
     }
   },

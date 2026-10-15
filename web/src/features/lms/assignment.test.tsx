@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import type {
   Activity,
   AssignmentGrade,
+  AssignmentGradeImportPreview,
   AssignmentSettings,
   MySubmission,
   Space,
@@ -320,5 +321,79 @@ describe('ödev (öğretim elemanı)', () => {
       expect(calls.at(-1)).toMatchObject({ method: 'POST', path: '/api/v1/activities/a9/grades/release' }),
     )
     expect(await screen.findByText('Puanlar yayımlandı.')).toBeInTheDocument()
+  })
+
+  it('puanlar Excel şablonuyla içe aktarılır: önizleme, hatalı satır, yazma', async () => {
+    session('PRIMARY', ['assessment_plan:manage'])
+    const previews: (string | null)[] = []
+    let applied: { ifMatch: string | null; type: string | null } | null = null
+    const preview = (errors: boolean): AssignmentGradeImportPreview => ({
+      version: 0,
+      score_column: 'Puan',
+      feedback_column: 'Geri Bildirim',
+      rows: [
+        {
+          line: 5,
+          student_no: '26290101',
+          student: roster.items[0]!.student,
+          status: 'CHANGED',
+          current_score: null,
+          next_score: 42.5,
+          feedback_changed: true,
+          error_code: null,
+          error: null,
+        },
+        ...(errors
+          ? [
+              {
+                line: 6,
+                student_no: '99999999',
+                student: null,
+                status: 'ERROR' as const,
+                current_score: null,
+                next_score: null,
+                feedback_changed: false,
+                error_code: 'NOT_IN_SECTION' as const,
+                error: 'Bu numarada şubenin kesin kayıtlı öğrencisi yok.',
+              },
+            ]
+          : []),
+      ],
+      missing: [roster.items[1]!.student],
+      summary: { changed: 1, unchanged: 0, empty: 0, errors: errors ? 1 : 0 },
+    })
+    server.use(
+      http.get('/api/v1/activities/:id/submissions', () => HttpResponse.json(roster)),
+      http.post('/api/v1/activities/:id/grades/import/preview', ({ request }) => {
+        previews.push(request.headers.get('Content-Type'))
+        return HttpResponse.json(preview(previews.length === 1))
+      }),
+      http.post('/api/v1/activities/:id/grades/import', ({ request }) => {
+        applied = { ifMatch: request.headers.get('If-Match'), type: request.headers.get('Content-Type') }
+        return HttpResponse.json(roster)
+      }),
+    )
+    const { user } = renderApp('/derslerim/s1/etkinlik/a9')
+    await user.click(await screen.findByRole('button', { name: "Excel'den içe aktar" }))
+    const dialog = await screen.findByRole('dialog', { name: "Puanları Excel'den içe aktar" })
+    const file = new File(['PK'], 'COM1007-1_Odev_1_puanlar.xlsx')
+    await user.upload(within(dialog).getByLabelText('Puan dosyası'), file)
+    const summary = await within(dialog).findByRole('region', { name: 'Önizleme' })
+    expect(previews[0]).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    expect(within(summary).getByText('Şubede bu numarada öğrenci yok')).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: 'Önce hatalı satırları düzeltin' })).toBeDisabled()
+    expect(within(summary).getByText('1 öğrenci dosyada yok (puanı değişmez)')).toBeInTheDocument()
+
+    await user.upload(within(dialog).getByLabelText('Puan dosyası'), file)
+    await waitFor(() => expect(previews).toHaveLength(2))
+    expect(await within(dialog).findByText('Geri bildirim')).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: '1 puanı yaz' }))
+    await waitFor(() =>
+      expect(applied).toEqual({
+        ifMatch: '"0"',
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      }),
+    )
+    expect(await screen.findByText('1 öğrencinin puanı yazıldı.')).toBeInTheDocument()
   })
 })

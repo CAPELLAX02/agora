@@ -2053,6 +2053,57 @@
         "saved": "Grade saved.",
         "scoreInvalid": "The grade must be between 0 and {{max}}, with at most two decimals.",
         "penaltyNote": "Late submission: {{pct}}% penalty; the student's grade is {{final}}."
+      },
+      "import": {
+        "open": "Import from Excel",
+        "template": "Excel template",
+        "title": "Import grades from Excel",
+        "description": "Download the template, fill in grades and feedback, and upload the file here. A row-by-row preview comes first; on confirmation all grades are written at once.",
+        "drop": "Drop an Excel or CSV file here or choose one",
+        "formats": ".xlsx or .csv · up to 1 MB",
+        "file": "Grade file",
+        "badType": "Only .xlsx or .csv files can be uploaded.",
+        "checking": "Checking the file…",
+        "stale": "Grades changed after the preview; check the file again.",
+        "again": "Check again",
+        "preview": "Preview",
+        "summary": {
+          "changed": "To change",
+          "unchanged": "Same",
+          "empty": "Empty",
+          "errors": "Invalid"
+        },
+        "filters": {
+          "changed": "Changes",
+          "errors": "Invalid",
+          "all": "All"
+        },
+        "line": "Row",
+        "change": "Change",
+        "result": "Result",
+        "noRows": "No rows to show.",
+        "emptyCell": "Empty cell: unchanged",
+        "feedbackChanged": "Feedback",
+        "status": {
+          "CHANGED": "To change",
+          "UNCHANGED": "Same",
+          "EMPTY": "Empty",
+          "ERROR": "Invalid"
+        },
+        "errors": {
+          "MISSING_STUDENT_NO": "Student number is empty",
+          "NOT_IN_SECTION": "No student with this number in the section",
+          "DUPLICATE_STUDENT": "Student appears more than once",
+          "INVALID_SCORE": "Invalid grade",
+          "FEEDBACK_TOO_LONG": "Feedback is too long"
+        },
+        "missing_one": "{{count}} student is not in the file (grade unchanged)",
+        "missing_other": "{{count}} students are not in the file (grades unchanged)",
+        "fixFirst": "Fix the invalid rows first",
+        "apply_one": "Write {{count}} grade",
+        "apply_other": "Write {{count}} grades",
+        "done_one": "Grade written for {{count}} student.",
+        "done_other": "Grades written for {{count}} students."
       }
     }
   },

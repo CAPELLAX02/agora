@@ -1,11 +1,13 @@
 import {
   AlarmClockIcon,
   CheckCheckIcon,
+  FileSpreadsheetIcon,
   CircleDashedIcon,
   FilePenLineIcon,
   HourglassIcon,
   MegaphoneIcon,
   PencilLineIcon,
+  UploadIcon,
   UsersRoundIcon,
 } from 'lucide-react'
 import { lazy, Suspense, useState } from 'react'
@@ -13,12 +15,15 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { formatDateTime, formatNumber } from '@/i18n/format'
+import { useAppDispatch } from '@/app/hooks'
 import {
+  agoraApi,
   useListSubmissionsQuery,
   useReleaseAssignmentGradesMutation,
   type SubmissionRosterRow,
 } from '@/shared/api/generated'
 import { useErrorMessage } from '@/shared/api/useErrorMessage'
+import { saveFile } from '@/shared/lib/download'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { ConfirmDialog } from '@/shared/ui/confirm-dialog'
@@ -29,6 +34,7 @@ import { EmptyState, ErrorState } from '@/shared/ui/states'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
 
 import { DueText, SubmissionStatus } from './assignmentParts'
+import { ImportGradesDialog } from './ImportGradesDialog'
 import { useAcceptsText, usePolicyText } from './assignmentText'
 
 // Puanlama paneli zengin metin editörüyle gelir: sadece açılınca indirilir.
@@ -46,8 +52,8 @@ const matches = (row: SubmissionRosterRow, f: Filter) =>
  * AssignmentTeacher, öğretim elemanının ödev ekranıdır: teslim özeti, öğrenci listesi (teslim
  * etmeyenler dahil), puanlama paneli ve puanların yayımlanması. İzleyici salt okunur görür.
  */
-export function AssignmentTeacher({ activityId }: { activityId: string }) {
-  const { t } = useTranslation()
+export function AssignmentTeacher({ activityId, fileBase }: { activityId: string; fileBase: string }) {
+  const { t, i18n } = useTranslation()
   const message = useErrorMessage()
   const acceptsText = useAcceptsText()
   const policyText = usePolicyText()
@@ -56,6 +62,23 @@ export function AssignmentTeacher({ activityId }: { activityId: string }) {
   const [filter, setFilter] = useState<Filter>('all')
   const [selected, setSelected] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const dispatch = useAppDispatch()
+
+  const downloadTemplate = async () => {
+    const en = i18n.language.startsWith('en')
+    try {
+      const blob = await dispatch(
+        agoraApi.endpoints.exportAssignmentGradesXlsx.initiate(
+          { id: activityId, lang: en ? 'en' : 'tr' },
+          { subscribe: false, forceRefetch: true },
+        ),
+      ).unwrap()
+      saveFile(blob, `${fileBase}_${en ? 'grades' : 'puanlar'}.xlsx`)
+    } catch (e) {
+      toast.error(message(e as never))
+    }
+  }
 
   if (error) {
     return <ErrorState error={error} onRetry={() => void refetch()} />
@@ -138,6 +161,18 @@ export function AssignmentTeacher({ activityId }: { activityId: string }) {
           </SelectContent>
         </Select>
         <span className="flex-1" />
+        {data.can_grade && (
+          <>
+            <Button variant="outline" onClick={() => void downloadTemplate()}>
+              <FileSpreadsheetIcon />
+              {t('lms.assignment.import.template')}
+            </Button>
+            <Button variant="outline" onClick={() => setImporting(true)}>
+              <UploadIcon />
+              {t('lms.assignment.import.open')}
+            </Button>
+          </>
+        )}
         {data.assignment.grades_released_at ? (
           <Badge variant="success" className="gap-1">
             <MegaphoneIcon className="size-3" />
@@ -236,6 +271,13 @@ export function AssignmentTeacher({ activityId }: { activityId: string }) {
         <Suspense fallback={null}>
           <GradeSheet activityId={activityId} userId={selected} onClose={() => setSelected(null)} />
         </Suspense>
+      )}
+      {importing && (
+        <ImportGradesDialog
+          activityId={activityId}
+          onTemplate={() => void downloadTemplate()}
+          onClose={() => setImporting(false)}
+        />
       )}
       {confirming && (
         <ConfirmDialog
