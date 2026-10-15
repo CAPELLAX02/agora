@@ -319,13 +319,17 @@ stateDiagram-v2
 ### Not defteri ↔ değerlendirme köprüsü (kritik entegrasyon)
 | Tablo | Sütunlar | Not |
 | --- | --- | --- |
-| `grade_items` | id, space_id, activity_id null, name, max_score, **assessment_component_id FK→grading.assessment_components null**, weight_in_component numeric(5,2), is_hidden, released_at | Bir bileşen birden çok öğeden beslenebilir (ör. 3 ödev → ÖDEV %20) |
-| `grade_item_scores` | grade_item_id, user_id, score, is_overridden, updated_at — PK | Bağlı öğenin puanı değişince → `assessment_scores (source='LMS')` yeniden hesaplanır |
+| `assignment_links` | activity_id PK FK→lms.assignments, **component_id FK→grading.assessment_components** (ON DELETE CASCADE), weight numeric(5,2) (bileşen içi), created_by, updated_at | Faz 5'te uygulandı (planlanan `grade_items` yerine; ödev dışı elle not öğeleri P2). Ödev şubenin dönem içi bir bileşenine bağlanır; bir bileşen birden çok ödevden beslenebilir (ör. 3 ödev → ÖDEV %20). Final ve bütünleme ödevden beslenmez |
+| ~~`grade_item_scores`~~ | — | Saklanmaz: bileşen notu ödev puanlarından (`assignment_grades`) hesaplanır |
 
 ```text
-Ödev puanlandı ─▶ grade_item_scores ─▶ (bileşene bağlıysa) ağırlıklı topla ─▶ grading.assessment_scores [source=LMS]
-                                                                              └─▶ eğitmen not ekranında "LMS'ten" rozetiyle görünür
+Ödev puanı yayımlandı / değişti ─▶ bağlı bileşenin ödevleri: Σ (puan_kesintili / en_yüksek × 100 × ağırlık) / Σ ağırlık
+                                  (yayımlanmış ödevler; puanı olmayan öğrenci 0; tam kesir, yüzde birliğe yarım yukarı)
+                                  ─▶ grading.assessment_scores [source=LMS], scores_version artar, denetim izi
+                                  └─▶ not tablosunda "Ödevlerden" rozeti; bu bileşene elle giriş kapalı (COMPONENT_FED_BY_LMS)
 ```
+
+Eşitleme ödev işlemi kaydedildikten sonra yapılır (yayımlama, yayımdan sonraki puan, Excel içe aktarma, ödev ayarı değişikliği, silme, bağlantı). Plan kilitlenmeden notlar yazılmaz; harf notları ilan edilince donar.
 
 ### Tamamlama ve etkileşim
 | Tablo | Sütunlar | Not |

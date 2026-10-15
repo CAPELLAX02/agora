@@ -335,6 +335,8 @@ canSubmitAssignment(actor, assignment, now):                     # uygulandı (F
 canGradeAssignment(actor, assignment):                           # uygulandı (Faz 5)
     canEditSpace(actor, assignment.section)                          # asistan da puanlar
     # Teslim listesini şubenin bölümünü yöneten personel (section:manage) salt okunur görür.
+    # Ödevi değerlendirme bileşenine bağlamak da öğretim elemanınındır; bağlı bileşene not
+    # tablosundan elle not girilmez (canEnterScore → COMPONENT_FED_BY_LMS).
     # Puanlar öğrenciye ödev bazında yayımlandıktan sonra görünür; teslim dosyasını sadece
     # sahibi öğrenci ve şubenin öğretim elemanları indirir.
 
