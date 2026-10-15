@@ -1,14 +1,21 @@
 package lms
 
 import (
+	"bytes"
+	"errors"
+	"fmt"
 	"math"
 	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/CAPELLAX02/agora/backend/internal/files"
 	"github.com/CAPELLAX02/agora/backend/internal/grading"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authz"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/httpx"
+	"github.com/CAPELLAX02/agora/backend/internal/platform/sheet"
 )
 
 // registerAssignments, ödev uçlarını kaydeder. Öğrenci kendi teslimini "my-submission" altında
@@ -27,6 +34,9 @@ func (h *Handler) registerAssignments(rt *authz.Router) {
 	rt.HandleFunc("POST /api/v1/activities/{id}/submissions/{userId}/comments", authz.Authenticated, h.teacherComment)
 	rt.HandleFunc("GET /api/v1/activities/{id}/submissions/{userId}/files/{fileId}/download-url", authz.Authenticated, h.studentFileURL)
 	rt.HandleFunc("POST /api/v1/activities/{id}/grades/release", authz.Authenticated, h.releaseGrades)
+	rt.HandleFunc("GET /api/v1/activities/{id}/grades.xlsx", authz.Authenticated, h.gradeSheet)
+	rt.HandleFunc("POST /api/v1/activities/{id}/grades/import/preview", authz.Authenticated, h.previewGradeImport)
+	rt.HandleFunc("POST /api/v1/activities/{id}/grades/import", authz.Authenticated, h.importGrades)
 }
 
 // --- İstek ve yanıtlar -----------------------------------------------------------
@@ -590,4 +600,175 @@ func (h *Handler) releaseGrades(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.writeRoster(w, r, a, st, sec, role)
+}
+
+// --- Excel ile toplu puan --------------------------------------------------------
+
+func (h *Handler) gradeSheet(w http.ResponseWriter, r *http.Request) {
+	a, st, sec, _, ok := h.teacher(w, r, true)
+	if !ok {
+		return
+	}
+	lang := r.URL.Query().Get("lang")
+	if lang != "" && lang != "tr" && lang != "en" {
+		httpx.ValidationFailed(w, r, []httpx.FieldError{{Field: "lang", Message: "tr ya da en olmalı."}})
+		return
+	}
+	rows, err := h.svc.Roster(r.Context(), st, sec.ID, a.ID)
+	if h.failed(w, r, err) {
+		return
+	}
+	// Önce belleğe: yazarken hata olursa yarım dosya yerine 500 dönülür.
+	var buf bytes.Buffer
+	if err := WriteGradeSheet(&buf, sec, a.ID, a.Title, st, rows, lang == "en", h.svc.now()); h.failed(w, r, err) {
+		return
+	}
+	suffix := "puanlar"
+	if lang == "en" {
+		suffix = "grades"
+	}
+	w.Header().Set("Content-Type", sheet.MediaXLSX)
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s-%s_%s_%s.xlsx"; filename*=UTF-8''%s`,
+		sec.CourseCode, sec.Code, asciiName(a.Title), suffix, url.PathEscape(sec.CourseCode+"-"+sec.Code+"_"+a.Title+"_"+suffix+".xlsx")))
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Length", strconv.Itoa(buf.Len()))
+	w.WriteHeader(http.StatusOK)
+	_, _ = buf.WriteTo(w)
+}
+
+// asciiName, dosya adının ASCII karşılığıdır (eski tarayıcılar için filename).
+func asciiName(s string) string {
+	repl := strings.NewReplacer("ç", "c", "Ç", "C", "ğ", "g", "Ğ", "G", "ı", "i", "İ", "I", "ö", "o", "Ö", "O", "ş", "s", "Ş", "S", "ü", "u", "Ü", "U")
+	return strings.Map(func(r rune) rune {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '-':
+			return r
+		}
+		return '_'
+	}, repl.Replace(s))
+}
+
+type gradeImportRowResponse struct {
+	Line            int              `json:"line"`
+	StudentNo       string           `json:"student_no"`
+	Student         *studentResponse `json:"student"`
+	Status          string           `json:"status"`
+	Current         *float64         `json:"current_score"`
+	Next            *float64         `json:"next_score"`
+	FeedbackChanged bool             `json:"feedback_changed"`
+	ErrorCode       *string          `json:"error_code"`
+	Error           *string          `json:"error"`
+}
+
+type gradeImportResponse struct {
+	Version        int                      `json:"version"`
+	ScoreColumn    *string                  `json:"score_column"`
+	FeedbackColumn *string                  `json:"feedback_column"`
+	Rows           []gradeImportRowResponse `json:"rows"`
+	Missing        []studentResponse        `json:"missing"`
+	Summary        struct {
+		Changed   int `json:"changed"`
+		Unchanged int `json:"unchanged"`
+		Empty     int `json:"empty"`
+		Errors    int `json:"errors"`
+	} `json:"summary"`
+}
+
+func optional(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+func pointsPtr(p *grading.Points) *float64 {
+	if p == nil {
+		return nil
+	}
+	v := p.Float()
+	return &v
+}
+
+func toGradeImport(gi GradeImport) gradeImportResponse {
+	res := gradeImportResponse{Version: gi.Version, ScoreColumn: optional(gi.ScoreColumn), FeedbackColumn: optional(gi.FeedbackColumn),
+		Rows: make([]gradeImportRowResponse, 0, len(gi.Rows)), Missing: make([]studentResponse, 0, len(gi.Missing))}
+	res.Summary.Changed, res.Summary.Unchanged, res.Summary.Empty, res.Summary.Errors = gi.Changed, gi.Unchanged, gi.Empty, gi.Errors
+	for _, row := range gi.Rows {
+		item := gradeImportRowResponse{Line: row.Line, StudentNo: row.StudentNo, Status: row.Status, Current: pointsPtr(row.Current),
+			Next: pointsPtr(row.Next), FeedbackChanged: row.FeedbackChanged, ErrorCode: optional(row.ErrorCode), Error: optional(row.Error)}
+		if row.Student != nil {
+			st := studentResponse(*row.Student)
+			item.Student = &st
+		}
+		res.Rows = append(res.Rows, item)
+	}
+	for _, st := range gi.Missing {
+		res.Missing = append(res.Missing, studentResponse(st))
+	}
+	return res
+}
+
+func (h *Handler) previewGradeImport(w http.ResponseWriter, r *http.Request) {
+	a, st, sec, _, ok := h.teacher(w, r, true)
+	if !ok {
+		return
+	}
+	data, mediaType, err := httpx.ReadBody(w, r, sheet.MediaCSV, sheet.MediaXLSX)
+	if err != nil {
+		httpx.InvalidBody(w, r, err)
+		return
+	}
+	gi, err := h.svc.PreviewGradeImport(r.Context(), sec, a.ID, a.Title, st, data, mediaType)
+	if h.importFailed(w, r, err) {
+		return
+	}
+	h.writeJSON(w, r, http.StatusOK, toGradeImport(gi))
+}
+
+func (h *Handler) importGrades(w http.ResponseWriter, r *http.Request) {
+	version, ok := httpx.IfMatchVersion(r)
+	if !ok {
+		// Hiç puan yokken sürüm 0'dır: "0" da kabul edilir.
+		if strings.Trim(r.Header.Get("If-Match"), `W/"`) != "0" {
+			httpx.PreconditionRequired(w, r)
+			return
+		}
+	}
+	a, _, sec, role, ok := h.teacher(w, r, true)
+	if !ok {
+		return
+	}
+	data, mediaType, err := httpx.ReadBody(w, r, sheet.MediaCSV, sheet.MediaXLSX)
+	if err != nil {
+		httpx.InvalidBody(w, r, err)
+		return
+	}
+	if _, err := h.svc.ImportGrades(r.Context(), userID(r), sec, a.ID, a.Title, version, data, mediaType); h.importFailed(w, r, err) {
+		return
+	}
+	st, err := h.svc.Assignment(r.Context(), h.svc.pool, a.ID)
+	if h.failed(w, r, err) {
+		return
+	}
+	h.writeRoster(w, r, a, st, sec, role)
+}
+
+func (h *Handler) importFailed(w http.ResponseWriter, r *http.Request, err error) bool {
+	var (
+		fileErr *sheet.Error
+		rowsErr *GradeRowsError
+	)
+	switch {
+	case errors.As(err, &fileErr):
+		_ = httpx.WriteProblem(w, r, httpx.Problem{Status: http.StatusBadRequest, Code: "INVALID_FILE", Detail: fileErr.Detail})
+	case errors.As(err, &rowsErr):
+		fields := make([]httpx.FieldError, 0, len(rowsErr.Rows))
+		for _, row := range rowsErr.Rows {
+			fields = append(fields, httpx.FieldError{Field: "rows." + strconv.Itoa(row.Line), Code: row.ErrorCode, Message: row.Error})
+		}
+		httpx.ValidationFailed(w, r, fields)
+	default:
+		return h.failed(w, r, err)
+	}
+	return true
 }
