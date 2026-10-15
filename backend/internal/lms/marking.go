@@ -141,11 +141,13 @@ func (s *Service) SetGrade(ctx context.Context, actorID, sectionID, activityID, 
 	if _, err := s.SectionStudent(ctx, sectionID, studentID); err != nil {
 		return err
 	}
-	return db.InTx(ctx, s.pool, func(tx pgx.Tx) error {
+	released := false
+	err := db.InTx(ctx, s.pool, func(tx pgx.Tx) error {
 		st, err := lockAssignment(ctx, tx, activityID)
 		if err != nil {
 			return err
 		}
+		released = st.ReleasedAt != nil
 		if in.Score != nil && (*in.Score < 0 || *in.Score > st.MaxScore) {
 			return &ValidationError{Field: "score", Message: fmt.Sprintf("0 ile %s arasında olmalı.", formatPoints(st.MaxScore))}
 		}
@@ -197,11 +199,16 @@ func (s *Service) SetGrade(ctx context.Context, actorID, sectionID, activityID, 
 		return audit.Record(ctx, tx, audit.Entry{ActorUserID: actorID, Action: "lms_grade.update", EntityType: "lms_activity",
 			EntityID: activityID, After: map[string]any{"student_id": studentID, "score": score, "attempt_no": attempt}})
 	})
+	// Yayımlanmış ödevin puanı değişince bağlı bileşenin notu da değişir.
+	if err == nil && released {
+		s.syncActivity(ctx, actorID, activityID)
+	}
+	return err
 }
 
 // ReleaseGrades, ödevin puanlarını öğrencilere yayımlar; sonraki puanlar hemen görünür.
 func (s *Service) ReleaseGrades(ctx context.Context, actorID, activityID string) error {
-	return db.InTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := db.InTx(ctx, s.pool, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `UPDATE lms.assignments SET grades_released_at = now() WHERE activity_id = $1 AND grades_released_at IS NULL`,
 			activityID)
 		if err != nil {
@@ -212,6 +219,10 @@ func (s *Service) ReleaseGrades(ctx context.Context, actorID, activityID string)
 		}
 		return audit.Record(ctx, tx, audit.Entry{ActorUserID: actorID, Action: "lms_assignment.release", EntityType: "lms_activity", EntityID: activityID})
 	})
+	if err == nil {
+		s.syncActivity(ctx, actorID, activityID)
+	}
+	return err
 }
 
 // formatPoints, puanı Türkçe yazar (75,5).

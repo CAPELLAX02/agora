@@ -34,6 +34,8 @@ func (h *Handler) registerAssignments(rt *authz.Router) {
 	rt.HandleFunc("POST /api/v1/activities/{id}/submissions/{userId}/comments", authz.Authenticated, h.teacherComment)
 	rt.HandleFunc("GET /api/v1/activities/{id}/submissions/{userId}/files/{fileId}/download-url", authz.Authenticated, h.studentFileURL)
 	rt.HandleFunc("POST /api/v1/activities/{id}/grades/release", authz.Authenticated, h.releaseGrades)
+	rt.HandleFunc("GET /api/v1/activities/{id}/link", authz.Authenticated, h.getLink)
+	rt.HandleFunc("PUT /api/v1/activities/{id}/link", authz.Authenticated, h.setLink)
 	rt.HandleFunc("GET /api/v1/activities/{id}/grades.xlsx", authz.Authenticated, h.gradeSheet)
 	rt.HandleFunc("POST /api/v1/activities/{id}/grades/import/preview", authz.Authenticated, h.previewGradeImport)
 	rt.HandleFunc("POST /api/v1/activities/{id}/grades/import", authz.Authenticated, h.importGrades)
@@ -771,4 +773,85 @@ func (h *Handler) importFailed(w http.ResponseWriter, r *http.Request, err error
 		return h.failed(w, r, err)
 	}
 	return true
+}
+
+// --- Not tablosu bağlantısı ------------------------------------------------------
+
+type linkResponse struct {
+	Link *struct {
+		ComponentID string  `json:"component_id"`
+		Weight      float64 `json:"weight"`
+	} `json:"link"`
+	Components      []linkableComponentResponse `json:"components"`
+	PlanLocked      bool                        `json:"plan_locked"`
+	GradesPublished bool                        `json:"grades_published"`
+	SyncState       *SyncState                  `json:"sync_state"`
+}
+
+type linkableComponentResponse struct {
+	ID      string  `json:"id"`
+	LabelTR string  `json:"label_tr"`
+	LabelEN string  `json:"label_en"`
+	Weight  float64 `json:"weight"`
+	Linked  int     `json:"linked_assignments"`
+}
+
+func (h *Handler) writeLink(w http.ResponseWriter, r *http.Request, sec Section, activityID string, state *SyncState) {
+	info, err := h.svc.LinkInfo(r.Context(), sec.ID, activityID)
+	if h.failed(w, r, err) {
+		return
+	}
+	res := linkResponse{Components: make([]linkableComponentResponse, 0, len(info.Components)),
+		PlanLocked: info.PlanLocked, GradesPublished: info.GradesPublished, SyncState: state}
+	if info.Link != nil {
+		res.Link = &struct {
+			ComponentID string  `json:"component_id"`
+			Weight      float64 `json:"weight"`
+		}{info.Link.ComponentID, info.Link.Weight.Float()}
+	}
+	for _, c := range info.Components {
+		res.Components = append(res.Components, linkableComponentResponse(c))
+	}
+	h.writeJSON(w, r, http.StatusOK, res)
+}
+
+func (h *Handler) getLink(w http.ResponseWriter, r *http.Request) {
+	if a, _, sec, _, ok := h.teacher(w, r, false); ok {
+		h.writeLink(w, r, sec, a.ID, nil)
+	}
+}
+
+func (h *Handler) setLink(w http.ResponseWriter, r *http.Request) {
+	a, _, sec, _, ok := h.teacher(w, r, true)
+	if !ok {
+		return
+	}
+	var req struct {
+		ComponentID *string  `json:"component_id"`
+		Weight      *float64 `json:"weight"`
+	}
+	if err := httpx.ReadJSON(w, r, &req); err != nil {
+		httpx.InvalidBody(w, r, err)
+		return
+	}
+	componentID, weight := "", grading.Points(100) // varsayılan ağırlık 1
+	if req.ComponentID != nil {
+		componentID = *req.ComponentID
+		if !httpx.ValidUUID(componentID) {
+			httpx.ValidationFailed(w, r, []httpx.FieldError{{Field: "component_id", Message: "Geçerli bir UUID olmalı."}})
+			return
+		}
+	}
+	if req.Weight != nil {
+		p, err := points("weight", *req.Weight)
+		if h.failed(w, r, err) {
+			return
+		}
+		weight = p
+	}
+	state, err := h.svc.SetLink(r.Context(), userID(r), sec.ID, a.ID, componentID, weight)
+	if h.failed(w, r, err) {
+		return
+	}
+	h.writeLink(w, r, sec, a.ID, &state)
 }

@@ -44,13 +44,14 @@ func (app *application) routes() http.Handler {
 	curriculum.NewHandler(curriculum.NewRepository(app.db), org.NewTargets(app.db), app.logger).Register(rt)
 	offering.NewHandler(offering.NewRepository(app.db), org.NewTargets(app.db), app.logger).Register(rt)
 	grading.NewHandler(grading.NewRepository(app.db), app.logger).Register(rt)
-	if app.files != nil {
-		files.NewHandler(app.files, app.logger).Register(rt)
-		lms.NewHandler(lms.NewService(app.db, app.files, time.Now), app.logger).Register(rt)
-	}
 	grades := grading.NewService(app.db, academic.NewRepository(app.db), time.Now)
 	if app.gradingMetrics != nil {
 		grades.SetMetrics(app.gradingMetrics)
+	}
+	if app.files != nil {
+		files.NewHandler(app.files, app.logger).Register(rt)
+		// Ödevlerin bağlı olduğu bileşenlerin notları not modülüne yazılır (kaynak LMS).
+		lms.NewHandler(lms.NewService(app.db, app.files, grades, app.logger, time.Now), app.logger).Register(rt)
 	}
 	grading.NewGradebookHandler(grades, app.logger).Register(rt)
 	// Ders seçme açılışı: değiştirici uçlarda kullanıcı başına hız sınırı ve Idempotency-Key.

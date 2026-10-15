@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -13,16 +14,19 @@ import (
 	"github.com/CAPELLAX02/agora/backend/internal/platform/db"
 )
 
-// Service, ders alanı işlemleridir.
+// Service, ders alanı işlemleridir. sink, ödevlerden hesaplanan bileşen notlarını not
+// modülüne yazar (nil ise köprü kapalı).
 type Service struct {
-	pool  *pgxpool.Pool
-	files *files.Service
-	now   func() time.Time
+	pool   *pgxpool.Pool
+	files  *files.Service
+	sink   GradeSink
+	logger *slog.Logger
+	now    func() time.Time
 }
 
 // NewService, bir Service oluşturur.
-func NewService(pool *pgxpool.Pool, fs *files.Service, now func() time.Time) *Service {
-	return &Service{pool: pool, files: fs, now: now}
+func NewService(pool *pgxpool.Pool, fs *files.Service, sink GradeSink, logger *slog.Logger, now func() time.Time) *Service {
+	return &Service{pool: pool, files: fs, sink: sink, logger: logger, now: now}
 }
 
 const sectionColumns = `s.id, s.section_code, c.id, c.code, c.name_tr, c.name_en, t.id, t.code, o.department_id, d.faculty_id`

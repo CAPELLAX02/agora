@@ -394,7 +394,7 @@ func (s *Service) UpdateActivity(ctx context.Context, actorID, id string, versio
 	if err := in.validate(s.files.MaxBytes()); err != nil {
 		return err
 	}
-	return db.InTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := db.InTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var typ string
 		if err := tx.QueryRow(ctx, `SELECT activity_type FROM lms.activities WHERE id = $1 AND deleted_at IS NULL FOR UPDATE`, id).Scan(&typ); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
@@ -430,11 +430,16 @@ func (s *Service) UpdateActivity(ctx context.Context, actorID, id string, versio
 		return audit.Record(ctx, tx, audit.Entry{ActorUserID: actorID, Action: "lms_activity.update", EntityType: "lms_activity", EntityID: id,
 			After: map[string]any{"title": in.Title, "visible": in.Visible}})
 	})
+	// En yüksek puan ya da geç teslim kesintisi değişmiş olabilir: bağlı bileşen yeniden hesaplanır.
+	if err == nil && in.Type == TypeAssignment {
+		s.syncActivity(ctx, actorID, id)
+	}
+	return err
 }
 
 // DeleteActivity, etkinliği siler (yumuşak); dosyaları serbest kalır.
 func (s *Service) DeleteActivity(ctx context.Context, actorID, id string) error {
-	return db.InTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := db.InTx(ctx, s.pool, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `UPDATE lms.activities SET deleted_at = now() WHERE id = $1 AND deleted_at IS NULL`, id)
 		if err != nil {
 			return fmt.Errorf("lms: etkinlik silinemedi: %w", err)
@@ -447,6 +452,11 @@ func (s *Service) DeleteActivity(ctx context.Context, actorID, id string) error 
 		}
 		return audit.Record(ctx, tx, audit.Entry{ActorUserID: actorID, Action: "lms_activity.delete", EntityType: "lms_activity", EntityID: id})
 	})
+	// Silinen ödev bağlı bileşenin notuna artık girmez.
+	if err == nil {
+		s.syncActivity(ctx, actorID, id)
+	}
+	return err
 }
 
 // validURL, http ya da https şemalı, ana bilgisayarı olan bir adrestir.

@@ -2,7 +2,6 @@ package lms
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"html"
 	"io"
@@ -642,10 +641,13 @@ func (s *Service) ImportGrades(ctx context.Context, actorID string, sec Section,
 		return audit.Record(ctx, tx, audit.Entry{ActorUserID: actorID, Action: "lms_grade.import", EntityType: "lms_activity",
 			EntityID: activityID, After: map[string]any{"changed": res.Changed, "source": source}})
 	})
-	if errors.Is(err, ErrVersionMismatch) {
+	if err != nil {
 		return GradeImport{}, err
 	}
-	return res, err
+	if st.ReleasedAt != nil {
+		s.syncActivity(ctx, actorID, activityID)
+	}
+	return res, nil
 }
 
 func joinInts(ns []int) string {

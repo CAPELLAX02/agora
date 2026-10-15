@@ -15,7 +15,9 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/CAPELLAX02/agora/backend/internal/academic"
 	"github.com/CAPELLAX02/agora/backend/internal/files"
+	"github.com/CAPELLAX02/agora/backend/internal/grading"
 	"github.com/CAPELLAX02/agora/backend/internal/lms"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authn"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authz"
@@ -114,15 +116,27 @@ func seed(t *testing.T, pool *pgxpool.Pool) fixture {
 }
 
 type server struct {
-	t    *testing.T
-	pool *pgxpool.Pool
-	h    http.Handler
-	fx   fixture
-	fs   *files.Service
-	now  *time.Time
+	t       *testing.T
+	pool    *pgxpool.Pool
+	h       http.Handler
+	fx      fixture
+	fs      *files.Service
+	now     *time.Time
+	grading *grading.Service // köprü testlerinde: ödevlerden bileşen notu
 }
 
 func newServer(t *testing.T) *server {
+	t.Helper()
+	return buildServer(t, false)
+}
+
+// newGradingServer, ödev ↔ bileşen köprüsü açık bir sunucudur.
+func newGradingServer(t *testing.T) *server {
+	t.Helper()
+	return buildServer(t, true)
+}
+
+func buildServer(t *testing.T, withGrading bool) *server {
 	t.Helper()
 	pool := dbtest.New(t)
 	store, _ := s3test.New(t)
@@ -140,8 +154,14 @@ func newServer(t *testing.T) *server {
 	mux := http.NewServeMux()
 	rt := authz.NewRouter(mux, authenticate, resolver, logger)
 	files.NewHandler(fs, logger).Register(rt)
-	lms.NewHandler(lms.NewService(pool, fs, clock), logger).Register(rt)
-	return &server{t: t, pool: pool, h: mux, fx: fx, fs: fs, now: &now}
+	srv := &server{t: t, pool: pool, h: mux, fx: fx, fs: fs, now: &now}
+	var sink lms.GradeSink
+	if withGrading {
+		srv.grading = grading.NewService(pool, academic.NewRepository(pool), clock)
+		sink = srv.grading
+	}
+	lms.NewHandler(lms.NewService(pool, fs, sink, logger, clock), logger).Register(rt)
+	return srv
 }
 
 type result struct {
