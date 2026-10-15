@@ -1,10 +1,16 @@
-import { CircleAlertIcon, FileIcon, UploadIcon, XIcon } from 'lucide-react'
-import { useState, type DragEvent, type FormEvent, type ReactNode } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import type { Activity, Topic } from '@/shared/api/generated'
-import { formatBytes, UploadError, useUpload } from '@/shared/api/upload'
-import { cn } from '@/shared/lib/utils'
+import type { ParseKeys } from 'i18next'
+
+import type {
+  Activity,
+  AssignmentInput,
+  AssignmentSettings,
+  LatePolicy,
+  SubmissionType,
+  Topic,
+} from '@/shared/api/generated'
 import { Alert, AlertDescription } from '@/shared/ui/alert'
 import { Button } from '@/shared/ui/button'
 import { Checkbox } from '@/shared/ui/checkbox'
@@ -19,156 +25,11 @@ import {
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { RichTextEditor } from '@/shared/ui/rich-text-editor'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Spinner } from '@/shared/ui/spinner'
 
+import { FileDropzone, type UploadedFile } from './FileDropzone'
 import { activityMeta, fromLocalInput, toLocalInput, type EditableType } from './meta'
-
-type UploadedFile = { id: string; name: string; size: number }
-type Pending = { key: string; name: string; progress: number; error?: string }
-
-/**
- * FileDropzone, dosyaları sürükle-bırak ya da seçiciyle yükler: her dosya hemen ve ilerleme
- * çubuğuyla yüklenir, sunucunun reddi (tür, içerik, boyut) dosyanın yanında yazar.
- */
-export function FileDropzone({
-  files,
-  onChange,
-  multiple,
-}: {
-  files: UploadedFile[]
-  onChange: (files: UploadedFile[]) => void
-  multiple: boolean
-}) {
-  const { t, i18n } = useTranslation()
-  const upload = useUpload()
-  const [pending, setPending] = useState<Pending[]>([])
-  const [dragging, setDragging] = useState(false)
-  const locale = i18n.language.startsWith('en') ? 'en-GB' : 'tr-TR'
-
-  const add = (list: FileList | null) => {
-    const chosen = Array.from(list ?? []).slice(0, multiple ? 50 : 1)
-    let current = multiple ? files : []
-    if (!multiple) {
-      onChange([])
-    }
-    for (const file of chosen) {
-      const key = `${file.name}-${file.size}-${Math.random()}`
-      setPending((p) => [...p, { key, name: file.name, progress: 0 }])
-      upload(file, (loaded, total) =>
-        setPending((p) => p.map((x) => (x.key === key ? { ...x, progress: total ? loaded / total : 0 } : x))),
-      )
-        .then((info) => {
-          setPending((p) => p.filter((x) => x.key !== key))
-          current = [...current, { id: info.id, name: info.name, size: info.size }]
-          onChange(current)
-        })
-        .catch((err: unknown) => {
-          const message =
-            err instanceof UploadError && err.code !== 'NETWORK'
-              ? err.message
-              : err instanceof UploadError
-                ? t('errors.network')
-                : t('lms.upload.failed')
-          setPending((p) => p.map((x) => (x.key === key ? { ...x, error: message, progress: 0 } : x)))
-        })
-    }
-  }
-
-  const onDrop = (e: DragEvent) => {
-    e.preventDefault()
-    setDragging(false)
-    add(e.dataTransfer.files)
-  }
-
-  return (
-    <div className="space-y-2">
-      <label
-        onDragOver={(e) => {
-          e.preventDefault()
-          setDragging(true)
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={onDrop}
-        className={cn(
-          'flex cursor-pointer flex-col items-center gap-1.5 rounded-xl border-2 border-dashed border-sky-400/50 bg-sky-50/50 px-4 py-5 text-center transition-colors hover:bg-sky-50 dark:bg-sky-500/5',
-          dragging && 'border-sky-500 bg-sky-100/60',
-        )}
-      >
-        <UploadIcon className="size-5 text-sky-600" aria-hidden />
-        <span className="text-sm font-semibold">
-          {t(multiple ? 'lms.upload.dropMany' : 'lms.upload.dropOne')}
-        </span>
-        <span className="text-xs text-muted-foreground">{t('lms.upload.limits')}</span>
-        <input
-          type="file"
-          multiple={multiple}
-          className="sr-only"
-          aria-label={t('lms.upload.choose')}
-          onChange={(e) => {
-            add(e.target.files)
-            e.target.value = ''
-          }}
-        />
-      </label>
-      <ul className="space-y-1.5">
-        {files.map((f) => (
-          <li key={f.id} className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
-            <FileIcon className="size-4 shrink-0 text-sky-600" aria-hidden />
-            <span className="min-w-0 flex-1 truncate">{f.name}</span>
-            <span className="text-xs text-muted-foreground tabular-nums">{formatBytes(f.size, locale)}</span>
-            <button
-              type="button"
-              aria-label={t('lms.upload.remove', { name: f.name })}
-              onClick={() => onChange(files.filter((x) => x.id !== f.id))}
-              className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              <XIcon className="size-3.5" />
-            </button>
-          </li>
-        ))}
-        {pending.map((p) => (
-          <li key={p.key} className="space-y-1 rounded-lg border px-3 py-2 text-sm" aria-live="polite">
-            <span className="flex items-center gap-2">
-              {p.error ? (
-                <CircleAlertIcon className="size-4 shrink-0 text-rose-600" aria-hidden />
-              ) : (
-                <Spinner className="size-4" />
-              )}
-              <span className="min-w-0 flex-1 truncate">{p.name}</span>
-              {p.error && (
-                <button
-                  type="button"
-                  aria-label={t('lms.upload.dismiss')}
-                  onClick={() => setPending((list) => list.filter((x) => x.key !== p.key))}
-                  className="rounded p-1 text-muted-foreground hover:bg-muted"
-                >
-                  <XIcon className="size-3.5" />
-                </button>
-              )}
-            </span>
-            {p.error ? (
-              <span className="block text-xs text-rose-700 dark:text-rose-300">{p.error}</span>
-            ) : (
-              <span
-                role="progressbar"
-                aria-label={p.name}
-                aria-valuenow={Math.round(p.progress * 100)}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                className="block h-1.5 overflow-hidden rounded-full bg-muted"
-              >
-                <span
-                  className="block h-full bg-sky-500 transition-all"
-                  style={{ width: `${p.progress * 100}%` }}
-                />
-              </span>
-            )}
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
 
 /** EditorDialog, ders içeriği düzenleme pencerelerinin ortak iskeletidir (geniş, kaydırılabilir). */
 function EditorDialog({
@@ -365,6 +226,224 @@ export type ActivityValues = {
   url?: string
   open_in_new_tab?: boolean
   body_html?: string
+  assignment?: AssignmentInput
+}
+
+type AssignmentForm = {
+  opens: string
+  due: string
+  cutoff: string
+  file: boolean
+  text: boolean
+  maxFiles: string
+  maxSizeMb: string
+  extensions: string
+  attempts: string
+  maxScore: string
+  policy: LatePolicy
+  penalty: string
+}
+
+/** nextWeek, bir hafta sonrasının 23:59'udur (yeni ödevin varsayılan son tarihi). */
+function nextWeek(): string {
+  const d = new Date()
+  d.setDate(d.getDate() + 7)
+  d.setHours(23, 59, 0, 0)
+  return toLocalInput(d.toISOString())
+}
+
+function assignmentForm(a?: AssignmentSettings | null): AssignmentForm {
+  return {
+    opens: toLocalInput(a?.opens_at),
+    due: a ? toLocalInput(a.due_at) : nextWeek(),
+    cutoff: toLocalInput(a?.cutoff_at),
+    file: a ? a.submission_types.includes('FILE') : true,
+    text: a ? a.submission_types.includes('ONLINE_TEXT') : false,
+    maxFiles: String(a?.max_files ?? 5),
+    maxSizeMb: a ? String(Math.round((a.max_file_size_bytes / 1048576) * 10) / 10) : '',
+    extensions: (a?.allowed_extensions ?? []).map((e) => e.replace(/^\./, '')).join(', '),
+    attempts: String(a?.max_attempts ?? 1),
+    maxScore: String(a?.max_score ?? 100),
+    policy: a?.late_policy ?? 'ALLOW',
+    penalty: String(a?.late_penalty_pct_per_day ?? 10),
+  }
+}
+
+const num = (v: string) => Number(v.replace(',', '.'))
+
+/** assignmentInput, formu istek gövdesine çevirir; hatalıysa hata anahtarını döndürür. */
+function assignmentInput(f: AssignmentForm): AssignmentInput | ParseKeys {
+  const types: SubmissionType[] = [
+    ...(f.file ? (['FILE'] as const) : []),
+    ...(f.text ? (['ONLINE_TEXT'] as const) : []),
+  ]
+  if (types.length === 0) {
+    return 'lms.assignment.form.typesRequired'
+  }
+  if (f.policy !== 'ALLOW' && !f.due) {
+    return 'lms.assignment.form.dueRequired'
+  }
+  const score = num(f.maxScore)
+  if (!(score > 0 && score <= 1000)) {
+    return 'lms.assignment.form.scoreInvalid'
+  }
+  return {
+    opens_at: fromLocalInput(f.opens),
+    due_at: fromLocalInput(f.due),
+    cutoff_at: f.policy === 'DENY' ? null : fromLocalInput(f.cutoff),
+    submission_types: types,
+    max_files: num(f.maxFiles) || 1,
+    ...(f.maxSizeMb.trim() ? { max_file_size_bytes: Math.round(num(f.maxSizeMb) * 1048576) } : {}),
+    allowed_extensions: f.extensions
+      .split(/[\s,;]+/)
+      .map((e) => e.trim())
+      .filter(Boolean),
+    max_attempts: num(f.attempts) || 1,
+    max_score: score,
+    late_policy: f.policy,
+    late_penalty_pct_per_day: f.policy === 'PENALTY' ? num(f.penalty) : 0,
+  }
+}
+
+/** AssignmentFields, ödevin teslim ayarlarıdır: tarihler, teslim türleri ve sınırlar, puan, geç teslim. */
+function AssignmentFields({
+  value,
+  onChange,
+}: {
+  value: AssignmentForm
+  onChange: (v: Partial<AssignmentForm>) => void
+}) {
+  const { t } = useTranslation()
+  return (
+    <fieldset className="space-y-3 rounded-xl border border-rose-200/70 bg-rose-50/30 p-3 dark:border-rose-500/20 dark:bg-rose-500/5">
+      <legend className="px-1 text-xs font-semibold text-muted-foreground">
+        {t('lms.assignment.form.legend')}
+      </legend>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="asg-opens">{t('lms.assignment.form.opens')}</Label>
+          <Input
+            id="asg-opens"
+            type="datetime-local"
+            value={value.opens}
+            onChange={(e) => onChange({ opens: e.target.value })}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="asg-due">{t('lms.assignment.form.due')}</Label>
+          <Input
+            id="asg-due"
+            type="datetime-local"
+            value={value.due}
+            onChange={(e) => onChange({ due: e.target.value })}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="asg-cutoff">{t('lms.assignment.form.cutoff')}</Label>
+          <Input
+            id="asg-cutoff"
+            type="datetime-local"
+            value={value.policy === 'DENY' ? '' : value.cutoff}
+            disabled={value.policy === 'DENY'}
+            onChange={(e) => onChange({ cutoff: e.target.value })}
+          />
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-x-5 gap-y-2">
+        <span className="text-sm font-medium">{t('lms.assignment.form.types')}</span>
+        <label className="flex items-center gap-2 text-sm">
+          <Checkbox checked={value.file} onCheckedChange={(v) => onChange({ file: v === true })} />
+          {t('lms.assignment.types.FILE')}
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <Checkbox checked={value.text} onCheckedChange={(v) => onChange({ text: v === true })} />
+          {t('lms.assignment.types.ONLINE_TEXT')}
+        </label>
+      </div>
+      {value.file && (
+        <div className="grid gap-3 sm:grid-cols-[110px_130px_1fr]">
+          <div className="space-y-1.5">
+            <Label htmlFor="asg-files">{t('lms.assignment.form.maxFiles')}</Label>
+            <Input
+              id="asg-files"
+              type="number"
+              min={1}
+              max={20}
+              value={value.maxFiles}
+              onChange={(e) => onChange({ maxFiles: e.target.value })}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="asg-size">{t('lms.assignment.form.maxSize')}</Label>
+            <Input
+              id="asg-size"
+              inputMode="decimal"
+              placeholder={t('lms.assignment.form.maxSizeDefault')}
+              value={value.maxSizeMb}
+              onChange={(e) => onChange({ maxSizeMb: e.target.value })}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="asg-ext">{t('lms.assignment.form.extensions')}</Label>
+            <Input
+              id="asg-ext"
+              placeholder={t('lms.assignment.form.extensionsHint')}
+              value={value.extensions}
+              onChange={(e) => onChange({ extensions: e.target.value })}
+            />
+          </div>
+        </div>
+      )}
+      <div className="grid gap-3 sm:grid-cols-[110px_110px_1fr_140px]">
+        <div className="space-y-1.5">
+          <Label htmlFor="asg-attempts">{t('lms.assignment.form.attempts')}</Label>
+          <Input
+            id="asg-attempts"
+            type="number"
+            min={1}
+            max={10}
+            value={value.attempts}
+            onChange={(e) => onChange({ attempts: e.target.value })}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="asg-score">{t('lms.assignment.form.maxScore')}</Label>
+          <Input
+            id="asg-score"
+            inputMode="decimal"
+            value={value.maxScore}
+            onChange={(e) => onChange({ maxScore: e.target.value })}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="asg-policy">{t('lms.assignment.form.policy')}</Label>
+          <Select value={value.policy} onValueChange={(v) => onChange({ policy: v as LatePolicy })}>
+            <SelectTrigger id="asg-policy" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(['ALLOW', 'PENALTY', 'DENY'] as const).map((p) => (
+                <SelectItem key={p} value={p}>
+                  {t(`lms.assignment.policy.${p}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {value.policy === 'PENALTY' && (
+          <div className="space-y-1.5">
+            <Label htmlFor="asg-penalty">{t('lms.assignment.form.penalty')}</Label>
+            <Input
+              id="asg-penalty"
+              inputMode="decimal"
+              value={value.penalty}
+              onChange={(e) => onChange({ penalty: e.target.value })}
+            />
+          </div>
+        )}
+      </div>
+    </fieldset>
+  )
 }
 
 /**
@@ -396,9 +475,16 @@ export function ActivityDialog({
     from: toLocalInput(activity?.available_from),
     until: toLocalInput(activity?.available_until),
   })
+  const [asg, setAsg] = useState(() => assignmentForm(activity?.assignment))
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const typeName = t(`lms.types.${type}`)
+  const descriptionLabel =
+    type === 'LABEL'
+      ? t('lms.form.labelText')
+      : type === 'ASSIGNMENT'
+        ? t('lms.assignment.form.instructions')
+        : t('lms.form.description')
 
   const submit = () => {
     if (!title.trim()) {
@@ -409,8 +495,18 @@ export function ActivityDialog({
       setError(t('lms.form.filesRequired'))
       return
     }
+    let assignment: AssignmentInput | undefined
+    if (type === 'ASSIGNMENT') {
+      const res = assignmentInput(asg)
+      if (typeof res === 'string') {
+        setError(t(res))
+        return
+      }
+      assignment = res
+    }
     setBusy(true)
     void onSave({
+      assignment,
       type,
       title: title.trim(),
       description_html: description,
@@ -444,6 +540,9 @@ export function ActivityDialog({
         <Label htmlFor="activity-title">{t('lms.form.title')}</Label>
         <Input id="activity-title" value={title} maxLength={200} onChange={(e) => setTitle(e.target.value)} />
       </div>
+      {type === 'ASSIGNMENT' && (
+        <AssignmentFields value={asg} onChange={(v) => setAsg((a) => ({ ...a, ...v }))} />
+      )}
       {(type === 'RESOURCE' || type === 'FOLDER') && (
         <FileDropzone
           files={files}
@@ -482,13 +581,11 @@ export function ActivityDialog({
         </div>
       )}
       <div className="space-y-1.5">
-        <span className="text-sm font-medium">
-          {type === 'LABEL' ? t('lms.form.labelText') : t('lms.form.description')}
-        </span>
+        <span className="text-sm font-medium">{descriptionLabel}</span>
         <RichTextEditor
           value={description}
           onChange={setDescription}
-          label={type === 'LABEL' ? t('lms.form.labelText') : t('lms.form.description')}
+          label={descriptionLabel}
           minHeight="min-h-20"
         />
       </div>

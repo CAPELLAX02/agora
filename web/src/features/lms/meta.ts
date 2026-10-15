@@ -29,8 +29,8 @@ export const activityMeta: Record<ActivityType, { icon: LucideIcon; tone: Tone }
   FORUM: { icon: MessagesSquareIcon, tone: 'emerald' },
 }
 
-/** editableTypes, ders alanında doğrudan eklenen etkinlik türleridir (ödev ve forum kendi akışlarıyla). */
-export const editableTypes = ['RESOURCE', 'FOLDER', 'URL', 'PAGE', 'LABEL'] as const
+/** editableTypes, ders alanında etkinlik penceresiyle eklenen türlerdir (forum kendi akışıyla). */
+export const editableTypes = ['ASSIGNMENT', 'RESOURCE', 'FOLDER', 'URL', 'PAGE', 'LABEL'] as const
 export type EditableType = (typeof editableTypes)[number]
 
 /** toLocalInput, ISO zamanı datetime-local alanının değerine çevirir (yerel saat). */

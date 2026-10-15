@@ -318,6 +318,49 @@ describe('ders alanı (öğretim elemanı)', () => {
     expect(await screen.findByText('Etkinlik eklendi.')).toBeInTheDocument()
   })
 
+  it('ödev eklenir: son tarih önerilir, teslim türleri ve geç teslim kesintisi seçilir', async () => {
+    const { user, calls } = setup('/derslerim/s1', teacher(), ['assessment_plan:manage'])
+    await user.click(await screen.findByRole('button', { name: 'Düzenlemeyi aç' }))
+    const general = screen.getByRole('region', { name: 'Genel' })
+    await user.click(within(general).getByRole('button', { name: 'Etkinlik ya da kaynak ekle' }))
+    await user.click(await screen.findByRole('menuitem', { name: 'Ödev' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Yeni Ödev' })
+    await user.type(within(dialog).getByLabelText('Başlık'), 'Ödev 1')
+    expect(within(dialog).getByLabelText('Son tarih')).not.toHaveValue('')
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Çevrimiçi metin' }))
+    await user.type(within(dialog).getByLabelText('Kabul edilen türler'), 'pdf, zip')
+    const score = within(dialog).getByLabelText('En yüksek puan')
+    await user.clear(score)
+    await user.type(score, '50')
+    await user.click(within(dialog).getByRole('combobox', { name: 'Geç teslim' }))
+    await user.click(await screen.findByRole('option', { name: 'Kesintili' }))
+    const penalty = within(dialog).getByLabelText('Günlük kesinti (%)')
+    await user.clear(penalty)
+    await user.type(penalty, '5')
+    await user.click(within(dialog).getByRole('button', { name: 'Kaydet' }))
+    await waitFor(() => expect(calls).toHaveLength(1))
+    expect(calls[0]).toMatchObject({
+      method: 'POST',
+      path: '/api/v1/topics/tp1/activities',
+      body: {
+        type: 'ASSIGNMENT',
+        title: 'Ödev 1',
+        assignment: {
+          opens_at: null,
+          cutoff_at: null,
+          submission_types: ['FILE', 'ONLINE_TEXT'],
+          allowed_extensions: ['pdf', 'zip'],
+          max_files: 5,
+          max_attempts: 1,
+          max_score: 50,
+          late_policy: 'PENALTY',
+          late_penalty_pct_per_day: 5,
+        },
+      },
+    })
+    expect((calls[0]!.body as { assignment: { due_at: string } }).assignment.due_at).toMatch(/T\d\d:\d\d/)
+  })
+
   it('dosya yüklenir ve dosya etkinliği eklenir', async () => {
     // jsdom 30'un FormData'sındaki dosyayı vitest'in fetch uyumluluk katmanı okuyamıyor (MSW
     // XHR'ı fetch isteğine çevirirken): yükleme ucu sahte bir XMLHttpRequest ile karşılanır.

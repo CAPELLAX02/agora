@@ -24,6 +24,7 @@ import { toast } from 'sonner'
 
 import { useAppDispatch } from '@/app/hooks'
 import { navTheme } from '@/features/shell/nav'
+import { formatDateTime } from '@/i18n/format'
 import { ifMatch } from '@/shared/api/etag'
 import {
   agoraApi,
@@ -642,7 +643,11 @@ function ActivityRow({
         ? t('lms.files', { count: a.files.length })
         : a.type === 'URL'
           ? hostOf(a.url)
-          : t(`lms.types.${a.type}`)
+          : a.type === 'ASSIGNMENT' && a.assignment
+            ? a.assignment.due_at
+              ? t('lms.assignment.dueShort', { time: formatDateTime(a.assignment.due_at) })
+              : t('lms.assignment.noDue')
+            : t(`lms.types.${a.type}`)
 
   const activate = () => {
     if (!open) {

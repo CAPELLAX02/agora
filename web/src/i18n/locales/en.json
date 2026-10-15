@@ -1903,7 +1903,158 @@
     "pageEmpty": "The page is empty.",
     "folderEmpty": "The folder has no files.",
     "edit": "Edit",
-    "actions": "Actions for {{name}}"
+    "actions": "Actions for {{name}}",
+    "assignment": {
+      "types": {
+        "FILE": "File upload",
+        "ONLINE_TEXT": "Online text"
+      },
+      "policy": {
+        "ALLOW": "Allowed (marked late)",
+        "PENALTY": "With penalty",
+        "DENY": "Not accepted"
+      },
+      "policyHint": {
+        "ALLOW": "Submissions are accepted after the due date and marked late.",
+        "PENALTY": "{{pct}}% is deducted from the grade for each started day after the due date.",
+        "DENY": "Submissions are not accepted after the due date."
+      },
+      "form": {
+        "legend": "Submission settings",
+        "opens": "Submissions open",
+        "due": "Due date",
+        "cutoff": "Cut-off date",
+        "types": "Submission type:",
+        "maxFiles": "Max files",
+        "maxSize": "Per file (MB)",
+        "maxSizeDefault": "Platform limit",
+        "extensions": "Accepted types",
+        "extensionsHint": "e.g. pdf, docx, zip — empty for all",
+        "attempts": "Attempts",
+        "maxScore": "Maximum grade",
+        "policy": "Late submissions",
+        "penalty": "Daily penalty (%)",
+        "instructions": "Assignment description and instructions",
+        "typesRequired": "Choose at least one submission type.",
+        "dueRequired": "Enter a due date for the late submission policy.",
+        "scoreInvalid": "The maximum grade must be between 0 and 1000."
+      },
+      "dueShort": "Due {{time}}",
+      "noDue": "No due date",
+      "acceptsFiles_one": "{{count}} file, up to {{size}}",
+      "acceptsFiles_other": "Up to {{count}} files, {{size}} each",
+      "downloadFile": "Download {{name}}",
+      "state": {
+        "NOT_OPEN": "Submissions open on {{time}}.",
+        "CLOSED": "The submission period has ended."
+      },
+      "status": {
+        "title": "Submission status",
+        "attempt": "Attempt",
+        "attemptOf": "{{n}} / {{max}}",
+        "submission": "Submission status",
+        "none": "Not submitted yet",
+        "draft": "Draft (not submitted)",
+        "submitted": "Submitted",
+        "late": "Submitted late",
+        "grading": "Grading status",
+        "graded": "Graded",
+        "notGraded": "Not graded",
+        "notReleased": "Grades not released yet",
+        "dueAt": "Due date",
+        "cutoffAt": "Cut-off date",
+        "opensAt": "Submissions open",
+        "lastModified": "Last modified",
+        "accepts": "Accepted",
+        "policy": "Late submissions"
+      },
+      "work": {
+        "title": "My submission",
+        "attemptN": "Attempt {{n}}",
+        "saveDraft": "Save draft",
+        "saved": "Draft saved.",
+        "unsaved": "You have unsaved changes.",
+        "submit": "Submit",
+        "submitTitle": "Submit the assignment?",
+        "submitDescription": "After submitting you cannot change this attempt, and you have no attempts left.",
+        "submitDescriptionMore_one": "After submitting you cannot change this attempt; you have {{count}} more attempt if needed.",
+        "submitDescriptionMore_other": "After submitting you cannot change this attempt; you have {{count}} more attempts if needed.",
+        "submitted": "Assignment submitted.",
+        "empty": "Add a file or text to submit.",
+        "newAttempt": "Start a new attempt",
+        "newAttemptStarted": "New attempt started; the previous submission was copied.",
+        "previous": "Previous attempts",
+        "noContent": "This attempt has no content.",
+        "submittedAt": "Submitted {{time}}"
+      },
+      "grade": {
+        "title": "Grade and feedback",
+        "penalty": "Late penalty {{pct}}% (grade given {{score}})",
+        "noFeedback": "No feedback written.",
+        "gradedBy": "{{name}} · {{time}}"
+      },
+      "comments": {
+        "title": "Submission comments",
+        "empty": "No comments yet.",
+        "label": "Comment",
+        "placeholder": "Write a comment…",
+        "send": "Send comment"
+      },
+      "errors": {
+        "SUBMISSION_NOT_OPEN": "This assignment is not open for submissions yet.",
+        "SUBMISSION_CLOSED": "The submission period for this assignment has ended.",
+        "ALREADY_SUBMITTED": "This attempt was already submitted; start a new attempt to change it.",
+        "EMPTY_SUBMISSION": "Add a file or text before submitting.",
+        "NO_ATTEMPTS_LEFT": "You have no attempts left.",
+        "VERSION_MISMATCH": "The submission changed in another tab; the page was refreshed, try again."
+      },
+      "teacher": {
+        "students": "Students",
+        "submitted": "Submitted",
+        "drafts": "Drafts",
+        "notStarted": "Not started",
+        "late": "Late",
+        "needsGrading": "Needs grading",
+        "filter": "Students shown",
+        "filters": {
+          "all": "All students",
+          "needs": "Needs grading",
+          "submitted": "Submitted",
+          "notStarted": "Not started"
+        },
+        "columns": {
+          "student": "Student",
+          "status": "Status",
+          "submittedAt": "Submitted",
+          "files": "Files",
+          "score": "Grade",
+          "comments": "Comments"
+        },
+        "needsBadge": "Needs grading",
+        "grade": "Grade",
+        "view": "View",
+        "gradeFor": "Grade {{name}}'s submission",
+        "viewFor": "View {{name}}'s submission",
+        "release": "Release grades",
+        "releaseTitle": "Release grades to students?",
+        "releaseDescription_one": "Students will see their grades and feedback; grades given later appear immediately. {{count}} submission still needs grading.",
+        "releaseDescription_other": "Students will see their grades and feedback; grades given later appear immediately. {{count}} submissions still need grading.",
+        "released": "Grades released · {{time}}",
+        "releasedToast": "Grades released.",
+        "empty": "There are no students in this section.",
+        "noMatch": "No students match this filter."
+      },
+      "sheet": {
+        "attempts": "Attempts",
+        "noAttempts": "The student has not submitted yet.",
+        "scoreLabel": "Grade (out of {{max}})",
+        "feedbackLabel": "Feedback",
+        "save": "Save grade",
+        "saved": "Grade saved.",
+        "scoreInvalid": "The grade must be between 0 and {{max}}, with at most two decimals.",
+        "penaltyNote": "Late submission: {{pct}}% penalty; the student's grade is {{final}}."
+      }
+    }
   },
   "richText": {
     "toolbar": "Formatting",

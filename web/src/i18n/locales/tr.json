@@ -1903,7 +1903,158 @@
     "pageEmpty": "Sayfa boş.",
     "folderEmpty": "Klasörde dosya yok.",
     "edit": "Düzenle",
-    "actions": "{{name}} için işlemler"
+    "actions": "{{name}} için işlemler",
+    "assignment": {
+      "types": {
+        "FILE": "Dosya yükleme",
+        "ONLINE_TEXT": "Çevrimiçi metin"
+      },
+      "policy": {
+        "ALLOW": "Serbest (geç işaretlenir)",
+        "PENALTY": "Kesintili",
+        "DENY": "Kabul edilmez"
+      },
+      "policyHint": {
+        "ALLOW": "Son tarihten sonra da teslim edilebilir; teslim geç olarak işaretlenir.",
+        "PENALTY": "Son tarihten sonraki başlamış her gün için puandan %{{pct}} düşülür.",
+        "DENY": "Son tarihten sonra teslim kabul edilmez."
+      },
+      "form": {
+        "legend": "Teslim ayarları",
+        "opens": "Teslim başlangıcı",
+        "due": "Son tarih",
+        "cutoff": "Kesin kapanış",
+        "types": "Teslim türü:",
+        "maxFiles": "En çok dosya",
+        "maxSize": "Dosya başına (MB)",
+        "maxSizeDefault": "Platform sınırı",
+        "extensions": "Kabul edilen türler",
+        "extensionsHint": "ör. pdf, docx, zip — boşsa hepsi",
+        "attempts": "Deneme hakkı",
+        "maxScore": "En yüksek puan",
+        "policy": "Geç teslim",
+        "penalty": "Günlük kesinti (%)",
+        "instructions": "Ödev açıklaması ve yönergeler",
+        "typesRequired": "En az bir teslim türü seçin.",
+        "dueRequired": "Geç teslim politikası için son tarih girin.",
+        "scoreInvalid": "En yüksek puan 0 ile 1000 arasında olmalı."
+      },
+      "dueShort": "Son tarih {{time}}",
+      "noDue": "Son tarih yok",
+      "acceptsFiles_one": "{{count}} dosya, en çok {{size}}",
+      "acceptsFiles_other": "En çok {{count}} dosya, dosya başına {{size}}",
+      "downloadFile": "{{name}} dosyasını indir",
+      "state": {
+        "NOT_OPEN": "Teslim {{time}} tarihinde açılacak.",
+        "CLOSED": "Teslim süresi doldu."
+      },
+      "status": {
+        "title": "Teslim durumu",
+        "attempt": "Deneme",
+        "attemptOf": "{{n}} / {{max}}",
+        "submission": "Gönderim durumu",
+        "none": "Henüz teslim edilmedi",
+        "draft": "Taslak (gönderilmedi)",
+        "submitted": "Gönderildi",
+        "late": "Geç gönderildi",
+        "grading": "Puan durumu",
+        "graded": "Puanlandı",
+        "notGraded": "Puanlanmadı",
+        "notReleased": "Puanlar henüz yayımlanmadı",
+        "dueAt": "Son tarih",
+        "cutoffAt": "Kesin kapanış",
+        "opensAt": "Teslim başlangıcı",
+        "lastModified": "Son düzenleme",
+        "accepts": "Kabul edilenler",
+        "policy": "Geç teslim"
+      },
+      "work": {
+        "title": "Teslimim",
+        "attemptN": "{{n}}. deneme",
+        "saveDraft": "Taslağı kaydet",
+        "saved": "Taslak kaydedildi.",
+        "unsaved": "Kaydedilmemiş değişiklikler var.",
+        "submit": "Gönder",
+        "submitTitle": "Ödev gönderilsin mi?",
+        "submitDescription": "Gönderdikten sonra bu denemeyi değiştiremezsiniz ve deneme hakkınız kalmaz.",
+        "submitDescriptionMore_one": "Gönderdikten sonra bu denemeyi değiştiremezsiniz; gerekirse {{count}} deneme hakkınız daha var.",
+        "submitDescriptionMore_other": "Gönderdikten sonra bu denemeyi değiştiremezsiniz; gerekirse {{count}} deneme hakkınız daha var.",
+        "submitted": "Ödev gönderildi.",
+        "empty": "Göndermek için dosya ya da metin ekleyin.",
+        "newAttempt": "Yeni deneme başlat",
+        "newAttemptStarted": "Yeni deneme başladı; önceki teslimin içeriği kopyalandı.",
+        "previous": "Önceki denemeler",
+        "noContent": "Bu denemede içerik yok.",
+        "submittedAt": "Gönderim: {{time}}"
+      },
+      "grade": {
+        "title": "Puan ve geri bildirim",
+        "penalty": "Geç teslim kesintisi %{{pct}} (verilen puan {{score}})",
+        "noFeedback": "Geri bildirim yazılmadı.",
+        "gradedBy": "{{name}} · {{time}}"
+      },
+      "comments": {
+        "title": "Gönderim yorumları",
+        "empty": "Henüz yorum yok.",
+        "label": "Yorum",
+        "placeholder": "Bir yorum yazın…",
+        "send": "Yorumu gönder"
+      },
+      "errors": {
+        "SUBMISSION_NOT_OPEN": "Bu ödev henüz teslime açılmadı.",
+        "SUBMISSION_CLOSED": "Bu ödevin teslim süresi doldu.",
+        "ALREADY_SUBMITTED": "Bu deneme zaten gönderildi; değiştirmek için yeni deneme başlatın.",
+        "EMPTY_SUBMISSION": "Göndermeden önce dosya ya da metin ekleyin.",
+        "NO_ATTEMPTS_LEFT": "Deneme hakkınız doldu.",
+        "VERSION_MISMATCH": "Teslim başka bir sekmede değişti; sayfa güncellendi, tekrar deneyin."
+      },
+      "teacher": {
+        "students": "Öğrenci",
+        "submitted": "Gönderen",
+        "drafts": "Taslakta",
+        "notStarted": "Başlamayan",
+        "late": "Geç",
+        "needsGrading": "Puan bekleyen",
+        "filter": "Gösterilen öğrenciler",
+        "filters": {
+          "all": "Bütün öğrenciler",
+          "needs": "Puanlanmayı bekleyenler",
+          "submitted": "Gönderenler",
+          "notStarted": "Başlamayanlar"
+        },
+        "columns": {
+          "student": "Öğrenci",
+          "status": "Durum",
+          "submittedAt": "Gönderim",
+          "files": "Dosya",
+          "score": "Puan",
+          "comments": "Yorum"
+        },
+        "needsBadge": "Puan bekliyor",
+        "grade": "Puanla",
+        "view": "Görüntüle",
+        "gradeFor": "{{name}} teslimini puanla",
+        "viewFor": "{{name}} teslimini görüntüle",
+        "release": "Puanları yayımla",
+        "releaseTitle": "Puanlar öğrencilere yayımlansın mı?",
+        "releaseDescription_one": "Öğrenciler puanlarını ve geri bildirimleri görür; sonra verilen puanlar da hemen görünür. {{count}} teslim hâlâ puanlanmayı bekliyor.",
+        "releaseDescription_other": "Öğrenciler puanlarını ve geri bildirimleri görür; sonra verilen puanlar da hemen görünür. {{count}} teslim hâlâ puanlanmayı bekliyor.",
+        "released": "Puanlar yayımlandı · {{time}}",
+        "releasedToast": "Puanlar yayımlandı.",
+        "empty": "Şubede öğrenci yok.",
+        "noMatch": "Bu filtreye uyan öğrenci yok."
+      },
+      "sheet": {
+        "attempts": "Denemeler",
+        "noAttempts": "Öğrenci henüz teslim etmedi.",
+        "scoreLabel": "Puan (en çok {{max}})",
+        "feedbackLabel": "Geri bildirim",
+        "save": "Puanı kaydet",
+        "saved": "Puan kaydedildi.",
+        "scoreInvalid": "Puan 0 ile {{max}} arasında, en çok iki ondalıklı olmalı.",
+        "penaltyNote": "Geç teslim: %{{pct}} kesinti; öğrencinin puanı {{final}}."
+      }
+    }
   },
   "richText": {
     "toolbar": "Biçimlendirme",
