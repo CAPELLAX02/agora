@@ -286,6 +286,21 @@ func (s *Service) activities(ctx context.Context, q db.Querier, where string, ar
 	if err != nil {
 		return nil, fmt.Errorf("lms: dosyalar okunamadı: %w", err)
 	}
+	var assignIDs []string
+	for _, a := range acts {
+		if a.Type == TypeAssignment {
+			assignIDs = append(assignIDs, a.ID)
+		}
+	}
+	if len(assignIDs) > 0 {
+		settings, err := assignments(ctx, q, assignIDs)
+		if err != nil {
+			return nil, err
+		}
+		for id, st := range settings {
+			acts[index[id]].Assignment = &st
+		}
+	}
 	return acts, nil
 }
 
@@ -317,6 +332,16 @@ func (s *Service) Activity(ctx context.Context, id string) (Activity, string, er
 // Accessible, etkinliğin role açık olduğunu denetler: düzenleyen her zaman; öğrenci ve
 // izleyici sadece görünür bölümdeki görünür ve açık etkinliğe.
 func (s *Service) Accessible(ctx context.Context, a Activity, role Role) error {
+	return s.access(ctx, a, role, false)
+}
+
+// Reviewable, Accessible gibidir ama kapanmış etkinliğe de izin verir: öğrenci, süresi geçen
+// ödevdeki teslimini, puanını ve yorumları görmeye devam eder.
+func (s *Service) Reviewable(ctx context.Context, a Activity, role Role) error {
+	return s.access(ctx, a, role, true)
+}
+
+func (s *Service) access(ctx context.Context, a Activity, role Role, allowClosed bool) error {
 	if role.CanEdit() {
 		return nil
 	}
@@ -336,7 +361,8 @@ func (s *Service) Accessible(ctx context.Context, a Activity, role Role) error {
 		return ErrNotFound
 	}
 	now := s.now()
-	if w.At(now) != Open || a.Window.At(now) != Open {
+	ok := func(av Availability) bool { return av == Open || (allowClosed && av == Closed) }
+	if !ok(w.At(now)) || !ok(a.Window.At(now)) {
 		return ErrNotAvailable
 	}
 	return nil

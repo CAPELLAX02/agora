@@ -236,7 +236,8 @@ func (s *Service) Reorder(ctx context.Context, actorID, sectionID string, layout
 }
 
 // ActivityInput, bir etkinliğin yazılabilir alanlarıdır. Türe özgü olanlar sadece o türde
-// kullanılır: FileIDs (dosya: 1, klasör: 1-50), URL ve NewTab (bağlantı), Body (sayfa).
+// kullanılır: FileIDs (dosya: 1, klasör: 1-50), URL ve NewTab (bağlantı), Body (sayfa),
+// Assignment (ödev).
 type ActivityInput struct {
 	Type        ActivityType
 	Title       string
@@ -247,9 +248,11 @@ type ActivityInput struct {
 	URL         string
 	NewTab      bool
 	Body        string
+	Assignment  *AssignmentSettings
 }
 
-func (in ActivityInput) validate() error {
+// validate, girdiyi denetler; maxUpload platformun dosya boyutu sınırıdır (ödevin sınırı onu aşamaz).
+func (in ActivityInput) validate(maxUpload int64) error {
 	if n := len([]rune(in.Title)); n < 1 || n > 200 {
 		return &ValidationError{Field: "title", Message: "1 ile 200 karakter arasında olmalı."}
 	}
@@ -266,9 +269,17 @@ func (in ActivityInput) validate() error {
 		if !validURL(in.URL) {
 			return &ValidationError{Field: "url", Message: "http ya da https ile başlayan geçerli bir adres olmalı."}
 		}
+	case TypeAssignment:
+		if in.Assignment == nil {
+			return &ValidationError{Field: "assignment", Message: "Ödevin ayarları gerekli."}
+		}
+		in.Assignment.normalize()
+		if err := in.Assignment.validate(maxUpload); err != nil {
+			return err
+		}
 	case TypePage, TypeLabel:
 	default:
-		return &ValidationError{Field: "type", Message: "RESOURCE, FOLDER, URL, PAGE ya da LABEL olmalı."}
+		return &ValidationError{Field: "type", Message: "RESOURCE, FOLDER, URL, PAGE, LABEL ya da ASSIGNMENT olmalı."}
 	}
 	if len(in.Body) > 200_000 || len(in.Description) > 50_000 {
 		return &ValidationError{Field: "body", Message: "Metin çok uzun."}
@@ -279,7 +290,7 @@ func (in ActivityInput) validate() error {
 // CreateActivity, bölümün sonuna bir etkinlik ekler; dosyaları etkinliğe bağlar (yükleyen
 // işlemi yapan olmalı).
 func (s *Service) CreateActivity(ctx context.Context, actorID, topicID string, in ActivityInput) (string, error) {
-	if err := in.validate(); err != nil {
+	if err := in.validate(s.files.MaxBytes()); err != nil {
 		return "", err
 	}
 	var id string
@@ -324,6 +335,8 @@ func (s *Service) writeDetails(ctx context.Context, tx pgx.Tx, actorID, id strin
 		if err != nil {
 			return fmt.Errorf("lms: bağlantı yazılamadı: %w", err)
 		}
+	case TypeAssignment:
+		return writeAssignment(ctx, tx, id, *in.Assignment)
 	case TypePage:
 		_, err := tx.Exec(ctx, `
 			INSERT INTO lms.pages (activity_id, body_html) VALUES ($1, $2)
@@ -378,7 +391,7 @@ func (s *Service) ActivitySection(ctx context.Context, id string) (string, Activ
 
 // UpdateActivity, etkinliği günceller (türü değişmez; iyimser kilit: version).
 func (s *Service) UpdateActivity(ctx context.Context, actorID, id string, version int, in ActivityInput) error {
-	if err := in.validate(); err != nil {
+	if err := in.validate(s.files.MaxBytes()); err != nil {
 		return err
 	}
 	return db.InTx(ctx, s.pool, func(tx pgx.Tx) error {

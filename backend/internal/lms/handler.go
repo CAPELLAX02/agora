@@ -41,6 +41,7 @@ func (h *Handler) Register(rt *authz.Router) {
 	rt.HandleFunc("PUT /api/v1/activities/{id}", authz.Authenticated, h.updateActivity)
 	rt.HandleFunc("DELETE /api/v1/activities/{id}", authz.Authenticated, h.deleteActivity)
 	rt.HandleFunc("GET /api/v1/activities/{id}/files/{fileId}/download-url", authz.Authenticated, h.fileURL)
+	h.registerAssignments(rt)
 }
 
 func userID(r *http.Request) string {
@@ -126,21 +127,22 @@ type fileRefResponse struct {
 }
 
 type activityResponse struct {
-	ID             string            `json:"id"`
-	TopicID        string            `json:"topic_id"`
-	Type           ActivityType      `json:"type"`
-	Title          string            `json:"title"`
-	Description    string            `json:"description_html"`
-	Visible        bool              `json:"is_visible"`
-	Availability   Availability      `json:"availability"`
-	AvailableFrom  *time.Time        `json:"available_from"`
-	AvailableUntil *time.Time        `json:"available_until"`
-	Version        int               `json:"version"`
-	UpdatedAt      time.Time         `json:"updated_at"`
-	Files          []fileRefResponse `json:"files"`
-	URL            *string           `json:"url"`
-	OpenInNewTab   *bool             `json:"open_in_new_tab"`
-	Body           *string           `json:"body_html"`
+	ID             string              `json:"id"`
+	TopicID        string              `json:"topic_id"`
+	Type           ActivityType        `json:"type"`
+	Title          string              `json:"title"`
+	Description    string              `json:"description_html"`
+	Visible        bool                `json:"is_visible"`
+	Availability   Availability        `json:"availability"`
+	AvailableFrom  *time.Time          `json:"available_from"`
+	AvailableUntil *time.Time          `json:"available_until"`
+	Version        int                 `json:"version"`
+	UpdatedAt      time.Time           `json:"updated_at"`
+	Files          []fileRefResponse   `json:"files"`
+	URL            *string             `json:"url"`
+	OpenInNewTab   *bool               `json:"open_in_new_tab"`
+	Body           *string             `json:"body_html"`
+	Assignment     *assignmentResponse `json:"assignment"`
 }
 
 type topicResponse struct {
@@ -197,6 +199,10 @@ func toActivity(a Activity, now time.Time) activityResponse {
 	}
 	if a.Type == TypePage && a.Body != "" {
 		res.Body = &a.Body
+	}
+	if a.Assignment != nil {
+		ar := toAssignment(*a.Assignment, now)
+		res.Assignment = &ar
 	}
 	return res
 }
@@ -396,18 +402,27 @@ type activityRequest struct {
 	Description string       `json:"description_html"`
 	Visible     *bool        `json:"is_visible"`
 	windowRequest
-	FileIDs []string `json:"file_ids"`
-	URL     string   `json:"url"`
-	NewTab  *bool    `json:"open_in_new_tab"`
-	Body    string   `json:"body_html"`
+	FileIDs    []string           `json:"file_ids"`
+	URL        string             `json:"url"`
+	NewTab     *bool              `json:"open_in_new_tab"`
+	Body       string             `json:"body_html"`
+	Assignment *assignmentRequest `json:"assignment"`
 }
 
-func (req activityRequest) input() ActivityInput {
-	return ActivityInput{
+func (req activityRequest) input(maxUpload int64) (ActivityInput, error) {
+	in := ActivityInput{
 		Type: req.Type, Title: req.Title, Description: req.Description, Visible: req.Visible == nil || *req.Visible,
 		Window: Window{From: req.AvailableFrom, Until: req.AvailableUntil}, FileIDs: req.FileIDs,
 		URL: req.URL, NewTab: req.NewTab == nil || *req.NewTab, Body: req.Body,
 	}
+	if req.Assignment != nil {
+		a, err := req.Assignment.settings(maxUpload)
+		if err != nil {
+			return ActivityInput{}, err
+		}
+		in.Assignment = &a
+	}
+	return in, nil
 }
 
 func (h *Handler) createActivity(w http.ResponseWriter, r *http.Request) {
@@ -426,7 +441,11 @@ func (h *Handler) createActivity(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	id, err := h.svc.CreateActivity(r.Context(), userID(r), topicID, req.input())
+	in, err := req.input(h.svc.files.MaxBytes())
+	if h.failed(w, r, err) {
+		return
+	}
+	id, err := h.svc.CreateActivity(r.Context(), userID(r), topicID, in)
 	if h.failed(w, r, err) {
 		return
 	}
@@ -486,7 +505,11 @@ func (h *Handler) updateActivity(w http.ResponseWriter, r *http.Request) {
 		httpx.InvalidBody(w, r, err)
 		return
 	}
-	if h.failed(w, r, h.svc.UpdateActivity(r.Context(), userID(r), id, version, req.input())) {
+	in, err := req.input(h.svc.files.MaxBytes())
+	if h.failed(w, r, err) {
+		return
+	}
+	if h.failed(w, r, h.svc.UpdateActivity(r.Context(), userID(r), id, version, in)) {
 		return
 	}
 	h.writeActivity(w, r, id, role, http.StatusOK)
@@ -537,7 +560,10 @@ func (h *Handler) forbidden(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) failed(w http.ResponseWriter, r *http.Request, err error) bool {
-	var verr *ValidationError
+	var (
+		verr     *ValidationError
+		conflict *ConflictError
+	)
 	switch {
 	case err == nil:
 		return false
@@ -545,6 +571,10 @@ func (h *Handler) failed(w http.ResponseWriter, r *http.Request, err error) bool
 		httpx.NotFound(w, r)
 	case errors.Is(err, ErrVersionMismatch):
 		httpx.PreconditionFailed(w, r)
+	case errors.Is(err, ErrPreconditionRequired):
+		httpx.PreconditionRequired(w, r)
+	case errors.As(err, &conflict):
+		_ = httpx.WriteProblem(w, r, httpx.Problem{Status: http.StatusConflict, Code: conflict.Code, Detail: conflict.Detail})
 	case errors.Is(err, ErrNotAvailable):
 		_ = httpx.WriteProblem(w, r, httpx.Problem{Status: http.StatusForbidden, Code: "NOT_AVAILABLE",
 			Detail: "Bu etkinlik henüz açılmadı ya da kapandı."})

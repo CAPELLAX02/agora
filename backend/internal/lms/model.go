@@ -144,10 +144,11 @@ type Activity struct {
 	Version     int
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
-	Files       []FileRef // RESOURCE, FOLDER
-	URL         string    // URL
-	NewTab      bool      // URL
-	Body        string    // PAGE (sadece ayrıntıda)
+	Files       []FileRef           // RESOURCE, FOLDER
+	URL         string              // URL
+	NewTab      bool                // URL
+	Body        string              // PAGE (sadece ayrıntıda)
+	Assignment  *AssignmentSettings // ASSIGNMENT
 }
 
 // Space, ders alanının görünümüdür: izleyenin rolüne göre süzülmüş bölümler ve etkinlikler.
