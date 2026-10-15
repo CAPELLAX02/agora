@@ -324,6 +324,20 @@ canViewSpace(actor, section):                                    # uygulandı (F
 canEditSpace(actor, section):                                    # uygulandı (Faz 5)
     roleIn(actor, section) IN ('PRIMARY', 'CO_INSTRUCTOR', 'ASSISTANT')   # asistan da içerik ekler
 
+canSubmitAssignment(actor, assignment, now):                     # uygulandı (Faz 5)
+    hasActiveEnrollment(actor, assignment.section)                   # ilişki: sadece şubenin öğrencisi
+    AND visibleAndOpen(assignment.activity, now)                     # gizli ya da açılmamış etkinlik yok
+    AND (assignment.opens_at IS NULL OR now >= assignment.opens_at)  # bağlam: teslim açıldı
+    AND now <= (assignment.late_policy = 'DENY' ? assignment.due_at : assignment.cutoff_at)
+    # Taslak serbestçe düzenlenir, gönderilen deneme kilitlenir; yeni deneme deneme hakkı kadar.
+    # Süresi geçen ödevde öğrenci teslimini, yayımlanmış puanını ve yorumları görmeye devam eder.
+
+canGradeAssignment(actor, assignment):                           # uygulandı (Faz 5)
+    canEditSpace(actor, assignment.section)                          # asistan da puanlar
+    # Teslim listesini şubenin bölümünü yöneten personel (section:manage) salt okunur görür.
+    # Puanlar öğrenciye ödev bazında yayımlandıktan sonra görünür; teslim dosyasını sadece
+    # sahibi öğrenci ve şubenin öğretim elemanları indirir.
+
 canEditAssessmentPlan(actor, section):                           # uygulandı (Faz 2)
     ( has(actor, "assessment_plan:manage")
       AND roleIn(actor, section) IN ('PRIMARY', 'CO_INSTRUCTOR') )   # ilişki: section_instructors

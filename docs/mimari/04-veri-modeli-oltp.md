@@ -282,12 +282,12 @@ stateDiagram-v2
 | `activities` | id, section_id FK, topic_id FK, activity_type CK(`RESOURCE, FOLDER, URL, PAGE, LABEL, ASSIGNMENT, FORUM`), title (1-200), description_html, position, is_visible, available_from, available_until, created_by, version, created_at, updated_at, deleted_at | Faz 5'te uygulandı. **Class-table inheritance**: ortak alanlar burada, türe özgü alanlar alt tablolarda (activity_id PK + FK). Zengin metin kaydedilmeden önce izin listesiyle temizlenir (bluemonday). Sınav, canlı oturum ve tamamlama kuralı ileride |
 
 ### Türe özgü tablolar
-| Tablo | Sütunlar |
-| --- | --- |
+| Tablo | Sütunlar | Not |
+| --- | --- | --- |
 | `activity_files` | activity_id FK, file_id FK→platform.files, position — PK(activity_id, file_id) | Faz 5'te uygulandı: dosya (tek) ve klasör (1-50) etkinliklerinin ortak tablosu. Dosya bağlanınca `files.attached_at` dolar; etkinlikten çıkan ya da silinen etkinliğin dosyası serbest kalır ve bir gün sonra temizlenir |
 | `urls` | activity_id PK, url CK(http/https, ≤2000), open_in_new_tab | Faz 5'te uygulandı |
 | `pages` | activity_id PK, body_html | Faz 5'te uygulandı (temizlenmiş HTML) |
-| `assignments` | activity_id PK, opens_at, due_at, cutoff_at, max_attempts smallint, submission_types text[] (`FILE, ONLINE_TEXT`), max_files, max_file_size_bytes, allowed_mime_types text[], max_score, late_policy CK(`ALLOW, DENY, PENALTY`), late_penalty_pct_per_day |
+| `assignments` | activity_id PK, opens_at, due_at, cutoff_at, max_attempts smallint (1-10), submission_types text[] (`FILE, ONLINE_TEXT`), max_files (1-20), max_file_size_bytes, allowed_extensions text[] (boşsa platformun izin listesi), max_score numeric(6,2), late_policy CK(`ALLOW, DENY, PENALTY`), late_penalty_pct_per_day, grades_released_at | Faz 5'te uygulandı. CK: opens < due ≤ cutoff. Teslim açılıştan, geç teslim kapalıysa son tarihe, açıksa kesin kapanışa kadar kabul edilir; PENALTY'de başlamış her geç gün için yüzde düşülür (en çok %100). Puanlar ödev bazında yayımlanır |
 | `quizzes` | activity_id PK, opens_at, closes_at, time_limit_seconds, max_attempts, grading_method CK(`HIGHEST, LAST, FIRST, AVERAGE`), shuffle_questions, shuffle_options, results_visibility CK(`IMMEDIATE, AFTER_CLOSE, NEVER`), max_score |
 | `forums` | activity_id PK, forum_kind CK(`ANNOUNCEMENTS, GENERAL, QNA`), students_can_start_threads, subscription_mode CK(`OPTIONAL, FORCED, DISABLED`) |
 | `live_sessions` | activity_id PK, provider CK(`GOOGLE_MEET, ZOOM, BBB, TEAMS, OTHER`), join_url, starts_at, ends_at, recurrence_rule (RRULE), recording_url |
@@ -295,10 +295,10 @@ stateDiagram-v2
 ### Ödev teslimi
 | Tablo | Sütunlar | Not |
 | --- | --- | --- |
-| `assignment_submissions` | id, assignment_id, user_id, attempt_no, status CK(`DRAFT, SUBMITTED, REOPENED`), online_text, submitted_at, is_late | UQ(assignment_id, user_id, attempt_no) |
-| `submission_files` | submission_id, file_id | |
-| `submission_feedback` | id, submission_id, score, feedback_html, feedback_file_id, graded_by, graded_at, released_at | Puan aynı zamanda `grade_item_scores`'a yazılır |
-| `submission_comments` | id, submission_id, author_id, body, created_at | "Gönderim yorumları" |
+| `assignment_submissions` | id, activity_id, user_id, attempt_no, status CK(`DRAFT, SUBMITTED`), online_text_html, submitted_at, is_late, version, created_at, updated_at | Faz 5'te uygulandı. UQ(activity_id, user_id, attempt_no); CK: SUBMITTED ⇔ submitted_at. Taslak düzenlenir (iyimser kilit), gönderilen deneme kilitlenir; yeni deneme öncekinin metni ve dosyalarıyla başlar (deneme hakkı kadar). Planlanan `REOPENED` yerine yeni deneme satırı |
+| `submission_files` | submission_id, file_id, position — PK(submission_id, file_id) | Faz 5'te uygulandı. Denemeler dosya paylaşabilir: dosya, hiçbir teslim onu göstermediğinde serbest kalır |
+| `assignment_grades` | activity_id, user_id, score numeric(6,2) null, feedback_html, attempt_no, graded_by, graded_at, version — PK(activity_id, user_id) | Faz 5'te uygulandı (planlanan `submission_feedback` yerine). Öğrenci başına bir puan, verildiği andaki son denemeye ait; teslim etmeyene de verilir. Geç kesintisi okunurken o denemenin teslim anından hesaplanır. Not öğesi köprüsüyle `grade_item_scores`'a akacak |
+| `submission_comments` | id, activity_id, student_id, author_id, body (1-2000, düz metin), created_at | Faz 5'te uygulandı. "Gönderim yorumları": öğrencinin teslimi üzerine öğrenci ve öğretim elemanları arasında |
 
 ### Sınav (quiz) ve soru bankası
 | Tablo | Sütunlar | Not |
