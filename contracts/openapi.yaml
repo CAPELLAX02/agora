@@ -3878,6 +3878,107 @@ paths:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Problem" }
 
+  /api/v1/activities/{id}/grades.xlsx:
+    get:
+      tags: [Ödev]
+      summary: Ödevin puan şablonunu (Excel) indirir
+      description: >-
+        Öğretim elemanının doldurup geri yüklediği şablon (yol haritası §5 #18). "Puanlar"
+        sayfası: başlık bloğu, öğrenci bilgileri, teslim durumu (geç kesintisiyle), gönderim
+        zamanı, dosya sayısı; puan (0 ile ödevin en yüksek puanı arası, Excel'de doğrulanır) ve
+        geri bildirim (düz metin) sarı ve kilitsiz, diğerleri gri ve kilitli. Şimdiki puanlar ve
+        geri bildirimler (düz metin) dolu gelir. "Açıklamalar" sayfası kuralları anlatır; çok
+        gizli kimlik sayfası dosyanın ödevini ve sütunlarını taşır.
+      operationId: exportAssignmentGradesXlsx
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - name: lang
+          in: query
+          schema: { type: string, enum: [tr, en], default: tr }
+      responses:
+        "200":
+          description: Puan şablonu (XLSX)
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema: { type: string, format: binary }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/activities/{id}/grades/import/preview:
+    post:
+      tags: [Ödev]
+      summary: Dosyadan (Excel ya da CSV) puan içe aktarmayı önizler
+      description: >-
+        Hiçbir şey kaydedilmez. Başlık satırı ilk satırlarda aranır: öğrenci numarası, `Puan`
+        ve isteğe bağlı `Geri Bildirim` sütunları (Agora şablonunda kimlik sayfasından; başka
+        ödevin şablonu reddedilir). Başlıksız iki sütunlu dosya (numara, puan) da olur. Boş
+        hücre puanı ve geri bildirimi değiştirmez; geri bildirim düz metindir (her satır bir
+        paragraf), şimdikinin düz yazısıyla aynıysa biçimi korunur.
+      operationId: previewAssignmentGradeImport
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+            schema: { type: string, format: binary, description: "En fazla 1 MiB" }
+          text/csv:
+            schema: { type: string, format: binary, description: "En fazla 1 MiB" }
+      responses:
+        "200":
+          description: Satır satır önizleme
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AssignmentGradeImportPreview" }
+        "400":
+          description: "`INVALID_FILE`: dosya okunamadı ya da başka ödevin şablonu"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/activities/{id}/grades/import:
+    post:
+      tags: [Ödev]
+      summary: Dosyadaki puanları yazar
+      description: >-
+        Önizlemedeki gibi doğrulanır; hatalı satır varsa hiçbir şey yazılmaz (400, satır
+        hataları `rows.<satır>` alanlarında). If-Match önizlemenin `version`'ıdır (hiç puan
+        yokken `"0"`); arada puan değiştiyse 412. Değişen satırlar tek transaction'da, o anki
+        son denemeye yazılır.
+      operationId: importAssignmentGrades
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+            schema: { type: string, format: binary }
+          text/csv:
+            schema: { type: string, format: binary }
+      responses:
+        "200":
+          description: Teslim listesi
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SubmissionRoster" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "412": { $ref: "#/components/responses/VersionMismatch" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
+
   /api/v1/instructors:
     get:
       tags: [Ders açma]
@@ -8866,6 +8967,43 @@ components:
             - type: "null"
             - $ref: "#/components/schemas/AssignmentGrade"
         comments: { type: array, items: { $ref: "#/components/schemas/SubmissionComment" } }
+
+    AssignmentGradeImportPreview:
+      type: object
+      required: [version, score_column, feedback_column, rows, missing, summary]
+      properties:
+        version: { type: integer, description: "Puan sürümü: uygularken If-Match" }
+        score_column: { type: [string, "null"] }
+        feedback_column: { type: [string, "null"] }
+        rows:
+          type: array
+          items:
+            type: object
+            required: [line, student_no, student, status, current_score, next_score, feedback_changed, error_code, error]
+            properties:
+              line: { type: integer, description: Dosyadaki satır }
+              student_no: { type: string }
+              student:
+                oneOf:
+                  - type: "null"
+                  - $ref: "#/components/schemas/SubmissionStudent"
+              status: { type: string, enum: [CHANGED, UNCHANGED, EMPTY, ERROR] }
+              current_score: { type: [number, "null"] }
+              next_score: { type: [number, "null"] }
+              feedback_changed: { type: boolean }
+              error_code:
+                type: [string, "null"]
+                enum: [MISSING_STUDENT_NO, NOT_IN_SECTION, DUPLICATE_STUDENT, INVALID_SCORE, FEEDBACK_TOO_LONG, null]
+              error: { type: [string, "null"] }
+        missing: { type: array, items: { $ref: "#/components/schemas/SubmissionStudent" }, description: Şubenin dosyada olmayan öğrencileri }
+        summary:
+          type: object
+          required: [changed, unchanged, empty, errors]
+          properties:
+            changed: { type: integer }
+            unchanged: { type: integer }
+            empty: { type: integer }
+            errors: { type: integer }
 
     GradeInput:
       type: object

@@ -1010,6 +1010,42 @@ const injectedRtkApi = api
         }),
         invalidatesTags: ['\u00D6dev', 'Ders alan\u0131'],
       }),
+      exportAssignmentGradesXlsx: build.query<
+        ExportAssignmentGradesXlsxApiResponse,
+        ExportAssignmentGradesXlsxApiArg
+      >({
+        query: (queryArg) => ({
+          url: `/api/v1/activities/${queryArg.id}/grades.xlsx`,
+          params: {
+            lang: queryArg.lang,
+          },
+        }),
+        providesTags: ['\u00D6dev'],
+      }),
+      previewAssignmentGradeImport: build.mutation<
+        PreviewAssignmentGradeImportApiResponse,
+        PreviewAssignmentGradeImportApiArg
+      >({
+        query: (queryArg) => ({
+          url: `/api/v1/activities/${queryArg.id}/grades/import/preview`,
+          method: 'POST',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['\u00D6dev'],
+      }),
+      importAssignmentGrades: build.mutation<ImportAssignmentGradesApiResponse, ImportAssignmentGradesApiArg>(
+        {
+          query: (queryArg) => ({
+            url: `/api/v1/activities/${queryArg.id}/grades/import`,
+            method: 'POST',
+            body: queryArg.body,
+            headers: {
+              'If-Match': queryArg['If-Match'],
+            },
+          }),
+          invalidatesTags: ['\u00D6dev'],
+        },
+      ),
       searchInstructors: build.query<SearchInstructorsApiResponse, SearchInstructorsApiArg>({
         query: (queryArg) => ({
           url: `/api/v1/instructors`,
@@ -2622,6 +2658,27 @@ export type ReleaseAssignmentGradesApiResponse = /** status 200 Liste */ Submiss
 export type ReleaseAssignmentGradesApiArg = {
   /** Geçerli bir UUID değilse 404 döner. */
   id: string
+}
+export type ExportAssignmentGradesXlsxApiResponse = /** status 200 Puan şablonu (XLSX) */ Blob
+export type ExportAssignmentGradesXlsxApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  lang?: 'tr' | 'en'
+}
+export type PreviewAssignmentGradeImportApiResponse =
+  /** status 200 Satır satır önizleme */ AssignmentGradeImportPreview
+export type PreviewAssignmentGradeImportApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: Blob
+}
+export type ImportAssignmentGradesApiResponse = /** status 200 Teslim listesi */ SubmissionRoster
+export type ImportAssignmentGradesApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
+  'If-Match': string
+  body: Blob
 }
 export type SearchInstructorsApiResponse = /** status 200 Liste */ {
   items: StaffSummary[]
@@ -4347,6 +4404,48 @@ export type GradeInput = {
   score?: number | null
   feedback_html?: string
 }
+export type AssignmentGradeImportPreview = {
+  /** Puan sürümü: uygularken If-Match */
+  version: number
+  score_column: string | null
+  feedback_column: string | null
+  rows: {
+    /** Dosyadaki satır */
+    line: number
+    student_no: string
+    student: null | SubmissionStudent
+    status: 'CHANGED' | 'UNCHANGED' | 'EMPTY' | 'ERROR'
+    current_score: number | null
+    next_score: number | null
+    feedback_changed: boolean
+    error_code:
+      | (
+          | 'MISSING_STUDENT_NO'
+          | 'NOT_IN_SECTION'
+          | 'DUPLICATE_STUDENT'
+          | 'INVALID_SCORE'
+          | 'FEEDBACK_TOO_LONG'
+          | null
+        )
+      | (
+          | 'MISSING_STUDENT_NO'
+          | 'NOT_IN_SECTION'
+          | 'DUPLICATE_STUDENT'
+          | 'INVALID_SCORE'
+          | 'FEEDBACK_TOO_LONG'
+          | null
+        )
+    error: string | null
+  }[]
+  /** Şubenin dosyada olmayan öğrencileri */
+  missing: SubmissionStudent[]
+  summary: {
+    changed: number
+    unchanged: number
+    empty: number
+    errors: number
+  }
+}
 export type StaffSummary = {
   staff_id: string
   staff_no: string
@@ -5562,6 +5661,10 @@ export const {
   useGetStudentSubmissionFileUrlQuery,
   useLazyGetStudentSubmissionFileUrlQuery,
   useReleaseAssignmentGradesMutation,
+  useExportAssignmentGradesXlsxQuery,
+  useLazyExportAssignmentGradesXlsxQuery,
+  usePreviewAssignmentGradeImportMutation,
+  useImportAssignmentGradesMutation,
   useSearchInstructorsQuery,
   useLazySearchInstructorsQuery,
   useListAssessmentTypesQuery,
