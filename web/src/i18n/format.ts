@@ -67,3 +67,8 @@ export function formatDuration(seconds: number): string {
     minutes,
   )
 }
+
+/** formatNumber, sayıyı dilin ondalık ayracıyla, en çok iki ondalıkla yazar (puanlar). */
+export function formatNumber(value: number, digits = 2): string {
+  return new Intl.NumberFormat(locale(), { maximumFractionDigits: digits }).format(value)
+}
