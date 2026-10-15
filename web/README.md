@@ -15,6 +15,10 @@ make web-dev                               # Web: http://localhost:5173
 pnpm ayrıca kurulmaz: Node.js ile gelen corepack, `package.json`'daki `packageManager`
 sürümünü kullanır.
 
+Paket sürümleri yayımlandıktan en az 14 gün sonra kurulur, geçişli bağımlılıklar dahil
+(`pnpm-workspace.yaml`'da `minimumReleaseAge`). Daha yeni bir sürüm istenirse pnpm
+reddeder; kilit dosyası da bu kurala uymalıdır (CI `--frozen-lockfile` ile denetler).
+
 Geliştirme sunucusu `/api` isteklerini API'ye aktarır (`AGORA_API_URL`, varsayılan
 `http://localhost:8080`). Tarayıcı için web ve API aynı origin'dedir, production'daki gibi.
 
