@@ -3878,6 +3878,62 @@ paths:
             application/problem+json:
               schema: { $ref: "#/components/schemas/Problem" }
 
+  /api/v1/activities/{id}/link:
+    get:
+      tags: [Ödev]
+      summary: Ödevin not tablosu bağlantısı
+      description: >-
+        Ödevin beslediği değerlendirme bileşeni ve şubenin bağlanabilir (dönem içi) bileşenleri.
+        Öğretim elemanları ve izleyici görür.
+      operationId: getAssignmentLink
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Bağlantı
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AssignmentLink" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Ödev, Değerlendirme]
+      summary: Ödevi bir değerlendirme bileşenine bağlar ya da bağlantıyı kaldırır
+      description: >-
+        Bileşenin notu, puanları yayımlanmış bağlı ödevlerin (geç kesintisi düşülmüş) puanlarının
+        100'lük ağırlıklı ortalamasıdır; puanı olmayan öğrenci o ödevden 0 alır. Notlar not
+        tablosuna kaynak LMS olarak yazılır ve bileşene elle giriş kapanır. Plan kilitlenmeden
+        notlar akmaz; harf notları ilan edilince donar (`sync_state`). Yayımlama, yayımdan
+        sonraki puan değişikliği ve ödev ayarı değişikliği bileşeni kendiliğinden yeniden hesaplar.
+      operationId: setAssignmentLink
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                component_id: { type: [string, "null"], format: uuid, description: Boşsa bağlantı kalkar }
+                weight: { type: number, exclusiveMinimum: 0, maximum: 100, default: 1, description: Bileşen içindeki ağırlık }
+      responses:
+        "200":
+          description: Bağlantı ve eşitleme sonucu
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AssignmentLink" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/v1/activities/{id}/grades.xlsx:
     get:
       tags: [Ödev]
@@ -4320,7 +4376,8 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "409":
           description: >-
-            `ASSESSMENT_PLAN_NOT_LOCKED`, `GRADE_ENTRY_WINDOW_CLOSED`, `MAKEUP_NOT_AVAILABLE`
+            `ASSESSMENT_PLAN_NOT_LOCKED`, `GRADE_ENTRY_WINDOW_CLOSED`, `COMPONENT_FED_BY_LMS`
+            (notlar ders alanındaki bağlı ödevlerden gelir), `MAKEUP_NOT_AVAILABLE`
             (bütünleme notları harf notları ilan edildikten sonra girilir), `GRADES_PUBLISHED`
             (harf notları ilan edildi), `MAKEUP_PUBLISHED` (bütünleme sonuçları ilan edildi);
             bütünleme hakkı olmayan öğrenci 400 `VALIDATION_FAILED`
@@ -8353,7 +8410,7 @@ components:
           items:
             type: object
             required: [id, type, sequence_no, label_tr, label_en, weight, version, published_at, entry_window, editable,
-                       scored_count, absent_count, average]
+                       scored_count, absent_count, average, lms_fed]
             properties:
               id: { type: string, format: uuid }
               type: { $ref: "#/components/schemas/AssessmentType" }
@@ -8368,6 +8425,11 @@ components:
               scored_count: { type: integer }
               absent_count: { type: integer }
               average: { type: [number, "null"], description: Girilen puanların ortalaması (girmedi hariç) }
+              lms_fed:
+                type: boolean
+                description: >-
+                  Notlar ders alanındaki bağlı ödevlerden gelir (kaynak LMS); elle girilmez
+                  (`COMPONENT_FED_BY_LMS`)
         students:
           type: array
           description: Soyadı ve adına göre sıralı
@@ -8967,6 +9029,37 @@ components:
             - type: "null"
             - $ref: "#/components/schemas/AssignmentGrade"
         comments: { type: array, items: { $ref: "#/components/schemas/SubmissionComment" } }
+
+    AssignmentLink:
+      type: object
+      required: [link, components, plan_locked, grades_published, sync_state]
+      properties:
+        link:
+          oneOf:
+            - type: "null"
+            - type: object
+              required: [component_id, weight]
+              properties:
+                component_id: { type: string, format: uuid }
+                weight: { type: number, description: Bileşen içindeki ağırlık }
+        components:
+          type: array
+          description: Şubenin dönem içi bileşenleri (final ve bütünleme ödevden beslenmez)
+          items:
+            type: object
+            required: [id, label_tr, label_en, weight, linked_assignments]
+            properties:
+              id: { type: string, format: uuid }
+              label_tr: { type: string }
+              label_en: { type: string }
+              weight: { type: number, description: Bileşenin plandaki ağırlığı (%) }
+              linked_assignments: { type: integer }
+        plan_locked: { type: boolean }
+        grades_published: { type: boolean, description: Harf notları ilan edildi (notlar dondu) }
+        sync_state:
+          type: [string, "null"]
+          enum: [SYNCED, PLAN_NOT_LOCKED, FROZEN, NOT_LINKED, null]
+          description: Sadece güncellemenin yanıtında
 
     AssignmentGradeImportPreview:
       type: object

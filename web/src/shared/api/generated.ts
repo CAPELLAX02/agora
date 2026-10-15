@@ -1010,6 +1010,20 @@ const injectedRtkApi = api
         }),
         invalidatesTags: ['\u00D6dev', 'Ders alan\u0131'],
       }),
+      getAssignmentLink: build.query<GetAssignmentLinkApiResponse, GetAssignmentLinkApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/activities/${queryArg.id}/link`,
+        }),
+        providesTags: ['\u00D6dev'],
+      }),
+      setAssignmentLink: build.mutation<SetAssignmentLinkApiResponse, SetAssignmentLinkApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/activities/${queryArg.id}/link`,
+          method: 'PUT',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['\u00D6dev', 'De\u011Ferlendirme'],
+      }),
       exportAssignmentGradesXlsx: build.query<
         ExportAssignmentGradesXlsxApiResponse,
         ExportAssignmentGradesXlsxApiArg
@@ -2658,6 +2672,22 @@ export type ReleaseAssignmentGradesApiResponse = /** status 200 Liste */ Submiss
 export type ReleaseAssignmentGradesApiArg = {
   /** Geçerli bir UUID değilse 404 döner. */
   id: string
+}
+export type GetAssignmentLinkApiResponse = /** status 200 Bağlantı */ AssignmentLink
+export type GetAssignmentLinkApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type SetAssignmentLinkApiResponse = /** status 200 Bağlantı ve eşitleme sonucu */ AssignmentLink
+export type SetAssignmentLinkApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: {
+    /** Boşsa bağlantı kalkar */
+    component_id?: string | null
+    /** Bileşen içindeki ağırlık */
+    weight?: number
+  }
 }
 export type ExportAssignmentGradesXlsxApiResponse = /** status 200 Puan şablonu (XLSX) */ Blob
 export type ExportAssignmentGradesXlsxApiArg = {
@@ -4404,6 +4434,29 @@ export type GradeInput = {
   score?: number | null
   feedback_html?: string
 }
+export type AssignmentLink = {
+  link: null | {
+    component_id: string
+    /** Bileşen içindeki ağırlık */
+    weight: number
+  }
+  /** Şubenin dönem içi bileşenleri (final ve bütünleme ödevden beslenmez) */
+  components: {
+    id: string
+    label_tr: string
+    label_en: string
+    /** Bileşenin plandaki ağırlığı (%) */
+    weight: number
+    linked_assignments: number
+  }[]
+  plan_locked: boolean
+  /** Harf notları ilan edildi (notlar dondu) */
+  grades_published: boolean
+  /** Sadece güncellemenin yanıtında */
+  sync_state:
+    | ('SYNCED' | 'PLAN_NOT_LOCKED' | 'FROZEN' | 'NOT_LINKED' | null)
+    | ('SYNCED' | 'PLAN_NOT_LOCKED' | 'FROZEN' | 'NOT_LINKED' | null)
+}
 export type AssignmentGradeImportPreview = {
   /** Puan sürümü: uygularken If-Match */
   version: number
@@ -4550,6 +4603,8 @@ export type Gradebook = {
     absent_count: number
     /** Girilen puanların ortalaması (girmedi hariç) */
     average: number | null
+    /** Notlar ders alanındaki bağlı ödevlerden gelir (kaynak LMS); elle girilmez (`COMPONENT_FED_BY_LMS`) */
+    lms_fed: boolean
   }[]
   /** Soyadı ve adına göre sıralı */
   students: {
@@ -5661,6 +5716,9 @@ export const {
   useGetStudentSubmissionFileUrlQuery,
   useLazyGetStudentSubmissionFileUrlQuery,
   useReleaseAssignmentGradesMutation,
+  useGetAssignmentLinkQuery,
+  useLazyGetAssignmentLinkQuery,
+  useSetAssignmentLinkMutation,
   useExportAssignmentGradesXlsxQuery,
   useLazyExportAssignmentGradesXlsxQuery,
   usePreviewAssignmentGradeImportMutation,
