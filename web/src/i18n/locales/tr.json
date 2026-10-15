@@ -1734,7 +1734,9 @@
     "saved_other": "{{count}} not kaydedildi",
     "leaveDescription_one": "{{count}} değişiklik kaydedilmedi. Sayfadan ayrılırsanız kaybolur.",
     "leaveDescription_other": "{{count}} değişiklik kaydedilmedi. Sayfadan ayrılırsanız kaybolur.",
-    "letters": "Harf notları"
+    "letters": "Harf notları",
+    "lmsFed": "Ödevlerden",
+    "lmsFedHint": "Notlar ders alanındaki bağlı ödevlerden gelir; puanları ödevden verin."
   },
   "letters": {
     "title": "Harf notları",
@@ -2104,6 +2106,27 @@
         "apply_other": "{{count}} puanı yaz",
         "done_one": "{{count}} öğrencinin puanı yazıldı.",
         "done_other": "{{count}} öğrencinin puanı yazıldı."
+      },
+      "link": {
+        "title": "Not tablosu bağlantısı",
+        "current": "Bu ödevin puanları not tablosunda “{{component}}” bileşenine {{weight}} ağırlıkla akar.",
+        "none": "Bağlı değil: ödev puanları not tablosuna akmaz.",
+        "noComponents": "Şubenin değerlendirme planında dönem içi bileşen yok.",
+        "planNotLocked": "Değerlendirme planı kilitlenince yayımlanan puanlar not tablosuna akar.",
+        "frozen": "Harf notları ilan edildi; bileşen notları dondu.",
+        "component": "Değerlendirme bileşeni",
+        "noneOption": "Bağlı değil",
+        "linkedCount_one": "{{count}} ödev bağlı",
+        "linkedCount_other": "{{count}} ödev bağlı",
+        "weight": "Bileşen içi ağırlık",
+        "save": "Bağlantıyı kaydet",
+        "hint": "Bileşenin notu, puanları yayımlanmış bağlı ödevlerin (geç kesintisi düşülmüş) puanlarının 100'lük ağırlıklı ortalamasıdır; puanı olmayan öğrenci 0 alır. Bu bileşene not tablosundan elle not girilmez.",
+        "saved": {
+          "SYNCED": "Bağlantı kaydedildi; bileşen notları güncellendi.",
+          "PLAN_NOT_LOCKED": "Bağlantı kaydedildi; puanlar plan kilitlenince akacak.",
+          "FROZEN": "Bağlantı kaydedildi; harf notları ilan edildiği için bileşen notları değişmedi.",
+          "NOT_LINKED": "Bağlantı kaldırıldı."
+        }
       }
     }
   },

@@ -287,6 +287,10 @@ export function GradebookPage() {
                 </div>
                 {c.published_at ? (
                   <Badge variant="success">{t('gradebook.componentPublished')}</Badge>
+                ) : c.lms_fed ? (
+                  <Badge variant="violet" title={t('gradebook.lmsFedHint')}>
+                    {t('gradebook.lmsFed')}
+                  </Badge>
                 ) : c.editable ? (
                   <Badge variant="warning">{t('gradebook.editable')}</Badge>
                 ) : (

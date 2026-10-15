@@ -114,6 +114,7 @@ export function GradeTable({
                 <span className="block text-xs font-normal text-muted-foreground">
                   %{c.weight}
                   {editable(c) && ` · ${t('gradebook.editable')}`}
+                  {c.lms_fed && ` · ${t('gradebook.lmsFed')}`}
                 </span>
               </th>
             ))}

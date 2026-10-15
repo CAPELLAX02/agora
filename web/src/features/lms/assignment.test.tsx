@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import type {
   Activity,
   AssignmentGrade,
+  AssignmentLink,
   AssignmentGradeImportPreview,
   AssignmentSettings,
   MySubmission,
@@ -106,6 +107,17 @@ const grade: AssignmentGrade = {
   version: 1,
 }
 
+const link: AssignmentLink = {
+  link: null,
+  components: [
+    { id: 'lab', label_tr: 'Laboratuvar', label_en: 'Laboratory', weight: 20, linked_assignments: 1 },
+    { id: 'mid', label_tr: 'Ara sınav', label_en: 'Midterm exam', weight: 30, linked_assignments: 0 },
+  ],
+  plan_locked: true,
+  grades_published: false,
+  sync_state: null,
+}
+
 type Call = { method: string; path: string; body?: unknown; ifMatch: string | null }
 
 function session(role: Space['role'], perms: string[]) {
@@ -124,6 +136,7 @@ function session(role: Space['role'], perms: string[]) {
     http.get('/api/v1/me/permissions', () => HttpResponse.json(grants(...perms))),
     http.get('/api/v1/spaces/:id', () => HttpResponse.json(space(role))),
     http.get('/api/v1/activities/:id', () => HttpResponse.json(assignment)),
+    http.get('/api/v1/activities/:id/link', () => HttpResponse.json(link)),
   )
   return { calls, record }
 }
@@ -395,5 +408,36 @@ describe('ödev (öğretim elemanı)', () => {
       }),
     )
     expect(await screen.findByText('1 öğrencinin puanı yazıldı.')).toBeInTheDocument()
+  })
+
+  it('ödev bir değerlendirme bileşenine ağırlıkla bağlanır', async () => {
+    const { calls, record } = session('PRIMARY', ['assessment_plan:manage'])
+    server.use(
+      http.get('/api/v1/activities/:id/submissions', () => HttpResponse.json(roster)),
+      http.put('/api/v1/activities/:id/link', async ({ request }) => {
+        await record(request)
+        return HttpResponse.json({ ...link, link: { component_id: 'lab', weight: 2 }, sync_state: 'SYNCED' })
+      }),
+    )
+    const { user } = renderApp('/derslerim/s1/etkinlik/a9')
+    const card = await screen.findByRole('region', { name: 'Not tablosu bağlantısı' })
+    expect(within(card).getByText('Bağlı değil: ödev puanları not tablosuna akmaz.')).toBeInTheDocument()
+    await user.click(within(card).getByRole('combobox', { name: 'Değerlendirme bileşeni' }))
+    await user.click(await screen.findByRole('option', { name: /Laboratuvar · %20 · 1 ödev bağlı/ }))
+    const weight = within(card).getByLabelText('Bileşen içi ağırlık')
+    await user.clear(weight)
+    await user.type(weight, '2')
+    await user.click(within(card).getByRole('button', { name: 'Bağlantıyı kaydet' }))
+    await waitFor(() =>
+      expect(calls).toEqual([
+        {
+          method: 'PUT',
+          path: '/api/v1/activities/a9/link',
+          body: { component_id: 'lab', weight: 2 },
+          ifMatch: null,
+        },
+      ]),
+    )
+    expect(await screen.findByText('Bağlantı kaydedildi; bileşen notları güncellendi.')).toBeInTheDocument()
   })
 })

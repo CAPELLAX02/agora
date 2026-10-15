@@ -33,6 +33,7 @@ import { StatTile } from '@/shared/ui/stat-tile'
 import { EmptyState, ErrorState } from '@/shared/ui/states'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
 
+import { AssignmentLinkCard } from './AssignmentLinkCard'
 import { DueText, SubmissionStatus } from './assignmentParts'
 import { ImportGradesDialog } from './ImportGradesDialog'
 import { useAcceptsText, usePolicyText } from './assignmentText'
@@ -108,6 +109,7 @@ export function AssignmentTeacher({ activityId, fileBase }: { activityId: string
         </span>
         <span className="text-muted-foreground">{policyText(data.assignment)}</span>
       </p>
+      <AssignmentLinkCard activityId={activityId} canEdit={data.can_grade} />
       <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
         <StatTile
           icon={UsersRoundIcon}

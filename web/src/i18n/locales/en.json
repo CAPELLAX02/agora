@@ -1734,7 +1734,9 @@
     "saved_other": "{{count}} scores saved",
     "leaveDescription_one": "{{count}} change is not saved. It will be lost if you leave.",
     "leaveDescription_other": "{{count}} changes are not saved. They will be lost if you leave.",
-    "letters": "Letter grades"
+    "letters": "Letter grades",
+    "lmsFed": "From assignments",
+    "lmsFedHint": "Scores come from linked assignments in the course space; grade the assignments instead."
   },
   "letters": {
     "title": "Letter grades",
@@ -2104,6 +2106,27 @@
         "apply_other": "Write {{count}} grades",
         "done_one": "Grade written for {{count}} student.",
         "done_other": "Grades written for {{count}} students."
+      },
+      "link": {
+        "title": "Gradebook link",
+        "current": "This assignment's grades feed the “{{component}}” component with weight {{weight}}.",
+        "none": "Not linked: assignment grades do not reach the gradebook.",
+        "noComponents": "The section's assessment plan has no in-term components.",
+        "planNotLocked": "Released grades reach the gradebook once the assessment plan is locked.",
+        "frozen": "Letter grades are published; component scores are frozen.",
+        "component": "Assessment component",
+        "noneOption": "Not linked",
+        "linkedCount_one": "{{count}} assignment linked",
+        "linkedCount_other": "{{count}} assignments linked",
+        "weight": "Weight in component",
+        "save": "Save link",
+        "hint": "The component score is the weighted average (out of 100) of released linked assignments' grades after late penalties; a student without a grade gets 0. This component cannot be entered by hand in the gradebook.",
+        "saved": {
+          "SYNCED": "Link saved; component scores updated.",
+          "PLAN_NOT_LOCKED": "Link saved; grades will flow once the plan is locked.",
+          "FROZEN": "Link saved; component scores did not change because letter grades are published.",
+          "NOT_LINKED": "Link removed."
+        }
       }
     }
   },
