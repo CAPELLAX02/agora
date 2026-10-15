@@ -12,6 +12,7 @@ export const addTagTypes = [
   'Ders a\u00E7ma',
   'Dosyalar',
   'Ders alan\u0131',
+  '\u00D6dev',
   'De\u011Ferlendirme',
   'Organizasyon',
   '\u00D6\u011Frenciler',
@@ -908,6 +909,106 @@ const injectedRtkApi = api
           url: `/api/v1/activities/${queryArg.id}/files/${queryArg.fileId}/download-url`,
         }),
         providesTags: ['Ders alan\u0131'],
+      }),
+      getMySubmission: build.query<GetMySubmissionApiResponse, GetMySubmissionApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/activities/${queryArg.id}/my-submission`,
+        }),
+        providesTags: ['\u00D6dev'],
+      }),
+      saveMySubmission: build.mutation<SaveMySubmissionApiResponse, SaveMySubmissionApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/activities/${queryArg.id}/my-submission`,
+          method: 'PUT',
+          body: queryArg.body,
+          headers: {
+            'If-Match': queryArg['If-Match'],
+          },
+        }),
+        invalidatesTags: ['\u00D6dev'],
+      }),
+      submitMySubmission: build.mutation<SubmitMySubmissionApiResponse, SubmitMySubmissionApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/activities/${queryArg.id}/my-submission/submit`,
+          method: 'POST',
+          headers: {
+            'If-Match': queryArg['If-Match'],
+          },
+        }),
+        invalidatesTags: ['\u00D6dev'],
+      }),
+      startNewAttempt: build.mutation<StartNewAttemptApiResponse, StartNewAttemptApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/activities/${queryArg.id}/my-submission/attempts`,
+          method: 'POST',
+        }),
+        invalidatesTags: ['\u00D6dev'],
+      }),
+      addMySubmissionComment: build.mutation<AddMySubmissionCommentApiResponse, AddMySubmissionCommentApiArg>(
+        {
+          query: (queryArg) => ({
+            url: `/api/v1/activities/${queryArg.id}/my-submission/comments`,
+            method: 'POST',
+            body: queryArg.commentInput,
+          }),
+          invalidatesTags: ['\u00D6dev'],
+        },
+      ),
+      getMySubmissionFileUrl: build.query<GetMySubmissionFileUrlApiResponse, GetMySubmissionFileUrlApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/activities/${queryArg.id}/my-submission/files/${queryArg.fileId}/download-url`,
+        }),
+        providesTags: ['\u00D6dev'],
+      }),
+      listSubmissions: build.query<ListSubmissionsApiResponse, ListSubmissionsApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/activities/${queryArg.id}/submissions`,
+        }),
+        providesTags: ['\u00D6dev'],
+      }),
+      getStudentSubmission: build.query<GetStudentSubmissionApiResponse, GetStudentSubmissionApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/activities/${queryArg.id}/submissions/${queryArg.userId}`,
+        }),
+        providesTags: ['\u00D6dev'],
+      }),
+      gradeSubmission: build.mutation<GradeSubmissionApiResponse, GradeSubmissionApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/activities/${queryArg.id}/submissions/${queryArg.userId}/grade`,
+          method: 'PUT',
+          body: queryArg.gradeInput,
+          headers: {
+            'If-Match': queryArg['If-Match'],
+          },
+        }),
+        invalidatesTags: ['\u00D6dev'],
+      }),
+      addSubmissionComment: build.mutation<AddSubmissionCommentApiResponse, AddSubmissionCommentApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/activities/${queryArg.id}/submissions/${queryArg.userId}/comments`,
+          method: 'POST',
+          body: queryArg.commentInput,
+        }),
+        invalidatesTags: ['\u00D6dev'],
+      }),
+      getStudentSubmissionFileUrl: build.query<
+        GetStudentSubmissionFileUrlApiResponse,
+        GetStudentSubmissionFileUrlApiArg
+      >({
+        query: (queryArg) => ({
+          url: `/api/v1/activities/${queryArg.id}/submissions/${queryArg.userId}/files/${queryArg.fileId}/download-url`,
+        }),
+        providesTags: ['\u00D6dev'],
+      }),
+      releaseAssignmentGrades: build.mutation<
+        ReleaseAssignmentGradesApiResponse,
+        ReleaseAssignmentGradesApiArg
+      >({
+        query: (queryArg) => ({
+          url: `/api/v1/activities/${queryArg.id}/grades/release`,
+          method: 'POST',
+        }),
+        invalidatesTags: ['\u00D6dev', 'Ders alan\u0131'],
       }),
       searchInstructors: build.query<SearchInstructorsApiResponse, SearchInstructorsApiArg>({
         query: (queryArg) => ({
@@ -2439,6 +2540,89 @@ export type GetActivityFileUrlApiArg = {
   id: string
   fileId: string
 }
+export type GetMySubmissionApiResponse = /** status 200 Teslim */ MySubmission
+export type GetMySubmissionApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type SaveMySubmissionApiResponse = /** status 200 Teslim */ MySubmission
+export type SaveMySubmissionApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Kayıt varsa zorunlu (yoksa 428), okurken alınan sürüm. Kayıt yoksa verilmez: ilk kayıt oluşturulur. */
+  'If-Match'?: string
+  body: {
+    online_text_html?: string
+    file_ids?: string[]
+  }
+}
+export type SubmitMySubmissionApiResponse = /** status 200 Teslim */ MySubmission
+export type SubmitMySubmissionApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
+  'If-Match': string
+}
+export type StartNewAttemptApiResponse = /** status 201 Teslim */ MySubmission
+export type StartNewAttemptApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type AddMySubmissionCommentApiResponse = /** status 201 Teslim */ MySubmission
+export type AddMySubmissionCommentApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  commentInput: CommentInput
+}
+export type GetMySubmissionFileUrlApiResponse = /** status 200 İmzalı URL */ DownloadUrl
+export type GetMySubmissionFileUrlApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  fileId: string
+}
+export type ListSubmissionsApiResponse = /** status 200 Liste */ SubmissionRoster
+export type ListSubmissionsApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type GetStudentSubmissionApiResponse = /** status 200 Teslim */ StudentWork
+export type GetStudentSubmissionApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Öğrencinin kullanıcı kimliği; şubenin öğrencisi değilse 404. */
+  userId: string
+}
+export type GradeSubmissionApiResponse = /** status 200 Teslim */ StudentWork
+export type GradeSubmissionApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Öğrencinin kullanıcı kimliği; şubenin öğrencisi değilse 404. */
+  userId: string
+  /** Kayıt varsa zorunlu (yoksa 428), okurken alınan sürüm. Kayıt yoksa verilmez: ilk kayıt oluşturulur. */
+  'If-Match'?: string
+  gradeInput: GradeInput
+}
+export type AddSubmissionCommentApiResponse = /** status 201 Teslim */ StudentWork
+export type AddSubmissionCommentApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Öğrencinin kullanıcı kimliği; şubenin öğrencisi değilse 404. */
+  userId: string
+  commentInput: CommentInput
+}
+export type GetStudentSubmissionFileUrlApiResponse = /** status 200 İmzalı URL */ DownloadUrl
+export type GetStudentSubmissionFileUrlApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Öğrencinin kullanıcı kimliği; şubenin öğrencisi değilse 404. */
+  userId: string
+  fileId: string
+}
+export type ReleaseAssignmentGradesApiResponse = /** status 200 Liste */ SubmissionRoster
+export type ReleaseAssignmentGradesApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
 export type SearchInstructorsApiResponse = /** status 200 Liste */ {
   items: StaffSummary[]
 }
@@ -3947,6 +4131,25 @@ export type SpaceSummary = {
 }
 export type Availability = 'OPEN' | 'NOT_YET' | 'CLOSED'
 export type ActivityType = 'RESOURCE' | 'FOLDER' | 'URL' | 'PAGE' | 'LABEL' | 'ASSIGNMENT' | 'FORUM'
+export type SubmissionType = 'FILE' | 'ONLINE_TEXT'
+export type LatePolicy = 'ALLOW' | 'DENY' | 'PENALTY'
+export type AssignmentSettings = {
+  opens_at: string | null
+  due_at: string | null
+  cutoff_at: string | null
+  max_attempts: number
+  submission_types: SubmissionType[]
+  max_files: number
+  max_file_size_bytes: number
+  allowed_extensions: string[]
+  max_score: number
+  late_policy: LatePolicy
+  late_penalty_pct_per_day: number
+  /** Puanların öğrencilere yayımlandığı an */
+  grades_released_at: string | null
+  /** Şu an teslim kabul ediliyor mu */
+  submission_state: 'NOT_OPEN' | 'OPEN' | 'CLOSED'
+}
 export type Activity = {
   id: string
   topic_id: string
@@ -3971,6 +4174,8 @@ export type Activity = {
   open_in_new_tab: boolean | null
   /** Sayfada; sadece etkinlik ayrıntısında */
   body_html: string | null
+  /** Ödevde ayarlar ve teslimin şu anki durumu */
+  assignment: null | AssignmentSettings
 }
 export type Topic = {
   id: string
@@ -4006,8 +4211,27 @@ export type TopicInput = {
   available_from?: string | null
   available_until?: string | null
 }
+export type AssignmentInput = {
+  /** Teslimin başladığı an; boşsa hemen */
+  opens_at?: string | null
+  /** Son tarih; DENY ve PENALTY için gerekli */
+  due_at?: string | null
+  /** Kesin kapanış (ALLOW, PENALTY); boşsa sınırsız */
+  cutoff_at?: string | null
+  max_attempts?: number
+  submission_types?: SubmissionType[]
+  max_files?: number
+  /** Varsayılan ve üst sınır platformun dosya boyutu sınırı */
+  max_file_size_bytes?: number
+  /** Boşsa platformun izin listesindeki her tür; büyük harf ve noktasız yazım kabul edilir */
+  allowed_extensions?: string[]
+  /** En çok iki ondalık */
+  max_score?: number
+  late_policy?: LatePolicy
+  late_penalty_pct_per_day?: number
+}
 export type ActivityInput = {
-  type: 'RESOURCE' | 'FOLDER' | 'URL' | 'PAGE' | 'LABEL'
+  type: 'RESOURCE' | 'FOLDER' | 'URL' | 'PAGE' | 'LABEL' | 'ASSIGNMENT'
   title: string
   description_html?: string
   is_visible?: boolean
@@ -4017,6 +4241,111 @@ export type ActivityInput = {
   url?: string
   open_in_new_tab?: boolean
   body_html?: string
+  assignment?: AssignmentInput
+}
+export type Submission = {
+  id: string
+  attempt_no: number
+  status: 'DRAFT' | 'SUBMITTED'
+  online_text_html: string
+  files: {
+    id: string
+    name: string
+    mime_type: string
+    size: number
+  }[]
+  submitted_at: string | null
+  is_late: boolean
+  /** Taslak güncellemesinde If-Match */
+  version: number
+  updated_at: string
+}
+export type AssignmentGrade = {
+  /** Verilen puan; boşsa puansız geri bildirim */
+  score: number | null
+  /** Puanlanan denemenin geç teslim kesintisi (yüzde) */
+  late_penalty_pct: number
+  /** Kesinti düşülmüş puan */
+  final_score: number | null
+  max_score: number
+  feedback_html: string
+  /** Puanın verildiği deneme */
+  attempt_no: number | null
+  graded_by: string
+  graded_at: string
+  version: number
+}
+export type SubmissionComment = {
+  id: string
+  author_id: string
+  author_name: string
+  body: string
+  created_at: string
+}
+export type MySubmission = {
+  assignment: AssignmentSettings
+  /** Eskiden yeniye */
+  attempts: Submission[]
+  /** Teslim açık ve son deneme taslak (ya da hiç yok) */
+  can_edit: boolean
+  can_submit: boolean
+  can_new_attempt: boolean
+  /** Sadece puanlar yayımlandıysa */
+  grade: null | AssignmentGrade
+  comments: SubmissionComment[]
+}
+export type CommentInput = {
+  body: string
+}
+export type SubmissionStudent = {
+  user_id: string
+  student_no: string
+  first_name: string
+  last_name: string
+}
+export type SubmissionRosterRow = {
+  student: SubmissionStudent
+  /** Son deneme; hiç başlamadıysa null */
+  latest: null | {
+    attempt_no: number
+    status: 'DRAFT' | 'SUBMITTED'
+    submitted_at: string | null
+    is_late: boolean
+    file_count: number
+    updated_at: string
+  }
+  grade: null | AssignmentGrade
+  comments: number
+  /** Son deneme gönderilmiş ve henüz puanlanmamış */
+  needs_grading: boolean
+}
+export type SubmissionRoster = {
+  assignment: AssignmentSettings
+  /** Şubenin öğretim elemanı mı (izleyici salt okunur) */
+  can_grade: boolean
+  summary: {
+    students: number
+    submitted: number
+    drafts: number
+    not_started: number
+    late: number
+    graded: number
+    needs_grading: number
+  }
+  items: SubmissionRosterRow[]
+}
+export type StudentWork = {
+  student: SubmissionStudent
+  assignment: AssignmentSettings
+  can_grade: boolean
+  attempts: Submission[]
+  grade: null | AssignmentGrade
+  comments: SubmissionComment[]
+}
+export type GradeInput = {
+  /** 0 ile ödevin en yüksek puanı arası, en çok iki ondalık */
+  score?: number | null
+  feedback_html?: string
 }
 export type StaffSummary = {
   staff_id: string
@@ -5216,6 +5545,23 @@ export const {
   useDeleteActivityMutation,
   useGetActivityFileUrlQuery,
   useLazyGetActivityFileUrlQuery,
+  useGetMySubmissionQuery,
+  useLazyGetMySubmissionQuery,
+  useSaveMySubmissionMutation,
+  useSubmitMySubmissionMutation,
+  useStartNewAttemptMutation,
+  useAddMySubmissionCommentMutation,
+  useGetMySubmissionFileUrlQuery,
+  useLazyGetMySubmissionFileUrlQuery,
+  useListSubmissionsQuery,
+  useLazyListSubmissionsQuery,
+  useGetStudentSubmissionQuery,
+  useLazyGetStudentSubmissionQuery,
+  useGradeSubmissionMutation,
+  useAddSubmissionCommentMutation,
+  useGetStudentSubmissionFileUrlQuery,
+  useLazyGetStudentSubmissionFileUrlQuery,
+  useReleaseAssignmentGradesMutation,
   useSearchInstructorsQuery,
   useLazySearchInstructorsQuery,
   useListAssessmentTypesQuery,

@@ -51,6 +51,7 @@ const activity = (id: string, over: Partial<Activity> = {}): Activity => ({
   url: null,
   open_in_new_tab: null,
   body_html: null,
+  assignment: null,
   ...over,
 })
 

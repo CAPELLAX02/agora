@@ -9,7 +9,13 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 
-import type { Activity, ActivityType } from '@/shared/api/generated'
+import type {
+  Activity,
+  ActivityInput,
+  ActivityType,
+  AssignmentInput,
+  AssignmentSettings,
+} from '@/shared/api/generated'
 import type { Tone } from '@/shared/ui/tone'
 
 /** activityMeta, etkinlik türünün ikonu ve rengidir. */
@@ -52,9 +58,9 @@ export function hostOf(url: string | null): string {
 }
 
 /** inputOf, etkinliğin güncelleme gövdesidir; sayfanın gövdesi ayrıntıdan verilir. */
-export function inputOf(a: Activity, body?: string) {
+export function inputOf(a: Activity, body?: string): ActivityInput {
   return {
-    type: a.type as EditableType,
+    type: a.type as ActivityInput['type'],
     title: a.title,
     description_html: a.description_html,
     is_visible: a.is_visible,
@@ -64,5 +70,23 @@ export function inputOf(a: Activity, body?: string) {
     url: a.url ?? undefined,
     open_in_new_tab: a.open_in_new_tab ?? undefined,
     body_html: body ?? a.body_html ?? undefined,
+    assignment: a.assignment ? assignmentInputOf(a.assignment) : undefined,
+  }
+}
+
+/** assignmentInputOf, ödevin ayarlarının yazılabilir alanlarıdır. */
+export function assignmentInputOf(s: AssignmentSettings): AssignmentInput {
+  return {
+    opens_at: s.opens_at,
+    due_at: s.due_at,
+    cutoff_at: s.cutoff_at,
+    max_attempts: s.max_attempts,
+    submission_types: s.submission_types,
+    max_files: s.max_files,
+    max_file_size_bytes: s.max_file_size_bytes,
+    allowed_extensions: s.allowed_extensions,
+    max_score: s.max_score,
+    late_policy: s.late_policy,
+    late_penalty_pct_per_day: s.late_penalty_pct_per_day,
   }
 }

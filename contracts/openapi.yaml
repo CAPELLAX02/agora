@@ -74,7 +74,11 @@ tags:
   - name: Ders alanı
     description: >-
       Öğrenme yönetimi: şube başına ders alanı (üyelik kesin kayıt ve öğretim elemanı
-      atamasından türetilir), bölümler ve etkinlikler (dosya, klasör, bağlantı, sayfa, etiket)
+      atamasından türetilir), bölümler ve etkinlikler (dosya, klasör, bağlantı, sayfa, etiket, ödev)
+  - name: Ödev
+    description: >-
+      Öğrencinin teslimi (taslak, gönderme, yeni deneme), teslim listesi, puan ve geri bildirim,
+      puanların yayımlanması ve gönderim yorumları
 
 paths:
   /healthz:
@@ -3565,6 +3569,315 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "503": { $ref: "#/components/responses/StorageUnavailable" }
 
+  /api/v1/activities/{id}/my-submission:
+    get:
+      tags: [Ödev]
+      summary: Öğrencinin teslimi
+      description: >-
+        Şubenin öğrencisine özeldir (diğerlerine 403). Denemeler, yapılabilecekler, yorumlar ve
+        puanlar yayımlandıysa puan. Kapanmış ödev okunmaya devam eder.
+      operationId: getMySubmission
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Teslim
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MySubmission" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Ödev]
+      summary: Taslağı kaydeder
+      description: >-
+        Hiç deneme yoksa ilk taslak oluşur (If-Match verilmez); varsa son deneme taslak olmalı.
+        Dosyalar öğrencinin yüklediği ya da önceki denemelerindeki dosyalardır; tür, boyut ve
+        sayı ödevin sınırlarına uymalı. Çıkarılan dosya hiçbir teslimde kalmadıysa serbest kalır.
+      operationId: saveMySubmission
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/IfMatchOptional"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                online_text_html: { type: string, maxLength: 200000 }
+                file_ids: { type: array, items: { type: string, format: uuid }, maxItems: 20 }
+      responses:
+        "200":
+          description: Teslim
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MySubmission" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`SUBMISSION_NOT_OPEN`, `SUBMISSION_CLOSED`, `ALREADY_SUBMITTED`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "412": { $ref: "#/components/responses/VersionMismatch" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
+
+  /api/v1/activities/{id}/my-submission/submit:
+    post:
+      tags: [Ödev]
+      summary: Taslağı gönderir
+      description: Deneme kilitlenir; son tarihten sonraysa geç işaretlenir.
+      operationId: submitMySubmission
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/IfMatch"
+      responses:
+        "200":
+          description: Teslim
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MySubmission" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`EMPTY_SUBMISSION`, `ALREADY_SUBMITTED`, `SUBMISSION_NOT_OPEN`, `SUBMISSION_CLOSED`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "412": { $ref: "#/components/responses/VersionMismatch" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
+
+  /api/v1/activities/{id}/my-submission/attempts:
+    post:
+      tags: [Ödev]
+      summary: Yeni deneme başlatır
+      description: Gönderilmiş son denemenin metni ve dosyalarıyla yeni bir taslak (deneme hakkı kaldıysa).
+      operationId: startNewAttempt
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "201":
+          description: Teslim
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MySubmission" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`NOT_SUBMITTED`, `NO_ATTEMPTS_LEFT`, `SUBMISSION_NOT_OPEN`, `SUBMISSION_CLOSED`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /api/v1/activities/{id}/my-submission/comments:
+    post:
+      tags: [Ödev]
+      summary: Teslime yorum yazar (öğrenci)
+      operationId: addMySubmissionComment
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CommentInput" }
+      responses:
+        "201":
+          description: Teslim
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MySubmission" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/activities/{id}/my-submission/files/{fileId}/download-url:
+    get:
+      tags: [Ödev]
+      summary: Öğrencinin teslim dosyasının imzalı indirme URL'si
+      operationId: getMySubmissionFileUrl
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/FileID"
+      responses:
+        "200":
+          description: İmzalı URL
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DownloadUrl" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/StorageUnavailable" }
+
+  /api/v1/activities/{id}/submissions:
+    get:
+      tags: [Ödev]
+      summary: Teslim listesi
+      description: >-
+        Şubenin bütün öğrencileri (teslim etmeyenler dahil): son deneme, puan, yorum sayısı ve
+        özet. Öğretim elemanları ve şubenin bölümünü yöneten personel (salt okunur) görür.
+      operationId: listSubmissions
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Liste
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SubmissionRoster" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/activities/{id}/submissions/{userId}:
+    get:
+      tags: [Ödev]
+      summary: Bir öğrencinin teslimi
+      description: Bütün denemeler, puan (yayımlanmamış olsa da) ve yorumlar.
+      operationId: getStudentSubmission
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/UserID"
+      responses:
+        "200":
+          description: Teslim
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StudentWork" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/activities/{id}/submissions/{userId}/grade:
+    put:
+      tags: [Ödev]
+      summary: Puan ve geri bildirim verir
+      description: >-
+        Puan o anki son denemeye verilir; teslim etmeyen öğrenciye de verilebilir. Hiç puan yoksa
+        If-Match verilmez. Geç teslim kesintisi okunurken hesaplanır.
+      operationId: gradeSubmission
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/UserID"
+        - $ref: "#/components/parameters/IfMatchOptional"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GradeInput" }
+      responses:
+        "200":
+          description: Teslim
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StudentWork" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "412": { $ref: "#/components/responses/VersionMismatch" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
+
+  /api/v1/activities/{id}/submissions/{userId}/comments:
+    post:
+      tags: [Ödev]
+      summary: Teslime yorum yazar (öğretim elemanı)
+      operationId: addSubmissionComment
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/UserID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CommentInput" }
+      responses:
+        "201":
+          description: Teslim
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StudentWork" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/activities/{id}/submissions/{userId}/files/{fileId}/download-url:
+    get:
+      tags: [Ödev]
+      summary: Öğrencinin teslim dosyasının imzalı indirme URL'si (öğretim elemanı)
+      operationId: getStudentSubmissionFileUrl
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/UserID"
+        - $ref: "#/components/parameters/FileID"
+      responses:
+        "200":
+          description: İmzalı URL
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DownloadUrl" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/StorageUnavailable" }
+
+  /api/v1/activities/{id}/grades/release:
+    post:
+      tags: [Ödev, Ders alanı]
+      summary: Puanları öğrencilere yayımlar
+      description: Sonra verilen puanlar hemen görünür.
+      operationId: releaseAssignmentGrades
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Liste
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SubmissionRoster" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`ALREADY_RELEASED`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
   /api/v1/instructors:
     get:
       tags: [Ders açma]
@@ -6466,6 +6779,25 @@ components:
       required: true
       description: Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner.
       schema: { type: string, examples: ['"3"'] }
+    IfMatchOptional:
+      name: If-Match
+      in: header
+      required: false
+      description: >-
+        Kayıt varsa zorunlu (yoksa 428), okurken alınan sürüm. Kayıt yoksa verilmez: ilk kayıt
+        oluşturulur.
+      schema: { type: string, examples: ['"3"'] }
+    UserID:
+      name: userId
+      in: path
+      required: true
+      description: Öğrencinin kullanıcı kimliği; şubenin öğrencisi değilse 404.
+      schema: { type: string, format: uuid }
+    FileID:
+      name: fileId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
     IncludeInactive:
       name: include_inactive
       in: query
@@ -8280,7 +8612,7 @@ components:
     Activity:
       type: object
       required: [id, topic_id, type, title, description_html, is_visible, availability, available_from, available_until,
-                 version, updated_at, files, url, open_in_new_tab, body_html]
+                 version, updated_at, files, url, open_in_new_tab, body_html, assignment]
       properties:
         id: { type: string, format: uuid }
         topic_id: { type: string, format: uuid }
@@ -8306,6 +8638,11 @@ components:
         url: { type: [string, "null"], description: URL etkinliğinde }
         open_in_new_tab: { type: [boolean, "null"] }
         body_html: { type: [string, "null"], description: "Sayfada; sadece etkinlik ayrıntısında" }
+        assignment:
+          description: Ödevde ayarlar ve teslimin şu anki durumu
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/AssignmentSettings"
 
     TopicInput:
       type: object
@@ -8323,7 +8660,7 @@ components:
       additionalProperties: false
       required: [type, title]
       properties:
-        type: { type: string, enum: [RESOURCE, FOLDER, URL, PAGE, LABEL] }
+        type: { type: string, enum: [RESOURCE, FOLDER, URL, PAGE, LABEL, ASSIGNMENT] }
         title: { type: string, minLength: 1, maxLength: 200 }
         description_html: { type: string, maxLength: 50000 }
         is_visible: { type: boolean, default: true }
@@ -8333,6 +8670,209 @@ components:
         url: { type: string, maxLength: 2000 }
         open_in_new_tab: { type: boolean, default: true }
         body_html: { type: string, maxLength: 200000 }
+        assignment: { $ref: "#/components/schemas/AssignmentInput" }
+
+    SubmissionType:
+      type: string
+      enum: [FILE, ONLINE_TEXT]
+
+    LatePolicy:
+      type: string
+      enum: [ALLOW, DENY, PENALTY]
+      description: >-
+        ALLOW: son tarihten sonra kesin kapanışa kadar kabul, geç işaretlenir. DENY: son tarihten
+        sonra kabul edilmez. PENALTY: kabul edilir, başlamış her gün için puandan yüzde düşülür.
+
+    AssignmentInput:
+      type: object
+      additionalProperties: false
+      description: Verilmeyen alanlar varsayılandır.
+      properties:
+        opens_at: { type: [string, "null"], format: date-time, description: Teslimin başladığı an; boşsa hemen }
+        due_at: { type: [string, "null"], format: date-time, description: Son tarih; DENY ve PENALTY için gerekli }
+        cutoff_at: { type: [string, "null"], format: date-time, description: "Kesin kapanış (ALLOW, PENALTY); boşsa sınırsız" }
+        max_attempts: { type: integer, minimum: 1, maximum: 10, default: 1 }
+        submission_types:
+          type: array
+          items: { $ref: "#/components/schemas/SubmissionType" }
+          minItems: 1
+          maxItems: 2
+          default: [FILE]
+        max_files: { type: integer, minimum: 1, maximum: 20, default: 5 }
+        max_file_size_bytes: { type: integer, format: int64, minimum: 1, description: Varsayılan ve üst sınır platformun dosya boyutu sınırı }
+        allowed_extensions:
+          type: array
+          items: { type: string, examples: [".pdf"] }
+          description: Boşsa platformun izin listesindeki her tür; büyük harf ve noktasız yazım kabul edilir
+        max_score: { type: number, exclusiveMinimum: 0, maximum: 1000, default: 100, description: En çok iki ondalık }
+        late_policy: { $ref: "#/components/schemas/LatePolicy" }
+        late_penalty_pct_per_day: { type: number, minimum: 0, maximum: 100, default: 0 }
+
+    AssignmentSettings:
+      type: object
+      required: [opens_at, due_at, cutoff_at, max_attempts, submission_types, max_files, max_file_size_bytes,
+                 allowed_extensions, max_score, late_policy, late_penalty_pct_per_day, grades_released_at, submission_state]
+      properties:
+        opens_at: { type: [string, "null"], format: date-time }
+        due_at: { type: [string, "null"], format: date-time }
+        cutoff_at: { type: [string, "null"], format: date-time }
+        max_attempts: { type: integer }
+        submission_types: { type: array, items: { $ref: "#/components/schemas/SubmissionType" } }
+        max_files: { type: integer }
+        max_file_size_bytes: { type: integer, format: int64 }
+        allowed_extensions: { type: array, items: { type: string } }
+        max_score: { type: number }
+        late_policy: { $ref: "#/components/schemas/LatePolicy" }
+        late_penalty_pct_per_day: { type: number }
+        grades_released_at: { type: [string, "null"], format: date-time, description: Puanların öğrencilere yayımlandığı an }
+        submission_state:
+          type: string
+          enum: [NOT_OPEN, OPEN, CLOSED]
+          description: Şu an teslim kabul ediliyor mu
+
+    Submission:
+      type: object
+      required: [id, attempt_no, status, online_text_html, files, submitted_at, is_late, version, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        attempt_no: { type: integer }
+        status: { type: string, enum: [DRAFT, SUBMITTED] }
+        online_text_html: { type: string }
+        files:
+          type: array
+          items:
+            type: object
+            required: [id, name, mime_type, size]
+            properties:
+              id: { type: string, format: uuid }
+              name: { type: string }
+              mime_type: { type: string }
+              size: { type: integer, format: int64 }
+        submitted_at: { type: [string, "null"], format: date-time }
+        is_late: { type: boolean }
+        version: { type: integer, description: Taslak güncellemesinde If-Match }
+        updated_at: { type: string, format: date-time }
+
+    AssignmentGrade:
+      type: object
+      required: [score, late_penalty_pct, final_score, max_score, feedback_html, attempt_no, graded_by, graded_at, version]
+      properties:
+        score: { type: [number, "null"], description: Verilen puan; boşsa puansız geri bildirim }
+        late_penalty_pct: { type: number, description: Puanlanan denemenin geç teslim kesintisi (yüzde) }
+        final_score: { type: [number, "null"], description: Kesinti düşülmüş puan }
+        max_score: { type: number }
+        feedback_html: { type: string }
+        attempt_no: { type: [integer, "null"], description: Puanın verildiği deneme }
+        graded_by: { type: string }
+        graded_at: { type: string, format: date-time }
+        version: { type: integer }
+
+    SubmissionComment:
+      type: object
+      required: [id, author_id, author_name, body, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        author_id: { type: string, format: uuid }
+        author_name: { type: string }
+        body: { type: string }
+        created_at: { type: string, format: date-time }
+
+    CommentInput:
+      type: object
+      additionalProperties: false
+      required: [body]
+      properties:
+        body: { type: string, minLength: 1, maxLength: 2000 }
+
+    MySubmission:
+      type: object
+      required: [assignment, attempts, can_edit, can_submit, can_new_attempt, grade, comments]
+      properties:
+        assignment: { $ref: "#/components/schemas/AssignmentSettings" }
+        attempts: { type: array, items: { $ref: "#/components/schemas/Submission" }, description: Eskiden yeniye }
+        can_edit: { type: boolean, description: Teslim açık ve son deneme taslak (ya da hiç yok) }
+        can_submit: { type: boolean }
+        can_new_attempt: { type: boolean }
+        grade:
+          description: Sadece puanlar yayımlandıysa
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/AssignmentGrade"
+        comments: { type: array, items: { $ref: "#/components/schemas/SubmissionComment" } }
+
+    SubmissionStudent:
+      type: object
+      required: [user_id, student_no, first_name, last_name]
+      properties:
+        user_id: { type: string, format: uuid }
+        student_no: { type: string }
+        first_name: { type: string }
+        last_name: { type: string }
+
+    SubmissionRosterRow:
+      type: object
+      required: [student, latest, grade, comments, needs_grading]
+      properties:
+        student: { $ref: "#/components/schemas/SubmissionStudent" }
+        latest:
+          description: Son deneme; hiç başlamadıysa null
+          oneOf:
+            - type: "null"
+            - type: object
+              required: [attempt_no, status, submitted_at, is_late, file_count, updated_at]
+              properties:
+                attempt_no: { type: integer }
+                status: { type: string, enum: [DRAFT, SUBMITTED] }
+                submitted_at: { type: [string, "null"], format: date-time }
+                is_late: { type: boolean }
+                file_count: { type: integer }
+                updated_at: { type: string, format: date-time }
+        grade:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/AssignmentGrade"
+        comments: { type: integer }
+        needs_grading: { type: boolean, description: Son deneme gönderilmiş ve henüz puanlanmamış }
+
+    SubmissionRoster:
+      type: object
+      required: [assignment, can_grade, summary, items]
+      properties:
+        assignment: { $ref: "#/components/schemas/AssignmentSettings" }
+        can_grade: { type: boolean, description: Şubenin öğretim elemanı mı (izleyici salt okunur) }
+        summary:
+          type: object
+          required: [students, submitted, drafts, not_started, late, graded, needs_grading]
+          properties:
+            students: { type: integer }
+            submitted: { type: integer }
+            drafts: { type: integer }
+            not_started: { type: integer }
+            late: { type: integer }
+            graded: { type: integer }
+            needs_grading: { type: integer }
+        items: { type: array, items: { $ref: "#/components/schemas/SubmissionRosterRow" } }
+
+    StudentWork:
+      type: object
+      required: [student, assignment, can_grade, attempts, grade, comments]
+      properties:
+        student: { $ref: "#/components/schemas/SubmissionStudent" }
+        assignment: { $ref: "#/components/schemas/AssignmentSettings" }
+        can_grade: { type: boolean }
+        attempts: { type: array, items: { $ref: "#/components/schemas/Submission" } }
+        grade:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/AssignmentGrade"
+        comments: { type: array, items: { $ref: "#/components/schemas/SubmissionComment" } }
+
+    GradeInput:
+      type: object
+      additionalProperties: false
+      properties:
+        score: { type: [number, "null"], minimum: 0, description: "0 ile ödevin en yüksek puanı arası, en çok iki ondalık" }
+        feedback_html: { type: string, maxLength: 50000 }
 
     StudentRef:
       type: object
