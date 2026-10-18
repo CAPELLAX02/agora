@@ -351,7 +351,7 @@ func event(ctx context.Context, tx pgx.Tx, registrationID, typ, actorID string, 
 		VALUES ($1, $2, $3, $4)`, registrationID, typ, nullable(actorID), payload); err != nil {
 		return fmt.Errorf("registration: olay yazılamadı: %w", err)
 	}
-	return nil
+	return notifyEvent(ctx, tx, registrationID, typ, payload)
 }
 
 func nullable(s string) any {

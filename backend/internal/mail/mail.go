@@ -28,8 +28,6 @@ import (
 const (
 	TemplatePasswordReset     = "password_reset"
 	TemplateAccountActivation = "account_activation"
-	// TemplateRegistrationDecision, danışmanın ders seçme kararı (onay, red, onayın geri alınması).
-	TemplateRegistrationDecision = "registration_decision"
 	// TemplateNotification, e-posta kanalı açık bir bildirim (internal/notify): başlık, metin ve
 	// uygulama içi bağlantı.
 	TemplateNotification = "notification"
@@ -62,7 +60,7 @@ type Renderer struct {
 func NewRenderer() (*Renderer, error) {
 	r := &Renderer{text: map[string]*texttemplate.Template{}, html: map[string]*htmltemplate.Template{}}
 
-	for _, code := range []string{TemplatePasswordReset, TemplateAccountActivation, TemplateRegistrationDecision, TemplateNotification} {
+	for _, code := range []string{TemplatePasswordReset, TemplateAccountActivation, TemplateNotification} {
 		for _, locale := range locales {
 			key := code + "." + locale
 

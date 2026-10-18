@@ -162,10 +162,10 @@ func run() error {
 		fileService = files.NewService(pool, store, cfg.MaxUploadBytes, time.Now)
 	}
 
-	// Tüketiciler: öğrenciye karar bildirimi, dönem geçişinde yarıyıl ilerletmesi, not ilanında
-	// dönem sonuçları (YANO/GANO). LMS üyeliği olaya bağlı değildir: kesin kayıttan türetilir.
+	// Tüketiciler: dönem geçişinde yarıyıl ilerletmesi, not ilanında dönem sonuçları (YANO/GANO).
+	// Bildirimler işlemle aynı transaction'da yazılır (internal/notify); LMS üyeliği kesin
+	// kayıttan türetilir.
 	events := outbox.NewDispatcher(pool, []outbox.Consumer{
-		registration.Notifier{WebBaseURL: cfg.WebBaseURL},
 		enrollment.SemesterAdvancer{},
 		grading.TermResultsUpdater{},
 	}, outbox.DefaultConfig, logger, func(result string) { domainEvents.WithLabelValues(result).Inc() })

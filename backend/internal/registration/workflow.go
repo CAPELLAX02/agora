@@ -240,7 +240,7 @@ func (s *Service) Decide(ctx context.Context, d Decider, sp enrollment.StudentPr
 		if err := event(ctx, tx, registrationID, eventType, d.UserID, payload); err != nil {
 			return err
 		}
-		// Bildirim (ve ileride LMS üyeliği) bu olayla, kayıt commit edilirse yapılır.
+		// Karar olayı diğer modüller içindir (ör. analitik); bildirim olay günlüğüyle yazıldı.
 		sections := make([]string, len(items))
 		for i, it := range items {
 			sections[i] = it.Section.ID

@@ -2,6 +2,7 @@ package registration_test
 
 import (
 	"net/http"
+	"slices"
 	"testing"
 	"time"
 )
@@ -113,5 +114,18 @@ func TestAddDrop(t *testing.T) {
 	}
 	if list := w.do("GET", path, w.ali, nil).items(); len(list) != 3 {
 		t.Errorf("talepler = %d, 3 olmalı", len(list))
+	}
+
+	// Bildirimler: her talep danışmana; danışmanın onayladığı bölüm başkanına; sonuç öğrenciye.
+	pending := "registration.add_drop_pending:ADVISOR"
+	if got := w.notifications(w.advisor); !slices.Equal(got, []string{"registration.submitted", pending, pending, pending}) {
+		t.Errorf("danışmanın bildirimleri: %v", got)
+	}
+	if got := w.notifications(w.head); !slices.Equal(got, []string{"registration.add_drop_pending:DEPT_HEAD"}) {
+		t.Errorf("bölüm başkanının bildirimleri: %v", got)
+	}
+	if got := w.notifications(w.ali); !slices.Equal(got, []string{"registration.decision:APPROVED",
+		"registration.add_drop_decision:APPLIED", "registration.add_drop_decision:REJECTED"}) {
+		t.Errorf("öğrencinin bildirimleri: %v", got)
 	}
 }

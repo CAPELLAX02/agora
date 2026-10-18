@@ -5,8 +5,12 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"slices"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/CAPELLAX02/agora/backend/internal/academic"
 	"github.com/CAPELLAX02/agora/backend/internal/enrollment"
@@ -31,38 +35,52 @@ func (w *world) count(sql string, args ...any) int {
 	return n
 }
 
-// Onay kararı outbox olayıyla öğrenciye e-postayla bildirilir; olay yeniden dağıtılsa da
-// e-posta bir kez kuyruğa girer.
+// notifications, kullanıcının bildirimleridir: tür ve (varsa) karar ya da aşama, eskiden yeniye.
+func (w *world) notifications(userID string) []string {
+	w.t.Helper()
+	rows, err := w.pool.Query(context.Background(), `
+		SELECT type_code || coalesce(':' || coalesce(payload->>'decision', payload->>'stage'), '')
+		FROM communication.notifications WHERE user_id = $1 ORDER BY id`, userID)
+	if err != nil {
+		w.t.Fatal(err)
+	}
+	out, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		w.t.Fatal(err)
+	}
+	return out
+}
+
+// Gönderilen kayıt danışmana, danışman kararı öğrenciye bildirilir; karar e-postayla da gider
+// (türün varsayılan kanalları).
 func TestDecisionNotification(t *testing.T) {
 	w := newWorld(t)
 	if r := w.add(w.ali, w.aliSP, "MAT111"); r.status != http.StatusCreated {
 		t.Fatalf("ekleme: %d %s", r.status, r.raw)
 	}
 	r := w.do("POST", "/api/v1/student-programs/"+w.aliSP+"/registration/submit", w.ali, nil, "If-Match", etag(w.registration(w.ali, w.aliSP)))
+	if got := w.notifications(w.advisor); !slices.Equal(got, []string{"registration.submitted"}) {
+		t.Errorf("danışmanın bildirimleri: %v", got)
+	}
 	r = w.do("POST", "/api/v1/registrations/"+r.body["id"].(string)+"/approve", w.advisor, map[string]string{"note": "Başarılar"}, "If-Match", etag(r))
 	if r.status != 200 {
 		t.Fatalf("onay: %d %s", r.status, r.raw)
 	}
-	if n := w.count(`SELECT count(*) FROM platform.outbox_events WHERE event_type = 'registration.approved'`); n != 1 {
-		t.Fatalf("olay sayısı = %d", n)
+	if got := w.notifications(w.ali); !slices.Equal(got, []string{"registration.decision:APPROVED"}) {
+		t.Errorf("öğrencinin bildirimleri: %v", got)
 	}
-	notifier := registration.Notifier{WebBaseURL: "http://localhost:5173"}
-	w.dispatch(notifier)
-	w.exec(`UPDATE platform.outbox_events SET status = 'PENDING', next_attempt_at = now()`) // yeniden dağıtım
-	w.dispatch(notifier)
-
-	var to, template string
-	var payload map[string]any
-	if err := w.pool.QueryRow(context.Background(), `SELECT to_address, template_code, payload FROM communication.email_outbox`).
-		Scan(&to, &template, &payload); err != nil {
+	var to, title, body, link string
+	if err := w.pool.QueryRow(context.Background(), `
+		SELECT to_address, payload->>'title', payload->>'body', payload->>'link' FROM communication.email_outbox
+		WHERE template_code = 'notification'`).Scan(&to, &title, &body, &link); err != nil {
 		t.Fatal(err)
 	}
-	if to != "24000001@agora.test" || template != "registration_decision" || payload["decision"] != "APPROVED" ||
-		payload["note"] != "Başarılar" || payload["link"] != "http://localhost:5173/ders-secimi" {
-		t.Errorf("e-posta = %s %s %v", to, template, payload)
+	if to != "24000001@agora.test" || title != "Ders kaydınız onaylandı" || !strings.Contains(body, "Danışman notu: Başarılar") ||
+		!strings.Contains(body, "1 ders") || link != "/ders-secimi" {
+		t.Errorf("e-posta = %s %q %q %s", to, title, body, link)
 	}
 	if n := w.count(`SELECT count(*) FROM communication.email_outbox`); n != 1 {
-		t.Errorf("%d e-posta kuyruğa girdi, 1 olmalı", n)
+		t.Errorf("%d e-posta kuyruğa girdi, 1 olmalı (danışmana e-posta gitmez)", n)
 	}
 }
 
