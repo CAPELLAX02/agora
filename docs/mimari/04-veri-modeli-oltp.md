@@ -343,9 +343,9 @@ Eşitleme ödev işlemi kaydedildikten sonra yapılır (yayımlama, yayımdan so
 
 | Tablo | Sütunlar | Not |
 | --- | --- | --- |
-| `announcements` | id, title, summary, body_html, announcement_type CK(`GENERAL, ACADEMIC, EXAM, URGENT, EVENT`), publish_from, publish_until, is_pinned, status CK(`DRAFT, PUBLISHED, ARCHIVED`), author_id, created_at, updated_at | OBS duyuru modeli (özet + içerik + başlangıç/bitiş + tür) |
-| `announcement_audiences` | id, announcement_id, scope_type CK(`UNIVERSITY, FACULTY, DEPARTMENT, PROGRAM, SECTION`), scope_id null, role_code null | Çoklu hedef. Ör. "Mühendislik Fakültesi öğrencileri" |
-| `announcement_reads` | announcement_id, user_id, read_at — PK | |
+| `announcements` | id, title, summary, body_html, announcement_type CK(`GENERAL, ACADEMIC, EXAM, URGENT, EVENT`), publish_from, publish_until CK(> publish_from), is_pinned, status CK(`DRAFT, PUBLISHED, ARCHIVED`), author_id, notified_at, created_at, updated_at, version | Faz 6'da uygulandı. OBS duyuru modeli (özet + içerik + başlangıç/bitiş + tür). `notified_at`: yayın başlayınca hedef kitleye bir kez bildirildi (ileri tarihlileri worker bildirir; kısmi index `WHERE status = 'PUBLISHED' AND notified_at IS NULL`). Ders duyuruları LMS forumunda |
+| `announcement_audiences` | announcement_id, scope_type CK(`UNIVERSITY, FACULTY, DEPARTMENT, PROGRAM`), scope_id (üniversitede boş, CK), audience CK(`ALL, STUDENTS, STAFF`) — UQ NULLS NOT DISTINCT | Faz 6'da uygulandı. Çoklu hedef, ör. "Mühendislik Fakültesi öğrencileri". Rol yerine kişi türü; şube hedefi yok (ders alanı) |
+| `announcement_reads` | announcement_id, user_id, read_at — PK | Faz 6'da uygulandı. Hedef kitledeki kullanıcı duyuruyu açınca |
 | `conversations` | id, conversation_type CK(`DIRECT, GROUP, SECTION`), section_id null, title, created_by, created_at, last_message_at | |
 | `conversation_members` | conversation_id, user_id, member_role, joined_at, left_at, last_read_message_id, is_starred, muted_until — PK | "Yıldızlı / Grup / Özel" |
 | `messages` | id (uuidv7 → zaman sıralı cursor), conversation_id, sender_id, body, reply_to_id null, created_at, edited_at, deleted_at | Index(conversation_id, id DESC) |

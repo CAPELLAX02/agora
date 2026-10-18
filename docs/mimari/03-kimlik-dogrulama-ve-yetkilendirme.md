@@ -221,7 +221,7 @@ helpdesk       ticket:create_own  ticket:handle
 | `grade_change:approve` | | | | ✅ | ✅ | | | | |
 | `lms:content_manage` / `lms:grade_submissions` | | ✅ | | | | | | | |
 | `lms:submit_own` | ✅ | | | | | | | | |
-| `announcement:publish` | | ✅ | | ✅ | ✅ | ✅ | ✅ | | |
+| `announcement:publish` | | | | ✅ | ✅ | ✅ | ✅ | | |
 | `calendar:manage` / `gradescale:manage` | | | | | | | ✅ | | |
 | `hold:manage` | | | | | ✅ | | | ✅ | |
 | `analytics:read_scoped` | | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | | |
@@ -348,6 +348,22 @@ canGradeAssignment(actor, assignment):                           # uygulandı (F
     # tablosundan elle not girilmez (canEnterScore → COMPONENT_FED_BY_LMS).
     # Puanlar öğrenciye ödev bazında yayımlandıktan sonra görünür; teslim dosyasını sadece
     # sahibi öğrenci ve şubenin öğretim elemanları indirir.
+
+canPublishAnnouncement(actor, audiences):                        # uygulandı (Faz 6)
+    actor.hasPermission('announcement:publish') AND every audience in audiences:
+        audience.scope = UNIVERSITY ? actor.scopeOf('announcement:publish').university
+                                    : actor.covers('announcement:publish', audience.unit)
+    # Bölüm başkanı bölümüne ve programlarına, dekan ve fakülte öğrenci işleri fakülteye,
+    # merkez öğrenci işleri üniversiteye yazar. Öğretim elemanının yetkisi kaldırıldı: ders
+    # duyuruları ders alanının Duyurular forumunda. Duyuruyu yazarı ya da bütün hedefleri
+    # kapsamında olan yönetir (düzenler, yayımlar, arşivler, istatistiği görür).
+
+canReadAnnouncement(actor, announcement):                        # uygulandı (Faz 6)
+    canManage(actor, announcement)
+    OR ( announcement.status = 'PUBLISHED' AND inWindow(announcement, now)
+         AND inAudience(actor, announcement) )
+    # Hedef kitle: öğrenci olarak (hazırlık, aktif, dondurulmuş) programı, bölümü ya da fakültesi;
+    # personel olarak birincil bölümü ya da fakültesi; üniversite hedefi herkes. Diğerlerine 404.
 
 canEditAssessmentPlan(actor, section):                           # uygulandı (Faz 2)
     ( has(actor, "assessment_plan:manage")
