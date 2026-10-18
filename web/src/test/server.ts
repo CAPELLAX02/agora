@@ -18,6 +18,14 @@ export const handlers = [
   http.get('/api/v1/me', () => HttpResponse.json(me())),
   http.get('/api/v1/me/permissions', () => HttpResponse.json(grants('user:read'))),
   http.get('/api/v1/roles', () => HttpResponse.json({ items: [] })),
+  // Üst çubuktaki zil: okunmamış yok; canlı akış testlerde kapalı (yeniden deneme seyrek).
+  http.get('/api/v1/me/notifications/unread-count', () => HttpResponse.json({ count: 0 })),
+  http.get('/api/v1/me/notifications/stream', () =>
+    HttpResponse.json(
+      { status: 503, code: 'STREAM_UNAVAILABLE', title: 'Service Unavailable', type: 'about:blank' },
+      { status: 503 },
+    ),
+  ),
 ]
 
 export const server = setupServer(...handlers)

@@ -7,6 +7,8 @@ import { Brand } from '@/shared/ui/brand'
 import { Button } from '@/shared/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from '@/shared/ui/sheet'
 
+import { NotificationBell } from '@/features/notifications/NotificationBell'
+
 import { MfaBanner } from './MfaBanner'
 import { PreferenceButtons } from './Preferences'
 import { Sidebar, SidebarNav } from './Sidebar'
@@ -46,6 +48,7 @@ export function AppLayout() {
           <Brand className="lg:hidden" />
           <div className="flex-1" />
           <PreferenceButtons />
+          <NotificationBell />
           <UserMenu />
         </header>
         <div className="print:hidden">

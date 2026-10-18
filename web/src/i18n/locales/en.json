@@ -2217,5 +2217,52 @@
     "undo": "Undo",
     "redo": "Redo",
     "linkPrompt": "Link address (leave empty to remove)"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "description": "Updates about your account: course registration, grades, courses and security.",
+    "bellUnread_one": "Notifications, {{count}} unread",
+    "bellUnread_other": "Notifications, {{count}} unread",
+    "markAllRead": "Mark all as read",
+    "allRead_one": "{{count}} notification marked as read.",
+    "allRead_other": "{{count}} notifications marked as read.",
+    "empty": "You have no notifications yet.",
+    "emptyUnread": "You have no unread notifications.",
+    "emptyArchived": "Your archive is empty.",
+    "seeAll": "All notifications",
+    "open": "Open",
+    "unread": "Unread",
+    "loadMore": "Show more",
+    "markReadFor": "{{title}}: mark as read",
+    "archiveFor": "{{title}}: archive",
+    "unarchiveFor": "{{title}}: move out of archive",
+    "filters": {
+      "all": "All",
+      "unread": "Unread",
+      "archived": "Archive"
+    },
+    "categories": {
+      "SECURITY": "Security",
+      "REGISTRATION": "Course registration",
+      "GRADES": "Grades",
+      "COURSES": "Courses",
+      "ANNOUNCEMENTS": "Announcements",
+      "MESSAGES": "Messages",
+      "REMINDERS": "Reminders"
+    },
+    "preferences": {
+      "title": "Notification preferences",
+      "short": "Preferences",
+      "description": "Choose which notifications arrive in the app and which by email.",
+      "type": "Notification",
+      "inApp": "In the app",
+      "email": "Email",
+      "mandatory": "Can't be turned off",
+      "mandatoryHint": "Security notifications can't be turned off.",
+      "save": "Save",
+      "saved": "Your notification preferences were saved.",
+      "unsaved_one": "{{count}} unsaved change",
+      "unsaved_other": "{{count}} unsaved changes"
+    }
   }
 }

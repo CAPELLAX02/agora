@@ -1,4 +1,11 @@
-import { LanguagesIcon, LogOutIcon, PaletteIcon, ShieldCheckIcon, UserRoundIcon } from 'lucide-react'
+import {
+  BellRingIcon,
+  LanguagesIcon,
+  LogOutIcon,
+  PaletteIcon,
+  ShieldCheckIcon,
+  UserRoundIcon,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
 
@@ -61,6 +68,10 @@ export function UserMenu() {
         <DropdownMenuItem onSelect={() => void navigate('/guvenlik')}>
           <ShieldCheckIcon className="text-emerald-500" />
           {t('nav.security')}
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => void navigate('/bildirimler/tercihler')}>
+          <BellRingIcon className="text-violet-500" />
+          {t('notifications.preferences.title')}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuSub>

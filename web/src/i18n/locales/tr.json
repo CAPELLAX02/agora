@@ -2217,5 +2217,52 @@
     "undo": "Geri al",
     "redo": "Yinele",
     "linkPrompt": "Bağlantı adresi (boş bırakılırsa kaldırılır)"
+  },
+  "notifications": {
+    "title": "Bildirimler",
+    "description": "Hesabınızla ilgili gelişmeler: ders kaydı, notlar, dersler ve güvenlik.",
+    "bellUnread_one": "Bildirimler, {{count}} okunmamış",
+    "bellUnread_other": "Bildirimler, {{count}} okunmamış",
+    "markAllRead": "Tümünü okundu say",
+    "allRead_one": "{{count}} bildirim okundu sayıldı.",
+    "allRead_other": "{{count}} bildirim okundu sayıldı.",
+    "empty": "Henüz bildiriminiz yok.",
+    "emptyUnread": "Okunmamış bildiriminiz yok.",
+    "emptyArchived": "Arşiviniz boş.",
+    "seeAll": "Bütün bildirimler",
+    "open": "Aç",
+    "unread": "Okunmamış",
+    "loadMore": "Daha fazla göster",
+    "markReadFor": "{{title}}: okundu say",
+    "archiveFor": "{{title}}: arşive kaldır",
+    "unarchiveFor": "{{title}}: arşivden çıkar",
+    "filters": {
+      "all": "Tümü",
+      "unread": "Okunmamış",
+      "archived": "Arşiv"
+    },
+    "categories": {
+      "SECURITY": "Güvenlik",
+      "REGISTRATION": "Ders kaydı",
+      "GRADES": "Notlar",
+      "COURSES": "Dersler",
+      "ANNOUNCEMENTS": "Duyurular",
+      "MESSAGES": "Mesajlar",
+      "REMINDERS": "Hatırlatmalar"
+    },
+    "preferences": {
+      "title": "Bildirim tercihleri",
+      "short": "Tercihler",
+      "description": "Hangi bildirimlerin uygulama içinde, hangilerinin e-postayla geleceğini seçin.",
+      "type": "Bildirim",
+      "inApp": "Uygulama içi",
+      "email": "E-posta",
+      "mandatory": "Kapatılamaz",
+      "mandatoryHint": "Güvenlik bildirimleri kapatılamaz.",
+      "save": "Kaydet",
+      "saved": "Bildirim tercihleriniz kaydedildi.",
+      "unsaved_one": "{{count}} kaydedilmemiş değişiklik",
+      "unsaved_other": "{{count}} kaydedilmemiş değişiklik"
+    }
   }
 }

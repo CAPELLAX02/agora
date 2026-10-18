@@ -56,6 +56,21 @@ export const routes: RouteObject[] = [
                   { path: 'profil', element: <ProfilePage /> },
                   { path: 'guvenlik', element: <SecurityPage /> },
                   {
+                    path: 'bildirimler',
+                    lazy: async () => {
+                      const { NotificationsPage } = await import('@/features/notifications/NotificationsPage')
+                      return { element: <NotificationsPage /> }
+                    },
+                  },
+                  {
+                    path: 'bildirimler/tercihler',
+                    lazy: async () => {
+                      const { NotificationPreferencesPage } =
+                        await import('@/features/notifications/NotificationPreferencesPage')
+                      return { element: <NotificationPreferencesPage /> }
+                    },
+                  },
+                  {
                     path: 'takvim',
                     lazy: async () => {
                       const { CalendarPage } = await import('@/features/calendar/CalendarPage')
