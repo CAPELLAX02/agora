@@ -16,6 +16,7 @@ import (
 	"github.com/CAPELLAX02/agora/backend/internal/audit"
 	"github.com/CAPELLAX02/agora/backend/internal/files"
 	"github.com/CAPELLAX02/agora/backend/internal/iam"
+	"github.com/CAPELLAX02/agora/backend/internal/notify"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authn"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authz"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/config"
@@ -81,9 +82,12 @@ func run() error {
 	defer pool.Close()
 	logger.Info("veritabanı bağlantı havuzu hazır", "max_conns", cfg.DBMaxConns)
 
-	// Denetim tablolarının önümüzdeki aylar için partition'ları hazır olsun. Worker
+	// Denetim ve bildirim tablolarının önümüzdeki aylar için partition'ları hazır olsun. Worker
 	// bunu günlük olarak da yapar. Fonksiyon tekrar çalıştırılabilir.
 	if err := audit.EnsurePartitions(ctx, pool, 3); err != nil {
+		return err
+	}
+	if err := notify.EnsurePartitions(ctx, pool, 3); err != nil {
 		return err
 	}
 

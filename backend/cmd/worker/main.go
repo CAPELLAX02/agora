@@ -1,6 +1,6 @@
 // Komut worker, API'den bağımsız çalışan arka plan işlerini yürütür: e-posta outbox'ı, alan
 // olaylarının dağıtımı (outbox), ders seçme penceresi biten taslakların serbest bırakılması,
-// denetim partition'larının bakımı, süresi dolmuş kayıtların temizliği ve dönem sonuçlarının
+// denetim ve bildirim partition'larının bakımı, süresi dolmuş kayıtların temizliği ve dönem sonuçlarının
 // günlük doğrulaması.
 //
 // API yatayda çoğaltıldığında zamanlanmış işler her kopyada çalışmasın diye ayrı bir
@@ -28,6 +28,7 @@ import (
 	"github.com/CAPELLAX02/agora/backend/internal/files"
 	"github.com/CAPELLAX02/agora/backend/internal/grading"
 	"github.com/CAPELLAX02/agora/backend/internal/mail"
+	"github.com/CAPELLAX02/agora/backend/internal/notify"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/config"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/db"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/idempotency"
@@ -49,6 +50,8 @@ const (
 	resetTokenRetention     = 7 * 24 * time.Hour
 	// İdempotentlik anahtarları: istemcinin yeniden denemelerini kapsayan süre.
 	idempotencyRetention = 24 * time.Hour
+	// Bildirimler 180 gün saklanır (aylık partition'lar bütünüyle düşürülür).
+	notificationRetentionDays = 180
 )
 
 func main() {
@@ -159,8 +162,7 @@ func run() error {
 	}
 
 	// Tüketiciler: öğrenciye karar bildirimi, dönem geçişinde yarıyıl ilerletmesi, not ilanında
-	// dönem sonuçları (YANO/GANO). LMS üyeliği (Faz 5) aynı registration.approved olayına
-	// bağlanacak.
+	// dönem sonuçları (YANO/GANO). LMS üyeliği olaya bağlı değildir: kesin kayıttan türetilir.
 	events := outbox.NewDispatcher(pool, []outbox.Consumer{
 		registration.Notifier{WebBaseURL: cfg.WebBaseURL},
 		enrollment.SemesterAdvancer{},
@@ -288,6 +290,14 @@ func every(ctx context.Context, interval time.Duration, fn func(context.Context)
 func maintain(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger) {
 	if err := audit.EnsurePartitions(ctx, pool, 3); err != nil {
 		logger.Error("denetim partition'ları açılamadı", "err", err)
+	}
+	if err := notify.EnsurePartitions(ctx, pool, 3); err != nil {
+		logger.Error("bildirim partition'ları açılamadı", "err", err)
+	}
+	if n, err := notify.DropExpired(ctx, pool, notificationRetentionDays); err != nil {
+		logger.Error("eski bildirim partition'ları düşürülemedi", "err", err)
+	} else if n > 0 {
+		logger.Info("eski bildirim partition'ları düşürüldü", "count", n)
 	}
 
 	// Gönderilmiş e-postaların gövdesi zaten boşaltılmış durumda. Sadece "gönderildi"
