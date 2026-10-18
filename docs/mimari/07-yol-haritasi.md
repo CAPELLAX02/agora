@@ -392,7 +392,7 @@ flowchart LR
 | --- | --- |
 | ✅ | Üst barda bildirim zili: okunmamış sayısı, son bildirimler (kategori ikonu ve rengi), okundu yapma ve bildirimin sayfasına geçiş; canlı akış fetch ile (Authorization başlığı, süresi dolan token sessizce yenilenir, kopunca `Last-Event-ID` ile yeniden bağlanma, sekme bir dakika gizli kalınca kapanıp görünür olunca kaçırılanlarla açılma), gelen bildirim uyarı (toast, "Aç") ve RTK Query önbelleğinin tazelenmesi |
 | ✅ | Bildirim merkezi sayfası (`/bildirimler`: tümü, okunmamış, arşiv; cursor ile sayfa sayfa; okundu, arşive kaldır ve geri al, toplu okundu) ve tercih matrisi (`/bildirimler/tercihler`, kullanıcı menüsünden: kategorilere göre gruplu, uygulama içi ve e-posta, güvenlik satırları kilitli, değişiklikler birlikte kaydedilir) |
-| ⬜ | Duyurular: liste ve ayrıntı, ana sayfada duyuru kartı, yayımlayan için editör (hedef kitle seçici, yayın penceresi, önizleme, okunma oranı) |
+| ✅ | Duyurular: menüde "İletişim" grubu; akış (`/duyurular`: tür rengi ve ikonu, sabitlenen önce, okunmamışa "Yeni", cursor ile sayfa), ayrıntı (hedefler, içerik; açınca okundu), ana sayfada duyuru kartı; yayımlayana yönetim listesi (`/duyuru-yonetimi`: durum, hedef, okuyan) ve düzenleyici (tür, özet, zengin metin, yayın penceresi, sabitleme, kapsamdaki birimlerden çok satırlı hedef seçici; taslak ya da yayımla), ayrıntıda hedef kitle büyüklüğü, okuyan oranı, yayımla, yayından kaldır, sil. Ana sayfadaki "yakında" kartı Faz 7 modüllerine çevrildi |
 | ⬜ | Mesajlar: konuşma listesi (okunmamış, yıldızlı, grup), konuşma ekranı (cursor ile geçmiş, yanıt, ek, düzenle, sil), yeni konuşma (yazılabilecek kişiler), canlı ileti |
 | ✅ | Forumda abone ol/ayrıl düğmesi |
 
