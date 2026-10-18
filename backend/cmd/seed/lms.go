@@ -68,7 +68,7 @@ func seedSpaceDemo(ctx context.Context, pool *pgxpool.Pool, cfg config.Config) e
 	}
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	fs := demoFiles(ctx, pool, cfg)
+	fs, stored := demoFiles(ctx, pool, cfg)
 	now := time.Now()
 	at := func(d time.Duration) func() time.Time { return func() time.Time { return now.Add(d) } }
 	svc := lms.NewService(pool, fs, nil, logger, time.Now)
@@ -107,7 +107,7 @@ fonksiyonlar ve basit veri yapıları. Her hafta bir bölüm açılır; ödevler
 		return svc.CreateActivity(ctx, teacher, topic, in)
 	}
 	upload := func(name, content string) []string {
-		if fs == nil {
+		if !stored {
 			return nil
 		}
 		f, err := fs.Upload(ctx, teacher, name, strings.NewReader(content))
@@ -247,28 +247,27 @@ func main() {
 		}
 	}
 	files := "dosyalarla"
-	if fs == nil {
+	if !stored {
 		files = "dosyasız (depoya ulaşılamadı)"
 	}
 	fmt.Printf("DERS ALANI %s-%s: 4 bölüm, 2 ödev (14 + 5 teslim), duyuru ve forum, %s\n", demoClassCourse, demoClassSection, files)
 	return nil
 }
 
-// demoFiles, seed'in dosya servisidir; depoya ulaşılamazsa nil.
-func demoFiles(ctx context.Context, pool *pgxpool.Pool, cfg config.Config) *files.Service {
+// demoFiles, seed'in dosya servisidir. Ders alanı servisi dosya sınırını ondan okuduğu için depo
+// olmasa da oluşturulur; depoya ulaşılamazsa stored false olur ve dosyalı etkinlikler atlanır.
+func demoFiles(ctx context.Context, pool *pgxpool.Pool, cfg config.Config) (svc *files.Service, stored bool) {
 	store, err := files.NewS3Store(files.S3Config{
 		Endpoint: cfg.S3Endpoint, PublicEndpoint: cfg.S3PublicEndpoint, UseSSL: cfg.S3UseSSL, Region: cfg.S3Region,
 		Bucket: cfg.S3Bucket, AccessKey: cfg.S3AccessKey, SecretKey: cfg.S3SecretKey,
 	})
 	if err != nil {
-		return nil
+		return files.NewService(pool, nil, cfg.MaxUploadBytes, time.Now), false
 	}
 	bctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	if err := store.EnsureBucket(bctx); err != nil {
-		return nil
-	}
-	return files.NewService(pool, store, cfg.MaxUploadBytes, time.Now)
+	stored = store.EnsureBucket(bctx) == nil
+	return files.NewService(pool, store, cfg.MaxUploadBytes, time.Now), stored
 }
 
 // demoPDF, tek sayfalık, başlığı yazan geçerli bir PDF üretir.

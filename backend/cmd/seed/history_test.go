@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/CAPELLAX02/agora/backend/internal/platform/config"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/db"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/dbtest"
 )
@@ -51,6 +52,20 @@ func TestHistory(t *testing.T) {
 		if err := seedDemoScores(ctx, pool, 20261008); err != nil {
 			t.Fatal(err)
 		}
+		// Dosya deposu yoksa ders alanı dosyasız kurulur (dosyalı etkinlikler atlanır).
+		if err := seedSpaceDemo(ctx, pool, config.Config{S3Endpoint: "localhost:1", S3Bucket: "agora", MaxUploadBytes: 50 << 20}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var activities, files, submissions int
+	if err := pool.QueryRow(ctx, `
+		SELECT (SELECT count(*) FROM lms.activities),
+		       (SELECT count(*) FROM lms.activities WHERE activity_type IN ('RESOURCE', 'FOLDER')),
+		       (SELECT count(*) FROM lms.assignment_submissions WHERE status = 'SUBMITTED')`).Scan(&activities, &files, &submissions); err != nil {
+		t.Fatal(err)
+	}
+	if activities == 0 || files != 0 || submissions != 19 {
+		t.Errorf("dosyasız ders alanı: %d etkinlik, %d dosyalı, %d teslim", activities, files, submissions)
 	}
 
 	letters := func(no, course string) []string {
