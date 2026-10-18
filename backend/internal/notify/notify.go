@@ -13,6 +13,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
+
+	"github.com/CAPELLAX02/agora/backend/internal/mail"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/db"
 )
 
@@ -39,28 +42,82 @@ type Notification struct {
 
 // Send, bildirimi her alıcıya bir kez, verilen sorgulayıcıyla (çoğunlukla çağıranın
 // transaction'ı) yazar: bildirim, iş verisiyle birlikte commit edilir ya da hiç yazılmaz.
+//
+// Kanallar alıcının tercihinden (yoksa türün varsayılanından) gelir; zorunlu türlerde tercih
+// yok sayılır. Uygulama içi kanal kapalıysa kayıt yazılmaz; e-posta açıksa ve hesap etkinse
+// e-posta aynı transaction'da kuyruğa girer.
 func Send(ctx context.Context, q db.Querier, n Notification) error {
-	if _, ok := texts[n.Type]; !ok {
-		return fmt.Errorf("notify: bilinmeyen bildirim türü %q", n.Type)
-	}
 	if n.Link != "" && !strings.HasPrefix(n.Link, "/") {
 		return fmt.Errorf("notify: bağlantı uygulama içi olmalı: %q", n.Link)
-	}
-	if len(n.UserIDs) == 0 {
-		return nil
 	}
 	data := n.Data
 	if data == nil {
 		data = map[string]any{}
 	}
+	// Şablon verisi gönderirken denetlenir: eksik alan bir programlama hatasıdır.
+	text, err := render(n.Type, data)
+	if err != nil {
+		return err
+	}
+	if len(n.UserIDs) == 0 {
+		return nil
+	}
 	payload, err := json.Marshal(data)
 	if err != nil {
 		return fmt.Errorf("notify: şablon verisi: %w", err)
 	}
+	rows, err := q.Query(ctx, `
+		WITH r AS (SELECT DISTINCT unnest($1::uuid[]) AS user_id),
+		     t AS (SELECT * FROM communication.notification_types WHERE code = $2)
+		SELECT r.user_id, u.email, p.first_name, u.status = 'ACTIVE', t.is_mandatory,
+		       CASE WHEN t.is_mandatory THEN 'IN_APP' = ANY (t.default_channels)
+		            ELSE coalesce(pa.enabled, 'IN_APP' = ANY (t.default_channels)) END,
+		       CASE WHEN t.is_mandatory THEN 'EMAIL' = ANY (t.default_channels)
+		            ELSE coalesce(pe.enabled, 'EMAIL' = ANY (t.default_channels)) END
+		FROM r
+		JOIN iam.users u ON u.id = r.user_id
+		JOIN people.persons p ON p.id = u.person_id
+		CROSS JOIN t
+		LEFT JOIN communication.notification_preferences pa ON pa.user_id = r.user_id AND pa.type_code = t.code AND pa.channel = 'IN_APP'
+		LEFT JOIN communication.notification_preferences pe ON pe.user_id = r.user_id AND pe.type_code = t.code AND pe.channel = 'EMAIL'`,
+		n.UserIDs, string(n.Type))
+	if err != nil {
+		return fmt.Errorf("notify: alıcılar okunamadı: %w", err)
+	}
+	type recipient struct {
+		id, email, name   string
+		active, mandatory bool
+		inApp, byEmail    bool
+	}
+	var list []recipient
+	var r recipient
+	if _, err := pgx.ForEachRow(rows, []any{&r.id, &r.email, &r.name, &r.active, &r.mandatory, &r.inApp, &r.byEmail}, func() error {
+		list = append(list, r)
+		return nil
+	}); err != nil {
+		return fmt.Errorf("notify: alıcılar okunamadı: %w", err)
+	}
+
+	var inApp []string
+	for _, r := range list {
+		if r.inApp {
+			inApp = append(inApp, r.id)
+		}
+		if r.byEmail && r.active {
+			if _, err := mail.Enqueue(ctx, q, mail.Email{To: r.email, Template: mail.TemplateNotification, Data: map[string]any{
+				"name": r.name, "title": text.TitleTR, "body": text.BodyTR, "link": n.Link, "mandatory": r.mandatory,
+			}}); err != nil {
+				return fmt.Errorf("notify: e-posta kuyruğa alınamadı: %w", err)
+			}
+		}
+	}
+	if len(inApp) == 0 {
+		return nil
+	}
 	if _, err := q.Exec(ctx, `
 		INSERT INTO communication.notifications (user_id, type_code, payload, link_path)
-		SELECT DISTINCT u, $2::text, $3::jsonb, nullif($4::text, '') FROM unnest($1::uuid[]) AS u`,
-		n.UserIDs, string(n.Type), payload, n.Link); err != nil {
+		SELECT u, $2::text, $3::jsonb, nullif($4::text, '') FROM unnest($1::uuid[]) AS u`,
+		inApp, string(n.Type), payload, n.Link); err != nil {
 		return fmt.Errorf("notify: bildirim yazılamadı: %w", err)
 	}
 	return nil

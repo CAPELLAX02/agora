@@ -1,6 +1,7 @@
 package notify
 
 import (
+	"fmt"
 	"strings"
 	"text/template"
 )
@@ -36,33 +37,46 @@ var texts = map[Type]Text{
 	},
 }
 
-// compiled, şablonların derlenmiş hâlidir: [tür][alan].
+// compiled, şablonların derlenmiş hâlidir: [tür][alan]. Bozuk bir şablon uygulamanın hiç
+// başlamamasına yol açar.
 var compiled = func() map[Type][4]*template.Template {
 	out := make(map[Type][4]*template.Template, len(texts))
 	for typ, t := range texts {
-		var c [4]*template.Template
-		for i, src := range []string{t.TitleTR, t.TitleEN, t.BodyTR, t.BodyEN} {
-			c[i] = template.Must(template.New(string(typ)).Option("missingkey=error").Parse(src))
-		}
-		out[typ] = c
+		out[typ] = compile(typ, t)
 	}
 	return out
 }()
 
+func compile(typ Type, t Text) [4]*template.Template {
+	var c [4]*template.Template
+	for i, src := range []string{t.TitleTR, t.TitleEN, t.BodyTR, t.BodyEN} {
+		c[i] = template.Must(template.New(string(typ)).Option("missingkey=error").Parse(src))
+	}
+	return c
+}
+
 // Render, bildirimin metnini üretir. Şablon verisi eksik ya da bozuksa (eski bir kaydın
 // verisi şablonla uyuşmuyorsa) metin yerine türün adı (fallback) kullanılır.
 func Render(typ Type, data map[string]any, fallback Text) Text {
+	t, err := render(typ, data)
+	if err != nil {
+		return fallback
+	}
+	return t
+}
+
+func render(typ Type, data map[string]any) (Text, error) {
 	c, ok := compiled[typ]
 	if !ok {
-		return fallback
+		return Text{}, fmt.Errorf("notify: bilinmeyen bildirim türü %q", typ)
 	}
 	var out [4]string
 	for i, tpl := range c {
 		var b strings.Builder
 		if err := tpl.Execute(&b, data); err != nil {
-			return fallback
+			return Text{}, fmt.Errorf("notify: %s şablonu işlenemedi: %w", typ, err)
 		}
 		out[i] = b.String()
 	}
-	return Text{TitleTR: out[0], TitleEN: out[1], BodyTR: out[2], BodyEN: out[3]}
+	return Text{TitleTR: out[0], TitleEN: out[1], BodyTR: out[2], BodyEN: out[3]}, nil
 }

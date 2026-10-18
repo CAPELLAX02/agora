@@ -209,7 +209,10 @@ func TestSendRejectsBadInput(t *testing.T) {
 func TestRenderFallsBackToTypeName(t *testing.T) {
 	s := newServer(t)
 	ada := user(t, s.pool, "ada")
-	s.send(notify.Notification{Type: notify.MFADisabled, UserIDs: []string{ada}}) // "by" eksik
+	if _, err := s.pool.Exec(context.Background(), `
+		INSERT INTO communication.notifications (user_id, type_code) VALUES ($1, 'security.mfa_disabled')`, ada); err != nil {
+		t.Fatal(err) // "by" eksik
+	}
 	list := items(s.do("GET", "/api/v1/me/notifications", ada))
 	if len(list) != 1 || list[0]["title_tr"] != "İki adımlı doğrulama kapatıldı" || list[0]["body_tr"] != "" ||
 		list[0]["title_en"] != "Two-step verification turned off" {
@@ -255,4 +258,38 @@ func TestPartitions(t *testing.T) {
 	if err := pool.QueryRow(ctx, `SELECT count(*) FROM communication.notifications`).Scan(&left); err != nil || left != 1 {
 		t.Errorf("kalan: %d %v", left, err)
 	}
+}
+
+func TestPreferencesEndpoints(t *testing.T) {
+	s := newServer(t)
+	ada := user(t, s.pool, "ada")
+	res := s.do("GET", "/api/v1/me/notification-preferences", ada)
+	list := items(res)
+	if res.status != 200 || len(list) < 3 || list[0]["type"] != "security.password_changed" ||
+		list[0]["mandatory"] != true || list[0]["in_app"] != true || list[0]["email"] != true || list[0]["name_tr"] != "Parolanız değiştirildi" {
+		t.Fatalf("tercihler: %d %s", res.status, res.raw)
+	}
+	for body, want := range map[string]int{
+		`{"items":[{"type":"security.password_changed","in_app":true,"email":false}]}`: 400,
+		`{"items":[{"type":"security.password_changed","in_app":true}]}`:               400,
+		`{"items":[{"type":"yok.boyle","in_app":true,"email":true}]}`:                  400,
+		`{"items":[{"type":"security.password_changed","in_app":true,"email":true}]}`:  200,
+		`{"items":[]}`: 200,
+	} {
+		if res := s.put("/api/v1/me/notification-preferences", ada, body); res.status != want {
+			t.Errorf("%s: %d %s", body, res.status, res.raw)
+		}
+	}
+}
+
+func (s *server) put(path, user, body string) result {
+	s.t.Helper()
+	req := httptest.NewRequest("PUT", path, strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Test-User", user)
+	rec := httptest.NewRecorder()
+	s.h.ServeHTTP(rec, req)
+	res := result{status: rec.Code, raw: rec.Body.String()}
+	_ = json.Unmarshal(rec.Body.Bytes(), &res.body)
+	return res
 }

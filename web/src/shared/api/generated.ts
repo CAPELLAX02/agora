@@ -232,6 +232,24 @@ const injectedRtkApi = api
         }),
         invalidatesTags: ['Bildirimler'],
       }),
+      getMyNotificationPreferences: build.query<
+        GetMyNotificationPreferencesApiResponse,
+        GetMyNotificationPreferencesApiArg
+      >({
+        query: () => ({ url: `/api/v1/me/notification-preferences` }),
+        providesTags: ['Bildirimler'],
+      }),
+      setMyNotificationPreferences: build.mutation<
+        SetMyNotificationPreferencesApiResponse,
+        SetMyNotificationPreferencesApiArg
+      >({
+        query: (queryArg) => ({
+          url: `/api/v1/me/notification-preferences`,
+          method: 'PUT',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['Bildirimler'],
+      }),
       getMyPermissions: build.query<GetMyPermissionsApiResponse, GetMyPermissionsApiArg>({
         query: () => ({ url: `/api/v1/me/permissions` }),
         providesTags: ['Hesap'],
@@ -2079,6 +2097,19 @@ export type UnarchiveMyNotificationApiResponse = unknown
 export type UnarchiveMyNotificationApiArg = {
   id: number
 }
+export type GetMyNotificationPreferencesApiResponse = /** status 200 Tercihler */ NotificationPreferenceList
+export type GetMyNotificationPreferencesApiArg = void
+export type SetMyNotificationPreferencesApiResponse =
+  /** status 200 Güncel tercihler */ NotificationPreferenceList
+export type SetMyNotificationPreferencesApiArg = {
+  body: {
+    items: {
+      type: string
+      in_app: boolean
+      email: boolean
+    }[]
+  }
+}
 export type GetMyPermissionsApiResponse = /** status 200 Yetkiler (yetki koduna ve kapsama göre sıralı) */ {
   items: Grant[]
 }
@@ -3880,6 +3911,19 @@ export type Notification = {
 export type NotificationPage = {
   items: Notification[]
   next_cursor?: string
+}
+export type NotificationPreference = {
+  type: string
+  category: NotificationCategory
+  name_tr: string
+  name_en: string
+  /** Kapatılamaz (güvenlik bildirimleri) */
+  mandatory: boolean
+  in_app: boolean
+  email: boolean
+}
+export type NotificationPreferenceList = {
+  items: NotificationPreference[]
 }
 export type Grant = {
   permission: string
@@ -5901,6 +5945,9 @@ export const {
   useMarkMyNotificationReadMutation,
   useArchiveMyNotificationMutation,
   useUnarchiveMyNotificationMutation,
+  useGetMyNotificationPreferencesQuery,
+  useLazyGetMyNotificationPreferencesQuery,
+  useSetMyNotificationPreferencesMutation,
   useGetMyPermissionsQuery,
   useLazyGetMyPermissionsQuery,
   useListUsersQuery,
