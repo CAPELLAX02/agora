@@ -75,6 +75,10 @@ tags:
     description: >-
       Öğrenme yönetimi: şube başına ders alanı (üyelik kesin kayıt ve öğretim elemanı
       atamasından türetilir), bölümler ve etkinlikler (dosya, klasör, bağlantı, sayfa, etiket, ödev)
+  - name: Forum
+    description: >-
+      Her ders alanında Duyurular forumu ve genel forumlar: konular, yanıtlar, sabitleme,
+      kilitleme
   - name: Ödev
     description: >-
       Öğrencinin teslimi (taslak, gönderme, yeni deneme), teslim listesi, puan ve geri bildirim,
@@ -4065,6 +4069,198 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "412": { $ref: "#/components/responses/VersionMismatch" }
         "428": { $ref: "#/components/responses/PreconditionRequired" }
+
+  /api/v1/activities/{id}/threads:
+    get:
+      tags: [Forum]
+      summary: Forumun konuları
+      description: Forumu (etkinliği) görebilen okur. Sabitlenenler önce, sonra son gönderiye göre.
+      operationId: listForumThreads
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Konular
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ForumThreadList" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [Forum]
+      summary: Konu açar
+      description: >-
+        Öğretim elemanı her forumda; öğrenci sadece öğrencilerin konu açabildiği genel forumda
+        (Duyurular'da açamaz). Gönderi izin listesiyle temizlenir.
+      operationId: createForumThread
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [title, body_html]
+              properties:
+                title: { type: string, minLength: 1, maxLength: 200 }
+                body_html: { type: string, maxLength: 100000 }
+      responses:
+        "201":
+          description: Konu
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ForumThread" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/threads/{id}:
+    get:
+      tags: [Forum]
+      summary: Konu ve gönderileri
+      operationId: getForumThread
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Konu
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ForumThread" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Forum]
+      summary: Konuyu günceller (başlık, sabitleme, kilit)
+      description: Sabitleme ve kilitleme öğretim elemanınındır; başlığı yazarı ya da öğretim elemanı değiştirir.
+      operationId: updateForumThread
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                title: { type: string, minLength: 1, maxLength: 200 }
+                is_pinned: { type: boolean }
+                is_locked: { type: boolean }
+      responses:
+        "200":
+          description: Konu
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ForumThread" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Forum]
+      summary: Konuyu siler (yazarı ya da öğretim elemanı)
+      operationId: deleteForumThread
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "204": { description: Silindi }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/threads/{id}/posts:
+    post:
+      tags: [Forum]
+      summary: Konuya yanıt yazar
+      description: >-
+        Öğretim elemanı her zaman; öğrenci genel forumda ve kilitli olmayan konuda (Duyurular'a
+        yanıt yazamaz). parent_post_id verilirse o gönderiye yanıttır.
+      operationId: replyForumThread
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [body_html]
+              properties:
+                body_html: { type: string, maxLength: 100000 }
+                parent_post_id: { type: [string, "null"], format: uuid }
+      responses:
+        "201":
+          description: Konu
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ForumThread" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/posts/{id}:
+    put:
+      tags: [Forum]
+      summary: Gönderiyi düzenler (yazarı ya da öğretim elemanı)
+      operationId: editForumPost
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [body_html]
+              properties:
+                body_html: { type: string, maxLength: 100000 }
+      responses:
+        "200":
+          description: Konu
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ForumThread" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Forum]
+      summary: Gönderiyi siler (yazarı ya da öğretim elemanı)
+      description: Gönderi yerinde "silindi" olarak kalır; konunun ilk gönderisi silinirse konu silinir.
+      operationId: deleteForumPost
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "204": { description: Silindi }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /api/v1/instructors:
     get:
@@ -8806,7 +9002,7 @@ components:
     Activity:
       type: object
       required: [id, topic_id, type, title, description_html, is_visible, availability, available_from, available_until,
-                 version, updated_at, files, url, open_in_new_tab, body_html, assignment]
+                 version, updated_at, files, url, open_in_new_tab, body_html, assignment, forum]
       properties:
         id: { type: string, format: uuid }
         topic_id: { type: string, format: uuid }
@@ -8837,6 +9033,11 @@ components:
           oneOf:
             - type: "null"
             - $ref: "#/components/schemas/AssignmentSettings"
+        forum:
+          description: Forumda türü, ayarı, konu sayısı ve son gönderi
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/ForumInfo"
 
     TopicInput:
       type: object
@@ -8854,7 +9055,7 @@ components:
       additionalProperties: false
       required: [type, title]
       properties:
-        type: { type: string, enum: [RESOURCE, FOLDER, URL, PAGE, LABEL, ASSIGNMENT] }
+        type: { type: string, enum: [RESOURCE, FOLDER, URL, PAGE, LABEL, ASSIGNMENT, FORUM] }
         title: { type: string, minLength: 1, maxLength: 200 }
         description_html: { type: string, maxLength: 50000 }
         is_visible: { type: boolean, default: true }
@@ -8865,6 +9066,12 @@ components:
         open_in_new_tab: { type: boolean, default: true }
         body_html: { type: string, maxLength: 200000 }
         assignment: { $ref: "#/components/schemas/AssignmentInput" }
+        forum:
+          type: object
+          additionalProperties: false
+          description: "Genel forum (Duyurular forumu ders alanıyla oluşur, öğrenciler orada konu açamaz)"
+          properties:
+            students_can_start_threads: { type: boolean, default: true }
 
     SubmissionType:
       type: string
@@ -9060,6 +9267,70 @@ components:
             - type: "null"
             - $ref: "#/components/schemas/AssignmentGrade"
         comments: { type: array, items: { $ref: "#/components/schemas/SubmissionComment" } }
+
+    ForumInfo:
+      type: object
+      required: [kind, students_can_start_threads, threads, last_post_at]
+      properties:
+        kind: { type: string, enum: [ANNOUNCEMENTS, GENERAL] }
+        students_can_start_threads: { type: boolean }
+        threads: { type: integer }
+        last_post_at: { type: [string, "null"], format: date-time }
+
+    ForumAuthor:
+      type: object
+      required: [id, name, is_instructor]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        is_instructor: { type: boolean, description: Şubenin öğretim elemanı }
+
+    ForumThreadSummary:
+      type: object
+      required: [id, title, author, is_pinned, is_locked, post_count, last_post_at, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        author: { $ref: "#/components/schemas/ForumAuthor" }
+        is_pinned: { type: boolean }
+        is_locked: { type: boolean }
+        post_count: { type: integer }
+        last_post_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+
+    ForumThreadList:
+      type: object
+      required: [forum, can_start, items]
+      properties:
+        forum: { $ref: "#/components/schemas/ForumInfo" }
+        can_start: { type: boolean, description: İsteği yapan konu açabilir mi }
+        items: { type: array, items: { $ref: "#/components/schemas/ForumThreadSummary" }, description: "Sabitlenenler önce, sonra son gönderiye göre" }
+
+    ForumThread:
+      allOf:
+        - $ref: "#/components/schemas/ForumThreadSummary"
+        - type: object
+          required: [activity_id, forum, can_reply, can_moderate, posts]
+          properties:
+            activity_id: { type: string, format: uuid }
+            forum: { $ref: "#/components/schemas/ForumInfo" }
+            can_reply: { type: boolean }
+            can_moderate: { type: boolean, description: "Sabitleme, kilitleme, her gönderiyi düzenleme ve silme" }
+            posts:
+              type: array
+              description: Eskiden yeniye; ilki konunun açılış gönderisi
+              items:
+                type: object
+                required: [id, parent_post_id, author, body_html, created_at, edited_at, deleted, can_edit]
+                properties:
+                  id: { type: string, format: uuid }
+                  parent_post_id: { type: [string, "null"], format: uuid }
+                  author: { $ref: "#/components/schemas/ForumAuthor" }
+                  body_html: { type: string, description: Silinen gönderide boş }
+                  created_at: { type: string, format: date-time }
+                  edited_at: { type: [string, "null"], format: date-time }
+                  deleted: { type: boolean }
+                  can_edit: { type: boolean, description: Düzenleyip silebilir mi (yazarı ya da öğretim elemanı) }
 
     TimelineItem:
       type: object

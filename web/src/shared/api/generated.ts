@@ -14,6 +14,7 @@ export const addTagTypes = [
   'Ders alan\u0131',
   '\u00D6dev',
   'De\u011Ferlendirme',
+  'Forum',
   'Organizasyon',
   '\u00D6\u011Frenciler',
   'Ders se\u00E7me',
@@ -1069,6 +1070,62 @@ const injectedRtkApi = api
           invalidatesTags: ['\u00D6dev'],
         },
       ),
+      listForumThreads: build.query<ListForumThreadsApiResponse, ListForumThreadsApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/activities/${queryArg.id}/threads`,
+        }),
+        providesTags: ['Forum'],
+      }),
+      createForumThread: build.mutation<CreateForumThreadApiResponse, CreateForumThreadApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/activities/${queryArg.id}/threads`,
+          method: 'POST',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['Forum'],
+      }),
+      getForumThread: build.query<GetForumThreadApiResponse, GetForumThreadApiArg>({
+        query: (queryArg) => ({ url: `/api/v1/threads/${queryArg.id}` }),
+        providesTags: ['Forum'],
+      }),
+      updateForumThread: build.mutation<UpdateForumThreadApiResponse, UpdateForumThreadApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/threads/${queryArg.id}`,
+          method: 'PUT',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['Forum'],
+      }),
+      deleteForumThread: build.mutation<DeleteForumThreadApiResponse, DeleteForumThreadApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/threads/${queryArg.id}`,
+          method: 'DELETE',
+        }),
+        invalidatesTags: ['Forum'],
+      }),
+      replyForumThread: build.mutation<ReplyForumThreadApiResponse, ReplyForumThreadApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/threads/${queryArg.id}/posts`,
+          method: 'POST',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['Forum'],
+      }),
+      editForumPost: build.mutation<EditForumPostApiResponse, EditForumPostApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/posts/${queryArg.id}`,
+          method: 'PUT',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['Forum'],
+      }),
+      deleteForumPost: build.mutation<DeleteForumPostApiResponse, DeleteForumPostApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/posts/${queryArg.id}`,
+          method: 'DELETE',
+        }),
+        invalidatesTags: ['Forum'],
+      }),
       searchInstructors: build.query<SearchInstructorsApiResponse, SearchInstructorsApiArg>({
         query: (queryArg) => ({
           url: `/api/v1/instructors`,
@@ -2726,6 +2783,62 @@ export type ImportAssignmentGradesApiArg = {
   'If-Match': string
   body: Blob
 }
+export type ListForumThreadsApiResponse = /** status 200 Konular */ ForumThreadList
+export type ListForumThreadsApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type CreateForumThreadApiResponse = /** status 201 Konu */ ForumThread
+export type CreateForumThreadApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: {
+    title: string
+    body_html: string
+  }
+}
+export type GetForumThreadApiResponse = /** status 200 Konu */ ForumThread
+export type GetForumThreadApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type UpdateForumThreadApiResponse = /** status 200 Konu */ ForumThread
+export type UpdateForumThreadApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: {
+    title?: string
+    is_pinned?: boolean
+    is_locked?: boolean
+  }
+}
+export type DeleteForumThreadApiResponse = unknown
+export type DeleteForumThreadApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type ReplyForumThreadApiResponse = /** status 201 Konu */ ForumThread
+export type ReplyForumThreadApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: {
+    body_html: string
+    parent_post_id?: string | null
+  }
+}
+export type EditForumPostApiResponse = /** status 200 Konu */ ForumThread
+export type EditForumPostApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: {
+    body_html: string
+  }
+}
+export type DeleteForumPostApiResponse = unknown
+export type DeleteForumPostApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
 export type SearchInstructorsApiResponse = /** status 200 Liste */ {
   items: StaffSummary[]
 }
@@ -4253,6 +4366,12 @@ export type AssignmentSettings = {
   /** Şu an teslim kabul ediliyor mu */
   submission_state: 'NOT_OPEN' | 'OPEN' | 'CLOSED'
 }
+export type ForumInfo = {
+  kind: 'ANNOUNCEMENTS' | 'GENERAL'
+  students_can_start_threads: boolean
+  threads: number
+  last_post_at: string | null
+}
 export type Activity = {
   id: string
   topic_id: string
@@ -4279,6 +4398,8 @@ export type Activity = {
   body_html: string | null
   /** Ödevde ayarlar ve teslimin şu anki durumu */
   assignment: null | AssignmentSettings
+  /** Forumda türü, ayarı, konu sayısı ve son gönderi */
+  forum: null | ForumInfo
 }
 export type Topic = {
   id: string
@@ -4334,7 +4455,7 @@ export type AssignmentInput = {
   late_penalty_pct_per_day?: number
 }
 export type ActivityInput = {
-  type: 'RESOURCE' | 'FOLDER' | 'URL' | 'PAGE' | 'LABEL' | 'ASSIGNMENT'
+  type: 'RESOURCE' | 'FOLDER' | 'URL' | 'PAGE' | 'LABEL' | 'ASSIGNMENT' | 'FORUM'
   title: string
   description_html?: string
   is_visible?: boolean
@@ -4345,6 +4466,10 @@ export type ActivityInput = {
   open_in_new_tab?: boolean
   body_html?: string
   assignment?: AssignmentInput
+  /** Genel forum (Duyurular forumu ders alanıyla oluşur, öğrenciler orada konu açamaz) */
+  forum?: {
+    students_can_start_threads?: boolean
+  }
 }
 export type TimelineItem = {
   kind: 'DUE' | 'OVERDUE' | 'TO_GRADE'
@@ -4526,6 +4651,49 @@ export type AssignmentGradeImportPreview = {
     empty: number
     errors: number
   }
+}
+export type ForumAuthor = {
+  id: string
+  name: string
+  /** Şubenin öğretim elemanı */
+  is_instructor: boolean
+}
+export type ForumThreadSummary = {
+  id: string
+  title: string
+  author: ForumAuthor
+  is_pinned: boolean
+  is_locked: boolean
+  post_count: number
+  last_post_at: string
+  created_at: string
+}
+export type ForumThreadList = {
+  forum: ForumInfo
+  /** İsteği yapan konu açabilir mi */
+  can_start: boolean
+  /** Sabitlenenler önce, sonra son gönderiye göre */
+  items: ForumThreadSummary[]
+}
+export type ForumThread = ForumThreadSummary & {
+  activity_id: string
+  forum: ForumInfo
+  can_reply: boolean
+  /** Sabitleme, kilitleme, her gönderiyi düzenleme ve silme */
+  can_moderate: boolean
+  /** Eskiden yeniye; ilki konunun açılış gönderisi */
+  posts: {
+    id: string
+    parent_post_id: string | null
+    author: ForumAuthor
+    /** Silinen gönderide boş */
+    body_html: string
+    created_at: string
+    edited_at: string | null
+    deleted: boolean
+    /** Düzenleyip silebilir mi (yazarı ya da öğretim elemanı) */
+    can_edit: boolean
+  }[]
 }
 export type StaffSummary = {
   staff_id: string
@@ -5753,6 +5921,16 @@ export const {
   useLazyExportAssignmentGradesXlsxQuery,
   usePreviewAssignmentGradeImportMutation,
   useImportAssignmentGradesMutation,
+  useListForumThreadsQuery,
+  useLazyListForumThreadsQuery,
+  useCreateForumThreadMutation,
+  useGetForumThreadQuery,
+  useLazyGetForumThreadQuery,
+  useUpdateForumThreadMutation,
+  useDeleteForumThreadMutation,
+  useReplyForumThreadMutation,
+  useEditForumPostMutation,
+  useDeleteForumPostMutation,
   useSearchInstructorsQuery,
   useLazySearchInstructorsQuery,
   useListAssessmentTypesQuery,
