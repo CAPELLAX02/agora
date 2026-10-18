@@ -83,6 +83,12 @@ func (m *HTTP) RequestFinished(method, route string, status int, duration time.D
 	m.duration.WithLabelValues(method, route).Observe(duration.Seconds())
 }
 
+// StreamFinished, kapanan bir olay akışını (SSE) sayar; süresi dağılıma girmez.
+func (m *HTTP) StreamFinished(method, route string, status int) {
+	m.inFlight.Dec()
+	m.requests.WithLabelValues(normalizeMethod(method), route, strconv.Itoa(status)).Inc()
+}
+
 // normalizeMethod, standart dışı HTTP metotlarını tek bir etikette toplar.
 // İstemci "FOO" gibi rastgele metotlar göndererek sınırsız sayıda metrik serisi
 // oluşturamasın diye.

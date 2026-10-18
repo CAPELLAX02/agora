@@ -13,7 +13,14 @@ type RequestObserver interface {
 	RequestFinished(method, route string, status int, duration time.Duration)
 }
 
+// StreamObserver, uzun yaşayan akışları (Server-Sent Events) süresini ölçmeden bitiren
+// gözlemcidir: dakikalarca açık kalan bir akış istek süresi dağılımını bozmasın.
+type StreamObserver interface {
+	StreamFinished(method, route string, status int)
+}
+
 // Observe, her isteğin metodunu, route desenini, durumunu ve süresini observer'a bildirir.
+// Yanıt bir olay akışıysa (text/event-stream) ve observer StreamObserver ise süre bildirilmez.
 func Observe(o RequestObserver) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -26,6 +33,10 @@ func Observe(o RequestObserver) Middleware {
 			status := rec.status
 			if status == 0 {
 				status = http.StatusOK
+			}
+			if so, ok := o.(StreamObserver); ok && strings.HasPrefix(rec.Header().Get("Content-Type"), "text/event-stream") {
+				so.StreamFinished(r.Method, Route(r), status)
+				return
 			}
 			o.RequestFinished(r.Method, Route(r), status, time.Since(start))
 		})

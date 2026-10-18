@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -101,5 +102,31 @@ func TestLMS(t *testing.T) {
 	}
 	if got := testutil.ToFloat64(m.completions.WithLabelValues("page")); got != 1 {
 		t.Errorf("sayfa tamamlama = %v, want 1", got)
+	}
+}
+
+func TestNotificationStreams(t *testing.T) {
+	reg := prometheus.NewRegistry()
+	open := 3
+	RegisterNotificationStreams(reg, func() int { return open })
+	want := `
+# HELP agora_notification_streams Açık canlı bildirim akışları (Server-Sent Events).
+# TYPE agora_notification_streams gauge
+agora_notification_streams 3
+`
+	if err := testutil.GatherAndCompare(reg, strings.NewReader(want), "agora_notification_streams"); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestStreamFinished(t *testing.T) {
+	m := NewHTTP(prometheus.NewRegistry())
+	m.RequestStarted()
+	m.StreamFinished("GET", "/api/v1/me/notifications/stream", 200)
+	if got := testutil.ToFloat64(m.inFlight); got != 0 {
+		t.Errorf("in-flight = %v", got)
+	}
+	if n := testutil.CollectAndCount(m.duration); n != 0 {
+		t.Errorf("akış süre dağılımına girmemeli: %d seri", n)
 	}
 }

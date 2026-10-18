@@ -84,3 +84,34 @@ func TestObserve(t *testing.T) {
 		})
 	}
 }
+
+// streamObserver, akışları ayrıca kaydeden sahte observer'dır.
+type streamObserver struct {
+	recordingObserver
+	streams int
+}
+
+func (o *streamObserver) StreamFinished(method, route string, status int) {
+	o.streams++
+	o.method, o.route, o.status = method, route, status
+}
+
+func TestObserveStream(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /stream", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+	})
+	mux.HandleFunc("GET /json", func(w http.ResponseWriter, r *http.Request) {})
+
+	o := &streamObserver{}
+	h := Observe(o)(mux)
+	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/stream", nil))
+	if o.streams != 1 || o.route != "/stream" || o.status != 200 || o.duration != 0 {
+		t.Errorf("akış süresiz bitmeli: %+v", o)
+	}
+	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/json", nil))
+	if o.streams != 1 || o.route != "/json" || o.started != 2 {
+		t.Errorf("sıradan istek RequestFinished'e gitmeli: %+v", o)
+	}
+}
