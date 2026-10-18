@@ -390,8 +390,8 @@ flowchart LR
 
 | Durum | Madde |
 | --- | --- |
-| ⬜ | Üst barda bildirim zili: okunmamış sayısı, son bildirimler, okundu yapma; SSE ile canlı güncelleme (yeniden bağlanma, sekme gizliyken bekletme) ve RTK Query önbelleğinin tazelenmesi |
-| ⬜ | Bildirim merkezi sayfası (süzgeç, toplu okundu, arşiv) ve hesap ayarlarında tercih matrisi |
+| ✅ | Üst barda bildirim zili: okunmamış sayısı, son bildirimler (kategori ikonu ve rengi), okundu yapma ve bildirimin sayfasına geçiş; canlı akış fetch ile (Authorization başlığı, süresi dolan token sessizce yenilenir, kopunca `Last-Event-ID` ile yeniden bağlanma, sekme bir dakika gizli kalınca kapanıp görünür olunca kaçırılanlarla açılma), gelen bildirim uyarı (toast, "Aç") ve RTK Query önbelleğinin tazelenmesi |
+| ✅ | Bildirim merkezi sayfası (`/bildirimler`: tümü, okunmamış, arşiv; cursor ile sayfa sayfa; okundu, arşive kaldır ve geri al, toplu okundu) ve tercih matrisi (`/bildirimler/tercihler`, kullanıcı menüsünden: kategorilere göre gruplu, uygulama içi ve e-posta, güvenlik satırları kilitli, değişiklikler birlikte kaydedilir) |
 | ⬜ | Duyurular: liste ve ayrıntı, ana sayfada duyuru kartı, yayımlayan için editör (hedef kitle seçici, yayın penceresi, önizleme, okunma oranı) |
 | ⬜ | Mesajlar: konuşma listesi (okunmamış, yıldızlı, grup), konuşma ekranı (cursor ile geçmiş, yanıt, ek, düzenle, sil), yeni konuşma (yazılabilecek kişiler), canlı ileti |
 | ✅ | Forumda abone ol/ayrıl düğmesi |
