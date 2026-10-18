@@ -28,6 +28,7 @@ import { DashCard } from './DashCard'
 import { GradesCard } from './GradesCard'
 import { RegistrationCard } from './RegistrationCard'
 import { TeachingCard } from './TeachingCard'
+import { TimelineCard } from './TimelineCard'
 import { WindowsCard } from './WindowsCard'
 
 /**
@@ -96,6 +97,7 @@ export function DashboardPage() {
       )}
 
       <div className="grid gap-5 lg:grid-cols-2">
+        {hasAny(['registration:manage_own', 'assessment_plan:manage']) && <TimelineCard />}
         {has('grade:read_own') && <GradesCard />}
         {has('assessment_plan:manage') && <TeachingCard />}
         {has('registration:manage_own') && <RegistrationCard />}

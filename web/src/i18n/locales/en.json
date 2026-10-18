@@ -285,6 +285,17 @@
       "pending_one": "{{component}}: {{count}} missing (until {{time}})",
       "pending_other": "{{component}}: {{count}} missing (until {{time}})",
       "planNotLocked": "Assessment plan not locked: lock it before entering scores"
+    },
+    "timeline": {
+      "title": "To do",
+      "description": "Upcoming and overdue submissions, assignments waiting to be graded",
+      "all": "My courses",
+      "none": "No upcoming submissions or assignments to grade.",
+      "overdue": "Overdue",
+      "toGrade_one": "{{count}} submission to grade",
+      "toGrade_other": "{{count}} submissions to grade",
+      "more_one": "and {{count}} more",
+      "more_other": "and {{count}} more"
     }
   },
   "profile": {

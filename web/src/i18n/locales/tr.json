@@ -285,6 +285,17 @@
       "pending_one": "{{component}}: {{count}} eksik (bitiş {{time}})",
       "pending_other": "{{component}}: {{count}} eksik (bitiş {{time}})",
       "planNotLocked": "Değerlendirme planı kilitlenmedi: not girişi için önce planı kilitleyin"
+    },
+    "timeline": {
+      "title": "Yapılacaklar",
+      "description": "Yaklaşan ve geciken teslimler, puanlanmayı bekleyen ödevler",
+      "all": "Derslerim",
+      "none": "Yaklaşan teslim ya da puanlanacak ödev yok.",
+      "overdue": "Gecikti",
+      "toGrade_one": "{{count}} teslim puan bekliyor",
+      "toGrade_other": "{{count}} teslim puan bekliyor",
+      "more_one": "ve {{count}} öğe daha",
+      "more_other": "ve {{count}} öğe daha"
     }
   },
   "profile": {

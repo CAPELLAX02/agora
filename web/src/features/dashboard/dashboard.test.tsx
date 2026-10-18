@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 
-import type { CalendarEvent, CalendarEventType } from '@/shared/api/generated'
+import type { CalendarEvent, CalendarEventType, TimelineItem } from '@/shared/api/generated'
 import { grants, tokens } from '@/test/fixtures'
 import { renderApp } from '@/test/render'
 import { server } from '@/test/server'
@@ -222,6 +222,7 @@ describe('ana sayfa', () => {
     server.use(
       http.post('/api/v1/auth/refresh', () => HttpResponse.json(tokens())),
       http.get('/api/v1/me/permissions', () => HttpResponse.json(grants('assessment_plan:manage'))),
+      http.get('/api/v1/me/timeline', () => HttpResponse.json({ items: [] })),
       http.get('/api/v1/terms/current', () => HttpResponse.json({ id: 't', code: '2026-FALL' })),
       http.get('/api/v1/me/sections', () =>
         HttpResponse.json({
@@ -247,5 +248,59 @@ describe('ana sayfa', () => {
     expect(s1).toHaveAttribute('href', '/subeler/s1/notlar')
     const s2 = screen.getByRole('link', { name: /COM3067-1/ })
     expect(await within(s2).findByText('Bekleyen not girişi yok')).toBeInTheDocument()
+  })
+
+  it('yapılacaklar: geciken ve yaklaşan ödevler, puanlanacak teslimler ödevin sayfasına götürür', async () => {
+    const course = {
+      id: 'c1',
+      code: 'COM1007',
+      name_tr: 'Bilgisayar Programlama I',
+      name_en: 'Computer Programming I',
+    }
+    const item = (
+      kind: TimelineItem['kind'],
+      id: string,
+      title: string,
+      over: Partial<TimelineItem> = {},
+    ): TimelineItem => ({
+      kind,
+      activity_id: id,
+      section_id: 's1',
+      section_code: '1',
+      course,
+      title,
+      due_at: new Date(Date.now() + 2 * 86_400_000).toISOString(),
+      cutoff_at: null,
+      needs_grading: 0,
+      ...over,
+    })
+    server.use(
+      http.post('/api/v1/auth/refresh', () => HttpResponse.json(tokens())),
+      http.get('/api/v1/me/permissions', () => HttpResponse.json(grants('registration:manage_own'))),
+      http.get('/api/v1/me/timeline', () =>
+        HttpResponse.json({
+          items: [
+            item('OVERDUE', 'a1', 'Ödev 1: Döngüler', {
+              due_at: new Date(Date.now() - 3_600_000).toISOString(),
+            }),
+            item('DUE', 'a2', 'Ödev 2: Diziler'),
+            item('TO_GRADE', 'a3', 'Proje önerisi', { needs_grading: 3 }),
+          ],
+        }),
+      ),
+      // Ana sayfanın öğrenci kartları bu testin konusu değil: programsız öğrenci.
+      http.get('/api/v1/me/programs', () => HttpResponse.json({ items: [] })),
+    )
+    renderApp('/')
+    const card = (await screen.findByText('Yapılacaklar')).closest('[data-slot=card]') as HTMLElement
+    const links = await within(card).findAllByRole('link', { name: /Ödev|Proje/ })
+    expect(links.map((l) => l.getAttribute('href'))).toEqual([
+      '/derslerim/s1/etkinlik/a1',
+      '/derslerim/s1/etkinlik/a2',
+      '/derslerim/s1/etkinlik/a3',
+    ])
+    expect(within(links[0]!).getByText('Gecikti')).toBeInTheDocument()
+    expect(within(links[2]!).getByText('3 teslim puan bekliyor')).toBeInTheDocument()
+    expect(within(links[1]!).getByText('COM1007-1 · Bilgisayar Programlama I')).toBeInTheDocument()
   })
 })
