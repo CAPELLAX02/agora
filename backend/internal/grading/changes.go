@@ -12,7 +12,6 @@ import (
 	"github.com/CAPELLAX02/agora/backend/internal/audit"
 	"github.com/CAPELLAX02/agora/backend/internal/grading/letter"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/db"
-	"github.com/CAPELLAX02/agora/backend/internal/platform/outbox"
 )
 
 // Not düzeltme hataları.
@@ -228,6 +227,9 @@ func (s *Service) RequestGradeChange(ctx context.Context, actorID string, in Gra
 		}
 		if err != nil {
 			return fmt.Errorf("grading: talep kaydedilemedi: %w", err)
+		}
+		if err := notifyChangeRequested(ctx, tx, id); err != nil {
+			return err
 		}
 		return audit.Record(ctx, tx, audit.Entry{
 			ActorUserID: actorID, Action: "grade_change.request", EntityType: "grade_change_request", EntityID: id,
@@ -474,7 +476,10 @@ func (s *Service) ApproveGradeChange(ctx context.Context, actorID string, r Grad
 		}); err != nil {
 			return err
 		}
-		return outbox.Publish(ctx, tx, "grades.published", "section", r.SectionID, PublishedEvent{
+		if err := notifyChangeDecided(ctx, tx, r.ID, "APPLIED", note); err != nil {
+			return err
+		}
+		return publishGrades(ctx, tx, PublishedEvent{
 			Phase: "CORRECTION", SectionID: r.SectionID, TermID: termID, CourseID: courseID,
 			Enrollments: []string{r.EnrollmentID}, StudentPrograms: []string{r.StudentProgramID},
 		})
@@ -496,6 +501,9 @@ func (s *Service) RejectGradeChange(ctx context.Context, actorID, id, note strin
 			SET status = 'REJECTED', reviewed_by = $2, review_note = $3, decided_at = now()
 			WHERE id = $1`, id, actorID, note); err != nil {
 			return fmt.Errorf("grading: talep reddedilemedi: %w", err)
+		}
+		if err := notifyChangeDecided(ctx, tx, id, "REJECTED", note); err != nil {
+			return err
 		}
 		return audit.Record(ctx, tx, audit.Entry{
 			ActorUserID: actorID, Action: "grade_change.reject", EntityType: "grade_change_request", EntityID: id,

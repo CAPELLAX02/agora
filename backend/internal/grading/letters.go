@@ -14,7 +14,6 @@ import (
 	"github.com/CAPELLAX02/agora/backend/internal/audit"
 	"github.com/CAPELLAX02/agora/backend/internal/grading/letter"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/db"
-	"github.com/CAPELLAX02/agora/backend/internal/platform/outbox"
 )
 
 // Harf notu hataları.
@@ -687,7 +686,7 @@ func (s *Service) PublishGrades(ctx context.Context, actorID string, sc SectionC
 		}); err != nil {
 			return err
 		}
-		return outbox.Publish(ctx, tx, "grades.published", "section", sc.SectionID, ev)
+		return publishGrades(ctx, tx, ev)
 	})
 	if err != nil {
 		return 0, err
@@ -804,7 +803,7 @@ func (s *Service) PublishMakeup(ctx context.Context, actorID string, sc SectionC
 			return nil
 		}
 		sort.Strings(ev.StudentPrograms)
-		return outbox.Publish(ctx, tx, "grades.published", "section", sc.SectionID, ev)
+		return publishGrades(ctx, tx, ev)
 	})
 	if err != nil {
 		return 0, err

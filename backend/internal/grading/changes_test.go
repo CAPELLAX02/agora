@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"slices"
 	"strings"
 	"testing"
 
@@ -34,6 +35,13 @@ func TestHTTPGradeChanges(t *testing.T) {
 		t.Fatal(err)
 	}
 	s.addGrant(headUser, approve)
+	// Bildirim alıcıları rol atamasından çözülür: bölüm başkanı rolü (grade_change:approve).
+	if _, err := s.pool.Exec(ctx, `
+		INSERT INTO iam.role_assignments (user_id, role_id, scope_type, scope_id)
+		SELECT $1, id, 'DEPARTMENT', $2 FROM iam.roles WHERE code = 'DEPARTMENT_HEAD'`, headUser, fx.bil); err != nil {
+		t.Fatal(err)
+	}
+	students := studentAccounts(t, s.pool)
 
 	section := "/api/v1/sections/" + fx.section
 	scores := func(code string) string { return "/api/v1/assessment-components/" + fx.components[code] + "/scores" }
@@ -207,6 +215,22 @@ func TestHTTPGradeChanges(t *testing.T) {
 		t.Errorf("bayat talep: %d %s", res.status, res.raw)
 	}
 
+	// Bildirimler: her talep onaylayana; karar talep edene (geri çekilen ve uygulanamayan hariç);
+	// ilan bütün öğrencilere, düzeltme notu değişen öğrenciye.
+	requested := "grades.change_requested"
+	if got := notificationsOf(t, s.pool, headUser); !slices.Equal(got, []string{requested, requested, requested, requested}) {
+		t.Errorf("onaylayanın bildirimleri: %v", got)
+	}
+	if got := notificationsOf(t, s.pool, fx.ayseUser); !slices.Equal(got, []string{"grades.change_decided:APPLIED", "grades.change_decided:REJECTED"}) {
+		t.Errorf("talep edenin bildirimleri: %v", got)
+	}
+	letters := "grades.letters_published:FINAL"
+	for i, want := range [][]string{{letters}, {letters, "grades.letters_published:CORRECTION"}, {letters}} {
+		if got := notificationsOf(t, s.pool, students[i]); !slices.Equal(got, want) {
+			t.Errorf("%d. öğrencinin bildirimleri: %v", i, got)
+		}
+	}
+
 	var audits string
 	_ = s.pool.QueryRow(ctx, `
 		SELECT string_agg(DISTINCT action, ' ') FROM audit.audit_log WHERE action LIKE 'grade_change.%'`).Scan(&audits)
@@ -216,9 +240,9 @@ func TestHTTPGradeChanges(t *testing.T) {
 		}
 	}
 	// Sayaçlar sadece başarılı işlemleri sayar: reddedilen onay ve bayat talep sayılmaz.
-	var requested int
-	_ = s.pool.QueryRow(ctx, `SELECT count(*) FROM grading.grade_change_requests`).Scan(&requested)
-	for key, want := range map[string]int{"changes/requested": requested, "changes/applied": 1, "changes/rejected": 1, "changes/withdrawn": 1} {
+	var requests int
+	_ = s.pool.QueryRow(ctx, `SELECT count(*) FROM grading.grade_change_requests`).Scan(&requests)
+	for key, want := range map[string]int{"changes/requested": requests, "changes/applied": 1, "changes/rejected": 1, "changes/withdrawn": 1} {
 		if got := s.metrics.get(key); got != want {
 			t.Errorf("%s = %d, want %d", key, got, want)
 		}

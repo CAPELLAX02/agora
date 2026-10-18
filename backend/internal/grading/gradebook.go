@@ -663,6 +663,9 @@ func (s *Service) PublishComponent(ctx context.Context, actorID string, ref Comp
 			WHERE id = $1`, ref.ID, nullable(actorID)); err != nil {
 			return fmt.Errorf("grading: bileşen yayımlanamadı: %w", err)
 		}
+		if err := notifyComponentPublished(ctx, tx, ref.ID); err != nil {
+			return err
+		}
 		return audit.Record(ctx, tx, audit.Entry{
 			ActorUserID: actorID, Action: "assessment_scores.publish", EntityType: "assessment_component", EntityID: ref.ID,
 			After: map[string]any{"scores": scores},

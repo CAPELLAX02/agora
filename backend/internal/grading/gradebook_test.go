@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -208,6 +209,7 @@ func studentRow(res result, enrollmentID string) map[string]any {
 func TestHTTPGradebook(t *testing.T) {
 	s := newGradebookServer(t)
 	fx := s.fx
+	students := studentAccounts(t, s.pool)
 	book := "/api/v1/sections/" + fx.section + "/gradebook"
 	scores := func(code string) string { return "/api/v1/assessment-components/" + fx.components[code] + "/scores" }
 	midterm := fx.components["MIDTERM"]
@@ -347,6 +349,12 @@ func TestHTTPGradebook(t *testing.T) {
 	}
 	if res := s.do("POST", "/api/v1/assessment-components/"+midterm+"/publish", fx.ayseUser, mfa, nil); component(res, midterm)["published_at"] != published {
 		t.Errorf("ikinci yayım tarihi değiştirmemeli")
+	}
+	// Notu (ya da "girmedi" kaydı) olan öğrencilere bir kez bildirilir; notu silinen Can'a gitmez.
+	for i, want := range [][]string{{"grades.component_published:Ara sınav"}, {"grades.component_published:Ara sınav"}, nil} {
+		if got := notificationsOf(t, s.pool, students[i]); !slices.Equal(got, want) {
+			t.Errorf("%d. öğrencinin bildirimleri: %v", i, got)
+		}
 	}
 
 	// Devam durumu.
