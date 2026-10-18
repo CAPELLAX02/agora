@@ -2188,7 +2188,13 @@
       "readOnlyHint": "Bu konuya yanıt yazamazsınız.",
       "description": "Forum açıklaması",
       "studentsCanStart": "Öğrenciler konu açabilir"
-    }
+    },
+    "progress": {
+      "title": "İlerlemem",
+      "summary": "{{completed}} / {{total}} etkinlik tamamlandı",
+      "percent": "%{{percent}} tamamlandı"
+    },
+    "completed": "Tamamlandı"
   },
   "richText": {
     "toolbar": "Biçimlendirme",

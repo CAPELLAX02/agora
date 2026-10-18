@@ -9,6 +9,7 @@ import { useMySpacesQuery } from '@/shared/api/generated'
 import { useLocalized } from '@/shared/lib/localized'
 import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/ui/badge'
+import { Meter } from '@/shared/ui/meter'
 import { PageHeader } from '@/shared/ui/page-header'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { EmptyState, ErrorState } from '@/shared/ui/states'
@@ -69,6 +70,22 @@ export function MySpacesPage() {
                     <p className="text-sm text-muted-foreground">
                       {[primary.title, primary.first_name, primary.last_name].filter(Boolean).join(' ')}
                     </p>
+                  )}
+                  {s.progress && s.progress.total > 0 && (
+                    <div className="space-y-1">
+                      <Meter
+                        value={s.progress.completed}
+                        max={s.progress.total}
+                        tone="emerald"
+                        size="sm"
+                        label={t('lms.progress.title')}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {t('lms.progress.percent', {
+                          percent: Math.round((s.progress.completed / s.progress.total) * 100),
+                        })}
+                      </p>
+                    </div>
                   )}
                   <p className="mt-auto flex items-center justify-between text-xs text-muted-foreground">
                     {t('lms.mySpaces.activities', { count: s.activities })}

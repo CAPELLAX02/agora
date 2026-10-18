@@ -53,6 +53,7 @@ const activity = (id: string, over: Partial<Activity> = {}): Activity => ({
   body_html: null,
   assignment: null,
   forum: null,
+  completed: false,
   ...over,
 })
 
@@ -78,6 +79,7 @@ function space(over: Partial<Space> = {}): Space {
     role: 'STUDENT',
     can_edit: false,
     summary_html: '<p>Haftalık iki saat laboratuvar.</p>',
+    progress: null,
     instructors: [instructor],
     topics: [
       topic('tp1', {
@@ -133,6 +135,7 @@ function setup(path: string, data: Space, perms: string[] = ['registration:manag
     course: data.course,
     term: data.term,
     role: data.role,
+    progress: null,
     instructors: data.instructors,
     activities: 4,
   }
@@ -237,6 +240,23 @@ describe('ders alanı (öğrenci)', () => {
     expect(await screen.findByRole('heading', { name: 'For döngüsü' })).toBeInTheDocument()
     expect(screen.getByText('Sayaçla tekrar.')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /COM1007-1/ })).toHaveAttribute('href', '/derslerim/s1')
+  })
+})
+
+describe('ilerleme', () => {
+  it('öğrenci ilerlemesini ve tamamladığı etkinlikleri görür', async () => {
+    const data = space({ progress: { completed: 2, total: 5 } })
+    data.topics[0]!.activities[0]!.completed = true
+    setup('/derslerim/s1', data)
+    const card = (await screen.findByText('İlerlemem')).closest('[data-slot=card]') as HTMLElement
+    expect(within(card).getByText('%40')).toBeInTheDocument()
+    expect(within(card).getByText('2 / 5 etkinlik tamamlandı')).toBeInTheDocument()
+    expect(within(card).getByRole('meter', { name: 'İlerlemem' })).toBeInTheDocument()
+    const resource = screen.getByRole('button', { name: /Ders izlencesi/ })
+    expect(within(resource).getByLabelText('Tamamlandı')).toBeInTheDocument()
+    expect(
+      within(screen.getByRole('button', { name: /Go turu/ })).queryByLabelText('Tamamlandı'),
+    ).not.toBeInTheDocument()
   })
 })
 

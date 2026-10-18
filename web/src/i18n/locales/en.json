@@ -2188,7 +2188,13 @@
       "readOnlyHint": "You cannot reply to this topic.",
       "description": "Forum description",
       "studentsCanStart": "Students can start topics"
-    }
+    },
+    "progress": {
+      "title": "My progress",
+      "summary": "{{completed}} of {{total}} activities completed",
+      "percent": "{{percent}}% completed"
+    },
+    "completed": "Completed"
   },
   "richText": {
     "toolbar": "Formatting",

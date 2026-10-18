@@ -1126,6 +1126,13 @@ const injectedRtkApi = api
         }),
         invalidatesTags: ['Forum'],
       }),
+      markActivityViewed: build.mutation<MarkActivityViewedApiResponse, MarkActivityViewedApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/activities/${queryArg.id}/views`,
+          method: 'POST',
+        }),
+        invalidatesTags: ['Ders alan\u0131'],
+      }),
       searchInstructors: build.query<SearchInstructorsApiResponse, SearchInstructorsApiArg>({
         query: (queryArg) => ({
           url: `/api/v1/instructors`,
@@ -2839,6 +2846,11 @@ export type DeleteForumPostApiArg = {
   /** Geçerli bir UUID değilse 404 döner. */
   id: string
 }
+export type MarkActivityViewedApiResponse = unknown
+export type MarkActivityViewedApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
 export type SearchInstructorsApiResponse = /** status 200 Liste */ {
   items: StaffSummary[]
 }
@@ -4332,6 +4344,10 @@ export type SpaceInstructor = {
   email: string
   role: 'PRIMARY' | 'CO_INSTRUCTOR' | 'ASSISTANT'
 }
+export type SpaceProgress = {
+  completed: number
+  total: number
+}
 export type SpaceSummary = {
   section_id: string
   section_code: string
@@ -4344,6 +4360,8 @@ export type SpaceSummary = {
   instructors: SpaceInstructor[]
   /** Görünür etkinlik sayısı */
   activities: number
+  /** Öğrencinin ilerlemesi (diğer rollerde null) */
+  progress: null | SpaceProgress
 }
 export type Availability = 'OPEN' | 'NOT_YET' | 'CLOSED'
 export type ActivityType = 'RESOURCE' | 'FOLDER' | 'URL' | 'PAGE' | 'LABEL' | 'ASSIGNMENT' | 'FORUM'
@@ -4400,6 +4418,8 @@ export type Activity = {
   assignment: null | AssignmentSettings
   /** Forumda türü, ayarı, konu sayısı ve son gönderi */
   forum: null | ForumInfo
+  /** Öğrenci tamamladı (öğrenci görünümünde; diğerlerinde false) */
+  completed: boolean
 }
 export type Topic = {
   id: string
@@ -4427,6 +4447,8 @@ export type Space = {
   summary_html: string
   instructors: SpaceInstructor[]
   topics: Topic[]
+  /** Öğrencinin ilerlemesi (diğer rollerde null) */
+  progress: null | SpaceProgress
 }
 export type TopicInput = {
   title: string
@@ -5931,6 +5953,7 @@ export const {
   useReplyForumThreadMutation,
   useEditForumPostMutation,
   useDeleteForumPostMutation,
+  useMarkActivityViewedMutation,
   useSearchInstructorsQuery,
   useLazySearchInstructorsQuery,
   useListAssessmentTypesQuery,

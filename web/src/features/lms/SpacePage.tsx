@@ -1,6 +1,7 @@
 import {
   ArrowDownIcon,
   ArrowLeftIcon,
+  CircleCheckIcon,
   ArrowUpIcon,
   DownloadIcon,
   EllipsisVerticalIcon,
@@ -15,6 +16,7 @@ import {
   PencilRulerIcon,
   PlusIcon,
   Trash2Icon,
+  TrophyIcon,
   UsersRoundIcon,
 } from 'lucide-react'
 import { lazy, Suspense, useState, type ReactNode } from 'react'
@@ -33,6 +35,7 @@ import {
   useDeleteActivityMutation,
   useDeleteTopicMutation,
   useGetSpaceQuery,
+  useMarkActivityViewedMutation,
   useSetSpaceLayoutMutation,
   useSetSpaceSummaryMutation,
   useUpdateActivityMutation,
@@ -56,6 +59,7 @@ import {
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu'
 import { IconChip } from '@/shared/ui/icon-chip'
+import { Meter } from '@/shared/ui/meter'
 import { PageHeader } from '@/shared/ui/page-header'
 import { RichText } from '@/shared/ui/rich-text'
 import { Skeleton } from '@/shared/ui/skeleton'
@@ -89,7 +93,8 @@ export function SpacePage() {
   const localized = useLocalized()
   const message = useErrorMessage()
   const dispatch = useAppDispatch()
-  const { data: space, error, refetch } = useGetSpaceQuery({ id })
+  // Etkinlikten dönünce tamamlamalar güncel görünsün.
+  const { data: space, error, refetch } = useGetSpaceQuery({ id }, { refetchOnMountOrArgChange: true })
   const [editMode, setEditMode] = useState(false)
   const [editing, setEditing] = useState<Editing | null>(null)
   const [setSummary] = useSetSpaceSummaryMutation()
@@ -248,6 +253,31 @@ export function SpacePage() {
         </div>
 
         <aside className="space-y-4">
+          {space.progress && space.progress.total > 0 && (
+            <Card>
+              <CardHeader className="flex items-center gap-3">
+                <IconChip icon={TrophyIcon} tone="emerald" />
+                <CardTitle className="flex-1">{t('lms.progress.title')}</CardTitle>
+                <span className="text-lg font-extrabold text-emerald-600 tabular-nums dark:text-emerald-400">
+                  %{Math.round((space.progress.completed / space.progress.total) * 100)}
+                </span>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Meter
+                  value={space.progress.completed}
+                  max={space.progress.total}
+                  tone="emerald"
+                  label={t('lms.progress.title')}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t('lms.progress.summary', {
+                    completed: space.progress.completed,
+                    total: space.progress.total,
+                  })}
+                </p>
+              </CardContent>
+            </Card>
+          )}
           <Card>
             <CardHeader className="flex items-center gap-3">
               <IconChip icon={InfoIcon} tone="sky" />
@@ -596,6 +626,7 @@ function ActivityRow({
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const download = useDownload()
+  const [markViewed] = useMarkActivityViewedMutation()
   const locale = i18n.language.startsWith('en') ? 'en-GB' : 'tr-TR'
   const meta = activityMeta[a.type]
   const open = a.availability === 'OPEN' || editable
@@ -667,6 +698,10 @@ function ActivityRow({
       return
     }
     if (a.type === 'URL' && a.url) {
+      // Öğrencinin açtığı bağlantı tamamlanır (öğretim elemanında sunucu bir şey yapmaz).
+      if (!editable) {
+        void markViewed({ id: a.id })
+      }
       if (a.open_in_new_tab) {
         window.open(a.url, '_blank', 'noopener,noreferrer')
       } else {
@@ -696,6 +731,12 @@ function ActivityRow({
           <span className="block truncate font-semibold">{a.title}</span>
           <span className="block truncate text-xs text-muted-foreground">{detail}</span>
         </span>
+        {a.completed && (
+          <CircleCheckIcon
+            className="size-5 shrink-0 text-emerald-600 dark:text-emerald-400"
+            aria-label={t('lms.completed')}
+          />
+        )}
         {ActionIcon && open && <ActionIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />}
       </button>
       <AvailabilityBadges item={a} />

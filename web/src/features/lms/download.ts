@@ -17,12 +17,12 @@ export function useSignedDownload() {
   }
 }
 
-/** useDownload, etkinliğin dosyasını indirir. */
+/** useDownload, etkinliğin dosyasını indirir; öğrencinin indirdiği dosya tamamlanır, ders alanı yenilenir. */
 export function useDownload() {
   const dispatch = useAppDispatch()
   const download = useSignedDownload()
-  return (activityId: string, fileId: string) =>
-    download(() =>
+  return async (activityId: string, fileId: string) => {
+    await download(() =>
       dispatch(
         agoraApi.endpoints.getActivityFileUrl.initiate(
           { id: activityId, fileId },
@@ -30,6 +30,8 @@ export function useDownload() {
         ),
       ).unwrap(),
     )
+    dispatch(agoraApi.util.invalidateTags(['Ders alanı']))
+  }
 }
 
 /**

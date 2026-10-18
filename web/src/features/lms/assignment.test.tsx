@@ -52,6 +52,7 @@ const assignment: Activity = {
   body_html: null,
   assignment: settings,
   forum: null,
+  completed: false,
 }
 
 const space = (role: Space['role']): Space => ({
@@ -68,6 +69,7 @@ const space = (role: Space['role']): Space => ({
   can_edit: role !== 'STUDENT',
   summary_html: '',
   instructors: [],
+  progress: null,
   topics: [
     {
       id: 'tp1',

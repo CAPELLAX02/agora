@@ -44,6 +44,7 @@ const forum: Activity = {
     threads: 2,
     last_post_at: '2026-10-17T09:00:00Z',
   },
+  completed: false,
 }
 
 const space = (role: Space['role']): Space => ({
@@ -60,6 +61,7 @@ const space = (role: Space['role']): Space => ({
   can_edit: role !== 'STUDENT',
   summary_html: '',
   instructors: [],
+  progress: null,
   topics: [
     {
       id: 'tp1',

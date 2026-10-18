@@ -4262,6 +4262,24 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/v1/activities/{id}/views:
+    post:
+      tags: [Ders alanı]
+      summary: Etkinliğin açıldığını kaydeder
+      description: >-
+        Öğrencinin ders alanından açtığı etkinlik (ör. yeni sekmede açılan bağlantı) tamamlanır;
+        görüntülenince tamamlanmayan türlerde (ödev, dosya, etiket) ve diğer rollerde bir şey olmaz.
+      operationId: markActivityViewed
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "204": { description: Kaydedildi }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/v1/instructors:
     get:
       tags: [Ders açma]
@@ -8947,7 +8965,7 @@ components:
 
     SpaceSummary:
       type: object
-      required: [section_id, section_code, course, term, role, instructors, activities]
+      required: [section_id, section_code, course, term, role, instructors, activities, progress]
       properties:
         section_id: { type: string, format: uuid }
         section_code: { type: string }
@@ -8961,10 +8979,15 @@ components:
         role: { $ref: "#/components/schemas/SpaceRole" }
         instructors: { type: array, items: { $ref: "#/components/schemas/SpaceInstructor" } }
         activities: { type: integer, description: Görünür etkinlik sayısı }
+        progress:
+          description: Öğrencinin ilerlemesi (diğer rollerde null)
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/SpaceProgress"
 
     Space:
       type: object
-      required: [section_id, section_code, course, term, role, can_edit, summary_html, instructors, topics]
+      required: [section_id, section_code, course, term, role, can_edit, summary_html, instructors, topics, progress]
       properties:
         section_id: { type: string, format: uuid }
         section_code: { type: string }
@@ -8980,6 +9003,11 @@ components:
         summary_html: { type: string }
         instructors: { type: array, items: { $ref: "#/components/schemas/SpaceInstructor" } }
         topics: { type: array, items: { $ref: "#/components/schemas/Topic" } }
+        progress:
+          description: Öğrencinin ilerlemesi (diğer rollerde null)
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/SpaceProgress"
 
     Topic:
       type: object
@@ -9002,7 +9030,7 @@ components:
     Activity:
       type: object
       required: [id, topic_id, type, title, description_html, is_visible, availability, available_from, available_until,
-                 version, updated_at, files, url, open_in_new_tab, body_html, assignment, forum]
+                 version, updated_at, files, url, open_in_new_tab, body_html, assignment, forum, completed]
       properties:
         id: { type: string, format: uuid }
         topic_id: { type: string, format: uuid }
@@ -9038,6 +9066,7 @@ components:
           oneOf:
             - type: "null"
             - $ref: "#/components/schemas/ForumInfo"
+        completed: { type: boolean, description: "Öğrenci tamamladı (öğrenci görünümünde; diğerlerinde false)" }
 
     TopicInput:
       type: object
@@ -9267,6 +9296,16 @@ components:
             - type: "null"
             - $ref: "#/components/schemas/AssignmentGrade"
         comments: { type: array, items: { $ref: "#/components/schemas/SubmissionComment" } }
+
+    SpaceProgress:
+      type: object
+      required: [completed, total]
+      description: >-
+        Görünür etkinliklerden (etiket hariç) tamamlananlar. Sayfa, klasör, forum ve bağlantı
+        görüntülenince, dosya indirilince, ödev gönderilince tamamlanır.
+      properties:
+        completed: { type: integer }
+        total: { type: integer }
 
     ForumInfo:
       type: object
