@@ -4061,8 +4061,8 @@ export type Announcement = {
   created_at: string
   updated_at: string
   version: number
-  /** Akışta: okuduğum an */
-  read_at?: string | null
+  /** Akışta okuduğum an (diğer yanıtlarda boş) */
+  read_at: string | null
   can_manage: boolean
   /** Yönetene; hedef kitle büyüklüğü sadece ayrıntıda */
   stats?: {

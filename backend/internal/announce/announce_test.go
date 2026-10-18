@@ -267,6 +267,17 @@ func TestAnnouncementLifecycle(t *testing.T) {
 	if got := s.notes(fx.ali); len(got) != 1 {
 		t.Errorf("düzenleme yeniden bildirmemeli: %v", got)
 	}
+	// Hedef kitlede olsa da yazar kendi duyurusunun bildirimini almaz.
+	if _, err := s.pool.Exec(context.Background(), `
+		INSERT INTO people.staff (person_id, staff_no, staff_type, primary_department_id)
+		SELECT person_id, 'P9101', 'ADMINISTRATIVE', $2 FROM iam.users WHERE id = $1`, fx.head, fx.bil); err != nil {
+		t.Fatal(err)
+	}
+	own := s.do("POST", "/api/v1/announcements", fx.head, map[string]any{"title": "Kendi duyurum", "type": "GENERAL", "publish": true,
+		"audiences": []any{audience("DEPARTMENT", fx.bil, "STAFF")}})
+	if own.status != 201 || len(s.notes(fx.head)) != 0 || len(s.notes(fx.bilStaff)) != 2 {
+		t.Errorf("yazarın bildirimi: %d %v %v", own.status, s.notes(fx.head), s.notes(fx.bilStaff))
+	}
 	if res := s.do("PUT", path, fx.head, body, "If-Match", `"2"`); res.status != 412 {
 		t.Errorf("eski sürüm: %d", res.status)
 	}
@@ -279,7 +290,7 @@ func TestAnnouncementLifecycle(t *testing.T) {
 		}
 		return len(res.body["items"].([]any))
 	}
-	if count(fx.head) != 1 || count(fx.dean) != 1 || count(fx.central) != 1 {
+	if count(fx.head) != 2 || count(fx.dean) != 2 || count(fx.central) != 2 {
 		t.Errorf("yönetim listeleri: %d %d %d", count(fx.head), count(fx.dean), count(fx.central))
 	}
 	if res := s.do("GET", "/api/v1/announcements", fx.other, nil); res.status != 403 {
@@ -387,5 +398,22 @@ func TestTargets(t *testing.T) {
 	}
 	if res := s.do("GET", "/api/v1/announcement-targets", fx.central, nil); res.body["university"] != true {
 		t.Errorf("merkez: %s", res.raw)
+	}
+}
+
+// Uygulamanın saati veritabanınınkinden ileride olsa da hemen yayımlanan duyuru hemen bildirilir:
+// başlangıç verilmemişse veritabanı zamanı yazılır.
+func TestPublishNowIgnoresClockSkew(t *testing.T) {
+	pool := dbtest.New(t)
+	fx := seed(t, pool)
+	svc := announce.NewService(pool, func() time.Time { return time.Now().Add(time.Minute) })
+	id, err := svc.Create(context.Background(), fx.head, announce.Input{Title: "Toplantı", Type: announce.TypeGeneral,
+		Audiences: []announce.Audience{{ScopeType: announce.ScopeDepartment, ScopeID: fx.bil, People: announce.PeopleAll}}}, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a, err := svc.Get(context.Background(), id)
+	if err != nil || a.NotifiedAt == nil {
+		t.Fatalf("hemen bildirilmeli: %+v %v", a.NotifiedAt, err)
 	}
 }

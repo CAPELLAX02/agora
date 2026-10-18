@@ -74,7 +74,7 @@ type announcementResponse struct {
 	CreatedAt    time.Time     `json:"created_at"`
 	UpdatedAt    time.Time     `json:"updated_at"`
 	Version      int           `json:"version"`
-	ReadAt       *time.Time    `json:"read_at,omitempty"`
+	ReadAt       *time.Time    `json:"read_at"` // isteği yapanın okuduğu an (akışta)
 	CanManage    bool          `json:"can_manage"`
 	Stats        *statsDTO     `json:"stats,omitempty"`
 }

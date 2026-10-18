@@ -8087,7 +8087,7 @@ components:
     Announcement:
       type: object
       required: [id, title, summary, body_html, type, publish_from, publish_until, is_pinned, status, author, audiences,
-                 notified_at, created_at, updated_at, version, can_manage]
+                 notified_at, created_at, updated_at, version, read_at, can_manage]
       properties:
         id: { type: string, format: uuid }
         title: { type: string }
@@ -8109,7 +8109,7 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         version: { type: integer }
-        read_at: { type: [string, "null"], format: date-time, description: "Akışta: okuduğum an" }
+        read_at: { type: [string, "null"], format: date-time, description: "Akışta okuduğum an (diğer yanıtlarda boş)" }
         can_manage: { type: boolean }
         stats:
           type: object

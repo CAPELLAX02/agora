@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -113,20 +114,18 @@ func (s *Service) Create(ctx context.Context, actorID string, in Input, publish 
 	if err := in.validate(); err != nil {
 		return "", err
 	}
-	from := s.now()
-	if in.PublishFrom != nil {
-		from = *in.PublishFrom
-	}
-	if in.PublishUntil != nil && !in.PublishUntil.After(from) {
-		return "", &ValidationError{"publish_until", "Yayın bitişi başlangıçtan sonra olmalı."}
+	if err := s.checkWindow(in); err != nil {
+		return "", err
 	}
 	var id string
 	err := db.InTx(ctx, s.pool, func(tx pgx.Tx) error {
+		// Başlangıç verilmemişse veritabanının zamanı: yayının başlayıp başlamadığı da veritabanı
+		// saatiyle denetlenir (uygulama ile veritabanı saatleri arasındaki fark bildirimi geciktirmesin).
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO communication.announcements (title, summary, body_html, announcement_type, publish_from, publish_until,
 			                                         is_pinned, author_id)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-			in.Title, in.Summary, in.Body, in.Type, from, in.PublishUntil, in.Pinned, actorID).Scan(&id); err != nil {
+			VALUES ($1, $2, $3, $4, coalesce($5::timestamptz, now()), $6, $7, $8) RETURNING id`,
+			in.Title, in.Summary, in.Body, in.Type, in.PublishFrom, in.PublishUntil, in.Pinned, actorID).Scan(&id); err != nil {
 			return fmt.Errorf("announce: duyuru yazılamadı: %w", err)
 		}
 		if err := writeAudiences(ctx, tx, id, in.Audiences); err != nil {
@@ -142,6 +141,18 @@ func (s *Service) Create(ctx context.Context, actorID string, in Input, publish 
 		return nil
 	})
 	return id, err
+}
+
+// checkWindow, yayın bitişinin başlangıçtan (verilmemişse şimdiden) sonra olduğunu denetler.
+func (s *Service) checkWindow(in Input) error {
+	from := s.now()
+	if in.PublishFrom != nil {
+		from = *in.PublishFrom
+	}
+	if in.PublishUntil != nil && !in.PublishUntil.After(from) {
+		return &ValidationError{"publish_until", "Yayın bitişi başlangıçtan sonra olmalı."}
+	}
+	return nil
 }
 
 // lock, duyuruyu sürümüyle kilitler ve durumunu döndürür.
@@ -174,18 +185,14 @@ func (s *Service) Update(ctx context.Context, actorID, id string, version int, i
 		if status == StatusArchived {
 			return ErrInvalidState
 		}
-		from := s.now()
-		if in.PublishFrom != nil {
-			from = *in.PublishFrom
-		}
-		if in.PublishUntil != nil && !in.PublishUntil.After(from) {
-			return &ValidationError{"publish_until", "Yayın bitişi başlangıçtan sonra olmalı."}
+		if err := s.checkWindow(in); err != nil {
+			return err
 		}
 		if _, err := tx.Exec(ctx, `
 			UPDATE communication.announcements
-			SET title = $2, summary = $3, body_html = $4, announcement_type = $5, publish_from = $6, publish_until = $7,
-			    is_pinned = $8, version = version + 1, updated_at = now()
-			WHERE id = $1`, id, in.Title, in.Summary, in.Body, in.Type, from, in.PublishUntil, in.Pinned); err != nil {
+			SET title = $2, summary = $3, body_html = $4, announcement_type = $5, publish_from = coalesce($6::timestamptz, now()),
+			    publish_until = $7, is_pinned = $8, version = version + 1, updated_at = now()
+			WHERE id = $1`, id, in.Title, in.Summary, in.Body, in.Type, in.PublishFrom, in.PublishUntil, in.Pinned); err != nil {
 			return fmt.Errorf("announce: duyuru güncellenemedi: %w", err)
 		}
 		if err := writeAudiences(ctx, tx, id, in.Audiences); err != nil {
@@ -403,14 +410,14 @@ func (s *Service) Stats(ctx context.Context, id string) (audience, reads int, er
 // notifyIfDue, yayını başlamış ve henüz bildirilmemiş duyuruyu hedef kitleye bildirir.
 func (s *Service) notifyIfDue(ctx context.Context, tx pgx.Tx, id string) error {
 	var (
-		title, summary, typ, author string
-		due                         bool
+		title, summary, typ, author, authorID string
+		due                                   bool
 	)
 	err := tx.QueryRow(ctx, `
-		SELECT an.title, an.summary, an.announcement_type, coalesce(p.first_name || ' ' || p.last_name, ''),
+		SELECT an.title, an.summary, an.announcement_type, coalesce(p.first_name || ' ' || p.last_name, ''), an.author_id,
 		       an.status = 'PUBLISHED' AND an.notified_at IS NULL AND an.publish_from <= now()
 		       AND (an.publish_until IS NULL OR an.publish_until > now())
-		`+joins+` WHERE an.id = $1`, id).Scan(&title, &summary, &typ, &author, &due)
+		`+joins+` WHERE an.id = $1`, id).Scan(&title, &summary, &typ, &author, &authorID, &due)
 	if err != nil {
 		return fmt.Errorf("announce: duyuru okunamadı: %w", err)
 	}
@@ -425,6 +432,7 @@ func (s *Service) notifyIfDue(ctx context.Context, tx pgx.Tx, id string) error {
 	if err != nil {
 		return fmt.Errorf("announce: hedef kitle okunamadı: %w", err)
 	}
+	users = slices.DeleteFunc(users, func(u string) bool { return u == authorID }) // yazar kendine bildirim almaz
 	kind := notify.AnnouncementPublished
 	if typ == TypeUrgent {
 		kind = notify.AnnouncementUrgent
