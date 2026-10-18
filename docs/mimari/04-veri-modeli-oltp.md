@@ -289,7 +289,7 @@ stateDiagram-v2
 | `pages` | activity_id PK, body_html | Faz 5'te uygulandı (temizlenmiş HTML) |
 | `assignments` | activity_id PK, opens_at, due_at, cutoff_at, max_attempts smallint (1-10), submission_types text[] (`FILE, ONLINE_TEXT`), max_files (1-20), max_file_size_bytes, allowed_extensions text[] (boşsa platformun izin listesi), max_score numeric(6,2), late_policy CK(`ALLOW, DENY, PENALTY`), late_penalty_pct_per_day, grades_released_at | Faz 5'te uygulandı. CK: opens < due ≤ cutoff. Teslim açılıştan, geç teslim kapalıysa son tarihe, açıksa kesin kapanışa kadar kabul edilir; PENALTY'de başlamış her geç gün için yüzde düşülür (en çok %100). Puanlar ödev bazında yayımlanır |
 | `quizzes` | activity_id PK, opens_at, closes_at, time_limit_seconds, max_attempts, grading_method CK(`HIGHEST, LAST, FIRST, AVERAGE`), shuffle_questions, shuffle_options, results_visibility CK(`IMMEDIATE, AFTER_CLOSE, NEVER`), max_score |
-| `forums` | activity_id PK, forum_kind CK(`ANNOUNCEMENTS, GENERAL, QNA`), students_can_start_threads, subscription_mode CK(`OPTIONAL, FORCED, DISABLED`) |
+| `forums` | activity_id PK, forum_kind CK(`ANNOUNCEMENTS, GENERAL`), students_can_start_threads | Faz 5'te uygulandı (soru-cevap türü ve abonelik Faz 6 ile). Duyurular forumu her ders alanında bir tane; öğrenciler orada konu açamaz (CK) |
 | `live_sessions` | activity_id PK, provider CK(`GOOGLE_MEET, ZOOM, BBB, TEAMS, OTHER`), join_url, starts_at, ends_at, recurrence_rule (RRULE), recording_url |
 
 ### Ödev teslimi
@@ -310,11 +310,11 @@ stateDiagram-v2
 | `quiz_answers` | id, attempt_id, question_id, question_version, response jsonb, is_correct, points_awarded, graded_by, feedback, answered_at | UQ(attempt_id, question_id) |
 
 ### Forum
-| Tablo | Sütunlar |
-| --- | --- |
-| `forum_threads` | id, forum_activity_id, author_id, title, is_pinned, is_locked, post_count, last_post_at, created_at |
-| `forum_posts` | id, thread_id, parent_post_id null, author_id, body_html, created_at, edited_at, deleted_at |
-| `forum_subscriptions` | forum_activity_id, user_id — PK |
+| Tablo | Sütunlar | Not |
+| --- | --- | --- |
+| `forum_threads` | id, activity_id FK→forums, author_id, title (1-200), is_pinned, is_locked, post_count, last_post_at, created_at, deleted_at | Faz 5'te uygulandı. Liste sırası (sabitlenen, son gönderi) için kısmi index |
+| `forum_posts` | id, thread_id, parent_post_id null, author_id, body_html, created_at, edited_at, deleted_at | Faz 5'te uygulandı. Silinen gönderi yerinde kalır (metni gösterilmez); ilk gönderi silinirse konu silinir |
+| `forum_subscriptions` | forum_activity_id, user_id — PK | Faz 6 (bildirimlerle) |
 
 ### Not defteri ↔ değerlendirme köprüsü (kritik entegrasyon)
 | Tablo | Sütunlar | Not |

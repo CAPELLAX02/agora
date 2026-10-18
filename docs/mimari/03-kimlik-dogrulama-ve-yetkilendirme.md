@@ -332,6 +332,15 @@ canSubmitAssignment(actor, assignment, now):                     # uygulandı (F
     # Taslak serbestçe düzenlenir, gönderilen deneme kilitlenir; yeni deneme deneme hakkı kadar.
     # Süresi geçen ödevde öğrenci teslimini, yayımlanmış puanını ve yorumları görmeye devam eder.
 
+canPostInForum(actor, forum, thread):                            # uygulandı (Faz 5)
+    canEditSpace(actor, forum.section)                               # öğretim elemanı her zaman
+    OR ( hasActiveEnrollment(actor, forum.section)
+         AND forum.kind = 'GENERAL'                                  # Duyurular'a öğrenci yazmaz
+         AND (thread IS NULL ? forum.students_can_start_threads      # konu açma
+                             : NOT thread.is_locked) )               # yanıt
+    # Gönderiyi yazarı ya da öğretim elemanı düzenler ve siler; sabitleme ve kilitleme öğretim
+    # elemanınındır; bölümü yöneten personel (izleyici) okur, yazamaz.
+
 canGradeAssignment(actor, assignment):                           # uygulandı (Faz 5)
     canEditSpace(actor, assignment.section)                          # asistan da puanlar
     # Teslim listesini şubenin bölümünü yöneten personel (section:manage) salt okunur görür.
