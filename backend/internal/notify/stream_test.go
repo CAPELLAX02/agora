@@ -134,6 +134,14 @@ func TestStream(t *testing.T) {
 		t.Errorf("kaçırılan bildirim: %+v", e)
 	}
 
+	// Yeni ileti "message" olayı olarak gelir (bildirim kaydı olmadan).
+	if err := notify.AnnounceMessages(context.Background(), pool, []string{ada}, "01a1511a-0000-7000-8000-000000000001"); err != nil {
+		t.Fatal(err)
+	}
+	if e := next(t, events); e.name != "message" || e.data["conversation_id"] != "01a1511a-0000-7000-8000-000000000001" || e.id != "" {
+		t.Errorf("ileti olayı: %+v", e)
+	}
+
 	// Kullanıcı başına akış sınırı.
 	for range notify.MaxStreamsPerUser {
 		openStream(t, ctx, url, can, "")

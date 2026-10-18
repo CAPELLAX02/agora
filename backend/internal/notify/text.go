@@ -155,6 +155,13 @@ var texts = map[Type]Text{
 		BodyTR:  "{{if .summary}}{{.summary}}{{else}}{{.author}} acil bir duyuru yayımladı.{{end}}",
 		BodyEN:  "{{if .summary}}{{.summary}}{{else}}{{.author}} posted an urgent announcement.{{end}}",
 	},
+	// Mesajlaşma. Veri: sender, conversation (grup adı; birebirde boş), preview.
+	MessageReceived: {
+		TitleTR: "{{.sender}} size ileti gönderdi",
+		TitleEN: "{{.sender}} sent you a message",
+		BodyTR:  "{{if .conversation}}{{.conversation}}: {{end}}{{.preview}}",
+		BodyEN:  "{{if .conversation}}{{.conversation}}: {{end}}{{.preview}}",
+	},
 }
 
 // compiled, şablonların derlenmiş hâlidir: [tür][alan]. Bozuk bir şablon uygulamanın hiç

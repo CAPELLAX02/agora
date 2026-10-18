@@ -46,6 +46,8 @@ const (
 
 	AnnouncementPublished Type = "announcement.published"
 	AnnouncementUrgent    Type = "announcement.urgent"
+
+	MessageReceived Type = "message.received"
 )
 
 // ErrNotFound: bildirim yok ya da başka bir kullanıcının.

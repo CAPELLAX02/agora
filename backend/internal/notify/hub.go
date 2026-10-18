@@ -3,17 +3,25 @@ package notify
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/CAPELLAX02/agora/backend/internal/platform/db"
 )
 
 // channel, yeni bildirimlerin duyurulduğu PostgreSQL kanalıdır. notify.Send, bildirimi yazdığı
 // transaction'da alıcı başına pg_notify çağırır: duyuru ancak commit edilince gider, yani
 // ayrı bir "commit sonrası" adımı gerekmez. API'nin her kopyası kanalı dinler.
 const channel = "agora_notifications"
+
+// messageChannel, yeni iletilerin duyurulduğu kanaldır: veri "kullanıcı:konuşma". Akış bunu
+// "message" olayı olarak iletir; istemci konuşmayı tazeler (iletiler bildirim merkezine girmez).
+const messageChannel = "agora_messages"
 
 // MaxStreamsPerUser, bir kullanıcının aynı anda açabileceği canlı akış sayısıdır (sekmeler).
 const MaxStreamsPerUser = 5
@@ -29,7 +37,7 @@ type Hub struct {
 	logger *slog.Logger
 
 	mu    sync.Mutex
-	subs  map[string]map[chan struct{}]struct{} // kullanıcı → akışların sinyal kanalları
+	subs  map[string]map[*subscription]struct{} // kullanıcı → açık akışlar
 	count int
 
 	done      chan struct{}
@@ -38,7 +46,7 @@ type Hub struct {
 
 // NewHub, bir Hub oluşturur; dinlemek için Run çağrılmalı.
 func NewHub(pool *pgxpool.Pool, logger *slog.Logger) *Hub {
-	return &Hub{pool: pool, logger: logger, subs: map[string]map[chan struct{}]struct{}{}, done: make(chan struct{})}
+	return &Hub{pool: pool, logger: logger, subs: map[string]map[*subscription]struct{}{}, done: make(chan struct{})}
 }
 
 // Run, kanalı ctx iptal edilene ya da Close çağrılana kadar dinler. Bağlantı koparsa üstel
@@ -77,7 +85,7 @@ func (h *Hub) listen(ctx context.Context) error {
 	// Bağlantı LISTEN durumunda kalacağı için havuzdan alınır ve iş bitince kapatılır.
 	conn := pooled.Hijack()
 	defer conn.Close(context.Background())
-	if _, err := conn.Exec(ctx, "LISTEN "+channel); err != nil {
+	if _, err := conn.Exec(ctx, "LISTEN "+channel+"; LISTEN "+messageChannel); err != nil {
 		return err
 	}
 	// Dinleme başlamadan (ya da bağlantı kopukken) gelen duyurular kaçmış olabilir: açık akışlar
@@ -88,30 +96,42 @@ func (h *Hub) listen(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		if n.Channel == messageChannel {
+			if user, conversation, ok := strings.Cut(n.Payload, ":"); ok {
+				h.message(user, conversation)
+			}
+			continue
+		}
 		h.wake(n.Payload)
 	}
 }
 
-// subscribe, kullanıcı için bir sinyal kanalı açar; bırakmak için dönen fonksiyon çağrılır.
-func (h *Hub) subscribe(userID string) (<-chan struct{}, func(), error) {
+// subscription, bir açık akıştır: bildirim sinyali (birleşir) ve yeni ileti olan konuşmalar.
+type subscription struct {
+	notify   chan struct{}
+	messages chan string
+}
+
+// subscribe, kullanıcı için bir akış aboneliği açar; bırakmak için dönen fonksiyon çağrılır.
+func (h *Hub) subscribe(userID string) (*subscription, func(), error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if len(h.subs[userID]) >= MaxStreamsPerUser {
 		return nil, nil, ErrTooManyStreams
 	}
-	ch := make(chan struct{}, 1)
+	sub := &subscription{notify: make(chan struct{}, 1), messages: make(chan string, 16)}
 	if h.subs[userID] == nil {
-		h.subs[userID] = map[chan struct{}]struct{}{}
+		h.subs[userID] = map[*subscription]struct{}{}
 	}
-	h.subs[userID][ch] = struct{}{}
+	h.subs[userID][sub] = struct{}{}
 	h.count++
-	return ch, func() {
+	return sub, func() {
 		h.mu.Lock()
 		defer h.mu.Unlock()
-		if _, ok := h.subs[userID][ch]; !ok {
+		if _, ok := h.subs[userID][sub]; !ok {
 			return
 		}
-		delete(h.subs[userID], ch)
+		delete(h.subs[userID], sub)
 		if len(h.subs[userID]) == 0 {
 			delete(h.subs, userID)
 		}
@@ -123,9 +143,22 @@ func (h *Hub) subscribe(userID string) (<-chan struct{}, func(), error) {
 func (h *Hub) wake(userID string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	for ch := range h.subs[userID] {
+	for sub := range h.subs[userID] {
 		select {
-		case ch <- struct{}{}:
+		case sub.notify <- struct{}{}:
+		default:
+		}
+	}
+}
+
+// message, kullanıcının akışlarına konuşmada yeni ileti olduğunu iletir. Kuyruk doluysa düşer:
+// istemci zaten konuşmaları tazeler.
+func (h *Hub) message(userID, conversationID string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	for sub := range h.subs[userID] {
+		select {
+		case sub.messages <- conversationID:
 		default:
 		}
 	}
@@ -158,4 +191,17 @@ func (h *Hub) Done() <-chan struct{} {
 // Close, dinlemeyi bırakır ve açık akışları kapatır (sunucu kapanırken). Tekrarı zararsızdır.
 func (h *Hub) Close() {
 	h.closeOnce.Do(func() { close(h.done) })
+}
+
+// AnnounceMessages, konuşmadaki yeni iletiyi alıcıların açık akışlarına duyurur; çağıranın
+// transaction'ında çağrılır, PostgreSQL commit edilince iletir.
+func AnnounceMessages(ctx context.Context, q db.Querier, userIDs []string, conversationID string) error {
+	if len(userIDs) == 0 {
+		return nil
+	}
+	if _, err := q.Exec(ctx, `SELECT pg_notify('`+messageChannel+`', u || ':' || $2) FROM unnest($1::text[]) AS u`,
+		userIDs, conversationID); err != nil {
+		return fmt.Errorf("notify: ileti duyurulamadı: %w", err)
+	}
+	return nil
 }

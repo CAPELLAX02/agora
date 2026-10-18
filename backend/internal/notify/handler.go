@@ -48,7 +48,7 @@ func (h *Handler) stream(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	wake, release, err := h.hub.subscribe(user)
+	sub, release, err := h.hub.subscribe(user)
 	if errors.Is(err, ErrTooManyStreams) {
 		_ = httpx.WriteProblem(w, r, httpx.Problem{Status: http.StatusTooManyRequests, Code: "TOO_MANY_STREAMS",
 			Detail: "Çok sayıda açık bildirim akışınız var; bazı sekmeleri kapatın."})
@@ -105,8 +105,13 @@ func (h *Handler) stream(w http.ResponseWriter, r *http.Request) {
 			return
 		case <-h.hub.Done():
 			return
-		case <-wake:
+		case <-sub.notify:
 			if !send() {
+				return
+			}
+		case conversation := <-sub.messages:
+			data, _ := json.Marshal(map[string]string{"conversation_id": conversation})
+			if !write("event: message\ndata: " + string(data) + "\n\n") {
 				return
 			}
 		case <-ticker.C:
