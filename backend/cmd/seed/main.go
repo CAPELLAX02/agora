@@ -265,6 +265,9 @@ func run() error {
 	if err := seedDemoScores(ctx, pool, *seed); err != nil {
 		return fmt.Errorf("not girişi demosu: %w", err)
 	}
+	if err := seedSpaceDemo(ctx, pool, cfg); err != nil {
+		return fmt.Errorf("ders alanı demosu: %w", err)
+	}
 
 	fmt.Printf("\nTüm seed kullanıcılarının parolası: %s\n", plain)
 	return nil
