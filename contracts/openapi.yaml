@@ -792,6 +792,43 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
+  /api/v1/me/notifications/stream:
+    get:
+      tags: [Bildirimler]
+      summary: Canlı bildirim akışı (Server-Sent Events)
+      description: >-
+        Açık kaldığı sürece her yeni bildirim `notification` olayı olarak gönderilir: `id` bildirimin
+        kimliği, `data` `Notification` JSON'u. Yeniden bağlanırken `Last-Event-ID` başlığıyla o
+        kimlikten sonraki (arşivlenmemiş) bildirimler hemen gönderilir; başlık yoksa geçmiş
+        gönderilmez (listeden okunur). Boşta 25 saniyede bir yorum satırı (`: ping`) gelir.
+        Kimlik diğer uçlar gibi `Authorization` başlığıyla doğrulanır (tarayıcıda EventSource
+        değil fetch akışı); adrese token yazılmaz. Kullanıcı başına en çok 5 açık akış.
+      operationId: streamMyNotifications
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: Last-Event-ID
+          in: header
+          description: Son alınan bildirimin kimliği
+          schema: { type: integer, format: int64 }
+      responses:
+        "200":
+          description: Olay akışı
+          content:
+            text/event-stream:
+              schema: { type: string }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429":
+          description: "`TOO_MANY_STREAMS`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "503":
+          description: "`STREAM_UNAVAILABLE`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
   /api/v1/me/notifications/unread-count:
     get:
       tags: [Bildirimler]

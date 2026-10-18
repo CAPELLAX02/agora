@@ -58,30 +58,41 @@ func (c *Center) List(ctx context.Context, f ListFilter) (items []Item, hasMore 
 	if err != nil {
 		return nil, false, fmt.Errorf("notify: bildirimler okunamadı: %w", err)
 	}
-	var (
-		it             Item
-		typ            string
-		nameTR, nameEN string
-		payload        []byte
-	)
-	_, err = pgx.ForEachRow(rows, []any{&it.ID, &it.CreatedAt, &typ, &it.Category, &nameTR, &nameEN, &payload,
-		&it.Link, &it.ReadAt, &it.ArchivedAt}, func() error {
-		it.Type = Type(typ)
-		var data map[string]any
-		if err := json.Unmarshal(payload, &data); err != nil {
-			return fmt.Errorf("notify: bildirim %d verisi: %w", it.ID, err)
-		}
-		it.Text = Render(it.Type, data, Text{TitleTR: nameTR, TitleEN: nameEN})
-		items = append(items, it)
-		return nil
-	})
+	items, err = scanItems(rows)
 	if err != nil {
-		return nil, false, fmt.Errorf("notify: bildirimler okunamadı: %w", err)
+		return nil, false, err
 	}
 	if len(items) > f.Limit {
 		return items[:f.Limit], true, nil
 	}
 	return items, false, nil
+}
+
+// Since, kullanıcının after kimliğinden sonraki (arşivlenmemiş) bildirimleridir, eskiden yeniye;
+// canlı akış kaçırılanları bununla gönderir.
+func (c *Center) Since(ctx context.Context, userID string, after int64, limit int) ([]Item, error) {
+	rows, err := c.pool.Query(ctx, `
+		SELECT n.id, n.created_at, n.type_code, t.category, t.name_tr, t.name_en, n.payload,
+		       coalesce(n.link_path, ''), n.read_at, n.archived_at
+		FROM communication.notifications n
+		JOIN communication.notification_types t ON t.code = n.type_code
+		WHERE n.user_id = $1 AND n.id > $2 AND n.archived_at IS NULL
+		ORDER BY n.id
+		LIMIT $3`, userID, after, limit)
+	if err != nil {
+		return nil, fmt.Errorf("notify: bildirimler okunamadı: %w", err)
+	}
+	return scanItems(rows)
+}
+
+// LastID, kullanıcının en son bildiriminin kimliğidir (yoksa 0).
+func (c *Center) LastID(ctx context.Context, userID string) (int64, error) {
+	var id int64
+	if err := c.pool.QueryRow(ctx, `
+		SELECT coalesce(max(id), 0) FROM communication.notifications WHERE user_id = $1`, userID).Scan(&id); err != nil {
+		return 0, fmt.Errorf("notify: son bildirim okunamadı: %w", err)
+	}
+	return id, nil
 }
 
 // UnreadCount, kullanıcının okunmamış (ve arşivlenmemiş) bildirim sayısıdır.
@@ -131,4 +142,30 @@ func (c *Center) MarkAllRead(ctx context.Context, userID string) (int, error) {
 		return 0, fmt.Errorf("notify: bildirimler okundu yapılamadı: %w", err)
 	}
 	return int(tag.RowsAffected()), nil
+}
+
+// scanItems, bildirim satırlarını okur ve metinlerini şablondan üretir.
+func scanItems(rows pgx.Rows) ([]Item, error) {
+	var (
+		items          []Item
+		it             Item
+		typ            string
+		nameTR, nameEN string
+		payload        []byte
+	)
+	_, err := pgx.ForEachRow(rows, []any{&it.ID, &it.CreatedAt, &typ, &it.Category, &nameTR, &nameEN, &payload,
+		&it.Link, &it.ReadAt, &it.ArchivedAt}, func() error {
+		it.Type = Type(typ)
+		var data map[string]any
+		if err := json.Unmarshal(payload, &data); err != nil {
+			return fmt.Errorf("notify: bildirim %d verisi: %w", it.ID, err)
+		}
+		it.Text = Render(it.Type, data, Text{TitleTR: nameTR, TitleEN: nameEN})
+		items = append(items, it)
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("notify: bildirimler okunamadı: %w", err)
+	}
+	return items, nil
 }

@@ -2,7 +2,9 @@ package notify
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -16,18 +18,110 @@ import (
 // Handler, bildirim merkezinin HTTP uçlarıdır. Herkes sadece kendi bildirimlerini görür.
 type Handler struct {
 	center *Center
+	hub    *Hub // canlı akış; nil ise akış ucu 503
 	logger *slog.Logger
 }
 
 // NewHandler, bir Handler oluşturur.
-func NewHandler(center *Center, logger *slog.Logger) *Handler {
-	return &Handler{center: center, logger: logger}
+func NewHandler(center *Center, hub *Hub, logger *slog.Logger) *Handler {
+	return &Handler{center: center, hub: hub, logger: logger}
+}
+
+// heartbeat, akış boşta kalınca gönderilen yorum satırının aralığıdır: ara sunucular (proxy)
+// bağlantıyı boşta sanıp kapatmasın.
+const heartbeat = 25 * time.Second
+
+// stream, canlı bildirim akışıdır (Server-Sent Events). Her yeni bildirim "notification"
+// olayı olarak, kimliğiyle gönderilir; istemci yeniden bağlanırken Last-Event-ID ile kaçırdıklarını
+// alır. İlk bağlantıda geçmiş gönderilmez (listeden okunur). Kimlik, diğer uçlar gibi
+// Authorization başlığıyla doğrulanır (tarayıcıda fetch akışı): adrese token yazılmaz.
+func (h *Handler) stream(w http.ResponseWriter, r *http.Request) {
+	if h.hub == nil {
+		_ = httpx.WriteProblem(w, r, httpx.Problem{Status: http.StatusServiceUnavailable, Code: "STREAM_UNAVAILABLE",
+			Detail: "Canlı bildirim akışı şu anda kullanılamıyor."})
+		return
+	}
+	user := userID(r)
+	last, err := strconv.ParseInt(r.Header.Get("Last-Event-ID"), 10, 64)
+	if err != nil || last < 0 {
+		if last, err = h.center.LastID(r.Context(), user); h.failed(w, r, err) {
+			return
+		}
+	}
+	wake, release, err := h.hub.subscribe(user)
+	if errors.Is(err, ErrTooManyStreams) {
+		_ = httpx.WriteProblem(w, r, httpx.Problem{Status: http.StatusTooManyRequests, Code: "TOO_MANY_STREAMS",
+			Detail: "Çok sayıda açık bildirim akışınız var; bazı sekmeleri kapatın."})
+		return
+	}
+	defer release()
+
+	// Akış uzun yaşar: sunucunun yazma zaman aşımı bu istek için kaldırılır.
+	rc := http.NewResponseController(w)
+	if err := rc.SetWriteDeadline(time.Time{}); err != nil {
+		h.logger.Warn("akışın yazma süresi kaldırılamadı", "err", err)
+	}
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("X-Accel-Buffering", "no") // nginx tamponlamasın
+	w.WriteHeader(http.StatusOK)
+	write := func(s string) bool {
+		if _, err := io.WriteString(w, s); err != nil {
+			return false
+		}
+		return rc.Flush() == nil
+	}
+	if !write("retry: 5000\n: bağlandı\n\n") {
+		return
+	}
+	// Bağlantıdan önce yazılmış ama Last-Event-ID'den sonraki bildirimler hemen gönderilir.
+	send := func() bool {
+		for {
+			items, err := h.center.Since(r.Context(), user, last, 100)
+			if err != nil {
+				h.logger.Error("akış bildirimleri okunamadı", "err", err, "request_id", httpx.RequestIDFrom(r.Context()))
+				return false
+			}
+			for _, it := range items {
+				data, err := json.Marshal(toResponse(it))
+				if err != nil || !write("id: "+strconv.FormatInt(it.ID, 10)+"\nevent: notification\ndata: "+string(data)+"\n\n") {
+					return false
+				}
+				last = it.ID
+			}
+			if len(items) < 100 {
+				return true
+			}
+		}
+	}
+	if !send() {
+		return
+	}
+	ticker := time.NewTicker(heartbeat)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-r.Context().Done():
+			return
+		case <-h.hub.Done():
+			return
+		case <-wake:
+			if !send() {
+				return
+			}
+		case <-ticker.C:
+			if !write(": ping\n\n") {
+				return
+			}
+		}
+	}
 }
 
 // Register, uçları yönlendiriciye ekler.
 func (h *Handler) Register(rt *authz.Router) {
 	rt.HandleFunc("GET /api/v1/me/notifications", authz.Authenticated, h.list)
 	rt.HandleFunc("GET /api/v1/me/notifications/unread-count", authz.Authenticated, h.unreadCount)
+	rt.HandleFunc("GET /api/v1/me/notifications/stream", authz.Authenticated, h.stream)
 	rt.HandleFunc("POST /api/v1/me/notifications/read-all", authz.Authenticated, h.readAll)
 	rt.HandleFunc("POST /api/v1/me/notifications/{id}/read", authz.Authenticated, h.markRead)
 	rt.HandleFunc("POST /api/v1/me/notifications/{id}/archive", authz.Authenticated, h.archive)

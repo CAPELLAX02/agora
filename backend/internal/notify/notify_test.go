@@ -56,7 +56,7 @@ func newServer(t *testing.T) *server {
 	}
 	mux := http.NewServeMux()
 	rt := authz.NewRouter(mux, authenticate, noGrants{}, logger)
-	notify.NewHandler(notify.NewCenter(pool, time.Now), logger).Register(rt)
+	notify.NewHandler(notify.NewCenter(pool, time.Now), nil, logger).Register(rt)
 	return &server{t: t, pool: pool, h: mux}
 }
 

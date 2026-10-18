@@ -46,6 +46,7 @@ type application struct {
 	gradingMetrics      *metrics.Grading
 	lmsMetrics          *metrics.LMS
 	files               *files.Service
+	notifications       *notify.Hub      // canlı bildirim akışlarının dağıtıcısı
 	registrationLimit   httpx.Middleware // ders seçme değiştirici uçlarının kullanıcı başına hız sınırı
 	permissions         authz.Resolver
 }
@@ -122,6 +123,11 @@ func run() error {
 	resetLimiter.OnReject(authMetrics.RateLimited)
 	registrationLimiter.OnReject(authMetrics.RateLimited)
 
+	// Canlı bildirimler: PostgreSQL kanalı tek bağlantıyla dinlenir, açık akışlar uyandırılır.
+	hub := notify.NewHub(pool, logger)
+	go hub.Run(ctx)
+	metrics.RegisterNotificationStreams(reg, hub.Streams)
+
 	app := &application{
 		cfg:     cfg,
 		logger:  logger,
@@ -144,6 +150,7 @@ func run() error {
 		gradingMetrics:      metrics.NewGrading(reg),
 		lmsMetrics:          metrics.NewLMS(reg),
 		files:               fileService,
+		notifications:       hub,
 		registrationLimit:   registrationLimiter.ByUser(logger),
 	}
 
@@ -153,6 +160,9 @@ func run() error {
 		// sunucusunun yazma zaman aşımı API'ninkinden uzun tutulur.
 		newServer(cfg.MetricsAddr, adminRoutes(reg), cfg, 2*time.Minute, logger),
 	}
+
+	// Açık akışlar kendiliğinden bitmez: kapanışta Hub kapatılır, akışlar biter, Shutdown beklemez.
+	servers[0].RegisterOnShutdown(hub.Close)
 
 	serverErr := make(chan error, len(servers))
 	for _, srv := range servers {

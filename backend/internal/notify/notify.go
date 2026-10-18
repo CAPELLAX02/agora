@@ -136,6 +136,10 @@ func Send(ctx context.Context, q db.Querier, n Notification) error {
 		inApp, string(n.Type), payload, n.Link); err != nil {
 		return fmt.Errorf("notify: bildirim yazılamadı: %w", err)
 	}
+	// Canlı akışlara duyuru: PostgreSQL bunu transaction commit edilince iletir.
+	if _, err := q.Exec(ctx, `SELECT pg_notify('`+channel+`', u) FROM unnest($1::text[]) AS u`, inApp); err != nil {
+		return fmt.Errorf("notify: bildirim duyurulamadı: %w", err)
+	}
 	return nil
 }
 
