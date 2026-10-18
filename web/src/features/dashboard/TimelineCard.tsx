@@ -49,7 +49,7 @@ export function TimelineCard() {
       ) : items.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t('dashboard.timeline.none')}</p>
       ) : (
-        <ul className="grid gap-2">
+        <ul className="grid grid-cols-[minmax(0,1fr)] gap-2">
           {items.slice(0, limit).map((it) => (
             <TimelineRow key={`${it.kind}-${it.activity_id}`} item={it} />
           ))}
@@ -69,7 +69,7 @@ function TimelineRow({ item }: { item: TimelineItem }) {
   const localized = useLocalized()
   const { icon, tone } = look[item.kind]
   return (
-    <li>
+    <li className="min-w-0">
       <Link
         to={`/derslerim/${item.section_id}/etkinlik/${item.activity_id}`}
         className="group flex items-center gap-3 rounded-xl border border-border/70 px-3 py-2.5 text-sm transition-all hover:border-primary/25 hover:bg-primary/[0.03]"

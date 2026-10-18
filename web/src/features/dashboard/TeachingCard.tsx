@@ -37,7 +37,7 @@ export function TeachingCard() {
       ) : sections.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t('dashboard.teaching.none')}</p>
       ) : (
-        <ul className="grid gap-2">
+        <ul className="grid grid-cols-[minmax(0,1fr)] gap-2">
           {sections.map((e) => (
             <SectionRow
               key={e.section_id}
@@ -68,7 +68,7 @@ function SectionRow({
   const pending = data ? pendingComponents(data) : []
   const tone = toneFor(course.code)
   return (
-    <li>
+    <li className="min-w-0">
       <Link
         to={`/subeler/${id}/notlar`}
         className="group flex items-center gap-3 rounded-xl border border-border/70 px-3 py-2.5 text-sm transition-all hover:border-primary/25 hover:bg-primary/[0.03]"

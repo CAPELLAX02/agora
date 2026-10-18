@@ -58,13 +58,13 @@ export function GradesCard() {
       ) : items.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t('dashboard.grades.empty')}</p>
       ) : (
-        <ul className="grid gap-2">
+        <ul className="grid grid-cols-[minmax(0,1fr)] gap-2">
           {items.map((it) => {
             const tone = toneFor(it.course.course.code)
             return (
               <li
                 key={it.key}
-                className="flex items-center gap-3 rounded-xl border border-border/70 px-3 py-2.5"
+                className="flex min-w-0 items-center gap-3 rounded-xl border border-border/70 px-3 py-2.5"
               >
                 <span className={cn('rounded-md px-1.5 py-0.5 font-mono text-xs font-bold', toneSoft[tone])}>
                   {it.course.course.code}
