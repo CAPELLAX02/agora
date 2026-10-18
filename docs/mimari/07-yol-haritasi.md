@@ -165,7 +165,7 @@ flowchart LR
 | ✅ | Backend CI (gofmt, vet, staticcheck, govulncheck, race testleri) | |
 | ✅ | Redis | Ders 16 |
 | ✅ | Mailpit (geliştirme SMTP) | `http://localhost:8025` |
-| ⏭️ | Nesne deposu | Faz 5'te dosya yüklemeyle birlikte eklenecek: kullanılmayan servis compose'da durmasın (SeaweedFS, §5 #20) |
+| ✅ | Nesne deposu | SeaweedFS, Faz 5'te dosya yüklemeyle birlikte eklendi: kullanılmayan servis compose'da durmasın diye beklendi (§5 #20) |
 | ✅ | Web: Vite + React + TS + Tailwind + shadcn, ESLint/Prettier/Vitest | pnpm (corepack), TypeScript strict, tip bilgili ESLint |
 | ✅ | Web: tasarım sistemi, açık/koyu tema, uygulama kabuğu, i18n | Radix tabanlı bileşenler, OKLCH renk belirteçleri, TR/EN (anahtarlar tip kontrollü, iki dilin eşliği testli) |
 | ✅ | Web: Redux store, OpenAPI'den RTK Query istemcisi, MSW | Access token sadece bellekte, 401'de tek uçuşlu sessiz yenileme, MSW ile bütünleşik testler |
@@ -262,7 +262,7 @@ flowchart LR
 | ✅ | Kural motoru | Saf Go paketi, tablo güdümlü testler. Engel, program kaydı durumu, AKTS üst sınırı (GANO'ya göre, yönetmelik parametresi), 1. sınıf zorunlu dersleri, alttan ders önceliği, ön koşul (VE/VEYA, geçti/devam etti), haftalık program çakışması (devam şartını önceden sağlamış tekrar derste uyarı), müfredat dışı ders, azami süre (en çok 5 ders), not yükseltme ve seçmeli yuva aşımı uyarıları. Hata ve uyarı ayrımı; ekleme anında ve gönderimde ayrı kural kümeleri |
 | ✅ | Sepet ve yarışa dayanıklı kontenjan | `registrations` (dönem başına tek), `registration_items`, `registration_events`; ekle, çıkar, şube değiştir. Öğrenci başına advisory lock; kontenjan sepete eklerken koşullu atomik `UPDATE` ile düşer (program alt kontenjanı dahil), çıkarınca serbest kalır; aynı dersin iki şubesi kısmi benzersiz index'le engellenir. Eşzamanlılık testi: yüzlerce goroutine aynı şubeye, kontenjan aşımı 0 (race detector açık) |
 | ✅ | Danışman onayı | Gönder, geri çek, onayla, gerekçeyle reddet, onayı geri al (durum makinesi, `If-Match`); ders seçme ve danışman onayı pencereleri; onayda kesin kayıtlar oluşur; danışman için dönem ve durum filtreli öğrenci listesi, toplu onay; öğrenci işleri pencere dışında gerekçeyle müdahale eder (`registration:override`, denetime işaretli) |
-| ✅ | Outbox | `platform.outbox_events` aynı transaction'da yazılır, worker `SKIP LOCKED` ile dağıtır, tüketiciler idempotent. İlk tüketici: öğrenciye onay ve red e-postası (LMS üyeliği Faz 5'te aynı olaya bağlanacak) |
+| ✅ | Outbox | `platform.outbox_events` aynı transaction'da yazılır, worker `SKIP LOCKED` ile dağıtır, tüketiciler idempotent. İlk tüketici: öğrenciye onay ve red e-postası (LMS üyeliği olaya bağlanmadı: kesin kayıttan türetilir, §5 #19) |
 | ✅ | Süresi dolan taslaklar | Ders seçme penceresi kapanınca gönderilmemiş taslakların ayırdığı kontenjan worker işiyle serbest bırakılır, olay günlüğüne yazılır |
 | ✅ | İdempotentlik, hız sınırı ve iş metrikleri | `Idempotency-Key` başlığı (`platform.idempotency_keys`); ders seçme uçları için kullanıcı başına ayrı hız sınırı; `agora_registration_items_added_total`, `agora_registration_submitted_total`, `agora_section_full_rejections_total` ve Grafana panosu |
 | ✅ | Ekle-bırak | Onaylı kayıtta öğrenci talebi (ekle-bırak penceresi) → danışman → bölüm başkanı onayı → uygulama; eklenecek şubenin kontenjanı talepte ayrılır, red ya da geri çekmede serbest kalır |
@@ -362,8 +362,8 @@ flowchart LR
 
 | Durum | Madde |
 | --- | --- |
-| ⬜ | Playwright e2e: kayıt onaylanınca öğrenci ders alanını görür; öğretim elemanı bölüm, dosya ve ödev ekler; öğrenci dosya yükleyip teslim eder; öğretim elemanı puanlar, puan bileşene akar; forum |
-| ⬜ | Sözleşme ve dokümanlar güncel (veri modeli, yetkilendirme politikaları, README'de demo rehberi), CI yeşil |
+| ✅ | Playwright e2e (`lms` projesi, kayıt senaryolarından sonra): öğretim elemanı planı kilitler, bölüm, dosya, ödev ve forum ekler, duyuru yazar, ödevi proje bileşenine bağlar; kaydı onaylanan öğrenci ana sayfada ödevi, ders alanında ilerlemesini görür, dosyayı indirir, forumda konu açar, ödevi dosyayla teslim eder; öğretim elemanı puanlayıp yayımlar, puan not tablosunda bileşene akar ("Ödevlerden"), soruyu yanıtlar; öğrenci puanı, geri bildirimi, yanıtı ve duyuruyu görür, ilerlemesi tamamlanır |
+| ✅ | Sözleşme ve dokümanlar güncel (veri modeli, yetkilendirme politikaları, iş metrikleri, README'de ders alanı demo rehberi), CI yeşil |
 
 ### Faz 6 ve sonrası
 
