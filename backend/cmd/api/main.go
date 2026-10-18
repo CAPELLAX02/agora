@@ -48,6 +48,7 @@ type application struct {
 	files               *files.Service
 	notifications       *notify.Hub      // canlı bildirim akışlarının dağıtıcısı
 	registrationLimit   httpx.Middleware // ders seçme değiştirici uçlarının kullanıcı başına hız sınırı
+	messageLimit        httpx.Middleware // ileti gönderiminin kullanıcı başına hız sınırı
 	permissions         authz.Resolver
 }
 
@@ -111,6 +112,7 @@ func run() error {
 	loginLimiter := ratelimit.New(rdb, "login", cfg.LoginRateLimit, time.Minute, time.Now)
 	resetLimiter := ratelimit.New(rdb, "password_reset", passwordResetLimit, time.Minute, time.Now)
 	registrationLimiter := ratelimit.New(rdb, "registration", cfg.RegistrationRateLimit, time.Minute, time.Now)
+	messageLimiter := ratelimit.New(rdb, "messages", messageLimit, time.Minute, time.Now)
 
 	permissions := iam.NewPermissionResolver(pool, rdb, time.Hour, logger)
 
@@ -122,6 +124,7 @@ func run() error {
 	loginLimiter.OnReject(authMetrics.RateLimited)
 	resetLimiter.OnReject(authMetrics.RateLimited)
 	registrationLimiter.OnReject(authMetrics.RateLimited)
+	messageLimiter.OnReject(authMetrics.RateLimited)
 
 	// Canlı bildirimler: PostgreSQL kanalı tek bağlantıyla dinlenir, açık akışlar uyandırılır.
 	hub := notify.NewHub(pool, logger)
@@ -152,6 +155,7 @@ func run() error {
 		files:               fileService,
 		notifications:       hub,
 		registrationLimit:   registrationLimiter.ByUser(logger),
+		messageLimit:        messageLimiter.ByUser(logger),
 	}
 
 	servers := []*http.Server{

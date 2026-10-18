@@ -3,6 +3,7 @@ export const addTagTypes = [
   'Sa\u011Fl\u0131k',
   'Kimlik do\u011Frulama',
   'Hesap',
+  'Mesajlar',
   'Duyurular',
   'Bildirimler',
   'Kullan\u0131c\u0131lar',
@@ -177,6 +178,66 @@ const injectedRtkApi = api
           },
         }),
         providesTags: ['Hesap'],
+      }),
+      listMyConversations: build.query<ListMyConversationsApiResponse, ListMyConversationsApiArg>({
+        query: () => ({ url: `/api/v1/me/conversations` }),
+        providesTags: ['Mesajlar'],
+      }),
+      getMyUnreadMessageCount: build.query<GetMyUnreadMessageCountApiResponse, GetMyUnreadMessageCountApiArg>(
+        {
+          query: () => ({ url: `/api/v1/me/conversations/unread-count` }),
+          providesTags: ['Mesajlar'],
+        },
+      ),
+      listMessagingContacts: build.query<ListMessagingContactsApiResponse, ListMessagingContactsApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/messaging/contacts`,
+          params: {
+            q: queryArg.q,
+          },
+        }),
+        providesTags: ['Mesajlar'],
+      }),
+      startConversation: build.mutation<StartConversationApiResponse, StartConversationApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/conversations`,
+          method: 'POST',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['Mesajlar'],
+      }),
+      getConversation: build.query<GetConversationApiResponse, GetConversationApiArg>({
+        query: (queryArg) => ({ url: `/api/v1/conversations/${queryArg.id}` }),
+        providesTags: ['Mesajlar'],
+      }),
+      listConversationMessages: build.query<
+        ListConversationMessagesApiResponse,
+        ListConversationMessagesApiArg
+      >({
+        query: (queryArg) => ({
+          url: `/api/v1/conversations/${queryArg.id}/messages`,
+          params: {
+            before: queryArg.before,
+            limit: queryArg.limit,
+          },
+        }),
+        providesTags: ['Mesajlar'],
+      }),
+      sendMessage: build.mutation<SendMessageApiResponse, SendMessageApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/conversations/${queryArg.id}/messages`,
+          method: 'POST',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['Mesajlar'],
+      }),
+      markConversationRead: build.mutation<MarkConversationReadApiResponse, MarkConversationReadApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/conversations/${queryArg.id}/read`,
+          method: 'POST',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['Mesajlar'],
       }),
       listMyAnnouncements: build.query<ListMyAnnouncementsApiResponse, ListMyAnnouncementsApiArg>({
         query: (queryArg) => ({
@@ -2155,6 +2216,64 @@ export type ListMySecurityEventsApiArg = {
   /** Önceki yanıtın `next_cursor` değeri (opak) */
   cursor?: string
 }
+export type ListMyConversationsApiResponse = /** status 200 Konuşmalar */ {
+  items: Conversation[]
+}
+export type ListMyConversationsApiArg = void
+export type GetMyUnreadMessageCountApiResponse = /** status 200 Sayı */ {
+  count: number
+}
+export type GetMyUnreadMessageCountApiArg = void
+export type ListMessagingContactsApiResponse = /** status 200 Kişiler */ {
+  items: MessagingPerson[]
+}
+export type ListMessagingContactsApiArg = {
+  q?: string
+}
+export type StartConversationApiResponse = /** status 201 Konuşma */ Conversation
+export type StartConversationApiArg = {
+  body: {
+    kind: 'DIRECT' | 'GROUP'
+    /** DIRECT için karşı taraf */
+    user_id?: string
+    /** GROUP için */
+    title?: string
+    /** GROUP için */
+    member_ids?: string[]
+  }
+}
+export type GetConversationApiResponse = /** status 200 Konuşma */ Conversation
+export type GetConversationApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type ListConversationMessagesApiResponse = /** status 200 İletiler */ {
+  items: ConversationMessage[]
+  has_more: boolean
+}
+export type ListConversationMessagesApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  before?: string
+  limit?: number
+}
+export type SendMessageApiResponse = /** status 201 İleti */ ConversationMessage
+export type SendMessageApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: {
+    body: string
+    reply_to_id?: string
+  }
+}
+export type MarkConversationReadApiResponse = unknown
+export type MarkConversationReadApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: {
+    message_id: string
+  }
+}
 export type ListMyAnnouncementsApiResponse = /** status 200 Duyurular */ AnnouncementPage
 export type ListMyAnnouncementsApiArg = {
   limit?: number
@@ -4030,6 +4149,46 @@ export type SecurityEvent = {
 export type SecurityEventPage = {
   items: SecurityEvent[]
   next_cursor?: string
+}
+export type MessagingPerson = {
+  id: string
+  name: string
+  /** Öğrenci ya da personel numarası */
+  number: string
+  is_staff: boolean
+}
+export type ConversationMessage = {
+  /** Zaman sıralı (uuidv7) */
+  id: string
+  sender: MessagingPerson
+  /** Silinmiş iletide boş */
+  body: string
+  reply_to_id: string | null
+  created_at: string
+  edited_at: string | null
+  deleted: boolean
+  mine: boolean
+}
+export type Conversation = {
+  id: string
+  kind: 'DIRECT' | 'GROUP' | 'SECTION'
+  /** Grupta adı, şube grubunda ders ve şube; birebirde boş */
+  title: string
+  section_id: string | null
+  /** Birebirde karşı taraf */
+  peer: MessagingPerson | null
+  last_message: ConversationMessage | null
+  last_message_at: string | null
+  created_at: string
+  unread: number
+  is_starred: boolean
+  muted_until: string | null
+  /** Grubu kuran ya da şubenin öğretim elemanı */
+  is_moderator: boolean
+  /** Ayrıntıda */
+  member_count?: number
+  /** Ayrıntıda */
+  members?: MessagingPerson[]
 }
 export type AnnouncementType = 'GENERAL' | 'ACADEMIC' | 'EXAM' | 'URGENT' | 'EVENT'
 export type AnnouncementAudience = {
@@ -6152,6 +6311,19 @@ export const {
   useEndSessionMutation,
   useListMySecurityEventsQuery,
   useLazyListMySecurityEventsQuery,
+  useListMyConversationsQuery,
+  useLazyListMyConversationsQuery,
+  useGetMyUnreadMessageCountQuery,
+  useLazyGetMyUnreadMessageCountQuery,
+  useListMessagingContactsQuery,
+  useLazyListMessagingContactsQuery,
+  useStartConversationMutation,
+  useGetConversationQuery,
+  useLazyGetConversationQuery,
+  useListConversationMessagesQuery,
+  useLazyListConversationMessagesQuery,
+  useSendMessageMutation,
+  useMarkConversationReadMutation,
   useListMyAnnouncementsQuery,
   useLazyListMyAnnouncementsQuery,
   useGetAnnouncementTargetsQuery,

@@ -32,6 +32,7 @@ const (
 	activationTokenTTL   = 72 * time.Hour
 	resetRequestInterval = 2 * time.Minute
 	passwordResetLimit   = 10 // bir IP'den dakikada en fazla kaç sıfırlama isteği
+	messageLimit         = 30 // bir kullanıcının dakikada en fazla kaç ileti göndereceği
 
 	mfaIssuer       = "Agora"         // doğrulayıcı uygulamada hesabın yanında görünen ad
 	mfaChallengeTTL = 5 * time.Minute // paroladan sonra kodu girmek için verilen süre
