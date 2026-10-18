@@ -402,7 +402,8 @@ func hasContent(st AssignmentSettings, text string, fileCount int) bool {
 	return (st.Accepts(SubmitText) && !emptyHTML(text)) || (st.Accepts(SubmitFile) && fileCount > 0)
 }
 
-// Submit, son taslağı gönderir: deneme kilitlenir, son tarihten sonraysa geç işaretlenir.
+// Submit, son taslağı gönderir: deneme kilitlenir, son tarihten sonraysa geç işaretlenir;
+// ödev öğrenci için tamamlanmış olur.
 func (s *Service) Submit(ctx context.Context, userID, activityID string, version int) error {
 	return db.InTx(ctx, s.pool, func(tx pgx.Tx) error {
 		st, err := lockAssignment(ctx, tx, activityID)
@@ -434,6 +435,11 @@ func (s *Service) Submit(ctx context.Context, userID, activityID string, version
 			       version = version + 1, updated_at = now()
 			WHERE id = $1`, latest.ID, now, late); err != nil {
 			return fmt.Errorf("lms: teslim gönderilemedi: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO lms.activity_completions (activity_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+			activityID, userID); err != nil {
+			return fmt.Errorf("lms: tamamlama yazılamadı: %w", err)
 		}
 		return audit.Record(ctx, tx, audit.Entry{ActorUserID: userID, Action: "lms_submission.submit", EntityType: "lms_submission",
 			EntityID: latest.ID, After: map[string]any{"activity_id": activityID, "attempt_no": latest.AttemptNo, "late": late, "files": len(fileIDs)}})

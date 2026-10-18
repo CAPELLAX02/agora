@@ -42,6 +42,7 @@ func (h *Handler) Register(rt *authz.Router) {
 	rt.HandleFunc("PUT /api/v1/activities/{id}", authz.Authenticated, h.updateActivity)
 	rt.HandleFunc("DELETE /api/v1/activities/{id}", authz.Authenticated, h.deleteActivity)
 	rt.HandleFunc("GET /api/v1/activities/{id}/files/{fileId}/download-url", authz.Authenticated, h.fileURL)
+	rt.HandleFunc("POST /api/v1/activities/{id}/views", authz.Authenticated, h.view)
 	h.registerAssignments(rt)
 	h.registerForums(rt)
 }
@@ -119,6 +120,7 @@ type spaceSummaryResponse struct {
 	Role        Role                 `json:"role"`
 	Instructors []instructorResponse `json:"instructors"`
 	Activities  int                  `json:"activities"`
+	Progress    *progressResponse    `json:"progress"`
 }
 
 type fileRefResponse struct {
@@ -146,6 +148,12 @@ type activityResponse struct {
 	Body           *string             `json:"body_html"`
 	Assignment     *assignmentResponse `json:"assignment"`
 	Forum          *forumResponse      `json:"forum"`
+	Completed      bool                `json:"completed"`
+}
+
+type progressResponse struct {
+	Completed int `json:"completed"`
+	Total     int `json:"total"`
 }
 
 type forumResponse struct {
@@ -177,6 +185,7 @@ type spaceResponse struct {
 	Summary     string               `json:"summary_html"`
 	Instructors []instructorResponse `json:"instructors"`
 	Topics      []topicResponse      `json:"topics"`
+	Progress    *progressResponse    `json:"progress"`
 }
 
 func toCourse(s Section) courseResponse {
@@ -218,6 +227,7 @@ func toActivity(a Activity, now time.Time) activityResponse {
 		fr := forumResponse(*a.Forum)
 		res.Forum = &fr
 	}
+	res.Completed = a.Completed
 	return res
 }
 
@@ -259,13 +269,22 @@ func (h *Handler) mySpaces(w http.ResponseWriter, r *http.Request) {
 		res.Items = append(res.Items, spaceSummaryResponse{
 			SectionID: s.ID, SectionCode: s.Code, Course: toCourse(s.Section), Term: termResponse{ID: s.TermID, Code: s.TermCode},
 			Role: s.Role, Instructors: toInstructors(s.Instructors), Activities: s.Activities,
+			Progress: studentProgress(s.Role, s.Completed, s.Countable),
 		})
 	}
 	h.writeJSON(w, r, http.StatusOK, res)
 }
 
+// studentProgress, öğrencinin ilerlemesidir; diğer rollerde nil.
+func studentProgress(role Role, completed, total int) *progressResponse {
+	if role != RoleStudent {
+		return nil
+	}
+	return &progressResponse{Completed: completed, Total: total}
+}
+
 func (h *Handler) writeSpace(w http.ResponseWriter, r *http.Request, sec Section, role Role, status int) {
-	sp, err := h.svc.Space(r.Context(), sec, role)
+	sp, err := h.svc.Space(r.Context(), sec, role, userID(r))
 	if h.failed(w, r, err) {
 		return
 	}
@@ -274,6 +293,9 @@ func (h *Handler) writeSpace(w http.ResponseWriter, r *http.Request, sec Section
 		SectionID: sec.ID, SectionCode: sec.Code, Course: toCourse(sec), Term: termResponse{ID: sec.TermID, Code: sec.TermCode},
 		Role: role, CanEdit: role.CanEdit(), Summary: sp.Summary, Instructors: toInstructors(sp.Instructors),
 		Topics: make([]topicResponse, 0, len(sp.Topics)),
+	}
+	if sp.Progress != nil {
+		res.Progress = &progressResponse{Completed: sp.Progress.Completed, Total: sp.Progress.Total}
 	}
 	for _, t := range sp.Topics {
 		tr := topicResponse{ID: t.ID, Title: t.Title, Summary: t.Summary, Visible: t.Visible, Availability: t.Window.At(now),
@@ -514,9 +536,44 @@ func (h *Handler) activity(w http.ResponseWriter, r *http.Request) (string, Sect
 }
 
 func (h *Handler) getActivity(w http.ResponseWriter, r *http.Request) {
-	if id, _, role, ok := h.activity(w, r); ok {
-		h.writeActivity(w, r, id, role, http.StatusOK)
+	id, _, role, ok := h.activity(w, r)
+	if !ok {
+		return
 	}
+	h.writeActivity(w, r, id, role, http.StatusOK)
+	h.viewed(r, id, role)
+}
+
+// viewed, öğrencinin görüntüleyince tamamlanan bir etkinliği (sayfa, klasör, forum, bağlantı)
+// açtığını kaydeder; erişim denetlenmiş olmalı. Hata yanıtı bozmaz, günlüğe yazılır.
+func (h *Handler) viewed(r *http.Request, activityID string, role Role) {
+	if role != RoleStudent {
+		return
+	}
+	_, typ, err := h.svc.ActivitySection(r.Context(), activityID)
+	if err == nil && typ.completesOnView() {
+		err = h.svc.MarkComplete(r.Context(), userID(r), activityID)
+	}
+	if err != nil {
+		h.logger.Error("tamamlama kaydedilemedi", "err", err, "request_id", httpx.RequestIDFrom(r.Context()))
+	}
+}
+
+// view, öğrencinin etkinliği ders alanından açtığını kaydeder (ör. bağlantı yeni sekmede açıldı).
+func (h *Handler) view(w http.ResponseWriter, r *http.Request) {
+	id, _, role, ok := h.activity(w, r)
+	if !ok {
+		return
+	}
+	a, _, err := h.svc.Activity(r.Context(), id)
+	if h.failed(w, r, err) {
+		return
+	}
+	if h.failed(w, r, h.svc.Accessible(r.Context(), a, role)) {
+		return
+	}
+	h.viewed(r, id, role)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *Handler) updateActivity(w http.ResponseWriter, r *http.Request) {
@@ -583,6 +640,12 @@ func (h *Handler) fileURL(w http.ResponseWriter, r *http.Request) {
 	u, exp, err := h.svc.FileURL(r.Context(), a, fileID)
 	if h.failed(w, r, err) {
 		return
+	}
+	// Dosyayı indiren öğrenci dosya ve klasör etkinliğini tamamlamış olur.
+	if role == RoleStudent {
+		if err := h.svc.MarkComplete(r.Context(), userID(r), id); err != nil {
+			h.logger.Error("tamamlama kaydedilemedi", "err", err, "request_id", httpx.RequestIDFrom(r.Context()))
+		}
 	}
 	h.writeJSON(w, r, http.StatusOK, files.URLResponse{URL: u, ExpiresAt: exp})
 }

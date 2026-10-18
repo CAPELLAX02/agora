@@ -88,7 +88,14 @@ func (s *Service) MySpaces(ctx context.Context, userID, termID string) ([]SpaceS
 		)
 		SELECT `+sectionColumns+`, m.role,
 		       (SELECT count(*) FROM lms.activities a JOIN lms.topics tp ON tp.id = a.topic_id
-		        WHERE a.section_id = s.id AND a.deleted_at IS NULL AND a.is_visible AND tp.is_visible AND tp.deleted_at IS NULL)
+		        WHERE a.section_id = s.id AND a.deleted_at IS NULL AND a.is_visible AND tp.is_visible AND tp.deleted_at IS NULL),
+		       (SELECT count(*) FROM lms.activities a JOIN lms.topics tp ON tp.id = a.topic_id
+		        WHERE a.section_id = s.id AND a.deleted_at IS NULL AND a.is_visible AND tp.is_visible AND tp.deleted_at IS NULL
+		          AND a.activity_type <> 'LABEL'),
+		       (SELECT count(*) FROM lms.activities a JOIN lms.topics tp ON tp.id = a.topic_id
+		        JOIN lms.activity_completions c ON c.activity_id = a.id AND c.user_id = $1
+		        WHERE a.section_id = s.id AND a.deleted_at IS NULL AND a.is_visible AND tp.is_visible AND tp.deleted_at IS NULL
+		          AND a.activity_type <> 'LABEL')
 		FROM mine m JOIN offering.sections s ON s.id = m.section_id`+
 		` JOIN offering.course_offerings o ON o.id = s.offering_id
 		JOIN curriculum.courses c ON c.id = o.course_id
@@ -104,7 +111,7 @@ func (s *Service) MySpaces(ctx context.Context, userID, termID string) ([]SpaceS
 			sum  SpaceSummary
 			role string
 		)
-		sec, err := scanSection(row, &role, &sum.Activities)
+		sec, err := scanSection(row, &role, &sum.Activities, &sum.Countable, &sum.Completed)
 		sum.Section, sum.Role = sec, Role(role)
 		return sum, err
 	})
@@ -158,7 +165,7 @@ func (s *Service) instructors(ctx context.Context, q db.Querier, sectionIDs []st
 // Space, ders alanını izleyenin rolüne göre döndürür. Düzenleyen her şeyi görür; öğrenci
 // gizli bölüm ve etkinlikleri görmez, henüz açılmamış ya da kapanmış olanların sadece adını ve
 // tarihlerini görür (içerik yok).
-func (s *Service) Space(ctx context.Context, sec Section, role Role) (Space, error) {
+func (s *Service) Space(ctx context.Context, sec Section, role Role, userID string) (Space, error) {
 	sp := Space{Section: sec, Role: role}
 	err := s.pool.QueryRow(ctx, `SELECT summary_html FROM lms.course_spaces WHERE section_id = $1`, sec.ID).Scan(&sp.Summary)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
@@ -174,6 +181,19 @@ func (s *Service) Space(ctx context.Context, sec Section, role Role) (Space, err
 	}
 	if !role.CanEdit() {
 		sp.Topics = forLearners(sp.Topics, s.now())
+	}
+	if role == RoleStudent {
+		done, err := s.completions(ctx, userID, sec.ID)
+		if err != nil {
+			return Space{}, err
+		}
+		for i := range sp.Topics {
+			for j := range sp.Topics[i].Activities {
+				sp.Topics[i].Activities[j].Completed = done[sp.Topics[i].Activities[j].ID]
+			}
+		}
+		p := progressOf(sp.Topics)
+		sp.Progress = &p
 	}
 	return sp, nil
 }

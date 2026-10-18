@@ -109,6 +109,8 @@ type SpaceSummary struct {
 	Role        Role
 	Instructors []Instructor
 	Activities  int // görünür etkinlik sayısı
+	Completed   int // öğrencinin tamamladığı görünür (etiket dışı) etkinlikler
+	Countable   int // görünür etiket dışı etkinlikler
 }
 
 // FileRef, bir etkinliğin dosyasıdır.
@@ -150,15 +152,18 @@ type Activity struct {
 	Body        string              // PAGE (sadece ayrıntıda)
 	Assignment  *AssignmentSettings // ASSIGNMENT
 	Forum       *ForumSettings      // FORUM
+	Completed   bool                // öğrenci tamamladı (sadece öğrenci görünümünde)
 }
 
-// Space, ders alanının görünümüdür: izleyenin rolüne göre süzülmüş bölümler ve etkinlikler.
+// Space, ders alanının görünümüdür: izleyenin rolüne göre süzülmüş bölümler ve etkinlikler;
+// öğrenciye ilerlemesi.
 type Space struct {
 	Section
 	Role        Role
 	Summary     string
 	Instructors []Instructor
 	Topics      []Topic
+	Progress    *Progress
 }
 
 // policy, ders içeriğindeki zengin metnin izin listesidir: biçimlendirme, başlıklar, listeler,
