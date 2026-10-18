@@ -196,3 +196,39 @@ func TestRenderRegistrationDecision(t *testing.T) {
 		t.Errorf("boş not: %v\n%s", err, m.Text)
 	}
 }
+
+func TestRenderNotification(t *testing.T) {
+	r := newRenderer(t)
+	r.WebBaseURL = "http://localhost:5173"
+	data := map[string]any{"name": "Ayşe", "title": "Parolanız değiştirildi", "body": "Hesabınızın parolası değiştirildi.",
+		"link": "/guvenlik", "mandatory": true}
+	for _, locale := range locales {
+		m, err := r.Render(TemplateNotification, locale, "ayse@agora.test", data)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if m.Subject != "Parolanız değiştirildi" {
+			t.Errorf("%s konu = %q", locale, m.Subject)
+		}
+		for _, body := range []string{m.Text, m.HTML} {
+			if !strings.Contains(body, "Ayşe") || !strings.Contains(body, "Hesabınızın parolası değiştirildi.") ||
+				!strings.Contains(body, "http://localhost:5173/guvenlik") {
+				t.Errorf("%s gövde:\n%s", locale, body)
+			}
+		}
+	}
+
+	// Bağlantısız ve tercihle gelen bildirimde düğme yok, dipnot tercihleri anlatır.
+	data["link"], data["mandatory"] = "", false
+	m, err := r.Render(TemplateNotification, "tr", "ayse@agora.test", data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(m.HTML, "Agora'da aç") || strings.Contains(m.Text, "Agora'da aç") ||
+		!strings.Contains(m.Text, "bildirim tercihleriniz nedeniyle") {
+		t.Errorf("bağlantısız bildirim:\n%s\n%s", m.Text, m.HTML)
+	}
+	if _, ok := data["web_base_url"]; ok {
+		t.Error("Render çağıranın verisini değiştirmemeli")
+	}
+}

@@ -86,6 +86,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	renderer.WebBaseURL = cfg.WebBaseURL
 	sender := &mail.SMTPSender{
 		Addr:     cfg.SMTPAddr,
 		From:     cfg.SMTPFrom,

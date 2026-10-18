@@ -1,0 +1,11 @@
+{{define "subject"}}{{.title}}{{end}}
+{{define "text"}}Merhaba {{.name}},
+
+{{.body}}
+{{if .link}}
+Agora'da aç: {{.web_base_url}}{{.link}}
+{{end}}
+{{if .mandatory}}Güvenlik bildirimleri kapatılamaz.{{else}}Bu e-postayı bildirim tercihleriniz nedeniyle aldınız; tercihlerinizi Agora'da hesap ayarlarından değiştirebilirsiniz.{{end}}
+
+Agora
+{{end}}

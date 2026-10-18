@@ -12,6 +12,7 @@ import (
 	"embed"
 	"fmt"
 	htmltemplate "html/template"
+	"maps"
 	"mime"
 	"mime/multipart"
 	"mime/quotedprintable"
@@ -29,6 +30,9 @@ const (
 	TemplateAccountActivation = "account_activation"
 	// TemplateRegistrationDecision, danışmanın ders seçme kararı (onay, red, onayın geri alınması).
 	TemplateRegistrationDecision = "registration_decision"
+	// TemplateNotification, e-posta kanalı açık bir bildirim (internal/notify): başlık, metin ve
+	// uygulama içi bağlantı.
+	TemplateNotification = "notification"
 )
 
 // Desteklenen diller. İlki varsayılandır.
@@ -50,13 +54,15 @@ type Message struct {
 type Renderer struct {
 	text map[string]*texttemplate.Template // "kod.dil" → şablon
 	html map[string]*htmltemplate.Template
+	// WebBaseURL, uygulama içi bağlantıların köküdür: şablonlara web_base_url olarak verilir.
+	WebBaseURL string
 }
 
 // NewRenderer, şablonları derler.
 func NewRenderer() (*Renderer, error) {
 	r := &Renderer{text: map[string]*texttemplate.Template{}, html: map[string]*htmltemplate.Template{}}
 
-	for _, code := range []string{TemplatePasswordReset, TemplateAccountActivation, TemplateRegistrationDecision} {
+	for _, code := range []string{TemplatePasswordReset, TemplateAccountActivation, TemplateRegistrationDecision, TemplateNotification} {
 		for _, locale := range locales {
 			key := code + "." + locale
 
@@ -88,6 +94,12 @@ func (r *Renderer) Render(code, locale, to string, data map[string]any) (Message
 	if !ok {
 		return Message{}, fmt.Errorf("mail: bilinmeyen şablon %q", code)
 	}
+
+	data = maps.Clone(data)
+	if data == nil {
+		data = map[string]any{}
+	}
+	data["web_base_url"] = r.WebBaseURL
 
 	var subject, text, html bytes.Buffer
 	if err := t.ExecuteTemplate(&subject, "subject", data); err != nil {

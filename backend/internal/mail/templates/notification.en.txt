@@ -1,0 +1,11 @@
+{{define "subject"}}{{.title}}{{end}}
+{{define "text"}}Hello {{.name}},
+
+{{.body}}
+{{if .link}}
+Open in Agora: {{.web_base_url}}{{.link}}
+{{end}}
+{{if .mandatory}}Security notifications can't be turned off.{{else}}You received this email because of your notification preferences; you can change them in your account settings in Agora.{{end}}
+
+Agora
+{{end}}
