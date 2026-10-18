@@ -2187,7 +2187,11 @@
       "lockedHint": "The topic is locked: no new replies.",
       "readOnlyHint": "You cannot reply to this topic.",
       "description": "Forum description",
-      "studentsCanStart": "Students can start topics"
+      "studentsCanStart": "Students can start topics",
+      "subscribe": "Follow",
+      "unsubscribe": "Unfollow",
+      "subscribedToast": "You follow this forum; new threads will be notified to you.",
+      "unsubscribedToast": "You no longer follow this forum."
     },
     "progress": {
       "title": "My progress",

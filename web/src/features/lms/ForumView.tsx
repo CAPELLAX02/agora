@@ -1,11 +1,23 @@
-import { LockIcon, MessageSquarePlusIcon, MessagesSquareIcon, PinIcon } from 'lucide-react'
+import {
+  BellIcon,
+  BellOffIcon,
+  LockIcon,
+  MessageSquarePlusIcon,
+  MessagesSquareIcon,
+  PinIcon,
+} from 'lucide-react'
 import { lazy, Suspense, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 
 import { formatDateTime, formatRelative } from '@/i18n/format'
-import { useCreateForumThreadMutation, useListForumThreadsQuery } from '@/shared/api/generated'
+import {
+  useCreateForumThreadMutation,
+  useListForumThreadsQuery,
+  useSubscribeForumMutation,
+  useUnsubscribeForumMutation,
+} from '@/shared/api/generated'
 import { useErrorMessage } from '@/shared/api/useErrorMessage'
 import { Alert, AlertDescription } from '@/shared/ui/alert'
 import { Badge } from '@/shared/ui/badge'
@@ -31,6 +43,29 @@ const RichTextEditor = lazy(() =>
   import('@/shared/ui/rich-text-editor').then((m) => ({ default: m.RichTextEditor })),
 )
 
+/** SubscribeButton, genel foruma abone olma düğmesidir: abone olunan forumdaki yeni konular bildirilir. */
+function SubscribeButton({ activityId, subscribed }: { activityId: string; subscribed: boolean }) {
+  const { t } = useTranslation()
+  const errorMessage = useErrorMessage()
+  const [subscribe, subscribing] = useSubscribeForumMutation()
+  const [unsubscribe, unsubscribing] = useUnsubscribeForumMutation()
+  const busy = subscribing.isLoading || unsubscribing.isLoading
+  const toggle = async () => {
+    const res = subscribed ? await unsubscribe({ id: activityId }) : await subscribe({ id: activityId })
+    if (res.error) {
+      toast.error(errorMessage(res.error))
+      return
+    }
+    toast.success(subscribed ? t('lms.forum.unsubscribedToast') : t('lms.forum.subscribedToast'))
+  }
+  return (
+    <Button variant="outline" aria-pressed={subscribed} disabled={busy} onClick={() => void toggle()}>
+      {subscribed ? <BellOffIcon /> : <BellIcon />}
+      {subscribed ? t('lms.forum.unsubscribe') : t('lms.forum.subscribe')}
+    </Button>
+  )
+}
+
 /**
  * ForumView, bir forumun konularıdır: sabitlenenler önce, sonra son gönderiye göre; konu
  * açabilen "Yeni konu" ile başlık ve ilk gönderiyi yazar.
@@ -52,6 +87,7 @@ export function ForumView({ sectionId, activityId }: { sectionId: string; activi
         <p className="flex-1 text-sm text-muted-foreground">
           {announcements ? t('lms.forum.announcementsHint') : t('lms.forum.generalHint')}
         </p>
+        {data.can_subscribe && <SubscribeButton activityId={activityId} subscribed={data.subscribed} />}
         {data.can_start && (
           <Button onClick={() => setCreating(true)}>
             <MessageSquarePlusIcon />

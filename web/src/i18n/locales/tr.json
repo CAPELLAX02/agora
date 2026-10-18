@@ -2187,7 +2187,11 @@
       "lockedHint": "Konu kilitli: yeni yanıt yazılamaz.",
       "readOnlyHint": "Bu konuya yanıt yazamazsınız.",
       "description": "Forum açıklaması",
-      "studentsCanStart": "Öğrenciler konu açabilir"
+      "studentsCanStart": "Öğrenciler konu açabilir",
+      "subscribe": "Abone ol",
+      "unsubscribe": "Abonelikten çık",
+      "subscribedToast": "Foruma abone oldunuz; yeni konular size bildirilecek.",
+      "unsubscribedToast": "Forum aboneliğinden çıktınız."
     },
     "progress": {
       "title": "İlerlemem",
