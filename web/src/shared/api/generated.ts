@@ -910,6 +910,15 @@ const injectedRtkApi = api
         }),
         providesTags: ['Ders alan\u0131'],
       }),
+      myTimeline: build.query<MyTimelineApiResponse, MyTimelineApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/me/timeline`,
+          params: {
+            term_id: queryArg.termId,
+          },
+        }),
+        providesTags: ['\u00D6dev'],
+      }),
       getMySubmission: build.query<GetMySubmissionApiResponse, GetMySubmissionApiArg>({
         query: (queryArg) => ({
           url: `/api/v1/activities/${queryArg.id}/my-submission`,
@@ -2589,6 +2598,13 @@ export type GetActivityFileUrlApiArg = {
   /** Geçerli bir UUID değilse 404 döner. */
   id: string
   fileId: string
+}
+export type MyTimelineApiResponse = /** status 200 Öğeler */ {
+  items: TimelineItem[]
+}
+export type MyTimelineApiArg = {
+  /** Varsayılan aktif dönem */
+  termId?: string
 }
 export type GetMySubmissionApiResponse = /** status 200 Teslim */ MySubmission
 export type GetMySubmissionApiArg = {
@@ -4330,6 +4346,18 @@ export type ActivityInput = {
   body_html?: string
   assignment?: AssignmentInput
 }
+export type TimelineItem = {
+  kind: 'DUE' | 'OVERDUE' | 'TO_GRADE'
+  activity_id: string
+  section_id: string
+  section_code: string
+  course: NamedRef
+  title: string
+  due_at: string | null
+  cutoff_at: string | null
+  /** TO_GRADE: puanlanmayı bekleyen teslim sayısı */
+  needs_grading: number
+}
 export type Submission = {
   id: string
   attempt_no: number
@@ -5699,6 +5727,8 @@ export const {
   useDeleteActivityMutation,
   useGetActivityFileUrlQuery,
   useLazyGetActivityFileUrlQuery,
+  useMyTimelineQuery,
+  useLazyMyTimelineQuery,
   useGetMySubmissionQuery,
   useLazyGetMySubmissionQuery,
   useSaveMySubmissionMutation,

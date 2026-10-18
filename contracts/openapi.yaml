@@ -3569,6 +3569,37 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "503": { $ref: "#/components/responses/StorageUnavailable" }
 
+  /api/v1/me/timeline:
+    get:
+      tags: [Ödev]
+      summary: Zaman çizelgesi (yapılacaklar)
+      description: >-
+        Kullanıcının dönemdeki ders alanlarında yapılacaklar. Öğrenciye son tarihi 60 gün
+        içinde olan, gönderilmemiş ve hâlâ teslim edilebilen ödevler (`DUE`; son tarihi geçmiş
+        ama geç teslim açıksa `OVERDUE`); öğretim elemanına puanlanmayı bekleyen teslimi olan
+        ödevler (`TO_GRADE`). Önce gecikenler, sonra yaklaşanlar (son tarihe göre), sonra
+        puanlanacaklar.
+      operationId: myTimeline
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: term_id
+          in: query
+          description: Varsayılan aktif dönem
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Öğeler
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/TimelineItem" } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
   /api/v1/activities/{id}/my-submission:
     get:
       tags: [Ödev]
@@ -9029,6 +9060,20 @@ components:
             - type: "null"
             - $ref: "#/components/schemas/AssignmentGrade"
         comments: { type: array, items: { $ref: "#/components/schemas/SubmissionComment" } }
+
+    TimelineItem:
+      type: object
+      required: [kind, activity_id, section_id, section_code, course, title, due_at, cutoff_at, needs_grading]
+      properties:
+        kind: { type: string, enum: [DUE, OVERDUE, TO_GRADE] }
+        activity_id: { type: string, format: uuid }
+        section_id: { type: string, format: uuid }
+        section_code: { type: string }
+        course: { $ref: "#/components/schemas/NamedRef" }
+        title: { type: string }
+        due_at: { type: [string, "null"], format: date-time }
+        cutoff_at: { type: [string, "null"], format: date-time }
+        needs_grading: { type: integer, description: "TO_GRADE: puanlanmayı bekleyen teslim sayısı" }
 
     AssignmentLink:
       type: object
