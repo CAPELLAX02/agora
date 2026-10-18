@@ -83,6 +83,10 @@ tags:
     description: >-
       Öğrencinin teslimi (taslak, gönderme, yeni deneme), teslim listesi, puan ve geri bildirim,
       puanların yayımlanması ve gönderim yorumları
+  - name: Bildirimler
+    description: >-
+      Kullanıcının bildirim merkezi: olaylardan üretilen bildirimler (güvenlik, ders kaydı, notlar,
+      dersler, duyurular), okunmamış sayısı, okundu ve arşiv
 
 paths:
   /healthz:
@@ -758,6 +762,116 @@ paths:
               schema: { $ref: "#/components/schemas/SecurityEventPage" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/me/notifications:
+    get:
+      tags: [Bildirimler]
+      summary: Bildirimlerim
+      description: >-
+        En yeniden eskiye. Varsayılan olarak arşivlenmemiş bildirimler; `archived=true` arşivdekileri,
+        `unread=true` sadece okunmamışları getirir. Başlık ve metin iki dilde, bildirimin
+        verisinden üretilir.
+      operationId: listMyNotifications
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: unread
+          in: query
+          schema: { type: boolean, default: false }
+        - name: archived
+          in: query
+          schema: { type: boolean, default: false }
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Bildirimler
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NotificationPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/me/notifications/unread-count:
+    get:
+      tags: [Bildirimler]
+      summary: Okunmamış bildirim sayısı
+      description: Okunmamış ve arşivlenmemiş bildirimler.
+      operationId: getMyUnreadNotificationCount
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Sayı
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count]
+                properties:
+                  count: { type: integer, minimum: 0 }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/me/notifications/read-all:
+    post:
+      tags: [Bildirimler]
+      summary: Bütün bildirimleri okundu yap
+      operationId: markAllMyNotificationsRead
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Okundu yapılan bildirim sayısı
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [updated]
+                properties:
+                  updated: { type: integer, minimum: 0 }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /api/v1/me/notifications/{id}/read:
+    post:
+      tags: [Bildirimler]
+      summary: Bildirimi okundu yap
+      description: Zaten okunmuşsa bir şey değişmez. Başkasının bildirimi yokmuş gibi 404.
+      operationId: markMyNotificationRead
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/NotificationID"
+      responses:
+        "204": { description: Okundu }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/me/notifications/{id}/archive:
+    post:
+      tags: [Bildirimler]
+      summary: Bildirimi arşive kaldır
+      description: Arşivlenen bildirim okundu da sayılır.
+      operationId: archiveMyNotification
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/NotificationID"
+      responses:
+        "204": { description: Arşivlendi }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Bildirimler]
+      summary: Bildirimi arşivden geri al
+      operationId: unarchiveMyNotification
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/NotificationID"
+      responses:
+        "204": { description: Geri alındı }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /api/v1/me/permissions:
     get:
@@ -7201,6 +7315,11 @@ components:
       in: path
       required: true
       schema: { type: string, format: uuid }
+    NotificationID:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, format: int64, minimum: 1 }
     IncludeInactive:
       name: include_inactive
       in: query
@@ -7592,6 +7711,35 @@ components:
         items:
           type: array
           items: { $ref: "#/components/schemas/SecurityEvent" }
+        next_cursor: { type: string }
+
+    NotificationCategory:
+      type: string
+      enum: [SECURITY, REGISTRATION, GRADES, COURSES, ANNOUNCEMENTS, MESSAGES, REMINDERS]
+
+    Notification:
+      type: object
+      required: [id, created_at, type, category, title_tr, title_en, body_tr, body_en, link, read_at, archived_at]
+      properties:
+        id: { type: integer, format: int64, description: Artan kimlik (cursor ve canlı akışın olay kimliği) }
+        created_at: { type: string, format: date-time }
+        type: { type: string, description: "Bildirim türü, ör. `security.password_changed`" }
+        category: { $ref: "#/components/schemas/NotificationCategory" }
+        title_tr: { type: string }
+        title_en: { type: string }
+        body_tr: { type: string, description: Düz metin; eski bir kaydın verisi şablonla uyuşmazsa boş }
+        body_en: { type: string }
+        link: { type: [string, "null"], description: "Uygulama içi adres (`/` ile başlar)" }
+        read_at: { type: [string, "null"], format: date-time }
+        archived_at: { type: [string, "null"], format: date-time }
+
+    NotificationPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Notification" }
         next_cursor: { type: string }
 
     AuditLogEntry:

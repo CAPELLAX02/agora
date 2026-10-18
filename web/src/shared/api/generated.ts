@@ -3,6 +3,7 @@ export const addTagTypes = [
   'Sa\u011Fl\u0131k',
   'Kimlik do\u011Frulama',
   'Hesap',
+  'Bildirimler',
   'Kullan\u0131c\u0131lar',
   'Denetim',
   'Akademik takvim',
@@ -175,6 +176,61 @@ const injectedRtkApi = api
           },
         }),
         providesTags: ['Hesap'],
+      }),
+      listMyNotifications: build.query<ListMyNotificationsApiResponse, ListMyNotificationsApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/me/notifications`,
+          params: {
+            unread: queryArg.unread,
+            archived: queryArg.archived,
+            limit: queryArg.limit,
+            cursor: queryArg.cursor,
+          },
+        }),
+        providesTags: ['Bildirimler'],
+      }),
+      getMyUnreadNotificationCount: build.query<
+        GetMyUnreadNotificationCountApiResponse,
+        GetMyUnreadNotificationCountApiArg
+      >({
+        query: () => ({ url: `/api/v1/me/notifications/unread-count` }),
+        providesTags: ['Bildirimler'],
+      }),
+      markAllMyNotificationsRead: build.mutation<
+        MarkAllMyNotificationsReadApiResponse,
+        MarkAllMyNotificationsReadApiArg
+      >({
+        query: () => ({
+          url: `/api/v1/me/notifications/read-all`,
+          method: 'POST',
+        }),
+        invalidatesTags: ['Bildirimler'],
+      }),
+      markMyNotificationRead: build.mutation<MarkMyNotificationReadApiResponse, MarkMyNotificationReadApiArg>(
+        {
+          query: (queryArg) => ({
+            url: `/api/v1/me/notifications/${queryArg.id}/read`,
+            method: 'POST',
+          }),
+          invalidatesTags: ['Bildirimler'],
+        },
+      ),
+      archiveMyNotification: build.mutation<ArchiveMyNotificationApiResponse, ArchiveMyNotificationApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/me/notifications/${queryArg.id}/archive`,
+          method: 'POST',
+        }),
+        invalidatesTags: ['Bildirimler'],
+      }),
+      unarchiveMyNotification: build.mutation<
+        UnarchiveMyNotificationApiResponse,
+        UnarchiveMyNotificationApiArg
+      >({
+        query: (queryArg) => ({
+          url: `/api/v1/me/notifications/${queryArg.id}/archive`,
+          method: 'DELETE',
+        }),
+        invalidatesTags: ['Bildirimler'],
       }),
       getMyPermissions: build.query<GetMyPermissionsApiResponse, GetMyPermissionsApiArg>({
         query: () => ({ url: `/api/v1/me/permissions` }),
@@ -1995,6 +2051,34 @@ export type ListMySecurityEventsApiArg = {
   /** Önceki yanıtın `next_cursor` değeri (opak) */
   cursor?: string
 }
+export type ListMyNotificationsApiResponse = /** status 200 Bildirimler */ NotificationPage
+export type ListMyNotificationsApiArg = {
+  unread?: boolean
+  archived?: boolean
+  limit?: number
+  /** Önceki yanıtın `next_cursor` değeri (opak) */
+  cursor?: string
+}
+export type GetMyUnreadNotificationCountApiResponse = /** status 200 Sayı */ {
+  count: number
+}
+export type GetMyUnreadNotificationCountApiArg = void
+export type MarkAllMyNotificationsReadApiResponse = /** status 200 Okundu yapılan bildirim sayısı */ {
+  updated: number
+}
+export type MarkAllMyNotificationsReadApiArg = void
+export type MarkMyNotificationReadApiResponse = unknown
+export type MarkMyNotificationReadApiArg = {
+  id: number
+}
+export type ArchiveMyNotificationApiResponse = unknown
+export type ArchiveMyNotificationApiArg = {
+  id: number
+}
+export type UnarchiveMyNotificationApiResponse = unknown
+export type UnarchiveMyNotificationApiArg = {
+  id: number
+}
 export type GetMyPermissionsApiResponse = /** status 200 Yetkiler (yetki koduna ve kapsama göre sıralı) */ {
   items: Grant[]
 }
@@ -3772,6 +3856,29 @@ export type SecurityEvent = {
 }
 export type SecurityEventPage = {
   items: SecurityEvent[]
+  next_cursor?: string
+}
+export type NotificationCategory =
+  'SECURITY' | 'REGISTRATION' | 'GRADES' | 'COURSES' | 'ANNOUNCEMENTS' | 'MESSAGES' | 'REMINDERS'
+export type Notification = {
+  /** Artan kimlik (cursor ve canlı akışın olay kimliği) */
+  id: number
+  created_at: string
+  /** Bildirim türü, ör. `security.password_changed` */
+  type: string
+  category: NotificationCategory
+  title_tr: string
+  title_en: string
+  /** Düz metin; eski bir kaydın verisi şablonla uyuşmazsa boş */
+  body_tr: string
+  body_en: string
+  /** Uygulama içi adres (`/` ile başlar) */
+  link: string | null
+  read_at: string | null
+  archived_at: string | null
+}
+export type NotificationPage = {
+  items: Notification[]
   next_cursor?: string
 }
 export type Grant = {
@@ -5786,6 +5893,14 @@ export const {
   useEndSessionMutation,
   useListMySecurityEventsQuery,
   useLazyListMySecurityEventsQuery,
+  useListMyNotificationsQuery,
+  useLazyListMyNotificationsQuery,
+  useGetMyUnreadNotificationCountQuery,
+  useLazyGetMyUnreadNotificationCountQuery,
+  useMarkAllMyNotificationsReadMutation,
+  useMarkMyNotificationReadMutation,
+  useArchiveMyNotificationMutation,
+  useUnarchiveMyNotificationMutation,
   useGetMyPermissionsQuery,
   useLazyGetMyPermissionsQuery,
   useListUsersQuery,

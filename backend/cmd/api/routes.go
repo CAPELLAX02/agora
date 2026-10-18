@@ -12,6 +12,7 @@ import (
 	"github.com/CAPELLAX02/agora/backend/internal/grading"
 	"github.com/CAPELLAX02/agora/backend/internal/iam"
 	"github.com/CAPELLAX02/agora/backend/internal/lms"
+	"github.com/CAPELLAX02/agora/backend/internal/notify"
 	"github.com/CAPELLAX02/agora/backend/internal/offering"
 	"github.com/CAPELLAX02/agora/backend/internal/org"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authz"
@@ -39,6 +40,7 @@ func (app *application) routes() http.Handler {
 	iam.NewUsersHandler(app.auth, iam.NewRepository(app.db), app.logger).Register(rt)
 
 	audit.NewHandler(audit.NewRepository(app.db), app.logger).Register(rt)
+	notify.NewHandler(notify.NewCenter(app.db, time.Now), app.logger).Register(rt)
 	enrollment.NewHandler(enrollment.NewRepository(app.db), enrollment.NewService(app.db), app.logger).Register(rt)
 	academic.NewHandler(academic.NewRepository(app.db), org.NewTargets(app.db), app.logger, time.Now).Register(rt)
 	curriculum.NewHandler(curriculum.NewRepository(app.db), org.NewTargets(app.db), app.logger).Register(rt)
