@@ -30,6 +30,7 @@ func NewHandler(svc *Service, logger *slog.Logger) *Handler {
 // şubenin öğretim elemanları düzenler.
 func (h *Handler) Register(rt *authz.Router) {
 	rt.HandleFunc("GET /api/v1/me/spaces", authz.Authenticated, h.mySpaces)
+	rt.HandleFunc("GET /api/v1/me/timeline", authz.Authenticated, h.timeline)
 	rt.HandleFunc("GET /api/v1/spaces/{id}", authz.Authenticated, h.getSpace)
 	rt.HandleFunc("PUT /api/v1/spaces/{id}", authz.Authenticated, h.setSummary)
 	rt.HandleFunc("PUT /api/v1/spaces/{id}/layout", authz.Authenticated, h.reorder)
@@ -207,21 +208,34 @@ func toActivity(a Activity, now time.Time) activityResponse {
 	return res
 }
 
-func (h *Handler) mySpaces(w http.ResponseWriter, r *http.Request) {
+// term, istekteki dönemdir (term_id); verilmezse içinde bulunulan dönem. Dönem yoksa ok true
+// ve termID boş döner.
+func (h *Handler) term(w http.ResponseWriter, r *http.Request) (string, bool) {
 	termID := r.URL.Query().Get("term_id")
 	if termID != "" && !httpx.ValidUUID(termID) {
 		httpx.ValidationFailed(w, r, []httpx.FieldError{{Field: "term_id", Message: "Geçerli bir UUID olmalı."}})
-		return
+		return "", false
 	}
 	if termID == "" {
 		err := h.svc.pool.QueryRow(r.Context(), `SELECT id FROM academic.terms WHERE is_current`).Scan(&termID)
 		if errors.Is(err, pgx.ErrNoRows) {
-			h.writeJSON(w, r, http.StatusOK, httpx.ListResponse[spaceSummaryResponse]{Items: []spaceSummaryResponse{}})
-			return
+			return "", true
 		}
 		if h.failed(w, r, err) {
-			return
+			return "", false
 		}
+	}
+	return termID, true
+}
+
+func (h *Handler) mySpaces(w http.ResponseWriter, r *http.Request) {
+	termID, ok := h.term(w, r)
+	if !ok {
+		return
+	}
+	if termID == "" {
+		h.writeJSON(w, r, http.StatusOK, httpx.ListResponse[spaceSummaryResponse]{Items: []spaceSummaryResponse{}})
+		return
 	}
 	list, err := h.svc.MySpaces(r.Context(), userID(r), termID)
 	if h.failed(w, r, err) {
@@ -590,4 +604,36 @@ func (h *Handler) writeJSON(w http.ResponseWriter, r *http.Request, status int, 
 	if err := httpx.WriteJSON(w, status, v); err != nil {
 		h.logger.Error("yanıt yazılamadı", "err", err, "request_id", httpx.RequestIDFrom(r.Context()))
 	}
+}
+
+type timelineItemResponse struct {
+	Kind         string         `json:"kind"`
+	ActivityID   string         `json:"activity_id"`
+	SectionID    string         `json:"section_id"`
+	SectionCode  string         `json:"section_code"`
+	Course       courseResponse `json:"course"`
+	Title        string         `json:"title"`
+	DueAt        *time.Time     `json:"due_at"`
+	CutoffAt     *time.Time     `json:"cutoff_at"`
+	NeedsGrading int            `json:"needs_grading"`
+}
+
+func (h *Handler) timeline(w http.ResponseWriter, r *http.Request) {
+	termID, ok := h.term(w, r)
+	if !ok {
+		return
+	}
+	res := httpx.ListResponse[timelineItemResponse]{Items: []timelineItemResponse{}}
+	if termID != "" {
+		items, err := h.svc.Timeline(r.Context(), userID(r), termID)
+		if h.failed(w, r, err) {
+			return
+		}
+		for _, it := range items {
+			res.Items = append(res.Items, timelineItemResponse{Kind: it.Kind, ActivityID: it.ActivityID, SectionID: it.SectionID,
+				SectionCode: it.SectionCode, Course: courseResponse{ID: it.CourseID, Code: it.CourseCode, NameTR: it.CourseNameTR, NameEN: it.CourseNameEN},
+				Title: it.Title, DueAt: it.DueAt, CutoffAt: it.CutoffAt, NeedsGrading: it.NeedsGrading})
+		}
+	}
+	h.writeJSON(w, r, http.StatusOK, res)
 }

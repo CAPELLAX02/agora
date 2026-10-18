@@ -226,6 +226,11 @@ const assignmentColumns = `opens_at, due_at, cutoff_at, max_attempts, submission
 
 // scanAssignment, assignmentColumns'u okur; prefix, sorguda onlardan önce gelen sütunlardır.
 func scanAssignment(row pgx.Row, prefix ...any) (AssignmentSettings, error) {
+	return scanAssignmentRow(row, prefix, nil)
+}
+
+// scanAssignmentRow, scanAssignment gibidir; suffix, assignmentColumns'tan sonra gelen sütunlardır.
+func scanAssignmentRow(row pgx.Row, prefix, suffix []any) (AssignmentSettings, error) {
 	var (
 		a            AssignmentSettings
 		score, pct   int64
@@ -233,6 +238,7 @@ func scanAssignment(row pgx.Row, prefix ...any) (AssignmentSettings, error) {
 	)
 	dest := append(prefix, &a.OpensAt, &a.DueAt, &a.CutoffAt, &attempts, &a.SubmissionTypes, &mf, &a.MaxFileSize,
 		&a.Extensions, &score, &a.LatePolicy, &pct, &a.ReleasedAt)
+	dest = append(dest, suffix...)
 	err := row.Scan(dest...)
 	a.MaxAttempts, a.MaxFiles, a.MaxScore, a.PenaltyPerDay = int(attempts), int(mf), grading.Points(score), grading.Points(pct)
 	return a, err
