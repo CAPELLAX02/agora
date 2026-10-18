@@ -21,7 +21,7 @@ Gerekenler: Docker, Go (sürüm `backend/go.mod`'da), Node.js 22 (pnpm ayrıca k
 ```bash
 make up            # PostgreSQL, Redis, SeaweedFS (dosyalar), Mailpit, Prometheus, Grafana
 make migrate-up    # şema
-make seed          # organizasyon, takvim, ders planları, ders açma ve demo hesaplar (tekrar çalıştırılabilir)
+make seed          # organizasyon, takvim, ders planları, ders açma, demo hesaplar ve ders alanı (tekrar çalıştırılabilir)
 make api           # API: http://localhost:8080
 make worker        # e-postalar ve olaylar (parola sıfırlama, ders kaydı kararları, taslak süresi)
 make web-install   # ilk seferde
@@ -129,6 +129,23 @@ Demo sınıfı `P10001`'in 1. sınıf dersi **COM1007-1** (Bilgisayar Programlam
 `make seed` ara sınavına not girilmiş sınıfa dokunmaz.
 
 **Yük testi:** `make loadtest-registration` ders seçme açılışında eşzamanlı giriş yapıp popüler şubelere ders ekleyen sentetik öğrencileri k6 ile canlandırır ve ardından kontenjan aşımının 0 olduğunu SQL ile doğrular (`make seed-synthetic` gerekir). Sonuçlar ve darboğaz analizi: [08 · Yük Testleri](docs/mimari/08-yuk-testleri.md).
+
+### Ders alanı demosu
+
+Her şubenin bir ders alanı vardır: öğretim elemanları (sorumlu, ortak, asistan) içeriği düzenler; kesin kaydı olan öğrenciler kaydı onaylanınca alanı "Derslerim"de görür. `make seed`, COM1007-1'e örnek bir ders alanı kurar (dosyalar için SeaweedFS çalışıyor olmalı: `make up`). Alanda tanıtım metni, "Genel" bölümü ve üç haftalık bölüm vardır; 3. hafta bir hafta sonra açılır. İçerik: sayfa, bağlantı, slayt (PDF), örnek kod klasörü, iki ödev, duyuru ve soru-cevap forumu.
+
+- **Ödev 1: Basit hesap makinesi:** son tarih bir hafta sonra; geç teslimde günlük %10 kesinti; 50 puan. `26290101` … `26290105` gönderdi, `26290106` ve `26290107` taslakta.
+- **Ödev 0: Kendini tanıt:** son tarihi geçti; 10 puan. `26290101` … `26290114` teslim etti; son ikisi geç teslim etti. Puanlar verilmiş ve yayımlanmıştır.
+
+| Ne denenir | Hesap | Not |
+| ---------- | ----- | --- |
+| Ders alanını düzenleme: bölüm, dosya, klasör, sayfa, bağlantı, ödev, forum; sıralama, gizleme, açılış tarihi | `P10001` (asistan `P10007`) | Derslerim → COM1007-1 → Düzenlemeyi aç |
+| Teslimleri puanlama, geri bildirim, Excel şablonuyla toplu puan, puanları yayımlama | `P10001` | Ödev 1'in sayfası: teslim listesi, "Puanla", Excel şablonu ve Excel'den yükleme |
+| Ödev puanlarının not tablosuna akması | `P10001` | Ödev sayfasında "Not tablosu bağlantısı": örneğin Ödev 0'ı Laboratuvar bileşenine bağlayın. Bileşen notu, puanları yayımlanmış bağlı ödevlerin 100'lük ağırlıklı ortalaması olur ve elle girilen notların yerine geçer. Not tablosunda "Ödevlerden" rozetiyle görünür ve elle değiştirilemez. Bağlantı kaldırılınca ödevden gelen notlar silinir; elle girilmiş eski notlar geri gelmez. Not akışının uçtan uca testi laboratuvarı elle girdiği için seed ödevleri bağlamaz |
+| Ödev teslimi (dosya ya da metin), taslak, yorum; ilerleme; ana sayfada "Yapılacaklar" | `26290108` … `26290120` | Ödev 1'e henüz başlamamış öğrenciler. `26290101`'de puanlanmış Ödev 0 ve geri bildirimi görünür |
+| Duyurular ve forum | öğrenciler ve `P10001` | Duyuruları öğretim elemanları yazar; soru-cevap forumunda öğrenciler konu açar ve yanıtlar. Öğretim elemanı konuyu sabitler, kilitler, siler |
+
+`make seed` ders alanı kurulmuş şubeye dokunmaz.
 
 ### Büyük veri seti
 
