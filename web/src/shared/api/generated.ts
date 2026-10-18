@@ -1144,6 +1144,20 @@ const injectedRtkApi = api
           invalidatesTags: ['\u00D6dev'],
         },
       ),
+      subscribeForum: build.mutation<SubscribeForumApiResponse, SubscribeForumApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/activities/${queryArg.id}/subscription`,
+          method: 'PUT',
+        }),
+        invalidatesTags: ['Forum'],
+      }),
+      unsubscribeForum: build.mutation<UnsubscribeForumApiResponse, UnsubscribeForumApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/activities/${queryArg.id}/subscription`,
+          method: 'DELETE',
+        }),
+        invalidatesTags: ['Forum'],
+      }),
       listForumThreads: build.query<ListForumThreadsApiResponse, ListForumThreadsApiArg>({
         query: (queryArg) => ({
           url: `/api/v1/activities/${queryArg.id}/threads`,
@@ -2904,6 +2918,16 @@ export type ImportAssignmentGradesApiArg = {
   /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
   'If-Match': string
   body: Blob
+}
+export type SubscribeForumApiResponse = unknown
+export type SubscribeForumApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type UnsubscribeForumApiResponse = unknown
+export type UnsubscribeForumApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
 }
 export type ListForumThreadsApiResponse = /** status 200 Konular */ ForumThreadList
 export type ListForumThreadsApiArg = {
@@ -4845,6 +4869,10 @@ export type ForumThreadList = {
   forum: ForumInfo
   /** İsteği yapan konu açabilir mi */
   can_start: boolean
+  /** Genel forum: yeni konular abonelere bildirilir (Duyurular herkese bildirilir) */
+  can_subscribe: boolean
+  /** İsteği yapan abone mi */
+  subscribed: boolean
   /** Sabitlenenler önce, sonra son gönderiye göre */
   items: ForumThreadSummary[]
 }
@@ -6105,6 +6133,8 @@ export const {
   useLazyExportAssignmentGradesXlsxQuery,
   usePreviewAssignmentGradeImportMutation,
   useImportAssignmentGradesMutation,
+  useSubscribeForumMutation,
+  useUnsubscribeForumMutation,
   useListForumThreadsQuery,
   useLazyListForumThreadsQuery,
   useCreateForumThreadMutation,

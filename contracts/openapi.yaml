@@ -4237,6 +4237,46 @@ paths:
         "412": { $ref: "#/components/responses/VersionMismatch" }
         "428": { $ref: "#/components/responses/PreconditionRequired" }
 
+  /api/v1/activities/{id}/subscription:
+    put:
+      tags: [Forum]
+      summary: Foruma abone ol
+      description: >-
+        Forumu görebilen herkes genel foruma abone olabilir; abone olunan forumda açılan yeni
+        konular bildirilir. Tekrarı zararsızdır. Duyurular forumu bütün üyelere bildirildiği için
+        `NOT_SUBSCRIBABLE`.
+      operationId: subscribeForum
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "204": { description: Abone olundu }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`NOT_SUBSCRIBABLE`: Duyurular forumu"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+    delete:
+      tags: [Forum]
+      summary: Forum aboneliğinden çık
+      operationId: unsubscribeForum
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "204": { description: Abonelikten çıkıldı }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`NOT_SUBSCRIBABLE`: Duyurular forumu"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
   /api/v1/activities/{id}/threads:
     get:
       tags: [Forum]
@@ -9560,10 +9600,12 @@ components:
 
     ForumThreadList:
       type: object
-      required: [forum, can_start, items]
+      required: [forum, can_start, can_subscribe, subscribed, items]
       properties:
         forum: { $ref: "#/components/schemas/ForumInfo" }
         can_start: { type: boolean, description: İsteği yapan konu açabilir mi }
+        can_subscribe: { type: boolean, description: "Genel forum: yeni konular abonelere bildirilir (Duyurular herkese bildirilir)" }
+        subscribed: { type: boolean, description: İsteği yapan abone mi }
         items: { type: array, items: { $ref: "#/components/schemas/ForumThreadSummary" }, description: "Sabitlenenler önce, sonra son gönderiye göre" }
 
     ForumThread:

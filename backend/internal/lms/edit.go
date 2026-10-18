@@ -333,6 +333,11 @@ func (s *Service) CreateActivity(ctx context.Context, actorID, topicID string, i
 		if err := s.writeDetails(ctx, tx, actorID, id, in, nil); err != nil {
 			return err
 		}
+		if in.Type == TypeAssignment {
+			if err := notifyAssignment(ctx, tx, actorID, id); err != nil {
+				return err
+			}
+		}
 		return audit.Record(ctx, tx, audit.Entry{ActorUserID: actorID, Action: "lms_activity.create", EntityType: "lms_activity", EntityID: id,
 			After: map[string]any{"section_id": sectionID, "type": in.Type, "title": in.Title}})
 	})
@@ -416,8 +421,12 @@ func (s *Service) UpdateActivity(ctx context.Context, actorID, id string, versio
 		return err
 	}
 	err := db.InTx(ctx, s.pool, func(tx pgx.Tx) error {
-		var typ string
-		if err := tx.QueryRow(ctx, `SELECT activity_type FROM lms.activities WHERE id = $1 AND deleted_at IS NULL FOR UPDATE`, id).Scan(&typ); err != nil {
+		var (
+			typ        string
+			wasVisible bool
+		)
+		if err := tx.QueryRow(ctx, `SELECT activity_type, is_visible FROM lms.activities WHERE id = $1 AND deleted_at IS NULL FOR UPDATE`, id).
+			Scan(&typ, &wasVisible); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return ErrNotFound
 			}
@@ -447,6 +456,12 @@ func (s *Service) UpdateActivity(ctx context.Context, actorID, id string, versio
 		}
 		if err := s.writeDetails(ctx, tx, actorID, id, in, current); err != nil {
 			return err
+		}
+		// Gizli oluşturulup sonra öğrencilere açılan ödev o zaman bildirilir.
+		if in.Type == TypeAssignment && !wasVisible && in.Visible {
+			if err := notifyAssignment(ctx, tx, actorID, id); err != nil {
+				return err
+			}
 		}
 		return audit.Record(ctx, tx, audit.Entry{ActorUserID: actorID, Action: "lms_activity.update", EntityType: "lms_activity", EntityID: id,
 			After: map[string]any{"title": in.Title, "visible": in.Visible}})

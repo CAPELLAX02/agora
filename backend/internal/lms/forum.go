@@ -177,6 +177,9 @@ func (s *Service) CreateThread(ctx context.Context, actorID, activityID, title, 
 		if _, err := tx.Exec(ctx, `INSERT INTO lms.forum_posts (thread_id, author_id, body_html) VALUES ($1, $2, $3)`, id, actorID, body); err != nil {
 			return fmt.Errorf("lms: gönderi yazılamadı: %w", err)
 		}
+		if err := notifyThread(ctx, tx, actorID, activityID, id, title, body); err != nil {
+			return err
+		}
 		return audit.Record(ctx, tx, audit.Entry{ActorUserID: actorID, Action: "lms_thread.create", EntityType: "lms_thread", EntityID: id,
 			After: map[string]any{"activity_id": activityID, "title": title}})
 	})
@@ -265,7 +268,7 @@ func (s *Service) Reply(ctx context.Context, actorID, threadID, parentID, html s
 		if _, err := tx.Exec(ctx, `UPDATE lms.forum_threads SET post_count = post_count + 1, last_post_at = now() WHERE id = $1`, threadID); err != nil {
 			return fmt.Errorf("lms: konu güncellenemedi: %w", err)
 		}
-		return nil
+		return notifyReply(ctx, tx, actorID, threadID)
 	})
 	if err == nil {
 		s.metrics.Posted("reply")
@@ -366,4 +369,26 @@ func (s *Service) UpdateThread(ctx context.Context, actorID, threadID string, in
 		return audit.Record(ctx, tx, audit.Entry{ActorUserID: actorID, Action: "lms_thread.update", EntityType: "lms_thread", EntityID: threadID,
 			After: map[string]any{"title": in.Title, "pinned": in.Pinned, "locked": in.Locked}})
 	})
+}
+
+// Subscribed, kullanıcının foruma abone olup olmadığıdır.
+func (s *Service) Subscribed(ctx context.Context, activityID, userID string) (bool, error) {
+	var ok bool
+	if err := s.pool.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM lms.forum_subscriptions WHERE activity_id = $1 AND user_id = $2)`, activityID, userID).Scan(&ok); err != nil {
+		return false, fmt.Errorf("lms: abonelik okunamadı: %w", err)
+	}
+	return ok, nil
+}
+
+// SetSubscription, kullanıcının foruma aboneliğini açar ya da kapatır; tekrarı zararsızdır.
+func (s *Service) SetSubscription(ctx context.Context, userID, activityID string, on bool) error {
+	q := `DELETE FROM lms.forum_subscriptions WHERE activity_id = $1 AND user_id = $2`
+	if on {
+		q = `INSERT INTO lms.forum_subscriptions (activity_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`
+	}
+	if _, err := s.pool.Exec(ctx, q, activityID, userID); err != nil {
+		return fmt.Errorf("lms: abonelik yazılamadı: %w", err)
+	}
+	return nil
 }

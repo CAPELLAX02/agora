@@ -20,6 +20,8 @@ func (h *Handler) registerForums(rt *authz.Router) {
 	rt.HandleFunc("POST /api/v1/threads/{id}/posts", authz.Authenticated, h.reply)
 	rt.HandleFunc("PUT /api/v1/posts/{id}", authz.Authenticated, h.editPost)
 	rt.HandleFunc("DELETE /api/v1/posts/{id}", authz.Authenticated, h.deletePost)
+	rt.HandleFunc("PUT /api/v1/activities/{id}/subscription", authz.Authenticated, h.subscribe)
+	rt.HandleFunc("DELETE /api/v1/activities/{id}/subscription", authz.Authenticated, h.unsubscribe)
 }
 
 type authorResponse struct {
@@ -40,9 +42,11 @@ type threadSummaryResponse struct {
 }
 
 type threadListResponse struct {
-	Forum    forumResponse           `json:"forum"`
-	CanStart bool                    `json:"can_start"`
-	Items    []threadSummaryResponse `json:"items"`
+	Forum        forumResponse           `json:"forum"`
+	CanStart     bool                    `json:"can_start"`
+	CanSubscribe bool                    `json:"can_subscribe"` // genel forum (Duyurular herkese bildirilir)
+	Subscribed   bool                    `json:"subscribed"`
+	Items        []threadSummaryResponse `json:"items"`
 }
 
 type postResponse struct {
@@ -113,7 +117,12 @@ func (h *Handler) listThreads(w http.ResponseWriter, r *http.Request) {
 	if h.failed(w, r, err) {
 		return
 	}
-	res := threadListResponse{Forum: forumResponse(f), CanStart: f.CanStartThread(role), Items: make([]threadSummaryResponse, 0, len(list))}
+	subscribed, err := h.svc.Subscribed(r.Context(), a.ID, userID(r))
+	if h.failed(w, r, err) {
+		return
+	}
+	res := threadListResponse{Forum: forumResponse(f), CanStart: f.CanStartThread(role), CanSubscribe: f.Kind == ForumGeneral,
+		Subscribed: subscribed, Items: make([]threadSummaryResponse, 0, len(list))}
 	for _, t := range list {
 		res.Items = append(res.Items, toThreadSummary(t))
 	}
@@ -331,6 +340,37 @@ func (h *Handler) deletePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if h.failed(w, r, h.svc.DeletePost(r.Context(), userID(r), postID)) {
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) subscribe(w http.ResponseWriter, r *http.Request) {
+	h.setSubscription(w, r, true)
+}
+
+func (h *Handler) unsubscribe(w http.ResponseWriter, r *http.Request) {
+	h.setSubscription(w, r, false)
+}
+
+// setSubscription, isteği yapanın genel foruma aboneliğini açar ya da kapatır; forumu görebilen
+// herkes abone olabilir. Duyurular forumu herkese bildirildiği için 409.
+func (h *Handler) setSubscription(w http.ResponseWriter, r *http.Request, on bool) {
+	id := r.PathValue("id")
+	if !httpx.ValidUUID(id) {
+		httpx.NotFound(w, r)
+		return
+	}
+	a, f, _, _, ok := h.forum(w, r, id)
+	if !ok {
+		return
+	}
+	if f.Kind != ForumGeneral {
+		_ = httpx.WriteProblem(w, r, httpx.Problem{Status: http.StatusConflict, Code: "NOT_SUBSCRIBABLE",
+			Detail: "Duyurular bütün üyelere bildirilir; bu foruma abone olunmaz."})
+		return
+	}
+	if h.failed(w, r, h.svc.SetSubscription(r.Context(), userID(r), a.ID, on)) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

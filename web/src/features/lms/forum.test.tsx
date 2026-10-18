@@ -83,6 +83,8 @@ const ayse = { id: 'u9', name: 'Ayşe Demir', is_instructor: true }
 const list: ForumThreadList = {
   forum: forum.forum!,
   can_start: true,
+  can_subscribe: true,
+  subscribed: false,
   items: [
     {
       id: 'th1',
@@ -142,6 +144,7 @@ type Call = { method: string; path: string; body?: unknown }
 
 function session(role: Space['role'], perms: string[], data: ForumThread = thread()) {
   const calls: Call[] = []
+  let subscribed = false
   const record = async (request: Request) => {
     const text = await request.text()
     calls.push({
@@ -155,7 +158,17 @@ function session(role: Space['role'], perms: string[], data: ForumThread = threa
     http.get('/api/v1/me/permissions', () => HttpResponse.json(grants(...perms))),
     http.get('/api/v1/spaces/:id', () => HttpResponse.json(space(role))),
     http.get('/api/v1/activities/:id', () => HttpResponse.json(forum)),
-    http.get('/api/v1/activities/:id/threads', () => HttpResponse.json(list)),
+    http.get('/api/v1/activities/:id/threads', () => HttpResponse.json({ ...list, subscribed })),
+    http.put('/api/v1/activities/:id/subscription', async ({ request }) => {
+      await record(request)
+      subscribed = true
+      return new HttpResponse(null, { status: 204 })
+    }),
+    http.delete('/api/v1/activities/:id/subscription', async ({ request }) => {
+      await record(request)
+      subscribed = false
+      return new HttpResponse(null, { status: 204 })
+    }),
     http.post('/api/v1/activities/:id/threads', async ({ request }) => {
       await record(request)
       return HttpResponse.json({ ...data, id: 'th3', title: 'Yeni soru' }, { status: 201 })
@@ -174,6 +187,24 @@ function session(role: Space['role'], perms: string[], data: ForumThread = threa
 }
 
 describe('forum', () => {
+  it('genel foruma abone olunur ve abonelikten çıkılır', async () => {
+    const { calls } = session('STUDENT', ['registration:manage_own'])
+    const { user } = renderApp('/derslerim/s1/etkinlik/f1')
+    const follow = await screen.findByRole('button', { name: 'Abone ol' })
+    expect(follow).toHaveAttribute('aria-pressed', 'false')
+    await user.click(follow)
+    expect(await screen.findByText(/Foruma abone oldunuz/)).toBeInTheDocument()
+    const unfollow = await screen.findByRole('button', { name: 'Abonelikten çık' })
+    expect(unfollow).toHaveAttribute('aria-pressed', 'true')
+    await user.click(unfollow)
+    await waitFor(() =>
+      expect(calls).toEqual([
+        { method: 'PUT', path: '/api/v1/activities/f1/subscription', body: undefined },
+        { method: 'DELETE', path: '/api/v1/activities/f1/subscription', body: undefined },
+      ]),
+    )
+  })
+
   it('konular sabitlenen önce listelenir; öğrenci konu açar ve konuya geçer', async () => {
     const { calls } = session('STUDENT', ['registration:manage_own'])
     const { user, router } = renderApp('/derslerim/s1/etkinlik/f1')

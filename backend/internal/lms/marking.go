@@ -220,6 +220,9 @@ func (s *Service) ReleaseGrades(ctx context.Context, actorID, activityID string)
 		if tag.RowsAffected() == 0 {
 			return &ConflictError{Code: "ALREADY_RELEASED", Detail: "Puanlar zaten yayımlandı."}
 		}
+		if err := notifyReleased(ctx, tx, actorID, activityID); err != nil {
+			return err
+		}
 		return audit.Record(ctx, tx, audit.Entry{ActorUserID: actorID, Action: "lms_assignment.release", EntityType: "lms_activity", EntityID: activityID})
 	})
 	if err == nil {
