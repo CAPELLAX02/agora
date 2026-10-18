@@ -405,7 +405,8 @@ func hasContent(st AssignmentSettings, text string, fileCount int) bool {
 // Submit, son taslağı gönderir: deneme kilitlenir, son tarihten sonraysa geç işaretlenir;
 // ödev öğrenci için tamamlanmış olur.
 func (s *Service) Submit(ctx context.Context, userID, activityID string, version int) error {
-	return db.InTx(ctx, s.pool, func(tx pgx.Tx) error {
+	var late, completed bool
+	err := db.InTx(ctx, s.pool, func(tx pgx.Tx) error {
 		st, err := lockAssignment(ctx, tx, activityID)
 		if err != nil {
 			return err
@@ -429,21 +430,31 @@ func (s *Service) Submit(ctx context.Context, userID, activityID string, version
 		if !hasContent(st, latest.Text, len(fileIDs)) {
 			return &ConflictError{Code: "EMPTY_SUBMISSION", Detail: "Göndermeden önce dosya ya da metin ekleyin."}
 		}
-		late := st.LateAt(now)
+		late = st.LateAt(now)
 		if _, err := tx.Exec(ctx, `
 			UPDATE lms.assignment_submissions SET status = 'SUBMITTED', submitted_at = $2, is_late = $3,
 			       version = version + 1, updated_at = now()
 			WHERE id = $1`, latest.ID, now, late); err != nil {
 			return fmt.Errorf("lms: teslim gönderilemedi: %w", err)
 		}
-		if _, err := tx.Exec(ctx, `
+		tag, err := tx.Exec(ctx, `
 			INSERT INTO lms.activity_completions (activity_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-			activityID, userID); err != nil {
+			activityID, userID)
+		if err != nil {
 			return fmt.Errorf("lms: tamamlama yazılamadı: %w", err)
 		}
+		completed = tag.RowsAffected() > 0
 		return audit.Record(ctx, tx, audit.Entry{ActorUserID: userID, Action: "lms_submission.submit", EntityType: "lms_submission",
 			EntityID: latest.ID, After: map[string]any{"activity_id": activityID, "attempt_no": latest.AttemptNo, "late": late, "files": len(fileIDs)}})
 	})
+	if err != nil {
+		return err
+	}
+	s.metrics.Submitted(late)
+	if completed {
+		s.metrics.Completed("assignment")
+	}
+	return nil
 }
 
 // NewAttempt, gönderilmiş son denemenin içeriğiyle yeni bir taslak deneme başlatır (deneme hakkı

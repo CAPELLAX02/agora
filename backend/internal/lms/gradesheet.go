@@ -644,6 +644,7 @@ func (s *Service) ImportGrades(ctx context.Context, actorID string, sec Section,
 	if err != nil {
 		return GradeImport{}, err
 	}
+	s.metrics.Graded(strings.ToLower(source), res.Changed)
 	if st.ReleasedAt != nil {
 		s.syncActivity(ctx, actorID, activityID)
 	}

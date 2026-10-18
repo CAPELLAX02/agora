@@ -3,6 +3,7 @@ package lms
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -19,12 +20,15 @@ func (t ActivityType) completesOnView() bool {
 	return t == TypePage || t == TypeFolder || t == TypeForum || t == TypeURL
 }
 
-// MarkComplete, öğrencinin etkinliği tamamladığını kaydeder (tekrarı zararsız).
-func (s *Service) MarkComplete(ctx context.Context, userID, activityID string) error {
-	_, err := s.pool.Exec(ctx, `
+// MarkComplete, öğrencinin etkinliği tamamladığını kaydeder (tekrarı zararsız; ilk tamamlama sayılır).
+func (s *Service) MarkComplete(ctx context.Context, userID, activityID string, typ ActivityType) error {
+	tag, err := s.pool.Exec(ctx, `
 		INSERT INTO lms.activity_completions (activity_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, activityID, userID)
 	if err != nil {
 		return fmt.Errorf("lms: tamamlama yazılamadı: %w", err)
+	}
+	if tag.RowsAffected() > 0 {
+		s.metrics.Completed(strings.ToLower(string(typ)))
 	}
 	return nil
 }

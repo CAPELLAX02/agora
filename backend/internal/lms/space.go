@@ -17,17 +17,37 @@ import (
 // Service, ders alanı işlemleridir. sink, ödevlerden hesaplanan bileşen notlarını not
 // modülüne yazar (nil ise köprü kapalı).
 type Service struct {
-	pool   *pgxpool.Pool
-	files  *files.Service
-	sink   GradeSink
-	logger *slog.Logger
-	now    func() time.Time
+	pool    *pgxpool.Pool
+	files   *files.Service
+	sink    GradeSink
+	logger  *slog.Logger
+	now     func() time.Time
+	metrics Metrics
 }
+
+// Metrics, ders alanının iş metrikleridir; olaylar işlem başarıyla bittikten sonra sayılır.
+// Etiket değerleri küçük harftir.
+type Metrics interface {
+	Submitted(late bool)
+	Graded(source string, n int)
+	Posted(kind string)
+	Completed(activityType string)
+}
+
+type noopMetrics struct{}
+
+func (noopMetrics) Submitted(bool)     {}
+func (noopMetrics) Graded(string, int) {}
+func (noopMetrics) Posted(string)      {}
+func (noopMetrics) Completed(string)   {}
 
 // NewService, bir Service oluşturur.
 func NewService(pool *pgxpool.Pool, fs *files.Service, sink GradeSink, logger *slog.Logger, now func() time.Time) *Service {
-	return &Service{pool: pool, files: fs, sink: sink, logger: logger, now: now}
+	return &Service{pool: pool, files: fs, sink: sink, logger: logger, now: now, metrics: noopMetrics{}}
 }
+
+// SetMetrics, olay sayaçlarını bağlar. Verilmezse olaylar sayılmaz.
+func (s *Service) SetMetrics(m Metrics) { s.metrics = m }
 
 const sectionColumns = `s.id, s.section_code, c.id, c.code, c.name_tr, c.name_en, t.id, t.code, o.department_id, d.faculty_id`
 

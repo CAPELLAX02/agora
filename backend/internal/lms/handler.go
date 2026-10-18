@@ -552,7 +552,7 @@ func (h *Handler) viewed(r *http.Request, activityID string, role Role) {
 	}
 	_, typ, err := h.svc.ActivitySection(r.Context(), activityID)
 	if err == nil && typ.completesOnView() {
-		err = h.svc.MarkComplete(r.Context(), userID(r), activityID)
+		err = h.svc.MarkComplete(r.Context(), userID(r), activityID, typ)
 	}
 	if err != nil {
 		h.logger.Error("tamamlama kaydedilemedi", "err", err, "request_id", httpx.RequestIDFrom(r.Context()))
@@ -643,7 +643,7 @@ func (h *Handler) fileURL(w http.ResponseWriter, r *http.Request) {
 	}
 	// Dosyayı indiren öğrenci dosya ve klasör etkinliğini tamamlamış olur.
 	if role == RoleStudent {
-		if err := h.svc.MarkComplete(r.Context(), userID(r), id); err != nil {
+		if err := h.svc.MarkComplete(r.Context(), userID(r), id, a.Type); err != nil {
 			h.logger.Error("tamamlama kaydedilemedi", "err", err, "request_id", httpx.RequestIDFrom(r.Context()))
 		}
 	}

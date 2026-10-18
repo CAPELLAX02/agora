@@ -123,6 +123,7 @@ type server struct {
 	fs      *files.Service
 	now     *time.Time
 	grading *grading.Service // köprü testlerinde: ödevlerden bileşen notu
+	svc     *lms.Service
 }
 
 func newServer(t *testing.T) *server {
@@ -160,7 +161,8 @@ func buildServer(t *testing.T, withGrading bool) *server {
 		srv.grading = grading.NewService(pool, academic.NewRepository(pool), clock)
 		sink = srv.grading
 	}
-	lms.NewHandler(lms.NewService(pool, fs, sink, logger, clock), logger).Register(rt)
+	srv.svc = lms.NewService(pool, fs, sink, logger, clock)
+	lms.NewHandler(srv.svc, logger).Register(rt)
 	return srv
 }
 

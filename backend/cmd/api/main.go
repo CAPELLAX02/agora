@@ -43,6 +43,7 @@ type application struct {
 
 	registrationMetrics *metrics.Registration
 	gradingMetrics      *metrics.Grading
+	lmsMetrics          *metrics.LMS
 	files               *files.Service
 	registrationLimit   httpx.Middleware // ders seçme değiştirici uçlarının kullanıcı başına hız sınırı
 	permissions         authz.Resolver
@@ -137,6 +138,7 @@ func run() error {
 		},
 		registrationMetrics: metrics.NewRegistration(reg),
 		gradingMetrics:      metrics.NewGrading(reg),
+		lmsMetrics:          metrics.NewLMS(reg),
 		files:               fileService,
 		registrationLimit:   registrationLimiter.ByUser(logger),
 	}

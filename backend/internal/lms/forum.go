@@ -180,6 +180,9 @@ func (s *Service) CreateThread(ctx context.Context, actorID, activityID, title, 
 		return audit.Record(ctx, tx, audit.Entry{ActorUserID: actorID, Action: "lms_thread.create", EntityType: "lms_thread", EntityID: id,
 			After: map[string]any{"activity_id": activityID, "title": title}})
 	})
+	if err == nil {
+		s.metrics.Posted("thread")
+	}
 	return id, err
 }
 
@@ -264,6 +267,9 @@ func (s *Service) Reply(ctx context.Context, actorID, threadID, parentID, html s
 		}
 		return nil
 	})
+	if err == nil {
+		s.metrics.Posted("reply")
+	}
 	return id, err
 }
 

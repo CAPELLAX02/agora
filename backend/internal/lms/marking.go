@@ -199,6 +199,9 @@ func (s *Service) SetGrade(ctx context.Context, actorID, sectionID, activityID, 
 		return audit.Record(ctx, tx, audit.Entry{ActorUserID: actorID, Action: "lms_grade.update", EntityType: "lms_activity",
 			EntityID: activityID, After: map[string]any{"student_id": studentID, "score": score, "attempt_no": attempt}})
 	})
+	if err == nil {
+		s.metrics.Graded("manual", 1)
+	}
 	// Yayımlanmış ödevin puanı değişince bağlı bileşenin notu da değişir.
 	if err == nil && released {
 		s.syncActivity(ctx, actorID, activityID)

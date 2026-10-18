@@ -51,7 +51,11 @@ func (app *application) routes() http.Handler {
 	if app.files != nil {
 		files.NewHandler(app.files, app.logger).Register(rt)
 		// Ödevlerin bağlı olduğu bileşenlerin notları not modülüne yazılır (kaynak LMS).
-		lms.NewHandler(lms.NewService(app.db, app.files, grades, app.logger, time.Now), app.logger).Register(rt)
+		lmsService := lms.NewService(app.db, app.files, grades, app.logger, time.Now)
+		if app.lmsMetrics != nil {
+			lmsService.SetMetrics(app.lmsMetrics)
+		}
+		lms.NewHandler(lmsService, app.logger).Register(rt)
 	}
 	grading.NewGradebookHandler(grades, app.logger).Register(rt)
 	// Ders seçme açılışı: değiştirici uçlarda kullanıcı başına hız sınırı ve Idempotency-Key.
