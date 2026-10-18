@@ -334,7 +334,7 @@ Eşitleme ödev işlemi kaydedildikten sonra yapılır (yayımlama, yayımdan so
 ### Tamamlama ve etkileşim
 | Tablo | Sütunlar | Not |
 | --- | --- | --- |
-| `activity_completions` | activity_id, user_id, state CK(`INCOMPLETE, COMPLETE, COMPLETE_PASS, COMPLETE_FAIL`), completed_at — PK | İlerleme % |
+| `activity_completions` | activity_id, user_id, completed_at — PK(activity_id, user_id) | Faz 5'te uygulandı (sadece tamamlananlar; geçti/kaldı durumları koşullu tamamlamayla ileride). Görüntüleme, indirme ya da teslimle kendiliğinden yazılır. İlerleme = görünür etiket dışı etkinliklerden tamamlananlar |
 | `events` | id bigint identity, occurred_at, user_id, space_id, activity_id, event_type (`VIEWED, DOWNLOADED, SUBMITTED, POSTED, QUIZ_STARTED, QUIZ_SUBMITTED, LIVE_JOINED`), meta jsonb | **Aylık partition**. OLAP `fact_lms_activity` kaynağı. 90 gün sonra eski partition'lar ambara aktarılıp düşürülür |
 
 ---

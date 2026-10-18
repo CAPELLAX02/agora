@@ -342,7 +342,7 @@ flowchart LR
 | ✅ | Not öğesi ↔ değerlendirme bileşeni köprüsü | Ödev, şubenin dönem içi bir bileşenine ağırlıkla bağlanır (`GET/PUT /activities/{id}/link`, `lms.assignment_links`); bileşen notu yayımlanmış bağlı ödevlerin kesinti sonrası puanlarının 100'lük ağırlıklı ortalaması (puanı olmayan 0, tam kesirle), not modülüne `source = LMS` yazılır (`ApplyLMSScores`: pencere aranmaz, plan kilitli olmalı, ilandan sonra donar). Not tablosunda "Ödevlerden" işareti (`lms_fed`), elle girişte 409 `COMPONENT_FED_BY_LMS`. Elle not öğeleri P2 |
 | ✅ | Forum | Her alanda Duyurular forumu (ders alanıyla oluşur, var olan alanlara migration ile eklendi; konuyu ve yanıtı öğretim elemanı yazar, silinemez, gizlenebilir) ve genel forum (öğrencilerin konu açması ayarlanabilir). Konu ve yanıtlar (temiz HTML, belirli gönderiye yanıt), yazar ya da öğretim elemanı düzenler ve siler (silinen gönderi yerinde kalır, ilk gönderi silinirse konu silinir), sabitleme ve kilitleme (kilitli konuya öğrenci yazamaz), izleyici okur. Abonelik bildirimleri Faz 6'da |
 | ✅ | Zaman çizelgesi | `GET /me/timeline` (dönem seçimli): öğrenciye son tarihi 60 gün içinde olan, gönderilmemiş ve hâlâ teslim edilebilen ödevler (`DUE`, geç teslim açıksa `OVERDUE`); gizli, açılmamış ve kapanmış (teslim edilemeyen) olanlar girmez. Öğretim elemanına puanlanmayı bekleyen teslimi olan ödevler (`TO_GRADE`, sayısıyla; bırakan öğrenciler sayılmaz). Sıra: gecikenler, yaklaşanlar, puanlanacaklar |
-| ⬜ | Etkinlik tamamlama ve ilerleme | Görüntüleme, teslim ya da elle tamamlama; alan başına ilerleme yüzdesi |
+| ✅ | Etkinlik tamamlama ve ilerleme | Öğrenci başına, kendiliğinden: sayfa, klasör, forum ve bağlantı görüntülenince (`GET /activities/{id}`, ders alanından açılan bağlantı için `POST /activities/{id}/views`), dosya indirilince, ödev gönderilince (`lms.activity_completions`). İlerleme: görünür, etiket dışı etkinliklerden tamamlananlar (ders alanında ve `GET /me/spaces`'te `progress`). Elle tamamlama ve koşullu erişim ileride |
 | ⬜ | İş metrikleri | Yüklenen dosyalar ve baytlar, teslimler (geç dahil), forum gönderileri; Grafana satırı |
 | ⬜ | Seed: ders alanı demosu | COM1007-1 için haftalık bölümler, dosyalar, sayfa, bağlantı, ödev ve teslimler, forum; ödev ara sınav bileşenine bağlı değil, laboratuvara bağlı |
 
@@ -350,7 +350,7 @@ flowchart LR
 
 | Durum | Madde |
 | --- | --- |
-| ✅ | Derslerim (öğrenci ve öğretim elemanı): ders kartları, dönem seçici, menüde "Derslerim" (ilerleme yüzdesi tamamlama maddesiyle) |
+| ✅ | Derslerim (öğrenci ve öğretim elemanı): ders kartları, öğrenciye ilerleme çubuğu, dönem seçici, menüde "Derslerim"; ders alanında "İlerlemem" kartı ve tamamlanan etkinlikte onay işareti |
 | ✅ | Ders alanı: bölümler ve etkinlikler, ders bilgisi ve öğretim elemanları, düzenleme modu (ekle, yukarı/aşağı sırala, ⋯ menüsünden düzenle, gizle, sil, erişim zamanı); zengin metin editörü (Tiptap) sadece düzenleyene indirilir |
 | ✅ | Etkinlikler: dosya (imzalı adresle indirme; tarayıcı içi önizleme ileride), klasör, sayfa (zengin metin), bağlantı; sürükle-bırak yükleme ve ilerleme çubuğu |
 | ✅ | Ödev: öğrenci teslimi (sürükle-bırak yükleme, ilerleme, taslak ve gönder, durum tablosu, yeni deneme, yorumlar); öğretim elemanı ödev ayarları formu, teslim listesi (özet, süzme), puanlama paneli (denemeler, puan, zengin metin geri bildirim, yorum), yayımlama, Excel ile toplu puan (§5 #18): şablon indirme ve satır satır önizlemeli içe aktarma |
