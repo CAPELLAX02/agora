@@ -37,6 +37,12 @@ const (
 	LettersPublished   Type = "grades.letters_published"
 	ChangeRequested    Type = "grades.change_requested"
 	ChangeDecided      Type = "grades.change_decided"
+
+	AssignmentCreated  Type = "lms.assignment_created"
+	AssignmentReleased Type = "lms.grades_released"
+	ForumAnnouncement  Type = "forum.announcement"
+	ForumReply         Type = "forum.reply"
+	ForumThread        Type = "forum.thread"
 )
 
 // ErrNotFound: bildirim yok ya da başka bir kullanıcının.

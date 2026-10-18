@@ -107,6 +107,41 @@ var texts = map[Type]Text{
 		BodyEN: `Your grade change request for {{.student}} was {{if eq .decision "APPLIED"}}approved and applied.{{else}}rejected.{{end}}` +
 			`{{if .note}} Note: {{.note}}{{end}}`,
 	},
+	// Ders alanı. Veri: course_code, title, due_tr, due_en (son tarih yoksa boş).
+	AssignmentCreated: {
+		TitleTR: "{{.course_code}} · yeni ödev: {{.title}}",
+		TitleEN: "{{.course_code}} · new assignment: {{.title}}",
+		BodyTR:  `“{{.title}}” ödevi yayımlandı.{{if .due_tr}} Son tarih: {{.due_tr}}.{{end}}`,
+		BodyEN:  `The assignment “{{.title}}” was posted.{{if .due_en}} Due: {{.due_en}}.{{end}}`,
+	},
+	// Veri: course_code, title.
+	AssignmentReleased: {
+		TitleTR: "{{.course_code}} · {{.title}} puanınız yayımlandı",
+		TitleEN: "{{.course_code}} · your {{.title}} score was released",
+		BodyTR:  "“{{.title}}” ödevinin puanları ve geri bildirimleri yayımlandı.",
+		BodyEN:  "Scores and feedback for “{{.title}}” were released.",
+	},
+	// Veri: course_code, title, author, excerpt (gönderinin düz metni, kısaltılmış).
+	ForumAnnouncement: {
+		TitleTR: "{{.course_code}} duyurusu: {{.title}}",
+		TitleEN: "{{.course_code}} announcement: {{.title}}",
+		BodyTR:  "{{.author}}: {{.excerpt}}",
+		BodyEN:  "{{.author}}: {{.excerpt}}",
+	},
+	// Veri: course_code, thread, author.
+	ForumReply: {
+		TitleTR: "{{.author}}, “{{.thread}}” konusuna yanıt yazdı",
+		TitleEN: "{{.author}} replied to “{{.thread}}”",
+		BodyTR:  "{{.course_code}} forumunda yazdığınız “{{.thread}}” konusunda yeni bir yanıt var.",
+		BodyEN:  "There is a new reply in “{{.thread}}”, a {{.course_code}} thread you posted in.",
+	},
+	// Veri: course_code, forum, thread, author.
+	ForumThread: {
+		TitleTR: "{{.course_code}} · {{.forum}}: {{.thread}}",
+		TitleEN: "{{.course_code}} · {{.forum}}: {{.thread}}",
+		BodyTR:  "{{.author}}, abone olduğunuz {{.forum}} forumunda “{{.thread}}” konusunu açtı.",
+		BodyEN:  "{{.author}} started “{{.thread}}” in {{.forum}}, a forum you follow.",
+	},
 }
 
 // compiled, şablonların derlenmiş hâlidir: [tür][alan]. Bozuk bir şablon uygulamanın hiç
