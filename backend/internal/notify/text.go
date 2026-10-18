@@ -72,6 +72,41 @@ var texts = map[Type]Text{
 		BodyEN: `{{if eq .decision "APPLIED"}}Your {{.term}} add/drop request was approved and applied to your registration.` +
 			`{{else}}Your {{.term}} add/drop request was rejected.{{if .note}} Reason: {{.note}}{{end}}{{end}}`,
 	},
+
+	// Notlar. Veri: course_code, course_tr, course_en, component_tr, component_en.
+	ComponentPublished: {
+		TitleTR: "{{.course_code}} · {{.component_tr}} notunuz yayımlandı",
+		TitleEN: "{{.course_code}} · your {{.component_en}} score was published",
+		BodyTR:  "{{.course_tr}} dersinde {{.component_tr}} notları yayımlandı. Notunuzu ve sınıf ortalamasını Notlarım'da görebilirsiniz.",
+		BodyEN:  "{{.component_en}} scores for {{.course_en}} were published. See your score and the class average in My grades.",
+	},
+	// Veri: course_code, course_tr, course_en, phase (FINAL, MAKEUP, CORRECTION).
+	LettersPublished: {
+		TitleTR: `{{.course_code}} {{if eq .phase "MAKEUP"}}bütünleme sonucunuz ilan edildi{{else if eq .phase "CORRECTION"}}notunuz düzeltildi{{else}}harf notunuz ilan edildi{{end}}`,
+		TitleEN: `{{.course_code}} {{if eq .phase "MAKEUP"}}make-up result announced{{else if eq .phase "CORRECTION"}}grade corrected{{else}}letter grade announced{{end}}`,
+		BodyTR: `{{if eq .phase "MAKEUP"}}{{.course_tr}} dersinin bütünleme sonuçları ilan edildi.` +
+			`{{else if eq .phase "CORRECTION"}}{{.course_tr}} dersindeki notunuz onaylanan bir düzeltmeyle değişti.` +
+			`{{else}}{{.course_tr}} dersinin harf notları ilan edildi.{{end}} Notunuzu Notlarım'da görebilirsiniz.`,
+		BodyEN: `{{if eq .phase "MAKEUP"}}Make-up results for {{.course_en}} were announced.` +
+			`{{else if eq .phase "CORRECTION"}}Your grade in {{.course_en}} changed with an approved correction.` +
+			`{{else}}Letter grades for {{.course_en}} were announced.{{end}} See your grade in My grades.`,
+	},
+	// Veri: course_code, student, requester.
+	ChangeRequested: {
+		TitleTR: "{{.course_code}} için not düzeltme talebi",
+		TitleEN: "Grade change request for {{.course_code}}",
+		BodyTR:  "{{.requester}}, {{.course_code}} dersinde {{.student}} için not düzeltme talep etti. Talep onayınızı bekliyor.",
+		BodyEN:  "{{.requester}} requested a grade change for {{.student}} in {{.course_code}}. The request awaits your approval.",
+	},
+	// Veri: course_code, student, decision (APPLIED, REJECTED), note.
+	ChangeDecided: {
+		TitleTR: `{{.course_code}} not düzeltme talebiniz {{if eq .decision "APPLIED"}}onaylandı{{else}}reddedildi{{end}}`,
+		TitleEN: `Your grade change request for {{.course_code}} was {{if eq .decision "APPLIED"}}approved{{else}}rejected{{end}}`,
+		BodyTR: `{{.student}} için not düzeltme talebiniz {{if eq .decision "APPLIED"}}onaylandı ve uygulandı.{{else}}reddedildi.{{end}}` +
+			`{{if .note}} Not: {{.note}}{{end}}`,
+		BodyEN: `Your grade change request for {{.student}} was {{if eq .decision "APPLIED"}}approved and applied.{{else}}rejected.{{end}}` +
+			`{{if .note}} Note: {{.note}}{{end}}`,
+	},
 }
 
 // compiled, şablonların derlenmiş hâlidir: [tür][alan]. Bozuk bir şablon uygulamanın hiç

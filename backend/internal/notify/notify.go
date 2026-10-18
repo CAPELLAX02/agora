@@ -32,6 +32,11 @@ const (
 	RegistrationDecision  Type = "registration.decision"
 	AddDropPending        Type = "registration.add_drop_pending"
 	AddDropDecision       Type = "registration.add_drop_decision"
+
+	ComponentPublished Type = "grades.component_published"
+	LettersPublished   Type = "grades.letters_published"
+	ChangeRequested    Type = "grades.change_requested"
+	ChangeDecided      Type = "grades.change_decided"
 )
 
 // ErrNotFound: bildirim yok ya da başka bir kullanıcının.

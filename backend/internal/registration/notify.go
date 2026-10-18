@@ -79,7 +79,7 @@ func notifyEvent(ctx context.Context, tx pgx.Tx, registrationID, typ string, pay
 		who["stage"] = "ADVISOR"
 		return send(notify.AddDropPending, advisorUser, who, "/ekle-birak-onaylari")
 	case "ADD_DROP_APPROVED": // danışman onayladı: talep bölüm başkanı aşamasında
-		heads, err := notify.PermissionHolders(ctx, tx, "registration:approve_add_drop", programID)
+		heads, err := notify.PermissionHolders(ctx, tx, "registration:approve_add_drop", notify.Target{ProgramID: programID})
 		if err != nil {
 			return err
 		}
