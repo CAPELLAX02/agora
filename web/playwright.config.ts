@@ -36,7 +36,14 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: /grading\.spec/ },
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: /(grading|lms)\.spec/ },
+    // Ders alanı akışı, kayıt senaryosunda onaylanan öğrencinin kaydına dayanır.
+    {
+      name: 'lms',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /lms\.spec/,
+      dependencies: ['chromium'],
+    },
     // Not akışı öğretim elemanına ve bölüm başkanına MFA kurar: o hesaplarla MFA'sız giriş yapan
     // senaryolardan sonra çalışır.
     {
