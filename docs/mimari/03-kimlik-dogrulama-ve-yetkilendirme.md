@@ -365,6 +365,15 @@ canReadAnnouncement(actor, announcement):                        # uygulandı (F
     # Hedef kitle: öğrenci olarak (hazırlık, aktif, dondurulmuş) programı, bölümü ya da fakültesi;
     # personel olarak birincil bölümü ya da fakültesi; üniversite hedefi herkes. Diğerlerine 404.
 
+canMessage(actor, peer):                                         # uygulandı (Faz 6)
+    actor != peer AND peer.active
+    AND ( isActiveStaff(actor)                                        # personel herkese
+          OR peer IN instructorsOf(sectionsOf(actor))                 # öğrenci: şubelerinin öğretim elemanları
+          OR peer = activeAdvisorOf(actor) )                          #          ve danışmanı
+    # Öğrenciler birbirine birebir yazamaz, şube grubunda yazar. Grubu personel kurar (kuran
+    # yönetici). Şube grubunun üyeleri şubenin öğretim elemanları ve bırakmamış öğrencileridir;
+    # öğretim elemanı grubun yöneticisidir. Konuşmaya erişemeyene konuşma yokmuş gibi 404.
+
 canEditAssessmentPlan(actor, section):                           # uygulandı (Faz 2)
     ( has(actor, "assessment_plan:manage")
       AND roleIn(actor, section) IN ('PRIMARY', 'CO_INSTRUCTOR') )   # ilişki: section_instructors
