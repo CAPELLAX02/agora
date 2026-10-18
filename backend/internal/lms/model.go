@@ -7,7 +7,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/microcosm-cc/bluemonday"
+	"github.com/CAPELLAX02/agora/backend/internal/platform/richtext"
 )
 
 // Hatalar.
@@ -166,18 +166,7 @@ type Space struct {
 	Progress    *Progress
 }
 
-// policy, ders içeriğindeki zengin metnin izin listesidir: biçimlendirme, başlıklar, listeler,
-// tablolar, bağlantılar, görseller ve kod blokları. Betik, stil, olay öznitelikleri ve
-// iframe atılır; bağlantılar yeni sekmede ve noopener ile açılır.
-var policy = func() *bluemonday.Policy {
-	p := bluemonday.UGCPolicy()
-	p.RequireNoReferrerOnLinks(true)
-	p.AddTargetBlankToFullyQualifiedLinks(true)
-	p.AllowAttrs("class").Matching(bluemonday.SpaceSeparatedTokens).OnElements("code", "pre", "span")
-	return p
-}()
-
-// Sanitize, kullanıcının yazdığı HTML'i izin listesine göre temizler.
+// Sanitize, kullanıcının yazdığı HTML'i izin listesine göre temizler (bkz. richtext).
 func Sanitize(html string) string {
-	return policy.Sanitize(html)
+	return richtext.Sanitize(html)
 }

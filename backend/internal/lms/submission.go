@@ -9,12 +9,12 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/microcosm-cc/bluemonday"
 
 	"github.com/CAPELLAX02/agora/backend/internal/audit"
 	"github.com/CAPELLAX02/agora/backend/internal/files"
 	"github.com/CAPELLAX02/agora/backend/internal/grading"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/db"
+	"github.com/CAPELLAX02/agora/backend/internal/platform/richtext"
 )
 
 // ErrPreconditionRequired, var olan bir kaydın sürümsüz (If-Match'siz) güncellenmesidir.
@@ -78,11 +78,9 @@ func (w Work) Latest() *Submission {
 	return &w.Attempts[len(w.Attempts)-1]
 }
 
-// plain, zengin metnin görünür yazısıdır (boş teslimi ayırt etmek için).
-var plain = bluemonday.StrictPolicy()
-
+// emptyHTML, zengin metinde görünür yazı olmadığını söyler (boş teslimi ayırt etmek için).
 func emptyHTML(html string) bool {
-	return strings.TrimSpace(strings.ReplaceAll(plain.Sanitize(html), "&nbsp;", "")) == ""
+	return richtext.Empty(html)
 }
 
 // Assignment, ödevin ayarlarıdır.

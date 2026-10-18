@@ -16,6 +16,7 @@ import (
 	"github.com/CAPELLAX02/agora/backend/internal/audit"
 	"github.com/CAPELLAX02/agora/backend/internal/grading"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/db"
+	"github.com/CAPELLAX02/agora/backend/internal/platform/richtext"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/sheet"
 )
 
@@ -162,19 +163,9 @@ func safeCell(s string) string {
 	return s
 }
 
-// plainText, zengin metnin düz yazısıdır: bloklar satır olur, etiketler atılır.
+// plainText, zengin metnin düz yazısıdır (bkz. richtext.PlainText).
 func plainText(h string) string {
-	for _, tag := range []string{"</p>", "<br>", "<br/>", "<br />", "</li>", "</h2>", "</h3>", "</blockquote>", "</pre>"} {
-		h = strings.ReplaceAll(h, tag, tag+"\n")
-	}
-	lines := strings.Split(html.UnescapeString(plain.Sanitize(h)), "\n")
-	out := lines[:0]
-	for _, l := range lines {
-		if l = strings.Join(strings.Fields(l), " "); l != "" {
-			out = append(out, l)
-		}
-	}
-	return strings.Join(out, "\n")
+	return richtext.PlainText(h)
 }
 
 // textHTML, düz metni paragraflara çevirir (her dolu satır bir paragraf).
