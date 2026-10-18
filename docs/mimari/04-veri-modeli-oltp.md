@@ -314,7 +314,7 @@ stateDiagram-v2
 | --- | --- | --- |
 | `forum_threads` | id, activity_id FK→forums, author_id, title (1-200), is_pinned, is_locked, post_count, last_post_at, created_at, deleted_at | Faz 5'te uygulandı. Liste sırası (sabitlenen, son gönderi) için kısmi index |
 | `forum_posts` | id, thread_id, parent_post_id null, author_id, body_html, created_at, edited_at, deleted_at | Faz 5'te uygulandı. Silinen gönderi yerinde kalır (metni gösterilmez); ilk gönderi silinirse konu silinir |
-| `forum_subscriptions` | forum_activity_id, user_id — PK | Faz 6 (bildirimlerle) |
+| `forum_subscriptions` | activity_id → forums, user_id, created_at — PK(activity_id, user_id) | Faz 6'da uygulandı. Genel forumda yeni konu abonelere bildirilir; Duyurular forumu bütün üyelere bildirildiği için aboneliği yok; konuya yazanlar yanıtları kendiliğinden alır |
 
 ### Not defteri ↔ değerlendirme köprüsü (kritik entegrasyon)
 | Tablo | Sütunlar | Not |
