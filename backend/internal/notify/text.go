@@ -142,6 +142,19 @@ var texts = map[Type]Text{
 		BodyTR:  "{{.author}}, abone olduğunuz {{.forum}} forumunda “{{.thread}}” konusunu açtı.",
 		BodyEN:  "{{.author}} started “{{.thread}}” in {{.forum}}, a forum you follow.",
 	},
+	// Kurumsal duyurular. Veri: title, summary (boş olabilir), author.
+	AnnouncementPublished: {
+		TitleTR: "Duyuru: {{.title}}",
+		TitleEN: "Announcement: {{.title}}",
+		BodyTR:  "{{if .summary}}{{.summary}}{{else}}{{.author}} yeni bir duyuru yayımladı.{{end}}",
+		BodyEN:  "{{if .summary}}{{.summary}}{{else}}{{.author}} posted a new announcement.{{end}}",
+	},
+	AnnouncementUrgent: {
+		TitleTR: "Acil duyuru: {{.title}}",
+		TitleEN: "Urgent announcement: {{.title}}",
+		BodyTR:  "{{if .summary}}{{.summary}}{{else}}{{.author}} acil bir duyuru yayımladı.{{end}}",
+		BodyEN:  "{{if .summary}}{{.summary}}{{else}}{{.author}} posted an urgent announcement.{{end}}",
+	},
 }
 
 // compiled, şablonların derlenmiş hâlidir: [tür][alan]. Bozuk bir şablon uygulamanın hiç

@@ -43,6 +43,9 @@ const (
 	ForumAnnouncement  Type = "forum.announcement"
 	ForumReply         Type = "forum.reply"
 	ForumThread        Type = "forum.thread"
+
+	AnnouncementPublished Type = "announcement.published"
+	AnnouncementUrgent    Type = "announcement.urgent"
 )
 
 // ErrNotFound: bildirim yok ya da başka bir kullanıcının.
@@ -114,18 +117,22 @@ func Send(ctx context.Context, q db.Querier, n Notification) error {
 		return fmt.Errorf("notify: alıcılar okunamadı: %w", err)
 	}
 
-	var inApp []string
+	var (
+		inApp  []string
+		emails []mail.Email
+	)
 	for _, r := range list {
 		if r.inApp {
 			inApp = append(inApp, r.id)
 		}
 		if r.byEmail && r.active {
-			if _, err := mail.Enqueue(ctx, q, mail.Email{To: r.email, Template: mail.TemplateNotification, Data: map[string]any{
+			emails = append(emails, mail.Email{To: r.email, Template: mail.TemplateNotification, Data: map[string]any{
 				"name": r.name, "title": text.TitleTR, "body": text.BodyTR, "link": n.Link, "mandatory": r.mandatory,
-			}}); err != nil {
-				return fmt.Errorf("notify: e-posta kuyruğa alınamadı: %w", err)
-			}
+			}})
 		}
+	}
+	if err := mail.EnqueueBatch(ctx, q, emails); err != nil {
+		return fmt.Errorf("notify: %w", err)
 	}
 	if len(inApp) == 0 {
 		return nil

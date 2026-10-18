@@ -1,6 +1,7 @@
 package mail
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -43,6 +44,32 @@ func Enqueue(ctx context.Context, q db.Querier, e Email) (string, error) {
 		return "", fmt.Errorf("mail: e-posta kuyruğa alınamadı: %w", err)
 	}
 	return id, nil
+}
+
+// EnqueueBatch, e-postaları tek sorguyla outbox'a yazar (ör. bir duyurunun binlerce alıcısı).
+// Çağıranın transaction'ı verilirse iş verisiyle birlikte commit edilir.
+func EnqueueBatch(ctx context.Context, q db.Querier, emails []Email) error {
+	if len(emails) == 0 {
+		return nil
+	}
+	to := make([]string, len(emails))
+	templates := make([]string, len(emails))
+	langs := make([]string, len(emails))
+	payloads := make([]string, len(emails))
+	for i, e := range emails {
+		payload, err := json.Marshal(e.Data)
+		if err != nil {
+			return fmt.Errorf("mail: şablon verisi kodlanamadı: %w", err)
+		}
+		to[i], templates[i], langs[i], payloads[i] = e.To, e.Template, cmp.Or(e.Locale, locales[0]), string(payload)
+	}
+	if _, err := q.Exec(ctx, `
+		INSERT INTO communication.email_outbox (to_address, template_code, locale, payload)
+		SELECT * FROM unnest($1::citext[], $2::text[], $3::text[], $4::jsonb[])`,
+		to, templates, langs, payloads); err != nil {
+		return fmt.Errorf("mail: e-postalar kuyruğa alınamadı: %w", err)
+	}
+	return nil
 }
 
 // Sender, e-posta gönderen bileşendir. *SMTPSender bunu sağlar.
