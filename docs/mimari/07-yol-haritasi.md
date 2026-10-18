@@ -365,6 +365,42 @@ flowchart LR
 | ✅ | Playwright e2e (`lms` projesi, kayıt senaryolarından sonra): öğretim elemanı planı kilitler, bölüm, dosya, ödev ve forum ekler, duyuru yazar, ödevi proje bileşenine bağlar; kaydı onaylanan öğrenci ana sayfada ödevi, ders alanında ilerlemesini görür, dosyayı indirir, forumda konu açar, ödevi dosyayla teslim eder; öğretim elemanı puanlayıp yayımlar, puan not tablosunda bileşene akar ("Ödevlerden"), soruyu yanıtlar; öğrenci puanı, geri bildirimi, yanıtı ve duyuruyu görür, ilerlemesi tamamlanır |
 | ✅ | Sözleşme ve dokümanlar güncel (veri modeli, yetkilendirme politikaları, iş metrikleri, README'de ders alanı demo rehberi), CI yeşil |
 
-### Faz 6 ve sonrası
+### Faz 6 — İletişim
+
+**Backend**
+
+| Durum | Madde | Not |
+| --- | --- | --- |
+| ⬜ | Bildirim kataloğu ve kayıtları | `communication` şeması: `notification_types` (kod, kategori, TR/EN ad, varsayılan kanallar, zorunlu mu: güvenlik bildirimleri kapatılamaz), `notifications` (aylık bölümlenmiş, okunmamışlara kısmi indeks, 180 gün saklama; bölümleri worker önceden açar ve eskileri düşürür). Kayıt aynı transaction'da, olay başına alıcıya bir kez (idempotent) |
+| ⬜ | Olaylardan bildirim | Outbox tüketicisi: ders kaydı kararları ve ekle-bırak, not ilanı (bileşen ve harf), not düzeltme kararları, ödev (yeni ödev, puanlar yayımlandı, son tarih yaklaşıyor), forum (duyuru, konuma yanıt, abone olunan forumda yeni konu), kurumsal duyuru. Her olay türü için TR/EN başlık, metin ve uygulama içi bağlantı |
+| ⬜ | Bildirim merkezi API'si | `GET /me/notifications` (cursor, okunmamış süzgeci), okunmamış sayısı, okundu, hepsini okundu yap, arşivle; başkasının bildirimine erişim 404 |
+| ⬜ | Tercih matrisi | `notification_preferences` (tür × kanal: uygulama içi, e-posta; mobil push Faz 10). `GET/PUT /me/notification-preferences`; zorunlu türler kapatılamaz, varsayılan katalogdan gelir |
+| ⬜ | E-posta kanalı | Tercihte e-posta açıksa bildirim, var olan e-posta kuyruğuna (`mail.Enqueue`, aynı transaction) kullanıcının dilinde şablonla girer (`html/template` + düz metin); gönderimde üstel geri çekilme, kalıcı hatada bırakma |
+| ⬜ | SSE ile canlı bildirim | `GET /me/notifications/stream` (`http.Flusher`, kalp atışı, `Last-Event-ID` ile kaçanları gönderme). EventSource başlık taşıyamadığı için kısa ömürlü, tek kullanımlık akış bileti. API örnekleri arasında Redis pub/sub; bağlantı sayısı sınırı, kapanışta düzgün bırakma |
+| ⬜ | Kurumsal duyurular | `announcements` (tür, özet, temiz HTML gövde, yayın penceresi, sabitleme, taslak/yayında/arşiv), `announcement_audiences` (üniversite, fakülte, bölüm, program, şube; isteğe bağlı rol), `announcement_reads`. Yayımlama yetkisi birim kapsamında; hedef kitle kişinin üyeliklerinden çözülür. Yayın başlayınca bildirim (ileri tarihli olanları worker yayımlar). `GET /me/announcements`, okundu bilgisi, yayımlayana okunma oranı |
+| ⬜ | Forum aboneliği | `forum_subscriptions`: genel foruma abone ol/ayrıl, kendi konusuna kendiliğinden abonelik; Duyurular forumu bütün üyelere bildirilir (zorunlu değil, tercihle kapatılır) |
+| ⬜ | Mesajlaşma | `conversations` (birebir, grup, şube grubu), üyeler (okunan son ileti, sessize alma, yıldız), `messages` (zaman sıralı kimlik, cursor, yanıt, düzenleme, yumuşak silme), ekler (dosya servisi). Kimin kime yazabileceği politikayla: öğrenci kendi şubelerinin öğretim elemanlarına ve danışmanına, personel herkese; şube grubu üyelikten türetilir. Yeni ileti SSE ile, okunmamış sayıları, gönderim hız sınırı |
+| ⬜ | Hatırlatmalar | Worker'da zamanlanmış işler: ders seçme ve not girişi pencerelerinin açılışı ve kapanışı, ödev son tarihi (24 saat kala, gönderilmemişse). Aynı hatırlatma bir kez |
+| ⬜ | İş metrikleri | Türe ve kanala göre bildirim, açık SSE bağlantısı, ileti, duyuru okuma; Grafana'da "İletişim" satırı |
+| ⬜ | Seed: iletişim demosu | Fakülte ve bölüm duyuruları (biri ileri tarihli), demo hesaplarına örnek bildirimler, danışman ile öğrenci arasında ve şube grubunda örnek konuşmalar |
+
+**Web**
+
+| Durum | Madde |
+| --- | --- |
+| ⬜ | Üst barda bildirim zili: okunmamış sayısı, son bildirimler, okundu yapma; SSE ile canlı güncelleme (yeniden bağlanma, sekme gizliyken bekletme) ve RTK Query önbelleğinin tazelenmesi |
+| ⬜ | Bildirim merkezi sayfası (süzgeç, toplu okundu, arşiv) ve hesap ayarlarında tercih matrisi |
+| ⬜ | Duyurular: liste ve ayrıntı, ana sayfada duyuru kartı, yayımlayan için editör (hedef kitle seçici, yayın penceresi, önizleme, okunma oranı) |
+| ⬜ | Mesajlar: konuşma listesi (okunmamış, yıldızlı, grup), konuşma ekranı (cursor ile geçmiş, yanıt, ek, düzenle, sil), yeni konuşma (yazılabilecek kişiler), canlı ileti |
+| ⬜ | Forumda abone ol/ayrıl düğmesi |
+
+**Kapanış**
+
+| Durum | Madde |
+| --- | --- |
+| ⬜ | Playwright e2e: duyuru hedef kitledeki öğrenciye canlı bildirim olarak düşer, dışındakine düşmez; tercih kapatılınca e-posta gitmez (Mailpit); öğrenci danışmanına mesaj yazar, danışman canlı görür ve yanıtlar |
+| ⬜ | Sözleşme ve dokümanlar güncel (veri modeli, politikalar, README'de demo rehberi), CI yeşil |
+
+### Faz 7 ve sonrası
 
 Her faz başlarken §2'deki kapsamdan aynı biçimde ayrıntılı bir liste çıkarılır.
