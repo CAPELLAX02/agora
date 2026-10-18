@@ -51,6 +51,7 @@ const assignment: Activity = {
   open_in_new_tab: null,
   body_html: null,
   assignment: settings,
+  forum: null,
 }
 
 const space = (role: Space['role']): Space => ({

@@ -29,8 +29,8 @@ export const activityMeta: Record<ActivityType, { icon: LucideIcon; tone: Tone }
   FORUM: { icon: MessagesSquareIcon, tone: 'emerald' },
 }
 
-/** editableTypes, ders alanında etkinlik penceresiyle eklenen türlerdir (forum kendi akışıyla). */
-export const editableTypes = ['ASSIGNMENT', 'RESOURCE', 'FOLDER', 'URL', 'PAGE', 'LABEL'] as const
+/** editableTypes, ders alanında etkinlik penceresiyle eklenen türlerdir. */
+export const editableTypes = ['ASSIGNMENT', 'FORUM', 'RESOURCE', 'FOLDER', 'URL', 'PAGE', 'LABEL'] as const
 export type EditableType = (typeof editableTypes)[number]
 
 /** toLocalInput, ISO zamanı datetime-local alanının değerine çevirir (yerel saat). */
@@ -60,7 +60,7 @@ export function hostOf(url: string | null): string {
 /** inputOf, etkinliğin güncelleme gövdesidir; sayfanın gövdesi ayrıntıdan verilir. */
 export function inputOf(a: Activity, body?: string): ActivityInput {
   return {
-    type: a.type as ActivityInput['type'],
+    type: a.type,
     title: a.title,
     description_html: a.description_html,
     is_visible: a.is_visible,
@@ -71,6 +71,7 @@ export function inputOf(a: Activity, body?: string): ActivityInput {
     open_in_new_tab: a.open_in_new_tab ?? undefined,
     body_html: body ?? a.body_html ?? undefined,
     assignment: a.assignment ? assignmentInputOf(a.assignment) : undefined,
+    forum: a.forum ? { students_can_start_threads: a.forum.students_can_start_threads } : undefined,
   }
 }
 

@@ -16,6 +16,7 @@ import { ErrorState } from '@/shared/ui/states'
 import { AssignmentStudent } from './AssignmentStudent'
 import { AssignmentTeacher } from './AssignmentTeacher'
 import { AvailabilityBadges } from './AvailabilityBadges'
+import { ForumView } from './ForumView'
 import { useDownload } from './download'
 import { activityMeta } from './meta'
 
@@ -124,6 +125,7 @@ export function ActivityPage() {
               </CardContent>
             </Card>
           )}
+          {a.type === 'FORUM' && <ForumView sectionId={id} activityId={a.id} />}
           {a.type === 'ASSIGNMENT' &&
             space &&
             (space.role === 'STUDENT' ? (

@@ -227,6 +227,7 @@ export type ActivityValues = {
   open_in_new_tab?: boolean
   body_html?: string
   assignment?: AssignmentInput
+  forum?: { students_can_start_threads: boolean }
 }
 
 type AssignmentForm = {
@@ -476,6 +477,8 @@ export function ActivityDialog({
     until: toLocalInput(activity?.available_until),
   })
   const [asg, setAsg] = useState(() => assignmentForm(activity?.assignment))
+  const [studentsStart, setStudentsStart] = useState(activity?.forum?.students_can_start_threads ?? true)
+  const announcements = activity?.forum?.kind === 'ANNOUNCEMENTS'
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const typeName = t(`lms.types.${type}`)
@@ -484,7 +487,9 @@ export function ActivityDialog({
       ? t('lms.form.labelText')
       : type === 'ASSIGNMENT'
         ? t('lms.assignment.form.instructions')
-        : t('lms.form.description')
+        : type === 'FORUM'
+          ? t('lms.forum.description')
+          : t('lms.form.description')
 
   const submit = () => {
     if (!title.trim()) {
@@ -507,6 +512,7 @@ export function ActivityDialog({
     setBusy(true)
     void onSave({
       assignment,
+      ...(type === 'FORUM' ? { forum: { students_can_start_threads: !announcements && studentsStart } } : {}),
       type,
       title: title.trim(),
       description_html: description,
@@ -540,6 +546,12 @@ export function ActivityDialog({
         <Label htmlFor="activity-title">{t('lms.form.title')}</Label>
         <Input id="activity-title" value={title} maxLength={200} onChange={(e) => setTitle(e.target.value)} />
       </div>
+      {type === 'FORUM' && !announcements && (
+        <label className="flex items-center gap-2 text-sm">
+          <Checkbox checked={studentsStart} onCheckedChange={(v) => setStudentsStart(v === true)} />
+          {t('lms.forum.studentsCanStart')}
+        </label>
+      )}
       {type === 'ASSIGNMENT' && (
         <AssignmentFields value={asg} onChange={(v) => setAsg((a) => ({ ...a, ...v }))} />
       )}

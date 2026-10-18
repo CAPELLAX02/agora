@@ -195,6 +195,13 @@ export const routes: RouteObject[] = [
                     },
                   },
                   {
+                    path: 'derslerim/:id/etkinlik/:activityId/konu/:threadId',
+                    lazy: async () => {
+                      const { ThreadPage } = await import('@/features/lms/ThreadPage')
+                      return { element: <ThreadPage /> }
+                    },
+                  },
+                  {
                     path: 'not-duzeltme',
                     lazy: async () => {
                       const { GradeChangesPage } = await import('@/features/gradechanges/GradeChangesPage')

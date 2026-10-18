@@ -24,7 +24,7 @@ import { toast } from 'sonner'
 
 import { useAppDispatch } from '@/app/hooks'
 import { navTheme } from '@/features/shell/nav'
-import { formatDateTime } from '@/i18n/format'
+import { formatDateTime, formatRelative } from '@/i18n/format'
 import { ifMatch } from '@/shared/api/etag'
 import {
   agoraApi,
@@ -176,7 +176,7 @@ export function SpacePage() {
       )
       body = res.data?.body_html ?? ''
     }
-    setEditing({ kind: 'activity', topicId, type: a.type as EditableType, activity: a, body })
+    setEditing({ kind: 'activity', topicId, type: a.type, activity: a, body })
   }
 
   return (
@@ -613,11 +613,16 @@ function ActivityRow({
           {a.is_visible ? <EyeOffIcon /> : <EyeIcon />}
           {a.is_visible ? t('lms.activity.hide') : t('lms.activity.show')}
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onSelect={onDelete}>
-          <Trash2Icon />
-          {t('lms.delete')}
-        </DropdownMenuItem>
+        {/* Duyurular forumu silinmez, gizlenebilir. */}
+        {a.forum?.kind !== 'ANNOUNCEMENTS' && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onSelect={onDelete}>
+              <Trash2Icon />
+              {t('lms.delete')}
+            </DropdownMenuItem>
+          </>
+        )}
       </ItemMenu>
     </span>
   )
@@ -643,11 +648,15 @@ function ActivityRow({
         ? t('lms.files', { count: a.files.length })
         : a.type === 'URL'
           ? hostOf(a.url)
-          : a.type === 'ASSIGNMENT' && a.assignment
-            ? a.assignment.due_at
-              ? t('lms.assignment.dueShort', { time: formatDateTime(a.assignment.due_at) })
-              : t('lms.assignment.noDue')
-            : t(`lms.types.${a.type}`)
+          : a.type === 'FORUM' && a.forum
+            ? a.forum.threads > 0 && a.forum.last_post_at
+              ? `${t('lms.forum.threads', { count: a.forum.threads })} · ${t('lms.forum.lastPost', { time: formatRelative(a.forum.last_post_at) })}`
+              : t('lms.forum.noThreadsShort')
+            : a.type === 'ASSIGNMENT' && a.assignment
+              ? a.assignment.due_at
+                ? t('lms.assignment.dueShort', { time: formatDateTime(a.assignment.due_at) })
+                : t('lms.assignment.noDue')
+              : t(`lms.types.${a.type}`)
 
   const activate = () => {
     if (!open) {
