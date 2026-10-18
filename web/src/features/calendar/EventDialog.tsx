@@ -16,6 +16,7 @@ import {
   type CalendarEventRequest,
 } from '@/shared/api/generated'
 import { useErrorMessage } from '@/shared/api/useErrorMessage'
+import { toLocalInput } from '@/shared/lib/datetime'
 import { useLocalized } from '@/shared/lib/localized'
 import { Button } from '@/shared/ui/button'
 import { Checkbox } from '@/shared/ui/checkbox'
@@ -25,8 +26,6 @@ import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Textarea } from '@/shared/ui/textarea'
-
-import { toLocalInput } from './term'
 
 /**
  * EventDialog, bir takvim olayı ekler ya da düzenler. Olay türü sonradan değişmez.

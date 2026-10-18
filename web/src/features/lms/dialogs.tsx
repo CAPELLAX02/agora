@@ -11,6 +11,7 @@ import type {
   SubmissionType,
   Topic,
 } from '@/shared/api/generated'
+import { fromLocalInput, toLocalInput } from '@/shared/lib/datetime'
 import { Alert, AlertDescription } from '@/shared/ui/alert'
 import { Button } from '@/shared/ui/button'
 import { Checkbox } from '@/shared/ui/checkbox'
@@ -29,7 +30,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Spinner } from '@/shared/ui/spinner'
 
 import { FileDropzone, type UploadedFile } from './FileDropzone'
-import { activityMeta, fromLocalInput, toLocalInput, type EditableType } from './meta'
+import { activityMeta, type EditableType } from './meta'
 
 /** EditorDialog, ders içeriği düzenleme pencerelerinin ortak iskeletidir (geniş, kaydırılabilir). */
 function EditorDialog({
