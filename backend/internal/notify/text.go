@@ -35,6 +35,43 @@ var texts = map[Type]Text{
 		BodyEN: `{{if eq .by "admin"}}An administrator reset two-step verification for your account; you can set it up again on the security page.` +
 			`{{else}}Two-step verification was turned off for your account. If this wasn't you, change your password right away.{{end}}`,
 	},
+
+	// Ders kaydı. Veri: student, student_no, term, courses, ects.
+	RegistrationSubmitted: {
+		TitleTR: "{{.student}} ders kaydını onayınıza gönderdi",
+		TitleEN: "{{.student}} sent their course registration for your approval",
+		BodyTR:  "{{.student}} ({{.student_no}}), {{.term}} dönemi ders kaydını onayınıza gönderdi: {{.courses}} ders, {{.ects}} AKTS.",
+		BodyEN:  "{{.student}} ({{.student_no}}) sent their {{.term}} course registration for your approval: {{.courses}} courses, {{.ects}} ECTS.",
+	},
+	// Veri: decision (APPROVED, REJECTED, REVOKED), term, courses, ects, note.
+	RegistrationDecision: {
+		TitleTR: `{{if eq .decision "APPROVED"}}Ders kaydınız onaylandı{{else if eq .decision "REJECTED"}}Ders kaydınız düzeltme için geri gönderildi{{else}}Ders kaydınızın onayı geri alındı{{end}}`,
+		TitleEN: `{{if eq .decision "APPROVED"}}Your course registration was approved{{else if eq .decision "REJECTED"}}Your course registration was sent back for changes{{else}}The approval of your course registration was revoked{{end}}`,
+		BodyTR: `{{if eq .decision "APPROVED"}}{{.term}} dönemi ders kaydınız danışmanınız tarafından onaylandı: {{.courses}} ders, {{.ects}} AKTS.` +
+			`{{else if eq .decision "REJECTED"}}{{.term}} dönemi ders kaydınız danışmanınız tarafından düzeltilmek üzere geri gönderildi. Ders seçme süresi içinde sepetinizi düzenleyip yeniden gönderebilirsiniz.` +
+			`{{else}}{{.term}} dönemi ders kaydınızın onayı geri alındı. Ders seçme süresi içinde sepetinizi düzenleyip yeniden gönderebilirsiniz.{{end}}` +
+			`{{if .note}} Danışman notu: {{.note}}{{end}}`,
+		BodyEN: `{{if eq .decision "APPROVED"}}Your {{.term}} course registration was approved by your advisor: {{.courses}} courses, {{.ects}} ECTS.` +
+			`{{else if eq .decision "REJECTED"}}Your {{.term}} course registration was sent back for changes by your advisor. You can edit and resubmit your basket while course registration is open.` +
+			`{{else}}The approval of your {{.term}} course registration was revoked. You can edit and resubmit your basket while course registration is open.{{end}}` +
+			`{{if .note}} Advisor's note: {{.note}}{{end}}`,
+	},
+	// Veri: student, student_no, term, stage (ADVISOR, DEPT_HEAD).
+	AddDropPending: {
+		TitleTR: "{{.student}} ekle-bırak talebi onayınızı bekliyor",
+		TitleEN: "{{.student}}'s add/drop request awaits your approval",
+		BodyTR:  `{{.student}} ({{.student_no}}), {{.term}} dönemi için ekle-bırak talebinde bulundu{{if eq .stage "DEPT_HEAD"}} ve danışmanı onayladı{{end}}. Talep onayınızı bekliyor.`,
+		BodyEN:  `{{.student}} ({{.student_no}}) made an add/drop request for {{.term}}{{if eq .stage "DEPT_HEAD"}} and their advisor approved it{{end}}. The request awaits your approval.`,
+	},
+	// Veri: decision (APPLIED, REJECTED), term, note.
+	AddDropDecision: {
+		TitleTR: `{{if eq .decision "APPLIED"}}Ekle-bırak talebiniz onaylandı{{else}}Ekle-bırak talebiniz reddedildi{{end}}`,
+		TitleEN: `{{if eq .decision "APPLIED"}}Your add/drop request was approved{{else}}Your add/drop request was rejected{{end}}`,
+		BodyTR: `{{if eq .decision "APPLIED"}}{{.term}} dönemi ekle-bırak talebiniz onaylandı ve ders kaydınıza uygulandı.` +
+			`{{else}}{{.term}} dönemi ekle-bırak talebiniz reddedildi.{{if .note}} Gerekçe: {{.note}}{{end}}{{end}}`,
+		BodyEN: `{{if eq .decision "APPLIED"}}Your {{.term}} add/drop request was approved and applied to your registration.` +
+			`{{else}}Your {{.term}} add/drop request was rejected.{{if .note}} Reason: {{.note}}{{end}}{{end}}`,
+	},
 }
 
 // compiled, şablonların derlenmiş hâlidir: [tür][alan]. Bozuk bir şablon uygulamanın hiç

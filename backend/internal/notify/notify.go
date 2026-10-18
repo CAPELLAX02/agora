@@ -27,6 +27,11 @@ const (
 	PasswordChanged Type = "security.password_changed"
 	MFAEnabled      Type = "security.mfa_enabled"
 	MFADisabled     Type = "security.mfa_disabled"
+
+	RegistrationSubmitted Type = "registration.submitted"
+	RegistrationDecision  Type = "registration.decision"
+	AddDropPending        Type = "registration.add_drop_pending"
+	AddDropDecision       Type = "registration.add_drop_decision"
 )
 
 // ErrNotFound: bildirim yok ya da başka bir kullanıcının.

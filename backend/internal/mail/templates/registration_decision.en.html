@@ -1,7 +1,0 @@
-{{define "content"}}<p>Hello {{.Data.name}},</p>
-{{if eq .Data.decision "APPROVED"}}<p>Your course registration for <strong>{{.Data.term}}</strong> has been <strong>approved</strong> by your advisor: {{.Data.courses}} courses, {{.Data.total_ects}} ECTS.</p>
-{{else if eq .Data.decision "REJECTED"}}<p>Your course registration for <strong>{{.Data.term}}</strong> has been <strong>sent back for changes</strong> by your advisor. You can edit and resubmit your basket while course registration is open.</p>
-{{else}}<p>The approval of your course registration for <strong>{{.Data.term}}</strong> has been <strong>revoked</strong>. You can edit and resubmit your basket while course registration is open.</p>
-{{end}}{{if .Data.note}}<p style="border-left:3px solid #1e3a8a;padding-left:12px;color:#374151;">Advisor's note: {{.Data.note}}</p>
-{{end}}<p style="margin:24px 0;"><a href="{{.Data.link}}" style="background:#1e3a8a;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:6px;display:inline-block;font-weight:600;">Go to my registration</a></p>{{end}}
-{{define "footer"}}You received this email because of a change in your course registration.{{end}}
