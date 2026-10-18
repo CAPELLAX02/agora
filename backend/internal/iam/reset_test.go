@@ -3,6 +3,7 @@ package iam_test
 import (
 	"context"
 	"errors"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -163,6 +164,9 @@ func TestResetPassword(t *testing.T) {
 	}
 	if got := e.eventCounts(t, userID)["PASSWORD_RESET_COMPLETED"]; got != 1 {
 		t.Errorf("PASSWORD_RESET_COMPLETED olayı %d kez", got)
+	}
+	if got := e.notifications(t, userID); !slices.Equal(got, []string{"security.password_changed"}) {
+		t.Errorf("bildirimler: %v", got)
 	}
 }
 

@@ -54,6 +54,9 @@ func TestChangePassword(t *testing.T) {
 	if got := e.eventCounts(t, userID)[audit.EventPasswordChanged]; got != 1 {
 		t.Errorf("PASSWORD_CHANGED olayı %d kez yazıldı", got)
 	}
+	if got := e.notifications(t, userID); !slices.Equal(got, []string{"security.password_changed"}) {
+		t.Errorf("bildirimler: %v", got)
+	}
 }
 
 func TestChangePasswordRejects(t *testing.T) {

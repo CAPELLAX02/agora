@@ -332,6 +332,9 @@ func TestMFADisable(t *testing.T) {
 	if _, err := e.login("P90012", pw); err != nil {
 		t.Errorf("MFA kapandıktan sonra tek adımlı giriş: %v", err)
 	}
+	if got := e.notifications(t, userID); !slices.Equal(got, []string{"security.mfa_enabled", "security.mfa_disabled:user"}) {
+		t.Errorf("bildirimler: %v", got)
+	}
 	if err := e.auth.DisableMFA(ctx, in); !errors.Is(err, iam.ErrMFANotEnabled) {
 		t.Errorf("ikinci kapatma: %v", err)
 	}
@@ -373,6 +376,9 @@ func TestResetMFA(t *testing.T) {
 	}
 	if _, err := e.login("P90013", pw); err != nil {
 		t.Errorf("sıfırlamadan sonra giriş: %v", err)
+	}
+	if got := e.notifications(t, userID); !slices.Equal(got, []string{"security.mfa_enabled", "security.mfa_disabled:admin"}) {
+		t.Errorf("bildirimler: %v", got)
 	}
 	var actor string
 	if err := e.pool.QueryRow(ctx, `SELECT actor_user_id FROM audit.audit_log WHERE action = 'user.mfa_reset' AND entity_id = $1`, userID).Scan(&actor); err != nil || actor != adminID {

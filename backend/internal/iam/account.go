@@ -10,6 +10,7 @@ import (
 
 	"github.com/CAPELLAX02/agora/backend/internal/audit"
 	"github.com/CAPELLAX02/agora/backend/internal/iam/password"
+	"github.com/CAPELLAX02/agora/backend/internal/notify"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/db"
 )
 
@@ -67,6 +68,9 @@ func (a *Auth) ChangePassword(ctx context.Context, in ChangePasswordInput) error
 			return err
 		}
 		if revoked, err = r.RevokeOtherSessions(ctx, user.ID, in.SessionID, now, RevokePasswordChange); err != nil {
+			return err
+		}
+		if err := notify.Send(ctx, tx, notify.Notification{Type: notify.PasswordChanged, UserIDs: []string{user.ID}, Link: "/guvenlik"}); err != nil {
 			return err
 		}
 		return audit.RecordSecurity(ctx, tx, audit.SecurityEvent{

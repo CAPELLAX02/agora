@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/CAPELLAX02/agora/backend/internal/audit"
@@ -581,6 +582,22 @@ func (e *authEnv) eventCounts(t *testing.T, userID string) map[string]int {
 		counts[typ] = n
 	}
 	return counts
+}
+
+// notifications, kullanıcıya yazılan bildirimlerdir: tür ve (varsa) "by" verisi, eskiden yeniye.
+func (e *authEnv) notifications(t *testing.T, userID string) []string {
+	t.Helper()
+	rows, err := e.pool.Query(context.Background(), `
+		SELECT type_code || coalesce(':' || (payload->>'by'), '') FROM communication.notifications
+		WHERE user_id = $1 ORDER BY id`, userID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		t.Fatal(err)
+	}
+	return out
 }
 
 func TestSecurityEvents(t *testing.T) {

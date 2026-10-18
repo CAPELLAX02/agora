@@ -15,6 +15,7 @@ import (
 
 	"github.com/CAPELLAX02/agora/backend/internal/audit"
 	"github.com/CAPELLAX02/agora/backend/internal/iam/totp"
+	"github.com/CAPELLAX02/agora/backend/internal/notify"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authn"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/db"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/secretbox"
@@ -435,6 +436,9 @@ func (a *Auth) EnableMFA(ctx context.Context, in EnableMFAInput) ([]string, erro
 		if err := r.setSessionAMR(ctx, in.SessionID, []string{methodPassword, authn.MethodOTP}); err != nil {
 			return err
 		}
+		if err := notify.Send(ctx, tx, notify.Notification{Type: notify.MFAEnabled, UserIDs: []string{user.ID}, Link: "/guvenlik"}); err != nil {
+			return err
+		}
 		return audit.RecordSecurity(ctx, tx, audit.SecurityEvent{
 			Type: audit.EventMFAEnabled, UserID: user.ID,
 			Details: map[string]any{"revoked_sessions": len(revoked)},
@@ -488,6 +492,10 @@ func (a *Auth) DisableMFA(ctx context.Context, in DisableMFAInput) error {
 				return err
 			}
 			if err := r.setSessionAMR(ctx, in.SessionID, []string{methodPassword}); err != nil {
+				return err
+			}
+			if err := notify.Send(ctx, tx, notify.Notification{Type: notify.MFADisabled, UserIDs: []string{user.ID},
+				Data: map[string]any{"by": "user"}, Link: "/guvenlik"}); err != nil {
 				return err
 			}
 			return audit.RecordSecurity(ctx, tx, audit.SecurityEvent{
@@ -599,6 +607,10 @@ func (a *Auth) ResetMFA(ctx context.Context, actorID, userID, reason string) err
 			Before: map[string]any{"mfa_enabled": true},
 			After:  map[string]any{"mfa_enabled": false, "reason": reason, "revoked_sessions": len(revoked)},
 		}); err != nil {
+			return err
+		}
+		if err := notify.Send(ctx, tx, notify.Notification{Type: notify.MFADisabled, UserIDs: []string{userID},
+			Data: map[string]any{"by": "admin"}, Link: "/guvenlik"}); err != nil {
 			return err
 		}
 		return audit.RecordSecurity(ctx, tx, audit.SecurityEvent{

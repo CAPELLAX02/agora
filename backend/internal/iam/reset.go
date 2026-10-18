@@ -11,6 +11,7 @@ import (
 
 	"github.com/CAPELLAX02/agora/backend/internal/audit"
 	"github.com/CAPELLAX02/agora/backend/internal/mail"
+	"github.com/CAPELLAX02/agora/backend/internal/notify"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/db"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/httpx"
 )
@@ -270,6 +271,12 @@ func (a *Auth) ResetPassword(ctx context.Context, rawToken, newPassword string) 
 		}
 		if revoked, err = r.RevokeOtherSessions(ctx, user.ID, "", now, RevokePasswordReset); err != nil {
 			return err
+		}
+		// Hesabı etkinleştirirken ilk parolayı belirlemek bir değişiklik değildir.
+		if t.Purpose == PurposeReset {
+			if err := notify.Send(ctx, tx, notify.Notification{Type: notify.PasswordChanged, UserIDs: []string{user.ID}, Link: "/guvenlik"}); err != nil {
+				return err
+			}
 		}
 		return audit.RecordSecurity(ctx, tx, audit.SecurityEvent{
 			Type: audit.EventPasswordResetCompleted, UserID: user.ID,
