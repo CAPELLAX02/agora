@@ -290,10 +290,22 @@ func (s *Service) activities(ctx context.Context, q db.Querier, where string, ar
 	if err != nil {
 		return nil, fmt.Errorf("lms: dosyalar okunamadı: %w", err)
 	}
-	var assignIDs []string
+	var assignIDs, forumIDs []string
 	for _, a := range acts {
-		if a.Type == TypeAssignment {
+		switch a.Type {
+		case TypeAssignment:
 			assignIDs = append(assignIDs, a.ID)
+		case TypeForum:
+			forumIDs = append(forumIDs, a.ID)
+		}
+	}
+	if len(forumIDs) > 0 {
+		settings, err := forums(ctx, q, forumIDs)
+		if err != nil {
+			return nil, err
+		}
+		for id, f := range settings {
+			acts[index[id]].Forum = &f
 		}
 	}
 	if len(assignIDs) > 0 {

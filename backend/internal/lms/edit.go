@@ -22,7 +22,8 @@ type ValidationError struct {
 
 func (e *ValidationError) Error() string { return "lms: " + e.Field + ": " + e.Message }
 
-// ensureSpace, şubenin ders alanını yoksa oluşturur: ilk bölüm "Genel" (e-Kampüs'teki gibi).
+// ensureSpace, şubenin ders alanını yoksa oluşturur: ilk bölüm "Genel" ve içinde Duyurular
+// forumu (e-Kampüs'teki gibi).
 func ensureSpace(ctx context.Context, tx pgx.Tx, sectionID string) error {
 	tag, err := tx.Exec(ctx, `INSERT INTO lms.course_spaces (section_id) VALUES ($1) ON CONFLICT DO NOTHING`, sectionID)
 	if err != nil {
@@ -31,8 +32,21 @@ func ensureSpace(ctx context.Context, tx pgx.Tx, sectionID string) error {
 	if tag.RowsAffected() == 0 {
 		return nil
 	}
-	if _, err := tx.Exec(ctx, `INSERT INTO lms.topics (section_id, title, position) VALUES ($1, 'Genel', 0)`, sectionID); err != nil {
+	var topicID string
+	if err := tx.QueryRow(ctx, `INSERT INTO lms.topics (section_id, title, position) VALUES ($1, 'Genel', 0) RETURNING id`,
+		sectionID).Scan(&topicID); err != nil {
 		return fmt.Errorf("lms: ilk bölüm oluşturulamadı: %w", err)
+	}
+	// Her ders alanında Duyurular forumu: konuyu ve yanıtı öğretim elemanı yazar.
+	var forumID string
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO lms.activities (section_id, topic_id, activity_type, title, position) VALUES ($1, $2, 'FORUM', 'Duyurular', 0)
+		RETURNING id`, sectionID, topicID).Scan(&forumID); err != nil {
+		return fmt.Errorf("lms: duyurular forumu oluşturulamadı: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `INSERT INTO lms.forums (activity_id, forum_kind, students_can_start_threads) VALUES ($1, 'ANNOUNCEMENTS', false)`,
+		forumID); err != nil {
+		return fmt.Errorf("lms: duyurular forumu oluşturulamadı: %w", err)
 	}
 	return nil
 }
@@ -237,7 +251,7 @@ func (s *Service) Reorder(ctx context.Context, actorID, sectionID string, layout
 
 // ActivityInput, bir etkinliğin yazılabilir alanlarıdır. Türe özgü olanlar sadece o türde
 // kullanılır: FileIDs (dosya: 1, klasör: 1-50), URL ve NewTab (bağlantı), Body (sayfa),
-// Assignment (ödev).
+// Assignment (ödev), Forum (forum; verilmezse öğrenciler konu açabilir).
 type ActivityInput struct {
 	Type        ActivityType
 	Title       string
@@ -249,6 +263,7 @@ type ActivityInput struct {
 	NewTab      bool
 	Body        string
 	Assignment  *AssignmentSettings
+	Forum       *ForumSettings
 }
 
 // validate, girdiyi denetler; maxUpload platformun dosya boyutu sınırıdır (ödevin sınırı onu aşamaz).
@@ -277,9 +292,9 @@ func (in ActivityInput) validate(maxUpload int64) error {
 		if err := in.Assignment.validate(maxUpload); err != nil {
 			return err
 		}
-	case TypePage, TypeLabel:
+	case TypePage, TypeLabel, TypeForum:
 	default:
-		return &ValidationError{Field: "type", Message: "RESOURCE, FOLDER, URL, PAGE, LABEL ya da ASSIGNMENT olmalı."}
+		return &ValidationError{Field: "type", Message: "RESOURCE, FOLDER, URL, PAGE, LABEL, ASSIGNMENT ya da FORUM olmalı."}
 	}
 	if len(in.Body) > 200_000 || len(in.Description) > 50_000 {
 		return &ValidationError{Field: "body", Message: "Metin çok uzun."}
@@ -337,6 +352,12 @@ func (s *Service) writeDetails(ctx context.Context, tx pgx.Tx, actorID, id strin
 		}
 	case TypeAssignment:
 		return writeAssignment(ctx, tx, id, *in.Assignment)
+	case TypeForum:
+		f := ForumSettings{Kind: ForumGeneral, StudentsCanStart: true}
+		if in.Forum != nil {
+			f.StudentsCanStart = in.Forum.StudentsCanStart
+		}
+		return writeForum(ctx, tx, id, f)
 	case TypePage:
 		_, err := tx.Exec(ctx, `
 			INSERT INTO lms.pages (activity_id, body_html) VALUES ($1, $2)
@@ -440,6 +461,14 @@ func (s *Service) UpdateActivity(ctx context.Context, actorID, id string, versio
 // DeleteActivity, etkinliği siler (yumuşak); dosyaları serbest kalır.
 func (s *Service) DeleteActivity(ctx context.Context, actorID, id string) error {
 	err := db.InTx(ctx, s.pool, func(tx pgx.Tx) error {
+		var announcements bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM lms.forums WHERE activity_id = $1 AND forum_kind = 'ANNOUNCEMENTS')`, id).
+			Scan(&announcements); err != nil {
+			return fmt.Errorf("lms: forum okunamadı: %w", err)
+		}
+		if announcements {
+			return &ValidationError{Field: "activity", Message: "Duyurular forumu silinemez; öğrencilerden gizleyebilirsiniz."}
+		}
 		tag, err := tx.Exec(ctx, `UPDATE lms.activities SET deleted_at = now() WHERE id = $1 AND deleted_at IS NULL`, id)
 		if err != nil {
 			return fmt.Errorf("lms: etkinlik silinemedi: %w", err)

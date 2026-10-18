@@ -149,6 +149,7 @@ type Activity struct {
 	NewTab      bool                // URL
 	Body        string              // PAGE (sadece ayrıntıda)
 	Assignment  *AssignmentSettings // ASSIGNMENT
+	Forum       *ForumSettings      // FORUM
 }
 
 // Space, ders alanının görünümüdür: izleyenin rolüne göre süzülmüş bölümler ve etkinlikler.

@@ -43,6 +43,7 @@ func (h *Handler) Register(rt *authz.Router) {
 	rt.HandleFunc("DELETE /api/v1/activities/{id}", authz.Authenticated, h.deleteActivity)
 	rt.HandleFunc("GET /api/v1/activities/{id}/files/{fileId}/download-url", authz.Authenticated, h.fileURL)
 	h.registerAssignments(rt)
+	h.registerForums(rt)
 }
 
 func userID(r *http.Request) string {
@@ -144,6 +145,14 @@ type activityResponse struct {
 	OpenInNewTab   *bool               `json:"open_in_new_tab"`
 	Body           *string             `json:"body_html"`
 	Assignment     *assignmentResponse `json:"assignment"`
+	Forum          *forumResponse      `json:"forum"`
+}
+
+type forumResponse struct {
+	Kind             string     `json:"kind"`
+	StudentsCanStart bool       `json:"students_can_start_threads"`
+	Threads          int        `json:"threads"`
+	LastPostAt       *time.Time `json:"last_post_at"`
 }
 
 type topicResponse struct {
@@ -204,6 +213,10 @@ func toActivity(a Activity, now time.Time) activityResponse {
 	if a.Assignment != nil {
 		ar := toAssignment(*a.Assignment, now)
 		res.Assignment = &ar
+	}
+	if a.Forum != nil {
+		fr := forumResponse(*a.Forum)
+		res.Forum = &fr
 	}
 	return res
 }
@@ -421,6 +434,9 @@ type activityRequest struct {
 	NewTab     *bool              `json:"open_in_new_tab"`
 	Body       string             `json:"body_html"`
 	Assignment *assignmentRequest `json:"assignment"`
+	Forum      *struct {
+		StudentsCanStart *bool `json:"students_can_start_threads"`
+	} `json:"forum"`
 }
 
 func (req activityRequest) input(maxUpload int64) (ActivityInput, error) {
@@ -435,6 +451,9 @@ func (req activityRequest) input(maxUpload int64) (ActivityInput, error) {
 			return ActivityInput{}, err
 		}
 		in.Assignment = &a
+	}
+	if req.Forum != nil {
+		in.Forum = &ForumSettings{StudentsCanStart: req.Forum.StudentsCanStart == nil || *req.Forum.StudentsCanStart}
 	}
 	return in, nil
 }
