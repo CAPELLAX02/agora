@@ -56,6 +56,62 @@ export const routes: RouteObject[] = [
                   { path: 'profil', element: <ProfilePage /> },
                   { path: 'guvenlik', element: <SecurityPage /> },
                   {
+                    path: 'duyurular',
+                    lazy: async () => {
+                      const { AnnouncementsPage } = await import('@/features/announcements/AnnouncementsPage')
+                      return { element: <AnnouncementsPage /> }
+                    },
+                  },
+                  {
+                    path: 'duyurular/:id',
+                    lazy: async () => {
+                      const { AnnouncementPage } = await import('@/features/announcements/AnnouncementPage')
+                      return { element: <AnnouncementPage /> }
+                    },
+                  },
+                  {
+                    path: 'duyuru-yonetimi',
+                    lazy: async () => {
+                      const { ManageAnnouncementsPage } =
+                        await import('@/features/announcements/ManageAnnouncementsPage')
+                      return {
+                        element: (
+                          <RequirePermission permission="announcement:publish">
+                            <ManageAnnouncementsPage />
+                          </RequirePermission>
+                        ),
+                      }
+                    },
+                  },
+                  {
+                    path: 'duyuru-yonetimi/yeni',
+                    lazy: async () => {
+                      const { AnnouncementEditorPage } =
+                        await import('@/features/announcements/AnnouncementEditorPage')
+                      return {
+                        element: (
+                          <RequirePermission permission="announcement:publish">
+                            <AnnouncementEditorPage />
+                          </RequirePermission>
+                        ),
+                      }
+                    },
+                  },
+                  {
+                    path: 'duyuru-yonetimi/:id/duzenle',
+                    lazy: async () => {
+                      const { AnnouncementEditorPage } =
+                        await import('@/features/announcements/AnnouncementEditorPage')
+                      return {
+                        element: (
+                          <RequirePermission permission="announcement:publish">
+                            <AnnouncementEditorPage />
+                          </RequirePermission>
+                        ),
+                      }
+                    },
+                  },
+                  {
                     path: 'bildirimler',
                     lazy: async () => {
                       const { NotificationsPage } = await import('@/features/notifications/NotificationsPage')

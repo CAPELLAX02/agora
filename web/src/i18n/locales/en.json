@@ -107,7 +107,10 @@
     "mySpaces": "My courses",
     "grades": "My grades",
     "gradeChanges": "Grade corrections",
-    "gradeChangeReview": "Correction approvals"
+    "gradeChangeReview": "Correction approvals",
+    "communication": "Communication",
+    "announcements": "Announcements",
+    "manageAnnouncements": "Manage announcements"
   },
   "auth": {
     "restoring": "Signing you in…",
@@ -227,11 +230,11 @@
     },
     "upcoming": {
       "title": "Academic modules",
-      "description": "Learning environment, announcements and notifications, attendance and documents will appear here in turn.",
+      "description": "Attendance, quiz, survey and document modules will appear here one by one.",
       "modules": {
-        "lms": "Learning environment",
-        "announcements": "Announcements",
         "attendance": "Attendance",
+        "quiz": "Quizzes",
+        "survey": "Surveys",
         "documents": "Documents"
       }
     },
@@ -296,6 +299,12 @@
       "toGrade_other": "{{count}} submissions to grade",
       "more_one": "and {{count}} more",
       "more_other": "and {{count}} more"
+    },
+    "announcements": {
+      "title": "Announcements",
+      "description": "The latest announcements for you",
+      "empty": "No announcements right now.",
+      "all": "All announcements"
     }
   },
   "profile": {
@@ -2263,6 +2272,96 @@
       "saved": "Your notification preferences were saved.",
       "unsaved_one": "{{count}} unsaved change",
       "unsaved_other": "{{count}} unsaved changes"
+    }
+  },
+  "announcements": {
+    "title": "Announcements",
+    "description": "Announcements from the university, your faculty, department and programme.",
+    "empty": "There are no announcements for you right now.",
+    "new": "New",
+    "pinned": "Pinned",
+    "loadMore": "Show more",
+    "audience": "Audience",
+    "university": "Whole university",
+    "types": {
+      "GENERAL": "General",
+      "ACADEMIC": "Academic",
+      "EXAM": "Exam",
+      "URGENT": "Urgent",
+      "EVENT": "Event"
+    },
+    "people": {
+      "ALL": "Everyone",
+      "STUDENTS": "Students",
+      "STAFF": "Staff"
+    },
+    "scopes": {
+      "UNIVERSITY": "University",
+      "FACULTY": "Faculty",
+      "DEPARTMENT": "Department",
+      "PROGRAM": "Programme"
+    },
+    "phases": {
+      "DRAFT": "Draft",
+      "SCHEDULED": "Scheduled",
+      "LIVE": "Live",
+      "EXPIRED": "Expired",
+      "ARCHIVED": "Taken down"
+    },
+    "stats": {
+      "title": "Reach",
+      "audience_one": "Audience: {{count}} person",
+      "audience_other": "Audience: {{count}} people",
+      "readsLabel": "Readers",
+      "reads_one": "{{count}} person read it",
+      "reads_other": "{{count}} people read it",
+      "notified": "Notified to the audience on {{time}}."
+    },
+    "actions": {
+      "edit": "Edit",
+      "publish": "Publish",
+      "published": "Announcement published.",
+      "archive": "Take down",
+      "archived": "Announcement taken down.",
+      "archiveTitle": "Take this announcement down?",
+      "archiveDescription": "It disappears from the audience's list but stays in the management list.",
+      "delete": "Delete draft",
+      "deleted": "Draft deleted.",
+      "deleteTitle": "Delete this draft?",
+      "deleteDescription": "This can't be undone."
+    },
+    "manage": {
+      "title": "Manage announcements",
+      "description": "Announcements you wrote and those for units within your scope.",
+      "new": "New announcement",
+      "empty": "No announcements yet."
+    },
+    "editor": {
+      "newTitle": "New announcement",
+      "editTitle": "Edit announcement",
+      "description": "The audience is chosen from units within your scope; it is notified when publishing starts.",
+      "title": "Title",
+      "type": "Type",
+      "summary": "Summary",
+      "summaryHint": "Shown in the list and in the notification.",
+      "body": "Content",
+      "from": "Publish from",
+      "fromHint": "Publishes immediately if empty.",
+      "until": "Publish until",
+      "pinned": "Pin to the top of the list",
+      "scope": "Scope",
+      "unit": "Choose a unit",
+      "scopeFor": "Target {{n}}: scope",
+      "unitFor": "Target {{n}}: unit",
+      "peopleFor": "Target {{n}}: people",
+      "removeAudience": "Remove target {{n}}",
+      "addAudience": "Add target",
+      "save": "Save",
+      "saveDraft": "Save as draft",
+      "saved": "Announcement saved.",
+      "draftSaved": "Draft saved.",
+      "titleRequired": "Enter a title.",
+      "audienceRequired": "Choose a scope and unit for each target."
     }
   }
 }

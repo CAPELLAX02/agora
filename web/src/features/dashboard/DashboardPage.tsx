@@ -1,13 +1,13 @@
 import {
   ArrowRightIcon,
   CalendarCheck2Icon,
+  ClipboardCheckIcon,
   FileBadgeIcon,
   GraduationCapIcon,
-  MegaphoneIcon,
-  MonitorPlayIcon,
   ShieldCheckIcon,
   ShieldOffIcon,
   SparklesIcon,
+  VoteIcon,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
@@ -24,6 +24,7 @@ import { Skeleton } from '@/shared/ui/skeleton'
 import { ErrorState } from '@/shared/ui/states'
 
 import { AdvisingCard } from './AdvisingCard'
+import { AnnouncementsCard } from './AnnouncementsCard'
 import { DashCard } from './DashCard'
 import { GradesCard } from './GradesCard'
 import { RegistrationCard } from './RegistrationCard'
@@ -103,6 +104,7 @@ export function DashboardPage() {
         {has('registration:manage_own') && <RegistrationCard />}
         {hasAny(['registration:approve', 'registration:approve_add_drop']) && <AdvisingCard />}
         {has('calendar:read') && <WindowsCard />}
+        {has('announcement:read') && <AnnouncementsCard />}
 
         <DashCard
           icon={me.mfa_enabled ? ShieldCheckIcon : ShieldOffIcon}
@@ -137,9 +139,9 @@ export function DashboardPage() {
           <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {(
               [
-                ['lms', MonitorPlayIcon, 'orange'],
-                ['announcements', MegaphoneIcon, 'sky'],
                 ['attendance', CalendarCheck2Icon, 'emerald'],
+                ['quiz', ClipboardCheckIcon, 'orange'],
+                ['survey', VoteIcon, 'sky'],
                 ['documents', FileBadgeIcon, 'violet'],
               ] as const
             ).map(([key, icon, tone]) => (

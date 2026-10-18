@@ -107,7 +107,10 @@
     "mySpaces": "Derslerim",
     "grades": "Notlarım",
     "gradeChanges": "Not düzeltme",
-    "gradeChangeReview": "Not düzeltme onayları"
+    "gradeChangeReview": "Not düzeltme onayları",
+    "communication": "İletişim",
+    "announcements": "Duyurular",
+    "manageAnnouncements": "Duyuru yönetimi"
   },
   "auth": {
     "restoring": "Oturum açılıyor…",
@@ -227,11 +230,11 @@
     },
     "upcoming": {
       "title": "Akademik modüller",
-      "description": "Öğrenme ortamı, duyurular ve bildirimler, yoklama ve belgeler modülleri sırayla burada yer alacak.",
+      "description": "Yoklama, sınav, anket ve belge modülleri sırayla burada yer alacak.",
       "modules": {
-        "lms": "Öğrenme ortamı",
-        "announcements": "Duyurular",
         "attendance": "Yoklama",
+        "quiz": "Sınav",
+        "survey": "Anket",
         "documents": "Belgeler"
       }
     },
@@ -296,6 +299,12 @@
       "toGrade_other": "{{count}} teslim puan bekliyor",
       "more_one": "ve {{count}} öğe daha",
       "more_other": "ve {{count}} öğe daha"
+    },
+    "announcements": {
+      "title": "Duyurular",
+      "description": "Size yönelik son duyurular",
+      "empty": "Şu anda duyuru yok.",
+      "all": "Bütün duyurular"
     }
   },
   "profile": {
@@ -2263,6 +2272,96 @@
       "saved": "Bildirim tercihleriniz kaydedildi.",
       "unsaved_one": "{{count}} kaydedilmemiş değişiklik",
       "unsaved_other": "{{count}} kaydedilmemiş değişiklik"
+    }
+  },
+  "announcements": {
+    "title": "Duyurular",
+    "description": "Üniversitenin, fakültenizin, bölümünüzün ve programınızın duyuruları.",
+    "empty": "Şu anda size yönelik bir duyuru yok.",
+    "new": "Yeni",
+    "pinned": "Sabitlendi",
+    "loadMore": "Daha fazla göster",
+    "audience": "Hedef kitle",
+    "university": "Bütün üniversite",
+    "types": {
+      "GENERAL": "Genel",
+      "ACADEMIC": "Akademik",
+      "EXAM": "Sınav",
+      "URGENT": "Acil",
+      "EVENT": "Etkinlik"
+    },
+    "people": {
+      "ALL": "Herkes",
+      "STUDENTS": "Öğrenciler",
+      "STAFF": "Personel"
+    },
+    "scopes": {
+      "UNIVERSITY": "Üniversite",
+      "FACULTY": "Fakülte",
+      "DEPARTMENT": "Bölüm",
+      "PROGRAM": "Program"
+    },
+    "phases": {
+      "DRAFT": "Taslak",
+      "SCHEDULED": "İleri tarihli",
+      "LIVE": "Yayında",
+      "EXPIRED": "Süresi doldu",
+      "ARCHIVED": "Yayından kaldırıldı"
+    },
+    "stats": {
+      "title": "Erişim",
+      "audience_one": "Hedef kitle: {{count}} kişi",
+      "audience_other": "Hedef kitle: {{count}} kişi",
+      "readsLabel": "Okuyanlar",
+      "reads_one": "{{count}} kişi okudu",
+      "reads_other": "{{count}} kişi okudu",
+      "notified": "Hedef kitleye {{time}} tarihinde bildirildi."
+    },
+    "actions": {
+      "edit": "Düzenle",
+      "publish": "Yayımla",
+      "published": "Duyuru yayımlandı.",
+      "archive": "Yayından kaldır",
+      "archived": "Duyuru yayından kaldırıldı.",
+      "archiveTitle": "Duyuru yayından kaldırılsın mı?",
+      "archiveDescription": "Duyuru hedef kitlenin listesinden kalkar; yönetim listesinde kalır.",
+      "delete": "Taslağı sil",
+      "deleted": "Taslak silindi.",
+      "deleteTitle": "Taslak silinsin mi?",
+      "deleteDescription": "Bu işlem geri alınamaz."
+    },
+    "manage": {
+      "title": "Duyuru yönetimi",
+      "description": "Yazdığınız ve yetki kapsamınızdaki birimlere yönelik duyurular.",
+      "new": "Yeni duyuru",
+      "empty": "Henüz duyuru yok."
+    },
+    "editor": {
+      "newTitle": "Yeni duyuru",
+      "editTitle": "Duyuruyu düzenle",
+      "description": "Hedef kitle yetkinizin kapsamındaki birimlerden seçilir; yayın başlayınca kitleye bildirilir.",
+      "title": "Başlık",
+      "type": "Tür",
+      "summary": "Özet",
+      "summaryHint": "Listede ve bildirimde görünür.",
+      "body": "İçerik",
+      "from": "Yayın başlangıcı",
+      "fromHint": "Boşsa hemen yayımlanır.",
+      "until": "Yayın bitişi",
+      "pinned": "Listede en üstte sabitle",
+      "scope": "Kapsam",
+      "unit": "Birim seçin",
+      "scopeFor": "{{n}}. hedef: kapsam",
+      "unitFor": "{{n}}. hedef: birim",
+      "peopleFor": "{{n}}. hedef: kişiler",
+      "removeAudience": "{{n}}. hedefi kaldır",
+      "addAudience": "Hedef ekle",
+      "save": "Kaydet",
+      "saveDraft": "Taslak olarak kaydet",
+      "saved": "Duyuru kaydedildi.",
+      "draftSaved": "Taslak kaydedildi.",
+      "titleRequired": "Başlık yazın.",
+      "audienceRequired": "Her hedef için kapsam ve birim seçin."
     }
   }
 }

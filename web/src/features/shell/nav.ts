@@ -6,6 +6,7 @@ import {
   GraduationCapIcon,
   ListChecksIcon,
   LockIcon,
+  MegaphoneIcon,
   MonitorPlayIcon,
   NotebookTextIcon,
   UsersRoundIcon,
@@ -19,6 +20,7 @@ import {
   HomeIcon,
   PresentationIcon,
   LibraryIcon,
+  MessageSquarePlusIcon,
   ScrollTextIcon,
   ShieldCheckIcon,
   UserRoundIcon,
@@ -173,6 +175,26 @@ export const navGroups: NavGroup[] = [
         permission: 'grade_change:approve',
       },
       { to: '/kayit-engelleri', label: 'nav.holds', tone: 'rose', icon: LockIcon, permission: 'hold:manage' },
+    ],
+  },
+  {
+    label: 'nav.communication',
+    items: [
+      {
+        to: '/duyurular',
+        label: 'nav.announcements',
+        tone: 'amber',
+        icon: MegaphoneIcon,
+        permission: 'announcement:read',
+      },
+      {
+        to: '/duyuru-yonetimi',
+        label: 'nav.manageAnnouncements',
+        tone: 'orange',
+        icon: MessageSquarePlusIcon,
+        permission: 'announcement:publish',
+        scoped: true,
+      },
     ],
   },
   {
