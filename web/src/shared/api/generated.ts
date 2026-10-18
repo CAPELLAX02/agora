@@ -3,6 +3,7 @@ export const addTagTypes = [
   'Sa\u011Fl\u0131k',
   'Kimlik do\u011Frulama',
   'Hesap',
+  'Duyurular',
   'Bildirimler',
   'Kullan\u0131c\u0131lar',
   'Denetim',
@@ -176,6 +177,77 @@ const injectedRtkApi = api
           },
         }),
         providesTags: ['Hesap'],
+      }),
+      listMyAnnouncements: build.query<ListMyAnnouncementsApiResponse, ListMyAnnouncementsApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/me/announcements`,
+          params: {
+            limit: queryArg.limit,
+            cursor: queryArg.cursor,
+          },
+        }),
+        providesTags: ['Duyurular'],
+      }),
+      getAnnouncementTargets: build.query<GetAnnouncementTargetsApiResponse, GetAnnouncementTargetsApiArg>({
+        query: () => ({ url: `/api/v1/announcement-targets` }),
+        providesTags: ['Duyurular'],
+      }),
+      listManagedAnnouncements: build.query<
+        ListManagedAnnouncementsApiResponse,
+        ListManagedAnnouncementsApiArg
+      >({
+        query: () => ({ url: `/api/v1/announcements` }),
+        providesTags: ['Duyurular'],
+      }),
+      createAnnouncement: build.mutation<CreateAnnouncementApiResponse, CreateAnnouncementApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/announcements`,
+          method: 'POST',
+          body: queryArg.announcementInput,
+        }),
+        invalidatesTags: ['Duyurular'],
+      }),
+      getAnnouncement: build.query<GetAnnouncementApiResponse, GetAnnouncementApiArg>({
+        query: (queryArg) => ({ url: `/api/v1/announcements/${queryArg.id}` }),
+        providesTags: ['Duyurular'],
+      }),
+      updateAnnouncement: build.mutation<UpdateAnnouncementApiResponse, UpdateAnnouncementApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/announcements/${queryArg.id}`,
+          method: 'PUT',
+          body: queryArg.announcementInput,
+          headers: {
+            'If-Match': queryArg['If-Match'],
+          },
+        }),
+        invalidatesTags: ['Duyurular'],
+      }),
+      deleteAnnouncement: build.mutation<DeleteAnnouncementApiResponse, DeleteAnnouncementApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/announcements/${queryArg.id}`,
+          method: 'DELETE',
+        }),
+        invalidatesTags: ['Duyurular'],
+      }),
+      publishAnnouncement: build.mutation<PublishAnnouncementApiResponse, PublishAnnouncementApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/announcements/${queryArg.id}/publish`,
+          method: 'POST',
+          headers: {
+            'If-Match': queryArg['If-Match'],
+          },
+        }),
+        invalidatesTags: ['Duyurular'],
+      }),
+      archiveAnnouncement: build.mutation<ArchiveAnnouncementApiResponse, ArchiveAnnouncementApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/announcements/${queryArg.id}/archive`,
+          method: 'POST',
+          headers: {
+            'If-Match': queryArg['If-Match'],
+          },
+        }),
+        invalidatesTags: ['Duyurular'],
       }),
       listMyNotifications: build.query<ListMyNotificationsApiResponse, ListMyNotificationsApiArg>({
         query: (queryArg) => ({
@@ -2083,6 +2155,52 @@ export type ListMySecurityEventsApiArg = {
   /** Önceki yanıtın `next_cursor` değeri (opak) */
   cursor?: string
 }
+export type ListMyAnnouncementsApiResponse = /** status 200 Duyurular */ AnnouncementPage
+export type ListMyAnnouncementsApiArg = {
+  limit?: number
+  /** Önceki yanıtın `next_cursor` değeri (opak) */
+  cursor?: string
+}
+export type GetAnnouncementTargetsApiResponse = /** status 200 Birimler */ AnnouncementTargets
+export type GetAnnouncementTargetsApiArg = void
+export type ListManagedAnnouncementsApiResponse = /** status 200 Duyurular */ AnnouncementPage
+export type ListManagedAnnouncementsApiArg = void
+export type CreateAnnouncementApiResponse = /** status 201 Duyuru */ Announcement
+export type CreateAnnouncementApiArg = {
+  announcementInput: AnnouncementInput
+}
+export type GetAnnouncementApiResponse = /** status 200 Duyuru */ Announcement
+export type GetAnnouncementApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type UpdateAnnouncementApiResponse = /** status 200 Duyuru */ Announcement
+export type UpdateAnnouncementApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
+  'If-Match': string
+  announcementInput: AnnouncementInput
+}
+export type DeleteAnnouncementApiResponse = unknown
+export type DeleteAnnouncementApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type PublishAnnouncementApiResponse = /** status 200 Duyuru */ Announcement
+export type PublishAnnouncementApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
+  'If-Match': string
+}
+export type ArchiveAnnouncementApiResponse = /** status 200 Duyuru */ Announcement
+export type ArchiveAnnouncementApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
+  'If-Match': string
+}
 export type ListMyNotificationsApiResponse = /** status 200 Bildirimler */ NotificationPage
 export type ListMyNotificationsApiArg = {
   unread?: boolean
@@ -3912,6 +4030,75 @@ export type SecurityEvent = {
 export type SecurityEventPage = {
   items: SecurityEvent[]
   next_cursor?: string
+}
+export type AnnouncementType = 'GENERAL' | 'ACADEMIC' | 'EXAM' | 'URGENT' | 'EVENT'
+export type AnnouncementAudience = {
+  scope_type: 'UNIVERSITY' | 'FACULTY' | 'DEPARTMENT' | 'PROGRAM'
+  /** Üniversitede boş */
+  scope_id: string | null
+  /** Birimin adı (okurken) */
+  scope_name?: string
+  /** Program hedefi sadece öğrencileri kapsar */
+  people: 'ALL' | 'STUDENTS' | 'STAFF'
+}
+export type Announcement = {
+  id: string
+  title: string
+  summary: string
+  body_html: string
+  type: AnnouncementType
+  publish_from: string
+  publish_until: string | null
+  is_pinned: boolean
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
+  author: {
+    id: string
+    name: string
+  }
+  audiences: AnnouncementAudience[]
+  /** Hedef kitleye bildirildiği an */
+  notified_at: string | null
+  created_at: string
+  updated_at: string
+  version: number
+  /** Akışta: okuduğum an */
+  read_at?: string | null
+  can_manage: boolean
+  /** Yönetene; hedef kitle büyüklüğü sadece ayrıntıda */
+  stats?: {
+    audience?: number
+    reads: number
+  }
+}
+export type AnnouncementPage = {
+  items: Announcement[]
+  next_cursor?: string
+}
+export type AnnouncementUnit = {
+  id: string
+  name: string
+  /** Bölümün fakültesi, programın bölümü */
+  parent_id: string | null
+}
+export type AnnouncementTargets = {
+  university: boolean
+  faculties: AnnouncementUnit[]
+  departments: AnnouncementUnit[]
+  programs: AnnouncementUnit[]
+}
+export type AnnouncementInput = {
+  title: string
+  summary?: string
+  /** Temizlenen HTML */
+  body_html?: string
+  type: AnnouncementType
+  /** Boşsa hemen */
+  publish_from?: string | null
+  publish_until?: string | null
+  is_pinned?: boolean
+  audiences: AnnouncementAudience[]
+  /** Sadece oluştururken: taslak yerine hemen yayımla */
+  publish?: boolean
 }
 export type NotificationCategory =
   'SECURITY' | 'REGISTRATION' | 'GRADES' | 'COURSES' | 'ANNOUNCEMENTS' | 'MESSAGES' | 'REMINDERS'
@@ -5965,6 +6152,19 @@ export const {
   useEndSessionMutation,
   useListMySecurityEventsQuery,
   useLazyListMySecurityEventsQuery,
+  useListMyAnnouncementsQuery,
+  useLazyListMyAnnouncementsQuery,
+  useGetAnnouncementTargetsQuery,
+  useLazyGetAnnouncementTargetsQuery,
+  useListManagedAnnouncementsQuery,
+  useLazyListManagedAnnouncementsQuery,
+  useCreateAnnouncementMutation,
+  useGetAnnouncementQuery,
+  useLazyGetAnnouncementQuery,
+  useUpdateAnnouncementMutation,
+  useDeleteAnnouncementMutation,
+  usePublishAnnouncementMutation,
+  useArchiveAnnouncementMutation,
   useListMyNotificationsQuery,
   useLazyListMyNotificationsQuery,
   useGetMyUnreadNotificationCountQuery,

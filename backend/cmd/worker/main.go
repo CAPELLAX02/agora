@@ -1,7 +1,7 @@
 // Komut worker, API'den bağımsız çalışan arka plan işlerini yürütür: e-posta outbox'ı, alan
 // olaylarının dağıtımı (outbox), ders seçme penceresi biten taslakların serbest bırakılması,
-// denetim ve bildirim partition'larının bakımı, süresi dolmuş kayıtların temizliği ve dönem sonuçlarının
-// günlük doğrulaması.
+// ileri tarihli duyuruların bildirimi, denetim ve bildirim partition'larının bakımı, süresi
+// dolmuş kayıtların temizliği ve dönem sonuçlarının günlük doğrulaması.
 //
 // API yatayda çoğaltıldığında zamanlanmış işler her kopyada çalışmasın diye ayrı bir
 // süreçtir. Birden fazla worker da güvenle çalışabilir: outbox kayıtları
@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus"
 
+	"github.com/CAPELLAX02/agora/backend/internal/announce"
 	"github.com/CAPELLAX02/agora/backend/internal/audit"
 	"github.com/CAPELLAX02/agora/backend/internal/enrollment"
 	"github.com/CAPELLAX02/agora/backend/internal/files"
@@ -39,10 +40,12 @@ import (
 )
 
 const (
-	outboxInterval      = 2 * time.Second
-	eventsInterval      = 2 * time.Second
-	expireInterval      = 10 * time.Minute
-	maintenanceInterval = 24 * time.Hour
+	outboxInterval = 2 * time.Second
+	eventsInterval = 2 * time.Second
+	expireInterval = 10 * time.Minute
+	// İleri tarihli duyurular yayın zamanı gelince bildirilir.
+	announcementInterval = 15 * time.Second
+	maintenanceInterval  = 24 * time.Hour
 	// Bağlanmayan dosyaların temizliği: saatte bir, bir günden eski olanlar.
 	fileCleanupInterval     = time.Hour
 	unattachedFileRetention = 24 * time.Hour
@@ -211,6 +214,21 @@ func run() error {
 	wg.Go(func() {
 		every(ctx, maintenanceInterval, func(ctx context.Context) {
 			maintain(ctx, pool, logger)
+		})
+	})
+	announcements := announce.NewService(pool, time.Now)
+	wg.Go(func() {
+		every(ctx, announcementInterval, func(ctx context.Context) {
+			n, err := announcements.NotifyDue(ctx)
+			if err != nil {
+				if ctx.Err() == nil {
+					logger.Error("yayını başlayan duyurular bildirilemedi", "err", err)
+				}
+				return
+			}
+			if n > 0 {
+				logger.Info("yayını başlayan duyurular bildirildi", "count", n)
+			}
 		})
 	})
 	// Yüklenip bir kayda (ödev teslimi, ders içeriği) bağlanmayan dosyalar bir gün sonra silinir.

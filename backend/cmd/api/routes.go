@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/CAPELLAX02/agora/backend/internal/academic"
+	"github.com/CAPELLAX02/agora/backend/internal/announce"
 	"github.com/CAPELLAX02/agora/backend/internal/audit"
 	"github.com/CAPELLAX02/agora/backend/internal/curriculum"
 	"github.com/CAPELLAX02/agora/backend/internal/enrollment"
@@ -41,6 +42,7 @@ func (app *application) routes() http.Handler {
 
 	audit.NewHandler(audit.NewRepository(app.db), app.logger).Register(rt)
 	notify.NewHandler(notify.NewCenter(app.db, time.Now), app.notifications, app.logger).Register(rt)
+	announce.NewHandler(announce.NewService(app.db, time.Now), app.logger).Register(rt)
 	enrollment.NewHandler(enrollment.NewRepository(app.db), enrollment.NewService(app.db), app.logger).Register(rt)
 	academic.NewHandler(academic.NewRepository(app.db), org.NewTargets(app.db), app.logger, time.Now).Register(rt)
 	curriculum.NewHandler(curriculum.NewRepository(app.db), org.NewTargets(app.db), app.logger).Register(rt)
