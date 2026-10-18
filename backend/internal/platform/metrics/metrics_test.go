@@ -75,3 +75,31 @@ func TestGrading(t *testing.T) {
 		t.Errorf("uygulanan düzeltme = %v, want 1", got)
 	}
 }
+
+func TestLMS(t *testing.T) {
+	reg := prometheus.NewRegistry()
+	m := NewLMS(reg)
+
+	if n := testutil.CollectAndCount(m.completions); n != 6 {
+		t.Errorf("tamamlama serileri = %d, want 6", n)
+	}
+	m.Submitted(false)
+	m.Submitted(true)
+	m.Submitted(true)
+	m.Graded("xlsx", 18)
+	m.Graded("manual", 1)
+	m.Posted("reply")
+	m.Completed("page")
+	if got := testutil.ToFloat64(m.submissions.WithLabelValues("late")); got != 2 {
+		t.Errorf("geç teslim = %v, want 2", got)
+	}
+	if got := testutil.ToFloat64(m.grades.WithLabelValues("xlsx")); got != 18 {
+		t.Errorf("excel puanları = %v, want 18", got)
+	}
+	if got := testutil.ToFloat64(m.posts.WithLabelValues("thread")); got != 0 {
+		t.Errorf("konu = %v, want 0", got)
+	}
+	if got := testutil.ToFloat64(m.completions.WithLabelValues("page")); got != 1 {
+		t.Errorf("sayfa tamamlama = %v, want 1", got)
+	}
+}

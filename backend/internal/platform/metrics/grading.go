@@ -19,7 +19,7 @@ func NewGrading(reg prometheus.Registerer) *Grading {
 	m := &Grading{
 		scores: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Namespace: namespace, Name: "scores_entered_total",
-			Help: "Yazılan (değişen) bileşen notları, kaynağa göre (manual, csv, xlsx).",
+			Help: "Yazılan (değişen) bileşen notları, kaynağa göre (manual, csv, xlsx, lms).",
 		}, []string{"source"}),
 		published: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Namespace: namespace, Name: "grades_published_total",
@@ -30,7 +30,7 @@ func NewGrading(reg prometheus.Registerer) *Grading {
 			Help: "Not düzeltme talepleri, sonuca göre (requested, applied, rejected, withdrawn).",
 		}, []string{"outcome"}),
 	}
-	for _, v := range []string{"manual", "csv", "xlsx"} {
+	for _, v := range []string{"manual", "csv", "xlsx", "lms"} {
 		m.scores.WithLabelValues(v)
 	}
 	for _, v := range []string{"final", "makeup"} {
