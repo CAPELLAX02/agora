@@ -185,7 +185,7 @@ Katmanlar: **handler** (HTTP ↔ DTO, doğrulama) → **service** (iş kurallar�
 | --- | --- |
 | **RED metrikleri** | `http_requests_total{route,method,status}`, `http_request_duration_seconds` (histogram) |
 | **Kaynaklar** | pgxpool (kullanılan/boşta/bekleyen bağlantı, bekleme süresi), Redis gecikmesi, Go runtime (goroutine, GC, heap) |
-| **İş metrikleri** | `agora_registration_items_added_total`, `agora_registration_submitted_total`, `agora_section_full_rejections_total`, `agora_scores_entered_total`, `agora_grades_published_total`, `agora_grade_changes_total`, `agora_term_results_drift`, `agora_login_failures_total`, `agora_refresh_reuse_detected_total`, `agora_outbox_lag_seconds`, `agora_etl_lag_seconds` |
+| **İş metrikleri** | `agora_registration_items_added_total`, `agora_registration_submitted_total`, `agora_section_full_rejections_total`, `agora_scores_entered_total` (kaynak LMS dahil), `agora_grades_published_total`, `agora_grade_changes_total`, `agora_term_results_drift`, `agora_files_uploaded_total`, `agora_file_upload_bytes_total`, `agora_lms_submissions_total`, `agora_lms_grades_total`, `agora_lms_forum_posts_total`, `agora_lms_activity_completions_total`, `agora_login_failures_total`, `agora_refresh_reuse_detected_total`, `agora_outbox_lag_seconds`, `agora_etl_lag_seconds` |
 | **Log** | `slog` JSON: `time, level, msg, request_id, user_id (takma), route, status, duration_ms`. PII maskeleme |
 | **İz (opsiyonel)** | OpenTelemetry → Tempo. HTTP → servis → SQL span'leri |
 | **Uyarılar** | 5xx oranı > %1 (5 dk), p95 > 500 ms, outbox gecikmesi > 60 sn, DB havuzu tükenmesi |
