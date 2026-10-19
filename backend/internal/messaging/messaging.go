@@ -131,15 +131,29 @@ type Conversation struct {
 
 // Service, mesajlaşmayı yönetir.
 type Service struct {
-	pool  *pgxpool.Pool
-	files *files.Service // ekler; nil ise ekli ileti gönderilemez
-	now   func() time.Time
+	pool    *pgxpool.Pool
+	files   *files.Service // ekler; nil ise ekli ileti gönderilemez
+	now     func() time.Time
+	metrics Metrics
 }
+
+// Metrics, mesajlaşmanın iş metrikleridir: konuşma türüne göre (direct, group, section)
+// gönderilen iletiler. İleti transaction'ı bittikten sonra sayılır.
+type Metrics interface {
+	MessageSent(kind string)
+}
+
+type noopMetrics struct{}
+
+func (noopMetrics) MessageSent(string) {}
 
 // NewService, bir Service oluşturur.
 func NewService(pool *pgxpool.Pool, fs *files.Service, now func() time.Time) *Service {
-	return &Service{pool: pool, files: fs, now: now}
+	return &Service{pool: pool, files: fs, now: now, metrics: noopMetrics{}}
 }
+
+// SetMetrics, ileti sayacını bağlar. Verilmezse iletiler sayılmaz.
+func (s *Service) SetMetrics(m Metrics) { s.metrics = m }
 
 // sectionRole, $2 kullanıcısının $1 şubesindeki rolüdür: 'INSTRUCTOR', 'STUDENT' ya da boş.
 const sectionRole = `coalesce(
@@ -606,10 +620,13 @@ func (s *Service) Send(ctx context.Context, actorID, conversationID, body, reply
 	case len(fileIDs) > 0 && s.files == nil:
 		return "", ErrNoStorage
 	}
-	var id string
+	var (
+		id   string
+		kind string
+	)
 	err := db.InTx(ctx, s.pool, func(tx pgx.Tx) error {
-		kind, _, err := access(ctx, tx, conversationID, actorID)
-		if err != nil {
+		var err error
+		if kind, _, err = access(ctx, tx, conversationID, actorID); err != nil {
 			return err
 		}
 		var reply any
@@ -684,7 +701,11 @@ func (s *Service) Send(ctx context.Context, actorID, conversationID, body, reply
 			UserIDs: slices.DeleteFunc(to, func(u string) bool { return muted[u] }),
 			Data:    map[string]any{"sender": sender, "conversation": title, "preview": string(preview)}})
 	})
-	return id, err
+	if err != nil {
+		return "", err
+	}
+	s.metrics.MessageSent(strings.ToLower(kind))
+	return id, nil
 }
 
 // mutedOf, konuşmayı şu an sessize almış alıcılardır.

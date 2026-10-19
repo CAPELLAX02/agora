@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -119,7 +120,13 @@ type server struct {
 	h    http.Handler
 	fx   fixture
 	fs   *files.Service
+	sent sentCounter
 }
+
+// sentCounter, konuşma türüne göre sayılan iletilerdir.
+type sentCounter map[string]int
+
+func (c sentCounter) MessageSent(kind string) { c[kind]++ }
 
 func newServer(t *testing.T) *server {
 	t.Helper()
@@ -142,8 +149,10 @@ func buildServer(t *testing.T, withFiles bool) *server {
 		})
 	}
 	mux := http.NewServeMux()
-	messaging.NewHandler(messaging.NewService(pool, fs, time.Now), logger).Register(authz.NewRouter(mux, authenticate, noGrants{}, logger))
-	return &server{t: t, pool: pool, h: mux, fx: fx, fs: fs}
+	svc, sent := messaging.NewService(pool, fs, time.Now), sentCounter{}
+	svc.SetMetrics(sent)
+	messaging.NewHandler(svc, logger).Register(authz.NewRouter(mux, authenticate, noGrants{}, logger))
+	return &server{t: t, pool: pool, h: mux, fx: fx, fs: fs, sent: sent}
 }
 
 type result struct {
@@ -353,6 +362,10 @@ func TestMessagesUnreadAndSectionGroup(t *testing.T) {
 	}
 	if res := s.do("POST", "/api/v1/conversations/"+section+"/messages", fx.ali, map[string]any{"body": "   "}); res.status != 400 {
 		t.Errorf("boş ileti: %d", res.status)
+	}
+	// Reddedilen iletiler sayılmaz.
+	if want := (sentCounter{"direct": 5, "section": 1}); !maps.Equal(s.sent, want) {
+		t.Errorf("ileti sayacı: %v, want %v", s.sent, want)
 	}
 }
 

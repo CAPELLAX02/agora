@@ -158,14 +158,30 @@ func (in *Input) validate() error {
 
 // Service, duyuruları yönetir.
 type Service struct {
-	pool *pgxpool.Pool
-	now  func() time.Time
+	pool    *pgxpool.Pool
+	now     func() time.Time
+	metrics Metrics
 }
+
+// Metrics, duyuruların iş metrikleridir: yayımlanan duyurular ve ilk okumalar. İşlem başarıyla
+// bittikten sonra sayılır.
+type Metrics interface {
+	AnnouncementPublished()
+	AnnouncementRead()
+}
+
+type noopMetrics struct{}
+
+func (noopMetrics) AnnouncementPublished() {}
+func (noopMetrics) AnnouncementRead()      {}
 
 // NewService, bir Service oluşturur.
 func NewService(pool *pgxpool.Pool, now func() time.Time) *Service {
-	return &Service{pool: pool, now: now}
+	return &Service{pool: pool, now: now, metrics: noopMetrics{}}
 }
+
+// SetMetrics, duyuru sayaçlarını bağlar. Verilmezse sayılmaz.
+func (s *Service) SetMetrics(m Metrics) { s.metrics = m }
 
 // Targets, hedeflerin yetki denetimi için birimlerini çözer (bölümün fakültesi, programın bölümü
 // ve fakültesi). Olmayan birim ValidationError döner.

@@ -98,12 +98,19 @@ func seed(t *testing.T, pool *pgxpool.Pool) fixture {
 }
 
 type server struct {
-	t    *testing.T
-	pool *pgxpool.Pool
-	svc  *announce.Service
-	h    http.Handler
-	fx   fixture
+	t       *testing.T
+	pool    *pgxpool.Pool
+	svc     *announce.Service
+	h       http.Handler
+	fx      fixture
+	metrics *counter
 }
+
+// counter, sayılan yayımlama ve okumalardır.
+type counter struct{ published, reads int }
+
+func (c *counter) AnnouncementPublished() { c.published++ }
+func (c *counter) AnnouncementRead()      { c.reads++ }
 
 func newServer(t *testing.T) *server {
 	t.Helper()
@@ -124,9 +131,10 @@ func newServer(t *testing.T) *server {
 		fx.central: publish(authz.ScopeUniversity, ""),
 	}
 	mux := http.NewServeMux()
-	svc := announce.NewService(pool, time.Now)
+	svc, metrics := announce.NewService(pool, time.Now), &counter{}
+	svc.SetMetrics(metrics)
 	announce.NewHandler(svc, logger).Register(authz.NewRouter(mux, authenticate, resolver, logger))
-	return &server{t: t, pool: pool, svc: svc, h: mux, fx: fx}
+	return &server{t: t, pool: pool, svc: svc, h: mux, fx: fx, metrics: metrics}
 }
 
 type result struct {
@@ -310,6 +318,10 @@ func TestAnnouncementLifecycle(t *testing.T) {
 	draft := s.do("POST", "/api/v1/announcements", fx.head, body)
 	if res := s.do("DELETE", "/api/v1/announcements/"+draft.body["id"].(string), fx.head, nil); res.status != 204 {
 		t.Errorf("taslak silinir: %d", res.status)
+	}
+	// Taslaklar yayımlanmış sayılmaz; okuma kişi başına bir kez.
+	if *s.metrics != (counter{published: 2, reads: 1}) {
+		t.Errorf("sayaçlar: %+v", *s.metrics)
 	}
 }
 

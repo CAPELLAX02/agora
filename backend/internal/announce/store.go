@@ -140,7 +140,13 @@ func (s *Service) Create(ctx context.Context, actorID string, in Input, publish 
 		}
 		return nil
 	})
-	return id, err
+	if err != nil {
+		return "", err
+	}
+	if publish {
+		s.metrics.AnnouncementPublished()
+	}
+	return id, nil
 }
 
 // checkWindow, yayın bitişinin başlangıçtan (verilmemişse şimdiden) sonra olduğunu denetler.
@@ -211,7 +217,7 @@ func (s *Service) Update(ctx context.Context, actorID, id string, version int, i
 
 // Publish, taslağı yayımlar; yayın başlamışsa hedef kitleye hemen bildirilir.
 func (s *Service) Publish(ctx context.Context, actorID, id string, version int) error {
-	return db.InTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := db.InTx(ctx, s.pool, func(tx pgx.Tx) error {
 		status, err := lock(ctx, tx, id, version)
 		if err != nil {
 			return err
@@ -221,6 +227,10 @@ func (s *Service) Publish(ctx context.Context, actorID, id string, version int) 
 		}
 		return s.publish(ctx, tx, actorID, id)
 	})
+	if err == nil {
+		s.metrics.AnnouncementPublished()
+	}
+	return err
 }
 
 func (s *Service) publish(ctx context.Context, tx pgx.Tx, actorID, id string) error {
@@ -369,10 +379,14 @@ func (s *Service) Visible(ctx context.Context, id, userID string) (bool, error) 
 
 // MarkRead, duyuruyu kullanıcı için okundu yapar (tekrarı zararsız).
 func (s *Service) MarkRead(ctx context.Context, id, userID string) error {
-	if _, err := s.pool.Exec(ctx, `
+	tag, err := s.pool.Exec(ctx, `
 		INSERT INTO communication.announcement_reads (announcement_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-		id, userID); err != nil {
+		id, userID)
+	if err != nil {
 		return fmt.Errorf("announce: okundu yazılamadı: %w", err)
+	}
+	if tag.RowsAffected() == 1 {
+		s.metrics.AnnouncementRead()
 	}
 	return nil
 }

@@ -140,6 +140,7 @@ func Send(ctx context.Context, q db.Querier, n Notification) error {
 	if err := mail.EnqueueBatch(ctx, q, emails); err != nil {
 		return fmt.Errorf("notify: %w", err)
 	}
+	countDelivered(n.Type, "email", len(emails))
 	if len(inApp) == 0 {
 		return nil
 	}
@@ -153,6 +154,7 @@ func Send(ctx context.Context, q db.Querier, n Notification) error {
 	if _, err := q.Exec(ctx, `SELECT pg_notify('`+channel+`', u) FROM unnest($1::text[]) AS u`, inApp); err != nil {
 		return fmt.Errorf("notify: bildirim duyurulamadı: %w", err)
 	}
+	countDelivered(n.Type, "in_app", len(inApp))
 	return nil
 }
 

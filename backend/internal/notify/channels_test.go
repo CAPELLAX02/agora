@@ -3,6 +3,7 @@ package notify
 import (
 	"context"
 	"errors"
+	"maps"
 	"testing"
 	"time"
 
@@ -55,9 +56,17 @@ func delivered(t *testing.T, pool *pgxpool.Pool, userID string) (inApp, emails i
 	return inApp, emails
 }
 
+// counter, kanal başına sayılan bildirimleri tutar.
+type counter map[string]int
+
+func (c counter) Delivered(typ, channel string, n int) { c[typ+" "+channel] += n }
+
 func TestChannelsFollowPreferences(t *testing.T) {
 	pool := dbtest.New(t)
 	useSampleType(t, pool)
+	counts := counter{}
+	SetMetrics(counts)
+	t.Cleanup(func() { SetMetrics(nil) })
 	ctx := context.Background()
 	c := NewCenter(pool, time.Now)
 	ada := addUser(t, pool, "ada", "ACTIVE")
@@ -109,6 +118,11 @@ func TestChannelsFollowPreferences(t *testing.T) {
 	}
 	if in, mails := delivered(t, pool, suspended); in != 1 || mails != 0 {
 		t.Errorf("askıdaki hesap: %d bildirim, %d e-posta", in, mails)
+	}
+
+	want := counter{"test.sample in_app": 1, "test.sample email": 1, "security.password_changed in_app": 2, "security.password_changed email": 1}
+	if !maps.Equal(counts, want) {
+		t.Errorf("sayaçlar: %v, want %v", counts, want)
 	}
 
 	// Gönderirken şablon verisi denetlenir.
