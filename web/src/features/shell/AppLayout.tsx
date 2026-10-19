@@ -9,12 +9,13 @@ import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from 
 
 import { NotificationBell } from '@/features/notifications/NotificationBell'
 
+import { Footer } from './Footer'
 import { MfaBanner } from './MfaBanner'
 import { PreferenceButtons } from './Preferences'
 import { Sidebar, SidebarNav } from './Sidebar'
 import { UserMenu } from './UserMenu'
 
-/** AppLayout, oturum açmış kullanıcının uygulama kabuğudur: yan menü, üst çubuk, içerik. */
+/** AppLayout, oturum açmış kullanıcının uygulama kabuğudur: yan menü, üst çubuk, içerik, altbilgi. */
 export function AppLayout() {
   const { t } = useTranslation()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -45,7 +46,7 @@ export function AppLayout() {
               <SidebarNav onNavigate={() => setMenuOpen(false)} />
             </SheetContent>
           </Sheet>
-          <Brand className="lg:hidden" />
+          <Brand compact className="lg:hidden" />
           <div className="flex-1" />
           <PreferenceButtons />
           <NotificationBell />
@@ -59,6 +60,7 @@ export function AppLayout() {
             <Outlet />
           </div>
         </main>
+        <Footer />
       </div>
     </div>
   )

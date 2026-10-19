@@ -111,7 +111,8 @@
     "communication": "Communication",
     "announcements": "Announcements",
     "manageAnnouncements": "Manage announcements",
-    "messages": "Messages"
+    "messages": "Messages",
+    "myAttendance": "My attendance"
   },
   "auth": {
     "restoring": "Signing you in…",
@@ -935,7 +936,8 @@
     "gradebook": "Gradebook",
     "noSchedule": "No weekly sessions",
     "students_one": "{{count}} student",
-    "students_other": "{{count}} students"
+    "students_other": "{{count}} students",
+    "attendance": "Attendance"
   },
   "offering": {
     "title": "Course offering",
@@ -2442,5 +2444,112 @@
       "unread": "Unread",
       "starred": "Starred"
     }
+  },
+  "attendance": {
+    "title": "Attendance",
+    "description": "{{course}} · sessions, roll call and absences",
+    "tabs": {
+      "sessions": "Sessions",
+      "summary": "Absence summary"
+    },
+    "upcoming": "Today and upcoming",
+    "past": "Past sessions",
+    "empty": "This section has no scheduled sessions.",
+    "types": {
+      "THEORY": "Theory",
+      "PRACTICE": "Practice",
+      "LAB": "Lab"
+    },
+    "groups": {
+      "THEORY": "Theory",
+      "PRACTICE": "Practice"
+    },
+    "makeup": "Make-up",
+    "statuses": {
+      "SCHEDULED": "Pending",
+      "HELD": "Roll taken",
+      "CANCELLED": "Cancelled"
+    },
+    "held": "{{present}} present · {{absent}} absent",
+    "take": "Take roll",
+    "edit": "Edit roll",
+    "notStarted": "Not started yet",
+    "actions": "Session actions",
+    "cancel": "Cancel session",
+    "restore": "Restore session",
+    "cancelled": "Session cancelled.",
+    "restored": "Session restored.",
+    "topic": "Topic",
+    "setTopic": "Write topic",
+    "topicTitle": "Session topic",
+    "topicSaved": "Topic saved.",
+    "save": "Save",
+    "addMakeup": "Make-up session",
+    "makeupTitle": "Add a make-up session",
+    "makeupDescription": "Make-up sessions count toward the absence limit and must be within the term.",
+    "type": "Session type",
+    "date": "Date",
+    "start": "Start",
+    "end": "End",
+    "add": "Add",
+    "makeupAdded": "Make-up session added.",
+    "roll": {
+      "allPresent": "All present",
+      "save": "Save roll",
+      "saved": "Roll saved.",
+      "counts": "{{present}} present · {{absent}} absent · {{late}} late · {{excused}} excused",
+      "students": "Students",
+      "back": "Back to sessions",
+      "statusFor": "{{name}}: attendance",
+      "empty": "No students in this section.",
+      "hint": "Unmarked students count as present. You can correct the roll after saving.",
+      "cancelledNote": "This session was cancelled; no roll is taken."
+    },
+    "marks": {
+      "PRESENT": "Present",
+      "ABSENT": "Absent",
+      "LATE": "Late",
+      "EXCUSED": "Excused"
+    },
+    "summary": {
+      "student": "Student",
+      "status": "Status",
+      "exceeded": "Over the limit",
+      "near": "Close to the limit",
+      "fail": "Failed (attendance)",
+      "ok": "Fine",
+      "hint": "Failing for non-attendance is decided in the gradebook.",
+      "empty": "No students in this section."
+    },
+    "usage": "{{absences}} / {{limit}}",
+    "usageLabel": "{{group}}: {{absences}} absences, limit {{limit}}",
+    "noLimit": "no limit",
+    "mine": {
+      "title": "My attendance",
+      "description": "Your absences per course and the regulation limit.",
+      "empty": "You have no enrollments this term.",
+      "sessions": "Sessions",
+      "near": "You are close to the limit",
+      "exceeded": "You exceeded the absence limit",
+      "ok": "Below the limit",
+      "fail": "Failed for non-attendance",
+      "rule": "Limit: {{pct}}% of {{planned}} planned sessions, i.e. {{limit}} sessions. Late and excused sessions are not absences.",
+      "notTaken": "Roll not taken",
+      "held": "Roll taken for {{held}} of {{planned}} sessions",
+      "showSessions": "Show sessions",
+      "hideSessions": "Hide sessions"
+    }
+  },
+  "brand": {
+    "university": "Ankara University",
+    "product": "Agora Student Information System"
+  },
+  "footer": {
+    "about": "Course registration, grades, transcripts, course spaces, announcements and messaging: one secure place for Ankara University students and academics.",
+    "team": "Development team",
+    "project": "Project",
+    "thesis": "Ankara University graduation project · {{year}}",
+    "source": "Source code",
+    "disclaimer": "An educational graduation project; not the university's official student information system."
   }
 }

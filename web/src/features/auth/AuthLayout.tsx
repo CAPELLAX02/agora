@@ -9,8 +9,9 @@ import {
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { AuthFooter } from '@/features/shell/Footer'
 import { PreferenceButtons } from '@/features/shell/Preferences'
-import { Brand, BrandMark } from '@/shared/ui/brand'
+import { Brand } from '@/shared/ui/brand'
 import { IconChip } from '@/shared/ui/icon-chip'
 
 /**
@@ -41,33 +42,28 @@ export function AuthLayout({ children }: { children: ReactNode }) {
           />
         </div>
 
-        <span className="relative flex items-center gap-2.5 text-lg font-extrabold tracking-tight">
-          <BrandMark className="rounded-[9px] ring-2 ring-white/30" />
-          Agora
-        </span>
+        <Brand inverse className="relative [&_img]:size-12" />
 
         <div className="relative grid max-w-xl gap-10">
-          <p className="text-4xl leading-[1.15] font-extrabold tracking-tight text-balance">
-            {t('app.tagline')}
-          </p>
+          <p className="text-4xl leading-[1.15] font-bold tracking-tight text-balance">{t('app.tagline')}</p>
 
           {/* Öğrencinin göreceklerinden örnekler. */}
           <div aria-hidden className="relative h-44">
-            <div className="absolute top-0 left-0 flex w-72 -rotate-2 items-center gap-3 rounded-2xl bg-white p-3.5 text-slate-800 shadow-2xl shadow-indigo-950/30">
+            <div className="absolute top-0 left-0 flex w-72 -rotate-2 items-center gap-3 rounded-xl bg-white p-3.5 text-slate-800 shadow-2xl shadow-indigo-950/30">
               <IconChip icon={CircleCheckIcon} tone="emerald" solid />
               <div className="min-w-0 text-sm">
                 <p className="font-bold">{t('app.showcase.approved')}</p>
                 <p className="text-xs text-slate-500">{t('app.showcase.approvedHint')}</p>
               </div>
             </div>
-            <div className="absolute top-20 left-40 flex w-72 rotate-2 items-center gap-3 rounded-2xl bg-white p-3.5 text-slate-800 shadow-2xl shadow-indigo-950/30">
+            <div className="absolute top-20 left-40 flex w-72 rotate-2 items-center gap-3 rounded-xl bg-white p-3.5 text-slate-800 shadow-2xl shadow-indigo-950/30">
               <IconChip icon={CalendarClockIcon} tone="sky" solid />
               <div className="min-w-0 text-sm">
                 <p className="font-bold">{t('app.showcase.today')}</p>
                 <p className="text-xs text-slate-500">{t('app.showcase.todayHint')}</p>
               </div>
             </div>
-            <div className="absolute top-2 left-[19rem] flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-sm font-bold ring-1 ring-white/30 backdrop-blur-md">
+            <div className="absolute top-2 left-[19rem] flex items-center gap-2 rounded-md bg-white/15 px-3 py-1.5 text-sm font-bold ring-1 ring-white/30 backdrop-blur-md">
               <SparklesIcon className="size-4 text-amber-200" />
               {t('app.showcase.gpa')} 3,42
             </div>
@@ -77,9 +73,9 @@ export function AuthLayout({ children }: { children: ReactNode }) {
             {features.map(({ icon: Icon, text }) => (
               <li
                 key={text}
-                className="flex items-center gap-3 rounded-2xl bg-white/10 px-3.5 py-2.5 text-sm font-medium ring-1 ring-white/20 backdrop-blur-md"
+                className="flex items-center gap-3 rounded-xl bg-white/10 px-3.5 py-2.5 text-sm font-medium ring-1 ring-white/20 backdrop-blur-md"
               >
-                <span className="flex size-8 items-center justify-center rounded-xl bg-white/20">
+                <span className="flex size-8 items-center justify-center rounded-full bg-white/20">
                   <Icon className="size-4" aria-hidden />
                 </span>
                 {text}
@@ -87,9 +83,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
             ))}
           </ul>
         </div>
-        <p className="relative text-xs text-white/70">
-          © {new Date().getFullYear()} Agora · Ankara Üniversitesi
-        </p>
+        <p className="relative text-xs text-white/70">{t('footer.disclaimer')}</p>
       </aside>
 
       <div className="flex flex-col app-glow">
@@ -100,6 +94,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
         <main id="main" className="flex flex-1 items-center justify-center px-4 pb-16">
           <div className="w-full max-w-sm">{children}</div>
         </main>
+        <AuthFooter />
       </div>
     </div>
   )

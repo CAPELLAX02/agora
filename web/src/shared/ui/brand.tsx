@@ -1,31 +1,54 @@
-import { useId } from 'react'
+import { useTranslation } from 'react-i18next'
 
+import logo from '@/assets/ankara-universitesi.png'
 import { cn } from '@/shared/lib/utils'
 
-/** BrandMark, Agora'nın işaretidir (favicon ile aynı çizim, marka geçişiyle). */
+/** BrandMark, Ankara Üniversitesi'nin amblemidir (süs: yanındaki metin markayı söyler). */
 export function BrandMark({ className }: { className?: string }) {
-  const id = useId()
   return (
-    <svg viewBox="0 0 32 32" aria-hidden className={cn('size-8 drop-shadow-sm', className)}>
-      <defs>
-        <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="oklch(0.5 0.22 268)" />
-          <stop offset="0.55" stopColor="oklch(0.56 0.24 295)" />
-          <stop offset="1" stopColor="oklch(0.66 0.21 345)" />
-        </linearGradient>
-      </defs>
-      <rect width="32" height="32" rx="9" fill={`url(#${id})`} />
-      <path d="M16 6 7 26h4.2l1.7-4h6.2l1.7 4H25L16 6Zm-1.7 12.4L16 14l1.7 4.4h-3.4Z" fill="white" />
-      <circle cx="24.5" cy="7.5" r="2.5" className="fill-highlight" />
-    </svg>
+    <img
+      src={logo}
+      alt=""
+      aria-hidden
+      width={318}
+      height={318}
+      draggable={false}
+      className={cn('size-9 shrink-0 rounded-full select-none', className)}
+    />
   )
 }
 
-export function Brand({ className }: { className?: string }) {
+/**
+ * Brand, uygulamanın kimliğidir: amblem, "Ankara Üniversitesi" ve altında "Agora Öğrenci Bilgi
+ * Sistemi". inverse, koyu ya da renkli zeminde beyaz metin kullanır.
+ */
+export function Brand({
+  className,
+  inverse = false,
+  compact = false,
+}: {
+  className?: string
+  inverse?: boolean
+  /** compact, dar ekranda (sm altı) sadece amblemi gösterir; ad ekran okuyucuya kalır. */
+  compact?: boolean
+}) {
+  const { t } = useTranslation()
   return (
-    <span className={cn('flex items-center gap-2.5 font-extrabold tracking-tight', className)}>
-      <BrandMark />
-      <span className="text-lg">Agora</span>
+    <span className={cn('flex min-w-0 items-center gap-2.5', className)}>
+      <BrandMark className={cn(inverse && 'bg-white p-px shadow-md')} />
+      <span className={cn('flex min-w-0 flex-col', compact && 'max-sm:sr-only')}>
+        <span className="truncate text-[15px] leading-tight font-bold tracking-tight">
+          {t('brand.university')}
+        </span>
+        <span
+          className={cn(
+            'truncate text-[11px] leading-tight font-medium',
+            inverse ? 'text-white/75' : 'text-muted-foreground',
+          )}
+        >
+          {t('brand.product')}
+        </span>
+      </span>
     </span>
   )
 }

@@ -111,7 +111,8 @@
     "communication": "İletişim",
     "announcements": "Duyurular",
     "manageAnnouncements": "Duyuru yönetimi",
-    "messages": "Mesajlar"
+    "messages": "Mesajlar",
+    "myAttendance": "Devamsızlığım"
   },
   "auth": {
     "restoring": "Oturum açılıyor…",
@@ -935,7 +936,8 @@
     "gradebook": "Not tablosu",
     "noSchedule": "Haftalık programda oturumu yok",
     "students_one": "{{count}} öğrenci",
-    "students_other": "{{count}} öğrenci"
+    "students_other": "{{count}} öğrenci",
+    "attendance": "Yoklama"
   },
   "offering": {
     "title": "Ders açma",
@@ -2442,5 +2444,112 @@
       "unread": "Okunmamış",
       "starred": "Yıldızlı"
     }
+  },
+  "attendance": {
+    "title": "Yoklama",
+    "description": "{{course}} · oturumlar, yoklama ve devamsızlık",
+    "tabs": {
+      "sessions": "Oturumlar",
+      "summary": "Devamsızlık özeti"
+    },
+    "upcoming": "Bugün ve yaklaşan",
+    "past": "Geçmiş oturumlar",
+    "empty": "Bu şubenin programında oturum yok.",
+    "types": {
+      "THEORY": "Teori",
+      "PRACTICE": "Uygulama",
+      "LAB": "Laboratuvar"
+    },
+    "groups": {
+      "THEORY": "Teori",
+      "PRACTICE": "Uygulama"
+    },
+    "makeup": "Telafi",
+    "statuses": {
+      "SCHEDULED": "Bekliyor",
+      "HELD": "Yoklama alındı",
+      "CANCELLED": "İptal"
+    },
+    "held": "{{present}} geldi · {{absent}} gelmedi",
+    "take": "Yoklama al",
+    "edit": "Yoklamayı düzenle",
+    "notStarted": "Henüz başlamadı",
+    "actions": "Oturum işlemleri",
+    "cancel": "Oturumu iptal et",
+    "restore": "İptali geri al",
+    "cancelled": "Oturum iptal edildi.",
+    "restored": "Oturum yeniden planlandı.",
+    "topic": "Konu",
+    "setTopic": "Konuyu yaz",
+    "topicTitle": "Oturumun konusu",
+    "topicSaved": "Konu kaydedildi.",
+    "save": "Kaydet",
+    "addMakeup": "Telafi oturumu",
+    "makeupTitle": "Telafi oturumu ekle",
+    "makeupDescription": "Telafi oturumu devamsızlık sınırında sayılır; dönemin içinde olmalı.",
+    "type": "Oturum türü",
+    "date": "Tarih",
+    "start": "Başlangıç",
+    "end": "Bitiş",
+    "add": "Ekle",
+    "makeupAdded": "Telafi oturumu eklendi.",
+    "roll": {
+      "allPresent": "Hepsi geldi",
+      "save": "Yoklamayı kaydet",
+      "saved": "Yoklama kaydedildi.",
+      "counts": "{{present}} geldi · {{absent}} gelmedi · {{late}} geç · {{excused}} raporlu",
+      "students": "Öğrenciler",
+      "back": "Oturumlara dön",
+      "statusFor": "{{name}}: yoklama durumu",
+      "empty": "Şubede öğrenci yok.",
+      "hint": "İşaretlenmeyen öğrenciler gelmiş sayılır. Kaydettikten sonra da düzeltebilirsiniz.",
+      "cancelledNote": "Bu oturum iptal edildi; yoklaması alınmaz."
+    },
+    "marks": {
+      "PRESENT": "Geldi",
+      "ABSENT": "Gelmedi",
+      "LATE": "Geç",
+      "EXCUSED": "Raporlu"
+    },
+    "summary": {
+      "student": "Öğrenci",
+      "status": "Durum",
+      "exceeded": "Sınırı aştı",
+      "near": "Sınıra yakın",
+      "fail": "Devamsız",
+      "ok": "Sorun yok",
+      "hint": "Devamsızlıktan kalma (devamsız) kararı not tablosunda verilir.",
+      "empty": "Şubede öğrenci yok."
+    },
+    "usage": "{{absences}} / {{limit}}",
+    "usageLabel": "{{group}}: {{absences}} devamsızlık, sınır {{limit}}",
+    "noLimit": "sınır yok",
+    "mine": {
+      "title": "Devamsızlığım",
+      "description": "Derslerinizdeki devamsızlık ve yönetmelikteki sınır.",
+      "empty": "Bu dönem kesin kaydınız yok.",
+      "sessions": "Oturumlar",
+      "near": "Sınıra yaklaşıyorsunuz",
+      "exceeded": "Devamsızlık sınırını aştınız",
+      "ok": "Sınırın altında",
+      "fail": "Devamsızlıktan kaldınız",
+      "rule": "Sınır: planlanan {{planned}} oturumun %{{pct}}'i, yani {{limit}} oturum. Geç kalınan ve raporlu oturumlar devamsızlık sayılmaz.",
+      "notTaken": "Yoklama alınmadı",
+      "held": "{{held}} / {{planned}} oturumun yoklaması alındı",
+      "showSessions": "Oturumları göster",
+      "hideSessions": "Oturumları gizle"
+    }
+  },
+  "brand": {
+    "university": "Ankara Üniversitesi",
+    "product": "Agora Öğrenci Bilgi Sistemi"
+  },
+  "footer": {
+    "about": "Ders seçimi, notlar, transkript, ders alanı, duyurular ve mesajlaşma: Ankara Üniversitesi öğrencileri ve akademisyenleri için tek ve güvenli bir yerde.",
+    "team": "Geliştirici ekip",
+    "project": "Proje",
+    "thesis": "Ankara Üniversitesi bitirme projesi · {{year}}",
+    "source": "Kaynak kod",
+    "disclaimer": "Eğitim amaçlı bir bitirme projesidir; üniversitenin resmî öğrenci bilgi sistemi değildir."
   }
 }
