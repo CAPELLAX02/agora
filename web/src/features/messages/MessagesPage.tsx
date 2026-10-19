@@ -1,4 +1,4 @@
-import { MessageCircleIcon, SearchIcon } from 'lucide-react'
+import { BellOffIcon, MessageCircleIcon, SearchIcon, StarIcon } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
@@ -52,9 +52,12 @@ function ConversationList({ activeId, className }: { activeId?: string; classNam
   const { t } = useTranslation()
   const { data, error, refetch } = useListMyConversationsQuery()
   const [query, setQuery] = useState('')
+  const [filter, setFilter] = useState<'all' | 'unread' | 'starred'>('all')
   const q = query.trim().toLocaleLowerCase('tr')
   const items = (data?.items ?? []).filter(
-    (c) => !q || conversationTitle(c).toLocaleLowerCase('tr').includes(q),
+    (c) =>
+      (!q || conversationTitle(c).toLocaleLowerCase('tr').includes(q)) &&
+      (filter === 'all' || (filter === 'unread' ? c.unread > 0 : c.is_starred)),
   )
   return (
     <section
@@ -64,8 +67,26 @@ function ConversationList({ activeId, className }: { activeId?: string; classNam
         className,
       )}
     >
-      <div className="relative border-b border-border/60 p-3">
-        <SearchIcon className="pointer-events-none absolute top-1/2 left-5.5 size-4 -translate-y-1/2 text-muted-foreground" />
+      <div className="relative space-y-2 border-b border-border/60 p-3">
+        <div className="flex gap-1" role="group" aria-label={t('messages.filter')}>
+          {(['all', 'unread', 'starred'] as const).map((f) => (
+            <button
+              key={f}
+              type="button"
+              aria-pressed={filter === f}
+              onClick={() => setFilter(f)}
+              className={cn(
+                'rounded-full px-2.5 py-1 text-xs font-semibold transition-colors',
+                filter === f
+                  ? 'bg-sky-500 text-white'
+                  : 'bg-muted text-muted-foreground hover:text-foreground',
+              )}
+            >
+              {t(`messages.filters.${f}`)}
+            </button>
+          ))}
+        </div>
+        <SearchIcon className="pointer-events-none absolute bottom-5.5 left-5.5 size-4 text-muted-foreground" />
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -112,6 +133,18 @@ function ConversationList({ activeId, className }: { activeId?: string; classNam
                         >
                           {title}
                         </span>
+                        {c.is_starred && (
+                          <StarIcon
+                            className="size-3.5 shrink-0 fill-amber-400 text-amber-500"
+                            aria-label={t('messages.starred')}
+                          />
+                        )}
+                        {c.muted_until && new Date(c.muted_until) > new Date() && (
+                          <BellOffIcon
+                            className="size-3.5 shrink-0 text-muted-foreground"
+                            aria-label={t('messages.muted')}
+                          />
+                        )}
                         {c.last_message_at && (
                           <span className="shrink-0 text-[11px] text-muted-foreground">
                             {formatRelative(c.last_message_at)}
@@ -124,7 +157,7 @@ function ConversationList({ activeId, className }: { activeId?: string; classNam
                             ? t('messages.noMessages')
                             : last.deleted
                               ? t('messages.deleted')
-                              : `${last.mine ? t('messages.you') : c.kind === 'DIRECT' ? '' : `${last.sender.name.split(' ')[0]}: `}${last.body}`}
+                              : `${last.mine ? t('messages.you') : c.kind === 'DIRECT' ? '' : `${last.sender.name.split(' ')[0]}: `}${last.body || t('messages.attachmentOnly')}`}
                         </span>
                         {c.unread > 0 && (
                           <span

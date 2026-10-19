@@ -1,33 +1,44 @@
-import { ArrowLeftIcon, SendIcon } from 'lucide-react'
-import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { ArrowLeftIcon, BellIcon, BellOffIcon, LogOutIcon, StarIcon } from 'lucide-react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 
 import { formatDateTime } from '@/i18n/format'
 import {
   useGetConversationQuery,
+  useLeaveConversationMutation,
   useListConversationMessagesQuery,
   useMarkConversationReadMutation,
-  useSendMessageMutation,
+  useSetConversationStateMutation,
+  type Conversation,
   type ConversationMessage,
 } from '@/shared/api/generated'
 import { useErrorMessage } from '@/shared/api/useErrorMessage'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/button'
+import { ConfirmDialog } from '@/shared/ui/confirm-dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/shared/ui/dropdown-menu'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { ErrorState } from '@/shared/ui/states'
-import { Textarea } from '@/shared/ui/textarea'
 
+import { Bubble } from './Bubble'
+import { Composer } from './Composer'
 import { conversationTitle } from './names'
 import { ConversationIcon } from './parts'
 
 const pageSize = 30
-const maxBody = 4000
 
 /**
- * ConversationView, açık konuşmadır: başlık, iletiler (en yeni altta; yukarıda eski iletiler sayfa
- * sayfa) ve yazma kutusu. Görüntülenen en yeni ileti okundu sayılır.
+ * ConversationView, açık konuşmadır: başlık (yıldız, sessiz, gruptan ayrılma), iletiler (en yeni
+ * altta; yukarıda eski iletiler sayfa sayfa) ve yazma kutusu. Görüntülenen en yeni ileti okundu sayılır.
  */
 export function ConversationView({ id }: { id: string }) {
   const { t } = useTranslation()
@@ -35,6 +46,7 @@ export function ConversationView({ id }: { id: string }) {
   const newest = useListConversationMessagesQuery({ id, limit: pageSize })
   // Eski sayfalar: her biri bir öncekinin en eski iletisinden önce (en yakını önce).
   const [older, setOlder] = useState<string[]>([])
+  const [replyTo, setReplyTo] = useState<ConversationMessage | null>(null)
   const [markRead] = useMarkConversationReadMutation()
   const scroller = useRef<HTMLDivElement>(null)
   const atBottom = useRef(true)
@@ -61,7 +73,18 @@ export function ConversationView({ id }: { id: string }) {
     return <Skeleton className="h-full" />
   }
   const title = conversationTitle(c)
-  const oldestLoaded = older.length > 0 ? older[older.length - 1] : undefined
+  const group = c.kind !== 'DIRECT'
+  const recent = newest.data?.items ?? []
+  const bubble = (m: ConversationMessage, page: ConversationMessage[]) => (
+    <Bubble
+      key={m.id}
+      m={m}
+      group={group}
+      moderator={c.is_moderator}
+      quote={m.reply_to_id ? [...page, ...recent].find((x) => x.id === m.reply_to_id) : undefined}
+      onReply={setReplyTo}
+    />
+  )
   return (
     <section
       aria-label={title}
@@ -74,7 +97,7 @@ export function ConversationView({ id }: { id: string }) {
           </Link>
         </Button>
         <ConversationIcon c={c} className="size-10" />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h2 className="truncate font-bold">{title}</h2>
           <p className="text-xs text-muted-foreground">
             {c.kind === 'DIRECT'
@@ -82,6 +105,7 @@ export function ConversationView({ id }: { id: string }) {
               : t('messages.members', { count: c.member_count ?? 0 })}
           </p>
         </div>
+        <ConversationActions c={c} />
       </header>
       <div
         ref={scroller}
@@ -102,32 +126,34 @@ export function ConversationView({ id }: { id: string }) {
                 key={before}
                 id={id}
                 before={before}
-                group={c.kind !== 'DIRECT'}
+                render={bubble}
                 onMore={i === 0 ? (next) => setOlder((o) => [...o, next]) : undefined}
               />
             ))}
             {older.length === 0 && newest.data.has_more && (
               <li className="text-center">
-                <Button
-                  variant="soft"
-                  size="sm"
-                  onClick={() => setOlder([newest.data.items[newest.data.items.length - 1]!.id])}
-                >
+                <Button variant="soft" size="sm" onClick={() => setOlder([recent[recent.length - 1]!.id])}>
                   {t('messages.loadOlder')}
                 </Button>
               </li>
             )}
-            {newest.data.items.length === 0 && oldestLoaded === undefined ? (
+            {recent.length === 0 && older.length === 0 ? (
               <li className="py-10 text-center text-sm text-muted-foreground">{t('messages.start')}</li>
             ) : (
-              [...newest.data.items]
-                .reverse()
-                .map((m) => <Bubble key={m.id} m={m} group={c.kind !== 'DIRECT'} />)
+              [...recent].reverse().map((m) => bubble(m, recent))
             )}
           </ol>
         )}
       </div>
-      <Composer id={id} onSent={() => (atBottom.current = true)} />
+      <Composer
+        id={id}
+        replyTo={replyTo}
+        onCancelReply={() => setReplyTo(null)}
+        onSent={() => {
+          atBottom.current = true
+          setReplyTo(null)
+        }}
+      />
     </section>
   )
 }
@@ -136,12 +162,12 @@ export function ConversationView({ id }: { id: string }) {
 function OlderPage({
   id,
   before,
-  group,
+  render,
   onMore,
 }: {
   id: string
   before: string
-  group: boolean
+  render: (m: ConversationMessage, page: ConversationMessage[]) => ReactNode
   onMore?: (next: string) => void
 }) {
   const { t } = useTranslation()
@@ -162,100 +188,113 @@ function OlderPage({
           </Button>
         </li>
       )}
-      {[...data.items].reverse().map((m) => (
-        <Bubble key={m.id} m={m} group={group} />
-      ))}
+      {[...data.items].reverse().map((m) => render(m, data.items))}
     </>
   )
 }
 
-function Bubble({ m, group }: { m: ConversationMessage; group: boolean }) {
-  const { t } = useTranslation()
-  return (
-    <li className={cn('flex', m.mine ? 'justify-end' : 'justify-start')}>
-      <div
-        className={cn(
-          'max-w-[80%] rounded-2xl px-3.5 py-2 text-sm shadow-xs',
-          m.mine
-            ? 'rounded-br-md bg-gradient-to-br from-sky-500 to-blue-600 text-white'
-            : 'rounded-bl-md border border-border/70 bg-muted/40',
-        )}
-      >
-        {group && !m.mine && (
-          <p
-            className={cn(
-              'mb-0.5 text-xs font-bold',
-              m.sender.is_staff ? 'text-violet-600 dark:text-violet-300' : 'text-sky-700 dark:text-sky-300',
-            )}
-          >
-            {m.sender.name}
-          </p>
-        )}
-        {m.deleted ? (
-          <p className="italic opacity-75">{t('messages.deleted')}</p>
-        ) : (
-          <p className="break-words whitespace-pre-wrap">{m.body}</p>
-        )}
-        <p className={cn('mt-1 text-right text-[10px]', m.mine ? 'text-white/75' : 'text-muted-foreground')}>
-          {formatDateTime(m.created_at)}
-          {m.edited_at && ` · ${t('messages.edited')}`}
-        </p>
-      </div>
-    </li>
-  )
-}
+/** muteOptions, sessize alma süreleridir (saat). */
+const muteOptions = [1, 8, 168] as const
 
-function Composer({ id, onSent }: { id: string; onSent: () => void }) {
+/** ConversationActions, konuşmanın kişisel işlemleridir: yıldız, süreyle sessiz, gruptan ayrılma. */
+function ConversationActions({ c }: { c: Conversation }) {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const errorMessage = useErrorMessage()
-  const [send, sending] = useSendMessageMutation()
-  const [body, setBody] = useState('')
-  const submit = async () => {
-    const text = body.trim()
-    if (!text || sending.isLoading) {
-      return
-    }
-    const res = await send({ id, body: { body: text } })
+  const [setState] = useSetConversationStateMutation()
+  const [leave] = useLeaveConversationMutation()
+  const [confirmLeave, setConfirmLeave] = useState(false)
+  const muted = c.muted_until !== null && new Date(c.muted_until) > new Date()
+
+  const update = async (starred: boolean, mutedUntil: string | null, message: string) => {
+    const res = await setState({ id: c.id, body: { is_starred: starred, muted_until: mutedUntil } })
     if (res.error) {
       toast.error(errorMessage(res.error))
       return
     }
-    setBody('')
-    onSent()
-  }
-  const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    // Enter gönderir, Shift+Enter satır atlatır.
-    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-      e.preventDefault()
-      void submit()
-    }
+    toast.success(message)
   }
   return (
-    <form
-      className="flex items-end gap-2 border-t border-border/60 p-3"
-      onSubmit={(e) => {
-        e.preventDefault()
-        void submit()
-      }}
-    >
-      <Textarea
-        value={body}
-        maxLength={maxBody}
-        rows={1}
-        onChange={(e) => setBody(e.target.value)}
-        onKeyDown={onKeyDown}
-        placeholder={t('messages.placeholder')}
-        aria-label={t('messages.compose')}
-        className="max-h-40 min-h-10 resize-none"
-      />
+    <div className="flex items-center gap-1">
       <Button
-        type="submit"
+        variant="ghost"
         size="icon"
-        disabled={!body.trim() || sending.isLoading}
-        aria-label={t('messages.send')}
+        aria-pressed={c.is_starred}
+        aria-label={c.is_starred ? t('messages.unstar') : t('messages.star')}
+        onClick={() =>
+          void update(
+            !c.is_starred,
+            c.muted_until,
+            c.is_starred ? t('messages.unstarred') : t('messages.starred'),
+          )
+        }
       >
-        <SendIcon />
+        <StarIcon className={cn(c.is_starred && 'fill-amber-400 text-amber-500')} />
       </Button>
-    </form>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" aria-label={t('messages.notificationsMenu')}>
+            {muted ? <BellOffIcon className="text-muted-foreground" /> : <BellIcon />}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {muted && c.muted_until && (
+            <>
+              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                {t('messages.mutedUntil', { time: formatDateTime(c.muted_until) })}
+              </DropdownMenuLabel>
+              <DropdownMenuItem onSelect={() => void update(c.is_starred, null, t('messages.unmuted'))}>
+                <BellIcon />
+                {t('messages.unmute')}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          )}
+          {muteOptions.map((h) => (
+            <DropdownMenuItem
+              key={h}
+              onSelect={() =>
+                void update(
+                  c.is_starred,
+                  new Date(Date.now() + h * 3600_000).toISOString(),
+                  t('messages.mutedToast'),
+                )
+              }
+            >
+              <BellOffIcon />
+              {t(`messages.muteFor.${h}`)}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {c.kind === 'GROUP' && (
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={t('messages.leave')}
+          onClick={() => setConfirmLeave(true)}
+        >
+          <LogOutIcon />
+        </Button>
+      )}
+      {confirmLeave && (
+        <ConfirmDialog
+          destructive
+          icon={LogOutIcon}
+          title={t('messages.leaveTitle')}
+          description={t('messages.leaveDescription')}
+          confirm={t('messages.leave')}
+          onClose={() => setConfirmLeave(false)}
+          onConfirm={async () => {
+            const res = await leave({ id: c.id })
+            if (res.error) {
+              toast.error(errorMessage(res.error))
+              return
+            }
+            void navigate('/mesajlar')
+          }}
+        />
+      )}
+    </div>
   )
 }

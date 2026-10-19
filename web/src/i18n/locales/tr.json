@@ -2402,6 +2402,45 @@
     "noContacts": "Kişi bulunamadı.",
     "picked_one": "{{count}} kişi seçildi",
     "picked_other": "{{count}} kişi seçildi",
-    "createGroup": "Grubu kur"
+    "createGroup": "Grubu kur",
+    "attachmentOnly": "📎 Ek",
+    "editLabel": "İletiyi düzenle",
+    "save": "Kaydet",
+    "download": "{{name}} dosyasını indir",
+    "actions": "İleti işlemleri",
+    "reply": "Yanıtla",
+    "edit": "Düzenle",
+    "delete": "Sil",
+    "deleteTitle": "İleti silinsin mi?",
+    "deleteDescription": "İleti konuşmada “silindi” olarak görünür.",
+    "replyingTo": "{{name}} adlı kişiye yanıt:",
+    "cancelReply": "Yanıtı kaldır",
+    "attachments": "Ekler",
+    "uploading": "Yükleniyor…",
+    "attach": "Dosya ekle",
+    "star": "Yıldızla",
+    "unstar": "Yıldızı kaldır",
+    "starred": "Yıldızlı",
+    "unstarred": "Yıldız kaldırıldı.",
+    "notificationsMenu": "Konuşma bildirimleri",
+    "mutedUntil": "{{time}} tarihine kadar sessiz",
+    "unmute": "Sessizi kaldır",
+    "unmuted": "Konuşmanın sesi açıldı.",
+    "mutedToast": "Konuşma sessize alındı.",
+    "muteFor": {
+      "1": "1 saat sessize al",
+      "8": "8 saat sessize al",
+      "168": "1 hafta sessize al"
+    },
+    "muted": "Sessiz",
+    "leave": "Gruptan ayrıl",
+    "leaveTitle": "Gruptan ayrılmak istiyor musunuz?",
+    "leaveDescription": "Grubun iletilerini artık görmezsiniz; yönetici sizi yeniden ekleyebilir.",
+    "filter": "Konuşmaları süz",
+    "filters": {
+      "all": "Tümü",
+      "unread": "Okunmamış",
+      "starred": "Yıldızlı"
+    }
   }
 }

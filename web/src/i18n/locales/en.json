@@ -2402,6 +2402,45 @@
     "noContacts": "No one found.",
     "picked_one": "{{count}} person selected",
     "picked_other": "{{count}} people selected",
-    "createGroup": "Create group"
+    "createGroup": "Create group",
+    "attachmentOnly": "📎 Attachment",
+    "editLabel": "Edit message",
+    "save": "Save",
+    "download": "Download {{name}}",
+    "actions": "Message actions",
+    "reply": "Reply",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteTitle": "Delete this message?",
+    "deleteDescription": "It shows as “deleted” in the conversation.",
+    "replyingTo": "Replying to {{name}}:",
+    "cancelReply": "Cancel reply",
+    "attachments": "Attachments",
+    "uploading": "Uploading…",
+    "attach": "Attach a file",
+    "star": "Star",
+    "unstar": "Remove star",
+    "starred": "Starred",
+    "unstarred": "Star removed.",
+    "notificationsMenu": "Conversation notifications",
+    "mutedUntil": "Muted until {{time}}",
+    "unmute": "Unmute",
+    "unmuted": "Conversation unmuted.",
+    "mutedToast": "Conversation muted.",
+    "muteFor": {
+      "1": "Mute for 1 hour",
+      "8": "Mute for 8 hours",
+      "168": "Mute for 1 week"
+    },
+    "muted": "Muted",
+    "leave": "Leave group",
+    "leaveTitle": "Leave this group?",
+    "leaveDescription": "You will no longer see its messages; the admin can add you again.",
+    "filter": "Filter conversations",
+    "filters": {
+      "all": "All",
+      "unread": "Unread",
+      "starred": "Starred"
+    }
   }
 }
