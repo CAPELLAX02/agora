@@ -9,15 +9,18 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/CAPELLAX02/agora/backend/internal/files"
 	"github.com/CAPELLAX02/agora/backend/internal/messaging"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authn"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/authz"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/dbtest"
+	"github.com/CAPELLAX02/agora/backend/internal/platform/s3test"
 )
 
 type noGrants struct{}
@@ -115,12 +118,23 @@ type server struct {
 	pool *pgxpool.Pool
 	h    http.Handler
 	fx   fixture
+	fs   *files.Service
 }
 
 func newServer(t *testing.T) *server {
 	t.Helper()
+	return buildServer(t, false)
+}
+
+func buildServer(t *testing.T, withFiles bool) *server {
+	t.Helper()
 	pool := dbtest.New(t)
 	fx := seed(t, pool)
+	var fs *files.Service
+	if withFiles {
+		store, _ := s3test.New(t)
+		fs = files.NewService(pool, store, 1<<20, time.Now)
+	}
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	authenticate := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -128,8 +142,8 @@ func newServer(t *testing.T) *server {
 		})
 	}
 	mux := http.NewServeMux()
-	messaging.NewHandler(messaging.NewService(pool, time.Now), logger).Register(authz.NewRouter(mux, authenticate, noGrants{}, logger))
-	return &server{t: t, pool: pool, h: mux, fx: fx}
+	messaging.NewHandler(messaging.NewService(pool, fs, time.Now), logger).Register(authz.NewRouter(mux, authenticate, noGrants{}, logger))
+	return &server{t: t, pool: pool, h: mux, fx: fx, fs: fs}
 }
 
 type result struct {
@@ -379,5 +393,114 @@ func TestMessageNotifications(t *testing.T) {
 	}
 	if n := s.unread(fx.teacher); n != 0 {
 		t.Errorf("sessize alınan konuşma toplam okunmamışa girmez: %v", n)
+	}
+}
+
+func TestEditDeleteStateGroupsAndAttachments(t *testing.T) {
+	s := buildServer(t, true)
+	fx := s.fx
+	ctx := context.Background()
+	conv := s.direct(fx.ali, fx.teacher).body["id"].(string)
+	m := s.send(fx.ali, conv, "Yanlış yazdım")
+
+	// Düzenlemeyi sadece yazar yapar; silmeyi yazar ya da yönetici.
+	if res := s.do("PUT", "/api/v1/messages/"+m, fx.ali, map[string]any{"body": "Doğrusu bu"}); res.status != 200 || res.body["edited_at"] == nil || res.body["body"] != "Doğrusu bu" {
+		t.Errorf("düzenleme: %d %s", res.status, res.raw)
+	}
+	if res := s.do("PUT", "/api/v1/messages/"+m, fx.teacher, map[string]any{"body": "x"}); res.status != 403 {
+		t.Errorf("başkasının iletisini düzenleme: %d", res.status)
+	}
+	if res := s.do("DELETE", "/api/v1/messages/"+m, fx.teacher, nil); res.status != 403 {
+		t.Errorf("birebirde karşı tarafın silmesi: %d", res.status)
+	}
+	if res := s.do("DELETE", "/api/v1/messages/"+m, fx.ali, nil); res.status != 204 {
+		t.Fatalf("silme: %d %s", res.status, res.raw)
+	}
+	if got := items(s.do("GET", "/api/v1/conversations/"+conv+"/messages", fx.teacher, nil))[0]; got["deleted"] != true || got["body"] != "" {
+		t.Errorf("silinen ileti: %v", got)
+	}
+	if res := s.do("PUT", "/api/v1/messages/"+m, fx.ali, map[string]any{"body": "geri"}); res.status != 403 {
+		t.Errorf("silinen düzenlenemez: %d", res.status)
+	}
+	if res := s.do("DELETE", "/api/v1/messages/"+m, fx.outside, nil); res.status != 404 {
+		t.Errorf("konuşma dışından silme: %d", res.status)
+	}
+
+	// Şube grubunda öğretim elemanı (yönetici) başkasının iletisini siler.
+	var section string
+	for _, c := range items(s.do("GET", "/api/v1/me/conversations", fx.ece, nil)) {
+		if c["kind"] == "SECTION" {
+			section = c["id"].(string)
+		}
+	}
+	spam := s.send(fx.ece, section, "Reklam")
+	if res := s.do("DELETE", "/api/v1/messages/"+spam, fx.ali, nil); res.status != 403 {
+		t.Errorf("öğrenci başkasının iletisini silemez: %d", res.status)
+	}
+	if res := s.do("DELETE", "/api/v1/messages/"+spam, fx.teacher, nil); res.status != 204 {
+		t.Errorf("öğretim elemanı siler: %d", res.status)
+	}
+
+	// Yıldız ve sessiz: sessize alınan konuşma toplam okunmamışa girmez.
+	s.send(fx.teacher, conv, "Bir şey değil")
+	until := time.Now().Add(24 * time.Hour).UTC().Truncate(time.Second)
+	res := s.do("PUT", "/api/v1/conversations/"+conv+"/state", fx.ali, map[string]any{"is_starred": true, "muted_until": until})
+	if res.status != 200 || res.body["is_starred"] != true || res.body["muted_until"] == nil {
+		t.Fatalf("durum: %d %s", res.status, res.raw)
+	}
+	if n := s.unread(fx.ali); n != 0 {
+		t.Errorf("sessizdeki okunmamış: %v", n)
+	}
+	if res := s.do("PUT", "/api/v1/conversations/"+conv+"/state", fx.ali, map[string]any{"is_starred": false, "muted_until": nil}); res.body["muted_until"] != nil {
+		t.Errorf("sessizi kaldırma: %s", res.raw)
+	}
+	if n := s.unread(fx.ali); n != 1 {
+		t.Errorf("sessiz kalkınca okunmamış: %v", n)
+	}
+
+	// Grup: üye ayrılır, yönetici ekler; birebirden ayrılınmaz.
+	group := s.do("POST", "/api/v1/conversations", fx.other, map[string]any{"kind": "GROUP", "title": "Kulüp", "member_ids": []string{fx.ali}}).body["id"].(string)
+	if res := s.do("POST", "/api/v1/conversations/"+conv+"/leave", fx.ali, nil); res.status != 403 {
+		t.Errorf("birebirden ayrılma: %d", res.status)
+	}
+	if res := s.do("POST", "/api/v1/conversations/"+group+"/leave", fx.ali, nil); res.status != 204 {
+		t.Fatalf("ayrılma: %d", res.status)
+	}
+	if res := s.do("GET", "/api/v1/conversations/"+group, fx.ali, nil); res.status != 404 {
+		t.Errorf("ayrılan grubu görmemeli: %d", res.status)
+	}
+	if res := s.do("POST", "/api/v1/conversations/"+group+"/members", fx.ali, map[string]any{"user_ids": []string{fx.ece}}); res.status != 404 {
+		t.Errorf("ayrılan üye ekleyemez: %d", res.status)
+	}
+	if res := s.do("POST", "/api/v1/conversations/"+group+"/members", fx.other, map[string]any{"user_ids": []string{fx.ece, fx.ali}}); res.status != 200 || res.body["member_count"] != 3.0 {
+		t.Errorf("üye ekleme: %d %s", res.status, res.raw)
+	}
+
+	// Ekler: sadece ekten oluşan ileti; konuşmaya erişen indirir; dosya ikinci kez bağlanmaz.
+	f, err := s.fs.Upload(ctx, fx.ali, "odev.pdf", strings.NewReader("%PDF-1.4 x"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	res = s.do("POST", "/api/v1/conversations/"+conv+"/messages", fx.ali, map[string]any{"body": "", "file_ids": []string{f.ID}})
+	if res.status != 201 || len(res.body["attachments"].([]any)) != 1 {
+		t.Fatalf("ekli ileti: %d %s", res.status, res.raw)
+	}
+	withFile := res.body["id"].(string)
+	url := "/api/v1/messages/" + withFile + "/files/" + f.ID + "/download-url"
+	if res := s.do("GET", url, fx.teacher, nil); res.status != 200 || res.body["url"] == "" {
+		t.Errorf("ek indirme: %d %s", res.status, res.raw)
+	}
+	if res := s.do("GET", url, fx.outside, nil); res.status != 404 {
+		t.Errorf("konuşma dışı indirme: %d", res.status)
+	}
+	if res := s.do("POST", "/api/v1/conversations/"+conv+"/messages", fx.ali, map[string]any{"body": "tekrar", "file_ids": []string{f.ID}}); res.status != 400 {
+		t.Errorf("bağlı dosya yeniden eklenmemeli: %d", res.status)
+	}
+	if res := s.do("POST", "/api/v1/conversations/"+conv+"/messages", fx.ali, map[string]any{"body": ""}); res.status != 400 {
+		t.Errorf("boş ileti: %d", res.status)
+	}
+	s.do("DELETE", "/api/v1/messages/"+withFile, fx.ali, nil)
+	if res := s.do("GET", url, fx.teacher, nil); res.status != 404 {
+		t.Errorf("silinen iletinin eki: %d", res.status)
 	}
 }

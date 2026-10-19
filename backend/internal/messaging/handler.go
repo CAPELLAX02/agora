@@ -39,6 +39,12 @@ func (h *Handler) Register(rt *authz.Router) {
 	rt.HandleFunc("GET /api/v1/conversations/{id}/messages", authz.Authenticated, h.messages)
 	rt.HandleFunc("POST /api/v1/conversations/{id}/messages", authz.Authenticated, h.post, h.send...)
 	rt.HandleFunc("POST /api/v1/conversations/{id}/read", authz.Authenticated, h.read)
+	rt.HandleFunc("PUT /api/v1/conversations/{id}/state", authz.Authenticated, h.setState)
+	rt.HandleFunc("POST /api/v1/conversations/{id}/leave", authz.Authenticated, h.leave)
+	rt.HandleFunc("POST /api/v1/conversations/{id}/members", authz.Authenticated, h.addMembers)
+	rt.HandleFunc("PUT /api/v1/messages/{id}", authz.Authenticated, h.editMessage)
+	rt.HandleFunc("DELETE /api/v1/messages/{id}", authz.Authenticated, h.deleteMessage)
+	rt.HandleFunc("GET /api/v1/messages/{id}/files/{fileId}/download-url", authz.Authenticated, h.attachmentURL)
 }
 
 type personDTO struct {
@@ -48,15 +54,23 @@ type personDTO struct {
 	Staff  bool   `json:"is_staff"`
 }
 
+type attachmentDTO struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	MimeType string `json:"mime_type"`
+	Size     int64  `json:"size"`
+}
+
 type messageDTO struct {
-	ID        string     `json:"id"`
-	Sender    personDTO  `json:"sender"`
-	Body      string     `json:"body"`
-	ReplyToID *string    `json:"reply_to_id"`
-	CreatedAt time.Time  `json:"created_at"`
-	EditedAt  *time.Time `json:"edited_at"`
-	Deleted   bool       `json:"deleted"`
-	Mine      bool       `json:"mine"`
+	ID          string          `json:"id"`
+	Sender      personDTO       `json:"sender"`
+	Body        string          `json:"body"`
+	ReplyToID   *string         `json:"reply_to_id"`
+	CreatedAt   time.Time       `json:"created_at"`
+	EditedAt    *time.Time      `json:"edited_at"`
+	Deleted     bool            `json:"deleted"`
+	Mine        bool            `json:"mine"`
+	Attachments []attachmentDTO `json:"attachments"`
 }
 
 type conversationDTO struct {
@@ -81,8 +95,12 @@ func toPerson(p Person) personDTO {
 }
 
 func toMessage(m Message, me string) messageDTO {
-	return messageDTO{ID: m.ID, Sender: toPerson(m.Sender), Body: m.Body, ReplyToID: m.ReplyToID, CreatedAt: m.CreatedAt,
-		EditedAt: m.EditedAt, Deleted: m.DeletedAt != nil, Mine: m.Sender.ID == me}
+	res := messageDTO{ID: m.ID, Sender: toPerson(m.Sender), Body: m.Body, ReplyToID: m.ReplyToID, CreatedAt: m.CreatedAt,
+		EditedAt: m.EditedAt, Deleted: m.DeletedAt != nil, Mine: m.Sender.ID == me, Attachments: make([]attachmentDTO, 0, len(m.Attachments))}
+	for _, a := range m.Attachments {
+		res.Attachments = append(res.Attachments, attachmentDTO(a))
+	}
+	return res
 }
 
 func toConversation(c Conversation, me string) conversationDTO {
@@ -238,8 +256,9 @@ func (h *Handler) messages(w http.ResponseWriter, r *http.Request) {
 }
 
 type postRequest struct {
-	Body      string `json:"body"`
-	ReplyToID string `json:"reply_to_id"`
+	Body      string   `json:"body"`
+	ReplyToID string   `json:"reply_to_id"`
+	FileIDs   []string `json:"file_ids"`
 }
 
 func (h *Handler) post(w http.ResponseWriter, r *http.Request) {
@@ -257,8 +276,14 @@ func (h *Handler) post(w http.ResponseWriter, r *http.Request) {
 		httpx.ValidationFailed(w, r, []httpx.FieldError{{Field: "reply_to_id", Message: "geçersiz ileti"}})
 		return
 	}
+	for _, f := range req.FileIDs {
+		if !httpx.ValidUUID(f) {
+			httpx.ValidationFailed(w, r, []httpx.FieldError{{Field: "file_ids", Message: "geçersiz dosya"}})
+			return
+		}
+	}
 	me := userID(r)
-	msgID, err := h.svc.Send(r.Context(), me, id, req.Body, req.ReplyToID)
+	msgID, err := h.svc.Send(r.Context(), me, id, req.Body, req.ReplyToID, req.FileIDs)
 	if h.failed(w, r, err) {
 		return
 	}
@@ -294,6 +319,113 @@ func (h *Handler) read(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+type stateRequest struct {
+	Starred    bool       `json:"is_starred"`
+	MutedUntil *time.Time `json:"muted_until"`
+}
+
+func (h *Handler) setState(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if !httpx.ValidUUID(id) {
+		httpx.NotFound(w, r)
+		return
+	}
+	var req stateRequest
+	if err := httpx.ReadJSON(w, r, &req); err != nil {
+		httpx.InvalidBody(w, r, err)
+		return
+	}
+	if h.failed(w, r, h.svc.SetState(r.Context(), userID(r), id, State(req))) {
+		return
+	}
+	h.writeConversation(w, r, id, http.StatusOK)
+}
+
+func (h *Handler) leave(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if !httpx.ValidUUID(id) {
+		httpx.NotFound(w, r)
+		return
+	}
+	if h.failed(w, r, h.svc.Leave(r.Context(), userID(r), id)) {
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+type membersRequest struct {
+	UserIDs []string `json:"user_ids"`
+}
+
+func (h *Handler) addMembers(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if !httpx.ValidUUID(id) {
+		httpx.NotFound(w, r)
+		return
+	}
+	var req membersRequest
+	if err := httpx.ReadJSON(w, r, &req); err != nil {
+		httpx.InvalidBody(w, r, err)
+		return
+	}
+	for _, u := range req.UserIDs {
+		if !httpx.ValidUUID(u) {
+			httpx.ValidationFailed(w, r, []httpx.FieldError{{Field: "user_ids", Message: "geçersiz kullanıcı"}})
+			return
+		}
+	}
+	if h.failed(w, r, h.svc.AddMembers(r.Context(), userID(r), id, req.UserIDs)) {
+		return
+	}
+	h.writeConversation(w, r, id, http.StatusOK)
+}
+
+func (h *Handler) editMessage(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if !httpx.ValidUUID(id) {
+		httpx.NotFound(w, r)
+		return
+	}
+	var req postRequest
+	if err := httpx.ReadJSON(w, r, &req); err != nil {
+		httpx.InvalidBody(w, r, err)
+		return
+	}
+	if h.failed(w, r, h.svc.EditMessage(r.Context(), userID(r), id, req.Body)) {
+		return
+	}
+	m, err := h.svc.Message(r.Context(), id)
+	if h.failed(w, r, err) {
+		return
+	}
+	h.writeJSON(w, r, http.StatusOK, toMessage(m, userID(r)))
+}
+
+func (h *Handler) deleteMessage(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if !httpx.ValidUUID(id) {
+		httpx.NotFound(w, r)
+		return
+	}
+	if h.failed(w, r, h.svc.DeleteMessage(r.Context(), userID(r), id)) {
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) attachmentURL(w http.ResponseWriter, r *http.Request) {
+	id, fileID := r.PathValue("id"), r.PathValue("fileId")
+	if !httpx.ValidUUID(id) || !httpx.ValidUUID(fileID) {
+		httpx.NotFound(w, r)
+		return
+	}
+	url, expires, err := h.svc.AttachmentURL(r.Context(), userID(r), id, fileID)
+	if h.failed(w, r, err) {
+		return
+	}
+	h.writeJSON(w, r, http.StatusOK, map[string]any{"url": url, "expires_at": expires})
+}
+
 func userID(r *http.Request) string {
 	p, _ := authn.PrincipalFrom(r.Context())
 	return p.UserID
@@ -310,7 +442,10 @@ func (h *Handler) failed(w http.ResponseWriter, r *http.Request, err error) bool
 		httpx.NotFound(w, r)
 	case errors.Is(err, ErrNotAllowed):
 		_ = httpx.WriteProblem(w, r, httpx.Problem{Status: http.StatusForbidden, Code: "MESSAGING_NOT_ALLOWED",
-			Detail: "Bu kişiye ileti gönderemezsiniz."})
+			Detail: "Bu işlem için yetkiniz yok."})
+	case errors.Is(err, ErrNoStorage):
+		_ = httpx.WriteProblem(w, r, httpx.Problem{Status: http.StatusServiceUnavailable, Code: "STORAGE_UNAVAILABLE",
+			Detail: "Dosya deposu şu anda kullanılamıyor."})
 	default:
 		h.logger.Error("mesajlaşma isteği başarısız", "err", err, "request_id", httpx.RequestIDFrom(r.Context()))
 		httpx.InternalServerError(w, r)

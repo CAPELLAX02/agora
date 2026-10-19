@@ -928,7 +928,8 @@ paths:
       tags: [Mesajlar]
       summary: İleti gönder
       description: >-
-        Düz metin (1-4000 karakter); gönderenin okundu imleci iletiye ilerler. Alıcıların açık akışlarına
+        Düz metin (en çok 4000 karakter) ve en çok 5 ek; metin ya da ek olmalı. Gönderenin okundu
+        imleci iletiye ilerler. Alıcıların açık akışlarına
         duyurulur; tercihi açık olana (sessize almamışsa) bildirim yazılır. Kullanıcı başına dakikada
         en çok 30 ileti.
       operationId: sendMessage
@@ -944,8 +945,13 @@ paths:
               type: object
               required: [body]
               properties:
-                body: { type: string, minLength: 1, maxLength: 4000 }
+                body: { type: string, maxLength: 4000, description: Ek varsa boş olabilir }
                 reply_to_id: { type: string, format: uuid }
+                file_ids:
+                  type: array
+                  maxItems: 5
+                  items: { type: string, format: uuid }
+                  description: Gönderenin yüklediği, henüz bir kayda bağlanmamış dosyalar
       responses:
         "201":
           description: İleti
@@ -981,6 +987,167 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/conversations/{id}/state:
+    put:
+      tags: [Mesajlar]
+      summary: Yıldız ve sessiz
+      description: Konuşmayı yıldızlar ya da süreyle sessize alır (`muted_until` boş ya da geçmişse sessiz değil).
+      operationId: setConversationState
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [is_starred]
+              properties:
+                is_starred: { type: boolean }
+                muted_until: { type: [string, "null"], format: date-time }
+      responses:
+        "200":
+          description: Konuşma
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Conversation" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/conversations/{id}/leave:
+    post:
+      tags: [Mesajlar]
+      summary: Gruptan ayrıl
+      description: Birebir ve şube grubundan ayrılınmaz (sessize alınır).
+      operationId: leaveConversation
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "204": { description: Ayrıldı }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: "`MESSAGING_NOT_ALLOWED`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/conversations/{id}/members:
+    post:
+      tags: [Mesajlar]
+      summary: Gruba kişi ekle
+      description: Sadece grubu kuran; ayrılmış olan yeniden katılır.
+      operationId: addConversationMembers
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_ids]
+              properties:
+                user_ids: { type: array, minItems: 1, maxItems: 200, items: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Konuşma
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Conversation" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: "`MESSAGING_NOT_ALLOWED`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/messages/{id}:
+    put:
+      tags: [Mesajlar]
+      summary: İletiyi düzenle
+      description: Sadece yazarı, silinmemiş iletide.
+      operationId: editMessage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string, maxLength: 4000 }
+      responses:
+        "200":
+          description: İleti
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConversationMessage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: "`MESSAGING_NOT_ALLOWED`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Mesajlar]
+      summary: İletiyi sil
+      description: Yazarı ya da konuşmanın yöneticisi (grubu kuran, şubenin öğretim elemanı); ileti yerinde "silindi" olarak kalır.
+      operationId: deleteMessage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "204": { description: Silindi }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: "`MESSAGING_NOT_ALLOWED`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/messages/{id}/files/{fileId}/download-url:
+    get:
+      tags: [Mesajlar]
+      summary: İleti ekinin indirme adresi
+      description: Konuşmaya erişen için kısa ömürlü imzalı adres; silinmiş iletinin eki indirilmez.
+      operationId: getMessageAttachmentUrl
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/FileID"
+      responses:
+        "200":
+          description: Adres
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [url, expires_at]
+                properties:
+                  url: { type: string }
+                  expires_at: { type: string, format: date-time }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503": { $ref: "#/components/responses/StorageUnavailable" }
 
   /api/v1/me/announcements:
     get:
@@ -8282,9 +8449,18 @@ components:
         number: { type: string, description: Öğrenci ya da personel numarası }
         is_staff: { type: boolean }
 
+    MessageAttachment:
+      type: object
+      required: [id, name, mime_type, size]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        mime_type: { type: string }
+        size: { type: integer, format: int64 }
+
     ConversationMessage:
       type: object
-      required: [id, sender, body, reply_to_id, created_at, edited_at, deleted, mine]
+      required: [id, sender, body, reply_to_id, created_at, edited_at, deleted, mine, attachments]
       properties:
         id: { type: string, format: uuid, description: Zaman sıralı (uuidv7) }
         sender: { $ref: "#/components/schemas/MessagingPerson" }
@@ -8294,6 +8470,7 @@ components:
         edited_at: { type: [string, "null"], format: date-time }
         deleted: { type: boolean }
         mine: { type: boolean }
+        attachments: { type: array, items: { $ref: "#/components/schemas/MessageAttachment" }, description: Silinmiş iletide boş }
 
     Conversation:
       type: object

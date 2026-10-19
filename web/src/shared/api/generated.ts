@@ -239,6 +239,54 @@ const injectedRtkApi = api
         }),
         invalidatesTags: ['Mesajlar'],
       }),
+      setConversationState: build.mutation<SetConversationStateApiResponse, SetConversationStateApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/conversations/${queryArg.id}/state`,
+          method: 'PUT',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['Mesajlar'],
+      }),
+      leaveConversation: build.mutation<LeaveConversationApiResponse, LeaveConversationApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/conversations/${queryArg.id}/leave`,
+          method: 'POST',
+        }),
+        invalidatesTags: ['Mesajlar'],
+      }),
+      addConversationMembers: build.mutation<AddConversationMembersApiResponse, AddConversationMembersApiArg>(
+        {
+          query: (queryArg) => ({
+            url: `/api/v1/conversations/${queryArg.id}/members`,
+            method: 'POST',
+            body: queryArg.body,
+          }),
+          invalidatesTags: ['Mesajlar'],
+        },
+      ),
+      editMessage: build.mutation<EditMessageApiResponse, EditMessageApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/messages/${queryArg.id}`,
+          method: 'PUT',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['Mesajlar'],
+      }),
+      deleteMessage: build.mutation<DeleteMessageApiResponse, DeleteMessageApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/messages/${queryArg.id}`,
+          method: 'DELETE',
+        }),
+        invalidatesTags: ['Mesajlar'],
+      }),
+      getMessageAttachmentUrl: build.query<GetMessageAttachmentUrlApiResponse, GetMessageAttachmentUrlApiArg>(
+        {
+          query: (queryArg) => ({
+            url: `/api/v1/messages/${queryArg.id}/files/${queryArg.fileId}/download-url`,
+          }),
+          providesTags: ['Mesajlar'],
+        },
+      ),
       listMyAnnouncements: build.query<ListMyAnnouncementsApiResponse, ListMyAnnouncementsApiArg>({
         query: (queryArg) => ({
           url: `/api/v1/me/announcements`,
@@ -2262,8 +2310,11 @@ export type SendMessageApiArg = {
   /** Geçerli bir UUID değilse 404 döner. */
   id: string
   body: {
+    /** Ek varsa boş olabilir */
     body: string
     reply_to_id?: string
+    /** Gönderenin yüklediği, henüz bir kayda bağlanmamış dosyalar */
+    file_ids?: string[]
   }
 }
 export type MarkConversationReadApiResponse = unknown
@@ -2273,6 +2324,50 @@ export type MarkConversationReadApiArg = {
   body: {
     message_id: string
   }
+}
+export type SetConversationStateApiResponse = /** status 200 Konuşma */ Conversation
+export type SetConversationStateApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: {
+    is_starred: boolean
+    muted_until?: string | null
+  }
+}
+export type LeaveConversationApiResponse = unknown
+export type LeaveConversationApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type AddConversationMembersApiResponse = /** status 200 Konuşma */ Conversation
+export type AddConversationMembersApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: {
+    user_ids: string[]
+  }
+}
+export type EditMessageApiResponse = /** status 200 İleti */ ConversationMessage
+export type EditMessageApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: {
+    body: string
+  }
+}
+export type DeleteMessageApiResponse = unknown
+export type DeleteMessageApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type GetMessageAttachmentUrlApiResponse = /** status 200 Adres */ {
+  url: string
+  expires_at: string
+}
+export type GetMessageAttachmentUrlApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  fileId: string
 }
 export type ListMyAnnouncementsApiResponse = /** status 200 Duyurular */ AnnouncementPage
 export type ListMyAnnouncementsApiArg = {
@@ -4157,6 +4252,12 @@ export type MessagingPerson = {
   number: string
   is_staff: boolean
 }
+export type MessageAttachment = {
+  id: string
+  name: string
+  mime_type: string
+  size: number
+}
 export type ConversationMessage = {
   /** Zaman sıralı (uuidv7) */
   id: string
@@ -4168,6 +4269,8 @@ export type ConversationMessage = {
   edited_at: string | null
   deleted: boolean
   mine: boolean
+  /** Silinmiş iletide boş */
+  attachments: MessageAttachment[]
 }
 export type Conversation = {
   id: string
@@ -6324,6 +6427,13 @@ export const {
   useLazyListConversationMessagesQuery,
   useSendMessageMutation,
   useMarkConversationReadMutation,
+  useSetConversationStateMutation,
+  useLeaveConversationMutation,
+  useAddConversationMembersMutation,
+  useEditMessageMutation,
+  useDeleteMessageMutation,
+  useGetMessageAttachmentUrlQuery,
+  useLazyGetMessageAttachmentUrlQuery,
   useListMyAnnouncementsQuery,
   useLazyListMyAnnouncementsQuery,
   useGetAnnouncementTargetsQuery,

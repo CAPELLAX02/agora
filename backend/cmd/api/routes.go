@@ -44,7 +44,7 @@ func (app *application) routes() http.Handler {
 	audit.NewHandler(audit.NewRepository(app.db), app.logger).Register(rt)
 	notify.NewHandler(notify.NewCenter(app.db, time.Now), app.notifications, app.logger).Register(rt)
 	announce.NewHandler(announce.NewService(app.db, time.Now), app.logger).Register(rt)
-	messages := messaging.NewHandler(messaging.NewService(app.db, time.Now), app.logger)
+	messages := messaging.NewHandler(messaging.NewService(app.db, app.files, time.Now), app.logger)
 	if app.messageLimit != nil {
 		messages.WithSendMiddleware(app.messageLimit)
 	}

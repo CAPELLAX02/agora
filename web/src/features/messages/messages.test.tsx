@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import type { Conversation, ConversationMessage, MessagingPerson } from '@/shared/api/generated'
 import { grants, tokens } from '@/test/fixtures'
@@ -19,6 +19,7 @@ const msg = (over: Partial<ConversationMessage>): ConversationMessage => ({
   edited_at: null,
   deleted: false,
   mine: false,
+  attachments: [],
   ...over,
 })
 
@@ -183,5 +184,107 @@ describe('mesajlar', () => {
     renderApp('/mesajlar')
     const list = await screen.findByRole('region', { name: 'Konuşmalar' })
     expect(await within(list).findByLabelText('2 okunmamış ileti')).toBeInTheDocument()
+  })
+
+  it('ileti yanıtlanır, düzenlenir, silinir; konuşma yıldızlanır ve sessize alınır; ek indirilir', async () => {
+    const current = direct({ unread: 0 })
+    const { calls, record } = session(() => [current])
+    const mine = msg({ id: 'm1', body: 'Yanlış yazdım', sender: me, mine: true })
+    const theirs = msg({
+      id: 'm2',
+      body: 'Ödevi ekledim',
+      attachments: [{ id: 'f1', name: 'odev.pdf', mime_type: 'application/pdf', size: 2048 }],
+    })
+    const recordAnd =
+      (response: () => Response) =>
+      async ({ request }: { request: Request }) => {
+        await record(request)
+        return response()
+      }
+    server.use(
+      http.get('/api/v1/conversations/:id', () => HttpResponse.json(current)),
+      http.get('/api/v1/conversations/:id/messages', () =>
+        HttpResponse.json({ items: [theirs, mine], has_more: false }),
+      ),
+      http.put(
+        '/api/v1/messages/:id',
+        recordAnd(() => HttpResponse.json({ ...mine, body: 'Doğrusu bu' })),
+      ),
+      http.delete(
+        '/api/v1/messages/:id',
+        recordAnd(() => new HttpResponse(null, { status: 204 })),
+      ),
+      http.post(
+        '/api/v1/conversations/:id/messages',
+        recordAnd(() => HttpResponse.json(msg({ id: 'm3', mine: true }), { status: 201 })),
+      ),
+      http.put(
+        '/api/v1/conversations/:id/state',
+        recordAnd(() => HttpResponse.json(current)),
+      ),
+      http.get('/api/v1/messages/:id/files/:fileId/download-url', () =>
+        HttpResponse.json({ url: 'https://depo.test/odev.pdf', expires_at: '2026-10-18T10:00:00Z' }),
+      ),
+    )
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
+    const { user } = renderApp('/mesajlar/c1')
+    const history = await screen.findByRole('list', { name: 'İletiler' })
+    const first = within(history).getByText('Ödevi ekledim').closest('li')!
+    const second = within(history).getByText('Yanlış yazdım').closest('li')!
+
+    // Ek indirilir.
+    await user.click(within(first).getByRole('button', { name: 'odev.pdf dosyasını indir' }))
+    await waitFor(() => expect(click).toHaveBeenCalled())
+    click.mockRestore()
+
+    // Yanıt: yazma kutusunun üstünde gösterilir, iletiyle gider.
+    await user.click(within(first).getByRole('button', { name: 'İleti işlemleri' }))
+    await user.click(await screen.findByRole('menuitem', { name: 'Yanıtla' }))
+    expect(screen.getByText('Ayşe Demir adlı kişiye yanıt:')).toBeInTheDocument()
+    await user.type(screen.getByRole('textbox', { name: 'İleti' }), 'Teşekkürler{Enter}')
+    await waitFor(() =>
+      expect(calls).toContainEqual({
+        method: 'POST',
+        path: '/api/v1/conversations/c1/messages',
+        body: { body: 'Teşekkürler', reply_to_id: 'm2' },
+      }),
+    )
+
+    // Kendi iletisini düzenler ve siler.
+    await user.click(within(second).getByRole('button', { name: 'İleti işlemleri' }))
+    await user.click(await screen.findByRole('menuitem', { name: 'Düzenle' }))
+    const editBox = within(second).getByRole('textbox', { name: 'İletiyi düzenle' })
+    await user.clear(editBox)
+    await user.type(editBox, 'Doğrusu bu')
+    await user.click(within(second).getByRole('button', { name: 'Kaydet' }))
+    await waitFor(() =>
+      expect(calls).toContainEqual({
+        method: 'PUT',
+        path: '/api/v1/messages/m1',
+        body: { body: 'Doğrusu bu' },
+      }),
+    )
+    await user.click(within(second).getByRole('button', { name: 'İleti işlemleri' }))
+    await user.click(await screen.findByRole('menuitem', { name: 'Sil' }))
+    await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Sil' }))
+    await waitFor(() =>
+      expect(calls).toContainEqual({ method: 'DELETE', path: '/api/v1/messages/m1', body: undefined }),
+    )
+
+    // Yıldız ve sessiz.
+    await user.click(screen.getByRole('button', { name: 'Yıldızla' }))
+    await waitFor(() =>
+      expect(calls).toContainEqual({
+        method: 'PUT',
+        path: '/api/v1/conversations/c1/state',
+        body: { is_starred: true, muted_until: null },
+      }),
+    )
+    await user.click(screen.getByRole('button', { name: 'Konuşma bildirimleri' }))
+    await user.click(await screen.findByRole('menuitem', { name: '1 saat sessize al' }))
+    await waitFor(() => {
+      const put = calls.filter((c) => c.path === '/api/v1/conversations/c1/state').at(-1)
+      expect((put?.body as { muted_until: string | null }).muted_until).not.toBeNull()
+    })
   })
 })

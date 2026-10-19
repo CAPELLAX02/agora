@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/CAPELLAX02/agora/backend/internal/files"
 	"github.com/CAPELLAX02/agora/backend/internal/notify"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/db"
 )
@@ -52,7 +53,7 @@ type Person struct {
 	Staff  bool
 }
 
-// Message, bir iletidir. Silinmiş iletinin metni boştur.
+// Message, bir iletidir. Silinmiş iletinin metni ve ekleri boştur.
 type Message struct {
 	ID             string
 	ConversationID string
@@ -62,6 +63,53 @@ type Message struct {
 	CreatedAt      time.Time
 	EditedAt       *time.Time
 	DeletedAt      *time.Time
+	Attachments    []Attachment
+}
+
+// Attachment, bir iletinin ekidir.
+type Attachment struct {
+	ID       string
+	Name     string
+	MimeType string
+	Size     int64
+}
+
+// MaxAttachments, bir iletinin en çok ek sayısıdır.
+const MaxAttachments = 5
+
+// withAttachments, iletilerin eklerini okur (silinmiş iletilerin ekleri gösterilmez).
+func withAttachments(ctx context.Context, q db.Querier, list []Message) error {
+	ids := make([]string, 0, len(list))
+	for _, m := range list {
+		if m.DeletedAt == nil {
+			ids = append(ids, m.ID)
+		}
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	rows, err := q.Query(ctx, `
+		SELECT a.message_id, f.id, f.original_name, f.mime_type, f.size_bytes
+		FROM communication.message_attachments a JOIN platform.files f ON f.id = a.file_id
+		WHERE a.message_id = ANY ($1::uuid[]) ORDER BY a.message_id, a.position`, ids)
+	if err != nil {
+		return fmt.Errorf("messaging: ekler okunamadı: %w", err)
+	}
+	byMessage := map[string][]Attachment{}
+	var (
+		msg string
+		a   Attachment
+	)
+	if _, err := pgx.ForEachRow(rows, []any{&msg, &a.ID, &a.Name, &a.MimeType, &a.Size}, func() error {
+		byMessage[msg] = append(byMessage[msg], a)
+		return nil
+	}); err != nil {
+		return fmt.Errorf("messaging: ekler okunamadı: %w", err)
+	}
+	for i := range list {
+		list[i].Attachments = byMessage[list[i].ID]
+	}
+	return nil
 }
 
 // Conversation, kullanıcının gördüğü hâliyle bir konuşmadır.
@@ -83,13 +131,14 @@ type Conversation struct {
 
 // Service, mesajlaşmayı yönetir.
 type Service struct {
-	pool *pgxpool.Pool
-	now  func() time.Time
+	pool  *pgxpool.Pool
+	files *files.Service // ekler; nil ise ekli ileti gönderilemez
+	now   func() time.Time
 }
 
 // NewService, bir Service oluşturur.
-func NewService(pool *pgxpool.Pool, now func() time.Time) *Service {
-	return &Service{pool: pool, now: now}
+func NewService(pool *pgxpool.Pool, fs *files.Service, now func() time.Time) *Service {
+	return &Service{pool: pool, files: fs, now: now}
 }
 
 // sectionRole, $2 kullanıcısının $1 şubesindeki rolüdür: 'INSTRUCTOR', 'STUDENT' ya da boş.
@@ -491,7 +540,11 @@ func (s *Service) Message(ctx context.Context, id string) (Message, error) {
 	if err != nil {
 		return Message{}, fmt.Errorf("messaging: ileti okunamadı: %w", err)
 	}
-	return m, nil
+	list := []Message{m}
+	if err := withAttachments(ctx, s.pool, list); err != nil {
+		return Message{}, err
+	}
+	return list[0], nil
 }
 
 // Messages, konuşmanın iletileridir: before kimliğinden eskiler (boşsa en yeniler), yeniden eskiye.
@@ -509,10 +562,14 @@ func (s *Service) Messages(ctx context.Context, conversationID, userID, before s
 	if err != nil {
 		return nil, false, fmt.Errorf("messaging: iletiler okunamadı: %w", err)
 	}
-	if len(list) > limit {
-		return list[:limit], true, nil
+	more := len(list) > limit
+	if more {
+		list = list[:limit]
 	}
-	return list, false, nil
+	if err := withAttachments(ctx, s.pool, list); err != nil {
+		return nil, false, err
+	}
+	return list, more, nil
 }
 
 // recipients, konuşmanın gönderen dışındaki üyeleridir.
@@ -531,12 +588,23 @@ func recipients(ctx context.Context, tx pgx.Tx, conversationID, kind, sectionID,
 // MaxBody, bir iletinin en uzun metnidir (karakter).
 const MaxBody = 4000
 
-// Send, konuşmaya bir ileti yazar; gönderenin okundu imleci iletiye ilerler. Alıcıların açık
-// akışlarına duyurulur; tercihi açık olana (sessize almamışsa) bildirim yazılır.
-func (s *Service) Send(ctx context.Context, actorID, conversationID, body, replyTo string) (string, error) {
+// ErrNoStorage: ekli ileti için dosya deposu yapılandırılmamış.
+var ErrNoStorage = errors.New("messaging: dosya deposu yok")
+
+// Send, konuşmaya bir ileti yazar (metin, ekler ya da ikisi); gönderenin okundu imleci iletiye
+// ilerler. Alıcıların açık akışlarına duyurulur; tercihi açık olana (sessize almamışsa) bildirim
+// yazılır. Ekler gönderenin yüklediği, henüz bir kayda bağlanmamış dosyalardır.
+func (s *Service) Send(ctx context.Context, actorID, conversationID, body, replyTo string, fileIDs []string) (string, error) {
 	body = strings.TrimSpace(body)
-	if n := utf8.RuneCountInString(body); n < 1 || n > MaxBody {
-		return "", &ValidationError{"body", fmt.Sprintf("1 ile %d karakter arasında olmalı.", MaxBody)}
+	switch n := utf8.RuneCountInString(body); {
+	case n > MaxBody:
+		return "", &ValidationError{"body", fmt.Sprintf("En çok %d karakter olmalı.", MaxBody)}
+	case n == 0 && len(fileIDs) == 0:
+		return "", &ValidationError{"body", "İleti metni ya da eki olmalı."}
+	case len(fileIDs) > MaxAttachments:
+		return "", &ValidationError{"file_ids", fmt.Sprintf("En çok %d ek eklenebilir.", MaxAttachments)}
+	case len(fileIDs) > 0 && s.files == nil:
+		return "", ErrNoStorage
 	}
 	var id string
 	err := db.InTx(ctx, s.pool, func(tx pgx.Tx) error {
@@ -571,6 +639,17 @@ func (s *Service) Send(ctx context.Context, actorID, conversationID, body, reply
 			conversationID, actorID, body, reply).Scan(&id); err != nil {
 			return fmt.Errorf("messaging: ileti yazılamadı: %w", err)
 		}
+		for i, fileID := range fileIDs {
+			if _, err := s.files.Attach(ctx, tx, fileID, actorID); errors.Is(err, files.ErrNotFound) || errors.Is(err, files.ErrAttached) {
+				return &ValidationError{"file_ids", "Dosya bulunamadı ya da başka bir kayda bağlı: " + fileID}
+			} else if err != nil {
+				return err
+			}
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO communication.message_attachments (message_id, file_id, position) VALUES ($1, $2, $3)`, id, fileID, i); err != nil {
+				return fmt.Errorf("messaging: ek yazılamadı: %w", err)
+			}
+		}
 		if err := markRead(ctx, tx, conversationID, actorID, id); err != nil {
 			return err
 		}
@@ -597,6 +676,9 @@ func (s *Service) Send(ctx context.Context, actorID, conversationID, body, reply
 		preview := []rune(body)
 		if len(preview) > 140 {
 			preview = append(preview[:139], '…')
+		}
+		if len(preview) == 0 {
+			preview = []rune(fmt.Sprintf("%d ek", len(fileIDs)))
 		}
 		return notify.Send(ctx, tx, notify.Notification{Type: notify.MessageReceived, Link: "/mesajlar/" + conversationID,
 			UserIDs: slices.DeleteFunc(to, func(u string) bool { return muted[u] }),
