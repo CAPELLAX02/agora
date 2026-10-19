@@ -150,6 +150,10 @@ flowchart LR
 | 18 | Toplu içe aktarmada Excel şablonları (2026-10-14) | Her toplu içe aktarma senaryosu (ilk örnek bileşen notları) sunucunun ürettiği profesyonel bir Excel şablonuyla gelir ve aynı dosya geri yüklenir; CSV de kabul edilir. Ortak katman `internal/platform/sheet` (excelize): marka renkli başlık, başlık bloğu, düzenlenecek hücreler sarı ve kilitsiz, diğerleri gri ve kilitli (parolasız sayfa koruması), Excel'de hücre doğrulaması, açıklama sayfası, yazdırma ayarları ve çok gizli kimlik sayfası (dosyanın kaydı ve sütunların anlamı: başka kaydın şablonu reddedilir, başlık değişse de sütun bulunur). Okuma hoşgörülü ve tek yoldan: satır numaraları dosyadaki, başlık satırı aranır, önce satır satır önizleme, sonra tek transaction |
 | 19 | Ders alanı = şube, üyelik türetilir (2026-10-14) | e-Kampüs'te her ders bir OBS şubesine 1:1 karşılık gelir ve onaylanan dersler "belirli aralıklarla" aktarılır. Agora'da ders alanının anahtarı şubedir (`lms.course_spaces.section_id` PK, ilk içerikle oluşur); üyelik kopyalanmaz, sorgu anında türetilir: öğrenci = şubede bırakmamış kesin kaydı olan, öğretim elemanı = şubeye atanmış (sorumlu, ortak, asistan). Kayıt onaylandığı transaction'da öğrenci derse erişir; senkronizasyon, gecikme ve kopukluk yoktur ("tek kaynak"). Gözlemci gibi elle üyelikler P2 |
 | 20 | Dosya depolama (2026-10-14) | Dosyalar S3 uyumlu nesne deposunda, üst verisi `platform.files`'ta. Sunucu **SeaweedFS** (Apache 2.0): MinIO'nun topluluk imajları 2025'ten beri yayımlanmıyor (Docker Hub ve quay.io'da erişilemiyor). İstemci S3'e özgü olmayan `minio-go`; S3 uyumlu her sunucuyla (ileride bulut depolama) çalışır. Yükleme API'den akışla geçer (bellekte tutulmaz): boyut sınırı, içerikten tür tespiti ve uzantı izin listesi, yüklerken SHA-256. İndirmede yetki dosyanın sahibi olan varlık üzerinden denetlenir, ardından kısa ömürlü (5 dk) imzalı URL verilir: büyük dosyalar API'den ve tarayıcı belleğinden geçmez. Bir varlığa bağlanmayan dosyalar worker'da temizlenir |
+| 21 | Yoklama oturumları ve devamsızlık (2026-10-19) | Oturumlar şubenin haftalık programından üretilir; programdaki her blok (teori, uygulama) dönemin her haftasında bir oturumdur, tatile düşen üretilmez. Devamsızlık oturum türü başına sayılır, sınır yönetmelik parametresinden (`attendance_max_absence_pct`) planlanan oturum sayısıyla hesaplanır: iptal edilen oturum sayılmaz, telafi sayılır. `ABSENT` devamsızlıktır; `LATE` gelmiş, `EXCUSED` (raporlu) devamsızlık sayılmaz. Kayıtlar dönem başına liste partition'ında (`term_id` anahtarın parçası): bir dönem ~25 milyon satır, eski dönemler ayrılabilir. Devamsızlıktan kalma (`ATTENDANCE_FAIL`) kararı sistemin önerisiyle öğretim elemanınındır |
+| 22 | Anket anonimliği (2026-10-19) | Anonimlik şemayla: yanıt satırında kullanıcı yok, kimlik yalnız atamada "tamamladı" olarak. Yanıt kimliği rastgele (UUID v4; zaman sıralı v7 sırayı ele verirdi), tarih güne yuvarlanır. Yanıt ve tamamlama tek transaction'da yazılır, ama uygulama kaydı (denetim, log) yanıtın kimliğini kişiyle birlikte yazmaz. Sonuçlar en az N yanıtla (k-anonimlik) ve harf notu ilanından sonra gösterilir |
+| 23 | Belge imzası ve doğrulama (2026-10-19) | Belge PDF'inin SHA-256 özeti Ed25519 ile imzalanır (JWT anahtarından ayrı, dosyadan okunan anahtar; anahtar kimliği kayıtta, anahtar değişse de eski belgeler doğrulanır). Doğrulama kodu 12 karakter base32 (insan dostu, karışan harfler yok), QR halka açık doğrulama sayfasına gider. Sayfa kişisel veriyi maskeler; özet karşılaştırması tarayıcıda yapılır, PDF sunucuya yüklenmez. Gerçek e-imza (5070 sayılı kanun) kapsam dışı: imza simülasyondur |
+| 24 | Quiz denemesi ve güvenliği (2026-10-19) | Süre sunucuda: deneme başlarken son an (süre ile kapanışın erkeni) yazılır, sonrasındaki cevap reddedilir, açık kalan deneme worker'da kapatılır. Soru ve şık sırası deneme başında dondurulur (deneme düzeni JSONB); istemciye doğru cevap ve puanlama bilgisi inceleme izni gelene kadar gitmez. Soru düzenlemesi kullanılmış soruda yeni sürüm açar, denemeler kendi sürümüyle puanlanır |
 
 ## 6. İlerleme ve "Bitti" Kontrol Listesi
 
@@ -405,6 +409,41 @@ flowchart LR
 | ✅ | Playwright e2e (`e2e/communication.spec.ts`, ayrı tarayıcı bağlamlarında açık oturumlarla): bölüm başkanının duyurusu hedef kitledeki öğrencinin açık sayfasına canlı bildirim olarak düşer, aynı bölümün öğretim elemanı (kitle öğrenciler) ne bildirim alır ne duyuruyu görür, yayımlayan okunma sayısını görür; acil duyuru e-postasını kapatan öğrenciye e-posta gitmez, varsayılandaki öğrenciye gider (Mailpit), uygulama içinde ikisi de görür; öğrenci danışmanına yazar, danışmanın açık listesinde konuşma okunmamışla belirir, yanıt öğrencinin açık konuşmasına canlı gelir |
 | ✅ | Sözleşme ve dokümanlar güncel (veri modeli, politikalar, gözlemlenebilirlik, README'de iletişim demosu rehberi), CI yeşil |
 
-### Faz 7 ve sonrası
+### Faz 7 — Yoklama, Sınav (quiz), Anket, Belgeler
+
+**Backend**
+
+| Durum | Madde | Not |
+| --- | --- | --- |
+| ⬜ | Yoklama: oturumlar | `attendance.class_sessions`: şubenin haftalık programından dönem boyunca üretilir (dönemin başlangıç ve bitişi arasında, yayımlanmış `HOLIDAY` olaylarına düşenler hariç; tekrar üretmek zararsız). Öğretim elemanı oturumu iptal eder, telafi oturumu ekler, konu yazar. `GET /sections/{id}/sessions` (§5 #21) |
+| ⬜ | Yoklama: giriş | `attendance_records` (oturum × kesin kayıt, durum `PRESENT, ABSENT, LATE, EXCUSED`, yöntem, giren). Oturumun yoklamasını toplu yazma (`PUT /sessions/{id}/attendance`, iyimser kilit), varsayılan "geldi". Politika `canTakeAttendance` (şubenin öğretim elemanı; asistan dahil), denetim kaydı |
+| ⬜ | Yoklama: devamsızlık ve eşik | Yönetmelik parametresi `attendance_max_absence_pct` (teori %30, uygulama %20) ile oturum türü başına sınır; öğrencinin kendi raporu (`GET /me/attendance`: ders ve tür başına devamsızlık / sınır, oturum listesi), şubenin özeti (öğrenci başına). Sınırın %70'inde ve aşılınca bildirim (`attendance.warning`, bir kez). Not tablosunda "sınır aşıldı" önerisi; devamsız (`ATTENDANCE_FAIL`) kararı yine öğretim elemanının |
+| ⬜ | Anket: tanım ve atama | `survey` şeması (§5 #22). Merkez öğrenci işleri dönemin ders değerlendirme anketini kurar (standart sorular, açılış ve kapanış, anket kapısı, en az yanıt); açılınca şube başına kesin kayıtlı öğrencilere atanır. `GET /me/surveys` (bekleyenler) |
+| ⬜ | Anket: yanıt ve anonimlik | Yanıt ve "tamamladı" bayrağı aynı transaction'da, aralarında bağ yok: yanıt kimliği rastgele (zaman sıralı değil), tarih güne yuvarlı; tekrar yanıt reddedilir. Anket kapısı: kapılı ankette atanmış değerlendirmeyi doldurmayan öğrenci o dersin harf notunu (notlar ve transkript) göremez |
+| ⬜ | Anket: sonuçlar | Öğretim elemanına harf notları ilan edildikten sonra ve en az N (varsayılan 5) yanıtla toplu sonuç (soru başına dağılım, ortalama; açık uçlu yanıtlar karışık sırayla); bölüm başkanına bölümün şubeleri. Altındaysa "yetersiz yanıt" |
+| ⬜ | Belgeler: talep | `documents` şeması: öğrenci belgesi ve transkript, dil (TR, EN), sebep (OBS'deki seçenekler). Öğrenci talep eder (`POST /me/document-requests`); kayıt engeli (`DOCUMENT`) varsa reddedilir. Üretim worker'da (outbox olayı), durum `REQUESTED → READY`; hazır olunca bildirim |
+| ⬜ | Belgeler: PDF, imza ve doğrulama | PDF Go'da üretilir (Türkçe karakter için gömülü TTF; kütüphane o dilimde seçilir), üzerinde doğrulama kodu ve QR. İçeriğin SHA-256'sı Ed25519 ile imzalanır (anahtar dosyadan, §5 #23). Halka açık doğrulama ucu ve sayfası (`/dogrula/{kod}`: geçerli mi, belge türü, maskeli ad, tarih; yüklenen PDF'in özeti tarayıcıda hesaplanıp karşılaştırılır), IP başına hız sınırı, doğrulama günlüğü (IP özeti) |
+| ⬜ | Quiz: soru bankası | `question_banks` (öğretim elemanının; şubenin öğretim elemanlarıyla paylaşılabilir), `questions` (tür: tek ve çok seçimli, doğru-yanlış, kısa cevap, sayısal, klasik, eşleştirme; türe özgü içerik JSONB'de, Go'da doğrulanır; sürüm: denemelerde kullanılmış soru düzenlenince yeni sürüm). Excel şablonuyla toplu soru yükleme (§5 #18) |
+| ⬜ | Quiz: etkinlik ve deneme | Ders alanında `QUIZ` etkinliği: açılış ve kapanış, süre, deneme hakkı, puanlama yöntemi (en yüksek, son), soru ve şık karıştırma, sonuç gösterimi (hemen, kapanıştan sonra). Yuvalar: sabit soru ya da bankadan (etiketle) rastgele. Deneme: sunucu tarafında son an (süre ve kapanışın erkeni), cevaplar otomatik kaydedilir, düzen deneme başında dondurulur, doğru cevaplar istemciye gönderilmez. Süresi dolan denemeyi worker kapatır (`AUTO_SUBMITTED`) (§5 #24) |
+| ⬜ | Quiz: puanlama | Nesnel türler otomatik (kısa cevap: büyük küçük harf ve boşluk duyarsız, birden çok kabul; sayısal: tolerans; çok seçimli ve eşleştirmede kısmi puan), klasik sorular elle (geri bildirimle). Puanlar yayımlanınca not tablosu köprüsü ödevlerdeki gibi (bağlı bileşene akar) |
+| ⬜ | İş metrikleri ve seed | Yoklama girişleri, quiz denemeleri, anket yanıt oranı, üretilen ve doğrulanan belgeler; Grafana satırı. Seed: demo şubelerinin oturumları ve geçmiş haftaların yoklaması, COM1007-1'de soru bankası ve quiz, açık ders değerlendirme anketi, demo öğrencisine hazır belge |
+
+**Web**
+
+| Durum | Madde |
+| --- | --- |
+| ⬜ | Yoklama: verdiğim derste oturum listesi (bugün öne), yoklama sayfası (öğrenci listesi, tek tıkla durum, hepsi geldi, kaydet), oturum iptali ve telafi; öğrencinin "Devamsızlığım" sayfası (ders başına çubuk, sınıra yaklaşınca uyarı rengi) |
+| ⬜ | Anket: öğrencinin bekleyen anketleri (ana sayfa kartı), doldurma ekranı (Likert, seçim, metin; anonimlik açıklaması), notlarda anket kapısı mesajı; merkezin anket yönetimi; öğretim elemanının sonuç ekranı (grafikler) |
+| ⬜ | Belgeler: talep formu (tür, dil, sebep), taleplerim (durum, indirme), halka açık doğrulama sayfası (kodla ya da QR'dan; PDF sürükleyip özet karşılaştırma) |
+| ⬜ | Quiz: soru bankası ve soru düzenleyici (türe göre), quiz ayarları ve yuvalar; öğrencinin deneme ekranı (geri sayım, soru gezgini, otomatik kayıt, gönderme onayı), sonuç ve inceleme; öğretim elemanının denemeler listesi ve klasik soru puanlama |
+
+**Kapanış**
+
+| Durum | Madde |
+| --- | --- |
+| ⬜ | Playwright e2e: öğretim elemanı yoklama alır, öğrenci devamsızlığını görür; öğrenci quiz'i çözer, puanı otomatik hesaplanır; anket doldurulmadan harf notu görünmez, doldurunca görünür; belge talebi hazırlanır, doğrulama sayfası kodu doğrular |
+| ⬜ | Sözleşme ve dokümanlar güncel (veri modeli, politikalar, README'de demo rehberi), CI yeşil |
+
+### Faz 8 ve sonrası
 
 Her faz başlarken §2'deki kapsamdan aynı biçimde ayrıntılı bir liste çıkarılır.
