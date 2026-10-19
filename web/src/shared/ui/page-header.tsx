@@ -26,15 +26,16 @@ export function PageHeader({
   className?: string
 }) {
   return (
-    <div className={cn('mb-7 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between', className)}>
-      <div className="flex min-w-0 items-center gap-4">
+    // Başlık en az 22rem ister; düğmeler sığmazsa alt satıra geçer (başlık sıkışıp bölünmez).
+    <div className={cn('mb-7 flex flex-wrap items-center justify-between gap-4', className)}>
+      <div className="flex min-w-[min(100%,22rem)] flex-1 items-center gap-4">
         {icon && <IconChip icon={icon} tone={tone} size="lg" solid className="hidden sm:inline-flex" />}
         <div className="min-w-0 space-y-1">
           <h1 className="text-2xl font-bold tracking-tight sm:text-[1.65rem]">{title}</h1>
           {description && <p className="text-sm text-muted-foreground">{description}</p>}
         </div>
       </div>
-      {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}
+      {actions && <div className="flex max-w-full flex-wrap gap-2">{actions}</div>}
     </div>
   )
 }
