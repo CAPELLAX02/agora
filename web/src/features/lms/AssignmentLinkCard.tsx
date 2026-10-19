@@ -77,7 +77,7 @@ function LinkForm({
   return (
     <section
       aria-labelledby="link-title"
-      className="space-y-3 rounded-2xl border border-indigo-200/70 bg-indigo-50/30 p-4 dark:border-indigo-500/20 dark:bg-indigo-500/5"
+      className="space-y-3 rounded-xl border border-indigo-200/70 bg-indigo-50/30 p-4 dark:border-indigo-500/20 dark:bg-indigo-500/5"
     >
       <h3 id="link-title" className="flex items-center gap-2 text-sm font-bold">
         <IconChip icon={Link2Icon} tone="indigo" size="sm" />

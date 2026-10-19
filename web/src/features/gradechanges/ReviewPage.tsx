@@ -56,7 +56,7 @@ export function ReviewPage() {
                 {t('gradeChanges.review.empty')}
               </EmptyState>
             ) : (
-              <div className="grid gap-4 lg:grid-cols-2">
+              <div className="grid gap-4 xl:grid-cols-2">
                 {pending.data.items.map((c) => (
                   <ChangeCard
                     key={c.id}
@@ -89,7 +89,7 @@ export function ReviewPage() {
               <h2 id="decided-changes" className="text-lg font-bold">
                 {t('gradeChanges.review.decided')}
               </h2>
-              <div className="grid gap-4 lg:grid-cols-2">
+              <div className="grid gap-4 xl:grid-cols-2">
                 {decided.data.items.slice(0, 10).map((c) => (
                   <ChangeCard key={c.id} change={c} />
                 ))}

@@ -88,7 +88,7 @@ export function ConversationView({ id }: { id: string }) {
   return (
     <section
       aria-label={title}
-      className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-soft"
+      className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-card shadow-soft"
     >
       <header className="flex items-center gap-3 border-b border-border/60 px-4 py-3">
         <Button variant="ghost" size="icon" className="lg:hidden" asChild>

@@ -109,7 +109,7 @@ export function Composer({
       {(files.length > 0 || uploading > 0) && (
         <ul className="flex flex-wrap gap-1.5" aria-label={t('messages.attachments')}>
           {files.map((f) => (
-            <li key={f.id} className="flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs">
+            <li key={f.id} className="flex items-center gap-1 rounded-md bg-muted px-2.5 py-1 text-xs">
               <span className="max-w-48 truncate">{f.name}</span>
               <span className="text-muted-foreground">{formatBytes(f.size)}</span>
               <button

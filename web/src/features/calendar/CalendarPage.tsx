@@ -139,7 +139,7 @@ export function CalendarPage() {
       ) : (
         <div className="space-y-6">
           {term && (
-            <p className="inline-flex items-center gap-2 rounded-full bg-sky-500/10 px-3 py-1 text-sm font-semibold text-sky-700 dark:text-sky-300">
+            <p className="inline-flex items-center gap-2 rounded-md bg-sky-500/10 px-3 py-1 text-sm font-semibold text-sky-700 dark:text-sky-300">
               <CalendarRangeIcon className="size-4" aria-hidden />
               {t('calendar.termDates', { start: formatDate(term.starts_on), end: formatDate(term.ends_on) })}
             </p>
@@ -178,13 +178,13 @@ function Windows({ termId, target }: { termId: string; target: Target }) {
         {error ? (
           <ErrorState error={error} onRetry={() => void refetch()} />
         ) : !data ? (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {Array.from({ length: 6 }, (_, i) => (
               <Skeleton key={i} className="h-20" />
             ))}
           </div>
         ) : (
-          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {data.items
               .filter((w) => w.type.is_action_window)
               .map((w) => (
@@ -291,7 +291,7 @@ function Events({
           <TableBody>
             {events.map((e) => (
               <TableRow key={e.id}>
-                <TableCell className="text-sm font-medium whitespace-nowrap tabular-nums">
+                <TableCell className="min-w-32 text-sm font-medium whitespace-normal tabular-nums">
                   {formatPeriod(e.starts_at, e.ends_at)}
                 </TableCell>
                 <TableCell className="whitespace-normal">

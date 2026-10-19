@@ -62,7 +62,7 @@ export function GradeSummary({ grade }: { grade: AssignmentGrade }) {
     <div className="space-y-3">
       {grade.score !== null && (
         <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <span className="text-3xl font-extrabold text-emerald-600 tabular-nums dark:text-emerald-400">
+          <span className="text-3xl font-bold text-emerald-600 tabular-nums dark:text-emerald-400">
             {formatNumber(grade.final_score ?? grade.score)}
           </span>
           <span className="text-sm text-muted-foreground">/ {formatNumber(grade.max_score)}</span>

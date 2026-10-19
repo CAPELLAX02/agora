@@ -258,7 +258,7 @@ export function SpacePage() {
               <CardHeader className="flex items-center gap-3">
                 <IconChip icon={TrophyIcon} tone="emerald" />
                 <CardTitle className="flex-1">{t('lms.progress.title')}</CardTitle>
-                <span className="text-lg font-extrabold text-emerald-600 tabular-nums dark:text-emerald-400">
+                <span className="text-lg font-bold text-emerald-600 tabular-nums dark:text-emerald-400">
                   %{Math.round((space.progress.completed / space.progress.total) * 100)}
                 </span>
               </CardHeader>
@@ -520,7 +520,7 @@ function TopicSection({
     <section
       aria-labelledby={`topic-${topic.id}`}
       className={cn(
-        'overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xs',
+        'overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs',
         !topic.is_visible && 'border-dashed opacity-80',
       )}
     >
@@ -724,7 +724,7 @@ function ActivityRow({
         type="button"
         onClick={activate}
         disabled={!open}
-        className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-1 py-1 text-left outline-none focus-visible:ring-4 focus-visible:ring-ring/30 disabled:cursor-not-allowed"
+        className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-1 py-1 text-left focus-ring disabled:cursor-not-allowed"
       >
         <IconChip icon={meta.icon} tone={meta.tone} size="sm" />
         <span className="min-w-0 flex-1">

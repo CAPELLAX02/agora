@@ -35,7 +35,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                     className={({ isActive }) =>
                       cn(
                         'group flex items-center gap-3 rounded-xl px-2.5 py-1.5 text-sm font-medium transition-all',
-                        'outline-none focus-visible:ring-4 focus-visible:ring-ring/30',
+                        'focus-ring',
                         isActive
                           ? 'bg-sidebar-accent font-semibold text-sidebar-accent-foreground shadow-xs'
                           : 'text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground',
@@ -47,7 +47,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                         <span
                           aria-hidden
                           className={cn(
-                            'inline-flex size-7 shrink-0 items-center justify-center rounded-lg transition-all [&>svg]:size-[15px]',
+                            'inline-flex size-7 shrink-0 items-center justify-center rounded-full transition-all [&>svg]:size-[15px]',
                             isActive
                               ? cn(toneSolid[tone], 'shadow-sm')
                               : cn(toneSoft[tone], 'group-hover:scale-105'),

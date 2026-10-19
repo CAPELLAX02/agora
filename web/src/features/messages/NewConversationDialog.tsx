@@ -146,7 +146,7 @@ function NewConversationDialog({ onClose }: { onClose: () => void }) {
                     }
                     aria-pressed={mode === 'group' ? selected : undefined}
                     className={cn(
-                      'flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors outline-none hover:bg-muted/60 focus-visible:ring-4 focus-visible:ring-ring/30',
+                      'flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left focus-ring transition-colors hover:bg-muted/60',
                       selected && 'bg-sky-500/10',
                     )}
                   >

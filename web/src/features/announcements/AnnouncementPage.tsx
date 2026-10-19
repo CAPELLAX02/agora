@@ -68,7 +68,7 @@ export function AnnouncementPage() {
           {a.can_manage ? t('announcements.manage.title') : t('announcements.title')}
         </Link>
       </Button>
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
         <Card>
           <CardHeader className="flex items-start gap-4">
             <IconChip icon={meta.icon} tone={meta.tone} size="lg" solid />
@@ -80,7 +80,7 @@ export function AnnouncementPage() {
                   <Badge variant={phaseBadge[phase]}>{t(`announcements.phases.${phase}`)}</Badge>
                 )}
               </div>
-              <h1 className="text-2xl font-extrabold tracking-tight">{a.title}</h1>
+              <h1 className="text-2xl font-bold tracking-tight">{a.title}</h1>
               <p className="text-sm text-muted-foreground">
                 {a.author.name} · {formatDateTime(a.publish_from)}
                 {a.publish_until && ` – ${formatDateTime(a.publish_until)}`}

@@ -46,7 +46,7 @@ export function InstructorSearch({
                 type="button"
                 aria-pressed={s.staff_id === value}
                 className={cn(
-                  'flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-accent focus-visible:bg-accent focus-visible:outline-none',
+                  'flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm outline-none hover:bg-accent focus-visible:bg-accent',
                   s.staff_id === value && 'bg-accent',
                 )}
                 onClick={() => {

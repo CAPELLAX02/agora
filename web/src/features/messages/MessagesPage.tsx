@@ -37,7 +37,7 @@ export function MessagesPage() {
         {id ? (
           <ConversationView key={id} id={id} />
         ) : (
-          <div className="hidden items-center justify-center rounded-2xl border border-dashed border-border bg-card/50 lg:flex">
+          <div className="hidden items-center justify-center rounded-xl border border-dashed border-border bg-card/50 lg:flex">
             <EmptyState icon={MessageCircleIcon} tone="sky" className="border-0">
               {t('messages.pick')}
             </EmptyState>
@@ -63,7 +63,7 @@ function ConversationList({ activeId, className }: { activeId?: string; classNam
     <section
       aria-label={t('messages.conversations')}
       className={cn(
-        'flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-soft',
+        'flex min-h-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-card shadow-soft',
         className,
       )}
     >
@@ -76,7 +76,7 @@ function ConversationList({ activeId, className }: { activeId?: string; classNam
               aria-pressed={filter === f}
               onClick={() => setFilter(f)}
               className={cn(
-                'rounded-full px-2.5 py-1 text-xs font-semibold transition-colors',
+                'rounded-md px-2.5 py-1 text-xs font-semibold transition-colors',
                 filter === f
                   ? 'bg-sky-500 text-white'
                   : 'bg-muted text-muted-foreground hover:text-foreground',
@@ -118,7 +118,7 @@ function ConversationList({ activeId, className }: { activeId?: string; classNam
                     to={`/mesajlar/${c.id}`}
                     aria-current={c.id === activeId ? 'page' : undefined}
                     className={cn(
-                      'flex items-center gap-3 rounded-xl px-2.5 py-2 transition-colors outline-none hover:bg-muted/60 focus-visible:ring-4 focus-visible:ring-ring/30',
+                      'flex items-center gap-3 rounded-xl px-2.5 py-2 focus-ring transition-colors hover:bg-muted/60',
                       c.id === activeId && 'bg-sky-500/10 hover:bg-sky-500/15',
                     )}
                   >
@@ -128,7 +128,7 @@ function ConversationList({ activeId, className }: { activeId?: string; classNam
                         <span
                           className={cn(
                             'min-w-0 flex-1 truncate text-sm',
-                            c.unread > 0 ? 'font-extrabold' : 'font-semibold',
+                            c.unread > 0 ? 'font-bold' : 'font-semibold',
                           )}
                         >
                           {title}

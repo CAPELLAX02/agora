@@ -170,7 +170,7 @@ function VersionCard({
       onClick={onSelect}
       aria-current={selected ? 'true' : undefined}
       className={cn(
-        'w-full rounded-md border p-3 text-left transition-colors hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none',
+        'w-full rounded-md border p-3 text-left focus-ring transition-colors hover:bg-accent',
         selected && 'border-primary bg-accent',
       )}
     >

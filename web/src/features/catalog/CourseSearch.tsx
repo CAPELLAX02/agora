@@ -76,7 +76,7 @@ export function CourseSearch({
             <li key={c.id}>
               <button
                 type="button"
-                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm outline-none hover:bg-accent focus-visible:bg-accent"
                 onClick={() => onChange(c)}
               >
                 <CheckIcon className="size-3.5 opacity-0" aria-hidden />

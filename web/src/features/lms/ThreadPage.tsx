@@ -243,7 +243,7 @@ function PostCard({
     <li
       id={`post-${post.id}`}
       className={cn(
-        'rounded-2xl border border-border/70 bg-card p-4 shadow-xs',
+        'rounded-xl border border-border/70 bg-card p-4 shadow-xs',
         post.author.is_instructor && 'border-violet-200/70 dark:border-violet-500/20',
       )}
     >
@@ -353,7 +353,7 @@ function ReplyBox({
     <section
       id="reply-box"
       aria-label={t('lms.forum.replyTitle')}
-      className="space-y-2 rounded-2xl border border-emerald-200/70 bg-emerald-50/30 p-4 dark:border-emerald-500/20 dark:bg-emerald-500/5"
+      className="space-y-2 rounded-xl border border-emerald-200/70 bg-emerald-50/30 p-4 dark:border-emerald-500/20 dark:bg-emerald-500/5"
     >
       <h2 className="text-sm font-bold">{t('lms.forum.replyTitle')}</h2>
       {replyTo && (

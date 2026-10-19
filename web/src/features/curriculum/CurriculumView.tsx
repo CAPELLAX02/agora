@@ -81,7 +81,7 @@ export function CurriculumView({
                       <span
                         aria-hidden
                         className={cn(
-                          'inline-flex size-8 items-center justify-center rounded-xl text-sm font-extrabold',
+                          'inline-flex size-8 items-center justify-center rounded-full text-sm font-bold',
                           toneSolid[semesterTones[(no - 1) % semesterTones.length]!],
                         )}
                       >
@@ -89,7 +89,7 @@ export function CurriculumView({
                       </span>
                       {t('curriculum.view.semester', { no })}
                     </span>
-                    <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold text-muted-foreground">
+                    <span className="rounded-md bg-muted px-2.5 py-0.5 text-xs font-semibold text-muted-foreground">
                       {t('curriculum.view.yearSeason', {
                         year: Math.ceil(no / 2),
                         season: t(no % 2 === 1 ? 'curriculum.view.fall' : 'curriculum.view.spring'),
@@ -100,10 +100,14 @@ export function CurriculumView({
                 <Table className="table-fixed">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-28">{t('catalog.code')}</TableHead>
+                      <TableHead className="w-24 sm:w-28">{t('catalog.code')}</TableHead>
                       <TableHead>{t('catalog.name')}</TableHead>
-                      <TableHead className="w-14 text-right">{t('catalog.hours')}</TableHead>
-                      <TableHead className="w-16 text-right">{t('catalog.credit')}</TableHead>
+                      <TableHead className="hidden w-14 text-right sm:table-cell">
+                        {t('catalog.hours')}
+                      </TableHead>
+                      <TableHead className="hidden w-16 text-right sm:table-cell">
+                        {t('catalog.credit')}
+                      </TableHead>
                       <TableHead className="w-14 text-right">{t('catalog.ects')}</TableHead>
                       {onRemove && <TableHead className="w-10" />}
                     </TableRow>
@@ -115,10 +119,14 @@ export function CurriculumView({
                   </TableBody>
                   <TableFooter>
                     <TableRow>
-                      <TableCell colSpan={3} className="text-xs">
+                      {/* Dar ekranda saat ve kredi sütunları gizlenir: tablo yatay kaymaz. */}
+                      <TableCell colSpan={2} className="text-xs">
                         {t('curriculum.view.semesterTotal')}
                       </TableCell>
-                      <TableCell className="text-right">{totals.get(no)?.national_credit}</TableCell>
+                      <TableCell className="hidden sm:table-cell" />
+                      <TableCell className="hidden text-right sm:table-cell">
+                        {totals.get(no)?.national_credit}
+                      </TableCell>
                       <TableCell className="text-right">{totals.get(no)?.ects}</TableCell>
                       {onRemove && <TableCell />}
                     </TableRow>
@@ -191,7 +199,7 @@ function ItemRow({
               <Button
                 variant="ghost"
                 size="sm"
-                className="-ml-2 h-auto px-2 py-0.5 text-left font-medium whitespace-normal"
+                className="-ml-2 h-auto max-w-full shrink px-2 py-0.5 text-left font-medium whitespace-normal"
                 aria-expanded={open}
                 onClick={() => setOpen(!open)}
               >
@@ -236,10 +244,10 @@ function ItemRow({
             )}
           </div>
         </TableCell>
-        <TableCell className="text-right font-mono text-xs">
+        <TableCell className="hidden text-right font-mono text-xs sm:table-cell">
           {item.theory_hours}-{item.practice_hours}
         </TableCell>
-        <TableCell className="text-right">{item.national_credit}</TableCell>
+        <TableCell className="hidden text-right sm:table-cell">{item.national_credit}</TableCell>
         <TableCell className="text-right">{item.ects}</TableCell>
         {onRemove && (
           <TableCell className="text-right">
@@ -256,7 +264,7 @@ function ItemRow({
       </TableRow>
       {slot && open && item.elective_group && (
         <TableRow className="hover:bg-transparent">
-          <TableCell colSpan={span} className="bg-muted/20">
+          <TableCell colSpan={span} className="bg-muted/20 whitespace-normal">
             <Pool groupId={item.elective_group.id} />
           </TableCell>
         </TableRow>
@@ -277,11 +285,12 @@ function Pool({ groupId }: { groupId: string }) {
   }
   return (
     <ul
-      className="grid gap-1 sm:grid-cols-2"
+      // Sütunlar en az 16rem: dar yerde tek sütuna düşer, metin taşmaz, satır kayar.
+      className="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-x-4 gap-y-1.5"
       aria-label={t('curriculum.view.pool', { name: localized(data) })}
     >
       {data.courses.map((c) => (
-        <li key={c.id} className="text-xs">
+        <li key={c.id} className="min-w-0 text-xs leading-snug">
           <Link to={`/dersler/${c.id}`} className="hover:underline">
             <span className="font-mono text-muted-foreground">{c.code}</span> {localized(c)}
           </Link>{' '}

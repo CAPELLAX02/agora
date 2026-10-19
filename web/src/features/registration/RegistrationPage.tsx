@@ -99,9 +99,9 @@ function StudentRegistration({ program }: { program: StudentProgram }) {
   return (
     <div className="space-y-6">
       <Card className="relative overflow-hidden border-violet-500/20 bg-gradient-to-br from-violet-500/[0.07] via-card to-sky-500/[0.06]">
-        <CardContent className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
+        <CardContent className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
           <div className="space-y-3">
-            <h2 className="text-xl font-extrabold tracking-tight">
+            <h2 className="text-xl font-bold tracking-tight">
               {t('registration.termTitle', { term: r.term.code })}
             </h2>
             <RegistrationState registration={r} />
@@ -121,7 +121,7 @@ function StudentRegistration({ program }: { program: StudentProgram }) {
                   </dt>
                   <dd
                     className={cn(
-                      'truncate font-extrabold tabular-nums',
+                      'truncate font-bold tabular-nums',
                       value.length > 6 ? 'text-sm leading-6' : 'text-lg',
                       toneText[tone],
                     )}

@@ -42,7 +42,7 @@ export function RegistrationCard() {
       ) : (
         <>
           <div className="flex items-baseline gap-2">
-            <span className="tabular text-3xl font-extrabold">{r.items.length}</span>
+            <span className="tabular text-3xl font-bold">{r.items.length}</span>
             <span className="text-sm text-muted-foreground">
               {t('dashboard.registration.coursesWord', { count: r.items.length })}
             </span>

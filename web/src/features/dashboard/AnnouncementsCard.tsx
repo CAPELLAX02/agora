@@ -43,7 +43,7 @@ export function AnnouncementsCard() {
                 >
                   <IconChip icon={meta.icon} tone={meta.tone} size="sm" />
                   <span className="min-w-0 flex-1">
-                    <span className={cn('block truncate', a.read_at ? 'font-semibold' : 'font-extrabold')}>
+                    <span className={cn('block truncate', a.read_at ? 'font-semibold' : 'font-bold')}>
                       {a.title}
                     </span>
                     <span className="block truncate text-xs text-muted-foreground">

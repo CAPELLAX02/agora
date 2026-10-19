@@ -44,10 +44,11 @@ export function WeeklyGrid({
   const today = ((new Date().getDay() + 6) % 7) + 1
 
   return (
-    <>
-      <div className="hidden overflow-x-auto md:block">
+    // Izgara kabın genişliği yetince (44rem) gösterilir, yetmezse gün gün liste: yatay kaydırma yok.
+    <div className="@container">
+      <div className="hidden @[44rem]:block">
         <div
-          className="grid min-w-[44rem]"
+          className="grid"
           style={{ gridTemplateColumns: `3.5rem repeat(${days.length}, minmax(0, 1fr))` }}
           role="table"
           aria-label={t('schedule.weekly')}
@@ -58,7 +59,7 @@ export function WeeklyGrid({
               <div key={d} role="columnheader" className="border-b px-2 pb-2 text-sm font-bold">
                 <span
                   className={cn(
-                    'inline-flex rounded-full px-2.5 py-0.5',
+                    'inline-flex rounded-md px-2 py-0.5',
                     d === today && 'bg-primary text-primary-foreground shadow-sm shadow-primary/25',
                   )}
                 >
@@ -112,7 +113,7 @@ export function WeeklyGrid({
           </div>
         </div>
       </div>
-      <ol className="space-y-4 md:hidden">
+      <ol className="space-y-4 @[44rem]:hidden">
         {days
           .filter((d) => entries.some((e) => e.day_of_week === d))
           .map((d) => (
@@ -130,7 +131,7 @@ export function WeeklyGrid({
             </li>
           ))}
       </ol>
-    </>
+    </div>
   )
 }
 
@@ -168,8 +169,7 @@ function Block({
     'block overflow-hidden rounded-lg border border-l-4 px-2 py-1 text-xs leading-snug shadow-xs',
     style && 'absolute',
     toneBlock[toneFor(e.course.code)],
-    href &&
-      'transition-all hover:-translate-y-px hover:shadow-md focus-visible:ring-4 focus-visible:ring-ring/30 focus-visible:outline-none',
+    href && 'focus-ring transition-all hover:-translate-y-px hover:shadow-md',
   )
   return href ? (
     <Link to={href} className={className} style={style} aria-label={label}>

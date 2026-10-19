@@ -107,7 +107,7 @@ function SectionRow({
           </Badge>
         )}
         {pending.length > 0 && (
-          <span className="tabular inline-flex min-w-7 justify-center rounded-full bg-amber-500/15 px-2 py-0.5 text-sm font-extrabold text-amber-800 dark:text-amber-300">
+          <span className="tabular inline-flex min-w-7 justify-center rounded-md bg-amber-500/15 px-2 py-0.5 text-sm font-bold text-amber-800 dark:text-amber-300">
             {pending.reduce((n, p) => n + p.missing, 0)}
           </span>
         )}

@@ -29,10 +29,10 @@ export function ForcePasswordChangePage() {
     <AuthLayout>
       <div className="space-y-6">
         <div className="space-y-2">
-          <span className="flex size-11 items-center justify-center rounded-xl bg-warning/20 text-warning-foreground dark:text-warning">
+          <span className="flex size-11 items-center justify-center rounded-full bg-warning/20 text-warning-foreground dark:text-warning">
             <KeyRoundIcon className="size-5" aria-hidden />
           </span>
-          <h1 className="text-3xl font-extrabold tracking-tight">{t('password.force.title')}</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t('password.force.title')}</h1>
           <p className="text-sm text-muted-foreground">{t('password.force.description')}</p>
         </div>
         {generalError && (

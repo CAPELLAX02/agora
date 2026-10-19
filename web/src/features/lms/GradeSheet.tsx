@@ -84,7 +84,7 @@ function SheetBody({ activityId, work }: { activityId: string; work: StudentWork
   return (
     <div className="space-y-6 pr-6">
       <header className="space-y-1">
-        <SheetTitle className="text-xl font-extrabold">
+        <SheetTitle className="text-xl font-bold">
           {work.student.first_name} {work.student.last_name}
         </SheetTitle>
         <SheetDescription className="flex flex-wrap items-center gap-2">

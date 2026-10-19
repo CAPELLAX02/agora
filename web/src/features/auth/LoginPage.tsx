@@ -138,11 +138,11 @@ function PasswordStep({
   return (
     <div className="space-y-7">
       <div className="space-y-2">
-        <p className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+        <p className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
           <SparklesIcon className="size-3.5" aria-hidden />
           {t('auth.login.welcome')}
         </p>
-        <h1 className="text-3xl font-extrabold tracking-tight">{t('auth.login.title')}</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{t('auth.login.title')}</h1>
         <p className="text-sm text-muted-foreground">{t('auth.login.description')}</p>
       </div>
 
@@ -259,7 +259,7 @@ function MfaStep({
     <div className="space-y-6">
       <div className="space-y-2">
         <IconChip icon={ShieldCheckIcon} tone="emerald" size="lg" solid />
-        <h1 className="text-3xl font-extrabold tracking-tight">{t('auth.mfa.title')}</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{t('auth.mfa.title')}</h1>
         <p className="text-sm text-muted-foreground">
           {t(useRecovery ? 'auth.mfa.recoveryDescription' : 'auth.mfa.description')}
         </p>

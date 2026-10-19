@@ -38,17 +38,17 @@ export function ForgotPasswordPage() {
     <AuthLayout>
       {isSuccess ? (
         <div className="space-y-4">
-          <span className="flex size-11 items-center justify-center rounded-xl bg-success/15 text-success">
+          <span className="flex size-11 items-center justify-center rounded-full bg-success/15 text-success">
             <MailCheckIcon className="size-5" aria-hidden />
           </span>
-          <h1 className="text-3xl font-extrabold tracking-tight">{t('auth.forgot.sentTitle')}</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t('auth.forgot.sentTitle')}</h1>
           <p className="text-sm text-muted-foreground">{t('auth.forgot.sentDescription')}</p>
           {back}
         </div>
       ) : (
         <div className="space-y-6">
           <div className="space-y-2">
-            <h1 className="text-3xl font-extrabold tracking-tight">{t('auth.forgot.title')}</h1>
+            <h1 className="text-3xl font-bold tracking-tight">{t('auth.forgot.title')}</h1>
             <p className="text-sm text-muted-foreground">{t('auth.forgot.description')}</p>
           </div>
           {error && (

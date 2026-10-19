@@ -93,8 +93,12 @@ export function NotificationPreferencesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>{t('notifications.preferences.type')}</TableHead>
-                <TableHead className="w-32 text-center">{t('notifications.preferences.inApp')}</TableHead>
-                <TableHead className="w-32 text-center">{t('notifications.preferences.email')}</TableHead>
+                <TableHead className="w-20 text-center whitespace-normal sm:w-32">
+                  {t('notifications.preferences.inApp')}
+                </TableHead>
+                <TableHead className="w-20 text-center whitespace-normal sm:w-32">
+                  {t('notifications.preferences.email')}
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -115,7 +119,7 @@ export function NotificationPreferencesPage() {
                       const name = localized(p)
                       return (
                         <TableRow key={p.type}>
-                          <TableCell>
+                          <TableCell className="whitespace-normal">
                             <span className="flex flex-wrap items-center gap-2">
                               {name}
                               {p.mandatory && (

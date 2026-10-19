@@ -89,7 +89,7 @@ export function SectionCard({ section: s, editable }: { section: Section; editab
           )}
         </div>
       </CardHeader>
-      <CardContent className="grid gap-6 py-4 lg:grid-cols-2">
+      <CardContent className="grid gap-6 py-4 xl:grid-cols-2">
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-medium">{t('offering.section.instructors')}</h3>
@@ -138,7 +138,7 @@ export function SectionCard({ section: s, editable }: { section: Section; editab
             </ul>
           )}
         </div>
-        <div className="space-y-2 lg:col-span-2">
+        <div className="space-y-2 xl:col-span-2">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-medium">{t('offering.section.slots')}</h3>
             {canSchedule && (

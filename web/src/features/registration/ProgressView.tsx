@@ -38,7 +38,7 @@ export function ProgressSummary({ progress: p }: { progress: StudentProgress }) 
           size="lg"
           className="flex-1"
         />
-        <span className="text-sm font-extrabold text-emerald-700 tabular-nums dark:text-emerald-300">
+        <span className="text-sm font-bold text-emerald-700 tabular-nums dark:text-emerald-300">
           %{percent}
         </span>
       </div>

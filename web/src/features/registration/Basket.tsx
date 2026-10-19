@@ -23,7 +23,7 @@ export function EctsMeter({ total, limit }: { total: number; limit: number }) {
     <div className="space-y-1.5">
       <div className="flex items-baseline justify-between text-sm">
         <span className="font-semibold text-muted-foreground">{t('registration.basket.ects')}</span>
-        <span className={cn('font-extrabold tabular-nums', over && 'text-destructive')}>
+        <span className={cn('font-bold tabular-nums', over && 'text-destructive')}>
           {t('registration.basket.ectsOf', { total, limit })}
         </span>
       </div>
@@ -51,7 +51,7 @@ export function RegistrationState({ registration: r }: { registration: Registrat
         <RegistrationStatusBadge status={r.status} />
         <span
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold',
+            'inline-flex items-center gap-1.5 rounded-md px-2.5 py-0.5 text-xs font-semibold',
             w.open || w.extended
               ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
               : 'bg-muted text-muted-foreground',
@@ -112,7 +112,7 @@ export function BasketItems({
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border px-4 py-6 text-center">
-        <IconChip icon={ShoppingBasketIcon} tone="violet" size="lg" className="rounded-full" />
+        <IconChip icon={ShoppingBasketIcon} tone="violet" size="lg" />
         <p className="text-sm text-muted-foreground">{t('registration.basket.empty')}</p>
       </div>
     )
@@ -138,7 +138,7 @@ export function BasketItems({
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-0.5">
-              <span className={cn('rounded-full px-2 py-0.5 text-xs font-bold tabular-nums', toneSoft[tone])}>
+              <span className={cn('rounded-md px-2 py-0.5 text-xs font-bold tabular-nums', toneSoft[tone])}>
                 {t('registration.ects', { ects: it.ects })}
               </span>
               {onRemove && (

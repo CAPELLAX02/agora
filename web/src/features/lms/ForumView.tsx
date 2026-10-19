@@ -105,7 +105,7 @@ export function ForumView({ sectionId, activityId }: { sectionId: string; activi
             <li key={th.id}>
               <Link
                 to={`/derslerim/${sectionId}/etkinlik/${activityId}/konu/${th.id}`}
-                className="flex items-center gap-3 rounded-2xl border border-border/70 bg-card px-4 py-3 shadow-xs transition-all hover:-translate-y-0.5 hover:shadow-soft"
+                className="flex items-center gap-3 rounded-xl border border-border/70 bg-card px-4 py-3 shadow-xs transition-all hover:-translate-y-0.5 hover:shadow-soft"
               >
                 <Initials name={th.author.name} instructor={th.author.is_instructor} />
                 <span className="min-w-0 flex-1">

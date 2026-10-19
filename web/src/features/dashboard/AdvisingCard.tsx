@@ -64,7 +64,7 @@ export function AdvisingCard() {
               ) : (
                 <span
                   className={cn(
-                    'tabular inline-flex min-w-7 justify-center rounded-full px-2 py-0.5 text-sm font-extrabold',
+                    'tabular inline-flex min-w-7 justify-center rounded-md px-2 py-0.5 text-sm font-bold',
                     r.count > 0
                       ? 'bg-amber-500/15 text-amber-800 dark:text-amber-300'
                       : 'bg-muted text-muted-foreground',

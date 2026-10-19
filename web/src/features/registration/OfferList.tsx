@@ -109,7 +109,7 @@ export function OfferList({
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-2 text-base font-bold">
                   {t(`registration.categories.${cat}`)}
-                  <span className={cn('rounded-full px-2 py-0.5 text-xs font-bold', toneSoft[tone])}>
+                  <span className={cn('rounded-md px-2 py-0.5 text-xs font-bold', toneSoft[tone])}>
                     {items.length}
                   </span>
                 </span>
@@ -195,13 +195,13 @@ function CourseOffer({
             : t('registration.offer.line', { semester: o.line.semester_no })}
         </span>
         {replaces && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2 py-0.5 font-semibold text-sky-700 dark:text-sky-300">
+          <span className="inline-flex items-center gap-1 rounded-md bg-sky-500/10 px-2 py-0.5 font-semibold text-sky-700 dark:text-sky-300">
             <LinkIcon className="size-3" aria-hidden />
             {t('registration.offer.replaces', { code: o.line.code })}
           </span>
         )}
         {o.last_letter && (
-          <span className="rounded-full bg-muted px-2 py-0.5 font-semibold">
+          <span className="rounded-md bg-muted px-2 py-0.5 font-semibold">
             {t('registration.offer.lastLetter', { letter: o.last_letter })}
           </span>
         )}

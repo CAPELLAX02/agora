@@ -107,7 +107,7 @@ function AnnouncementItem({ a }: { a: Announcement }) {
       <Link
         to={`/duyurular/${a.id}`}
         className={cn(
-          'group flex gap-4 rounded-2xl border border-border/70 bg-card p-4 shadow-soft transition-all outline-none hover:-translate-y-0.5 hover:shadow-lift focus-visible:ring-4 focus-visible:ring-ring/30',
+          'group flex gap-4 rounded-xl border border-border/70 bg-card p-4 shadow-soft focus-ring transition-all hover:-translate-y-0.5 hover:shadow-lift',
           a.type === 'URGENT' && 'border-rose-500/40',
         )}
       >
@@ -121,7 +121,7 @@ function AnnouncementItem({ a }: { a: Announcement }) {
           <h2
             className={cn(
               'text-base leading-snug group-hover:underline',
-              unread ? 'font-extrabold' : 'font-semibold',
+              unread ? 'font-bold' : 'font-semibold',
             )}
           >
             {a.title}

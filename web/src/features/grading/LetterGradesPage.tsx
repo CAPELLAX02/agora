@@ -199,7 +199,7 @@ export function LetterGradesPage() {
       <div
         className={cn(
           'mb-6 grid gap-6',
-          published && data.grading_mode === 'LETTER' && 'lg:grid-cols-[2fr_1fr]',
+          published && data.grading_mode === 'LETTER' && 'xl:grid-cols-[2fr_1fr]',
         )}
       >
         <Card>
@@ -252,7 +252,7 @@ export function LetterGradesPage() {
           {t('gradebook.empty')}
         </EmptyState>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-border/70 bg-card shadow-xs">
+        <div className="overflow-x-auto rounded-xl border border-border/70 bg-card shadow-xs">
           <table className="w-full min-w-max text-sm">
             <thead>
               <tr className="border-b bg-muted text-left">

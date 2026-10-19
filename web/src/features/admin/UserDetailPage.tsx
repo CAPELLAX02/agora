@@ -90,8 +90,8 @@ export function UserDetailPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+      <div className="grid gap-6 xl:grid-cols-3">
+        <Card className="xl:col-span-2">
           <CardHeader>
             <CardTitle>{t('userDetail.account')}</CardTitle>
           </CardHeader>
@@ -236,7 +236,7 @@ function RolesCard({
   const { data, error, refetch } = useListUserRolesQuery({ id: userId })
 
   return (
-    <Card className="lg:col-span-3">
+    <Card className="xl:col-span-3">
       <CardHeader>
         <CardTitle>{t('userDetail.roles.title')}</CardTitle>
         <CardDescription>{t('userDetail.roles.description')}</CardDescription>

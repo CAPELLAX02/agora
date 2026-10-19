@@ -114,7 +114,7 @@ function SessionRow({ session: s, ending, onEnd }: { session: Session; ending: b
   const name = [s.browser ?? t('sessions.unknownBrowser'), s.os].filter(Boolean).join(' · ')
   return (
     <li className="flex flex-wrap items-center gap-4 py-3">
-      <span className="flex size-10 items-center justify-center rounded-lg bg-muted">
+      <span className="flex size-10 items-center justify-center rounded-full bg-muted">
         <Icon className="size-5 text-muted-foreground" aria-hidden />
       </span>
       <div className="min-w-0 flex-1 space-y-0.5">

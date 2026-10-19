@@ -346,7 +346,7 @@ export function GradebookPage() {
         <div
           role="region"
           aria-label={t('gradebook.unsavedRegion')}
-          className="sticky bottom-4 z-30 mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-amber-300/70 bg-amber-50/95 px-4 py-3 shadow-lift backdrop-blur dark:bg-amber-950/80"
+          className="sticky bottom-4 z-30 mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-amber-300/70 bg-amber-50/95 px-4 py-3 shadow-lift backdrop-blur dark:bg-amber-950/80"
         >
           <p className="min-w-0 flex-1 text-sm font-semibold">
             {t('gradebook.unsaved', { count: pending.length })}

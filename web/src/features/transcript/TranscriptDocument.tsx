@@ -61,12 +61,12 @@ export function TranscriptDocument({
 
   return (
     <article className="space-y-6" aria-label={t('transcript.title')}>
-      <header className="rounded-2xl border bg-card p-5 shadow-xs print:rounded-none print:border-0 print:p-0 print:shadow-none">
+      <header className="rounded-xl border bg-card p-5 shadow-xs print:rounded-none print:border-0 print:p-0 print:shadow-none">
         <div className="flex items-start justify-between gap-4 border-b pb-4">
           <div className="flex items-center gap-3">
             <IconChip icon={GraduationCapIcon} tone="lime" size="lg" solid className="print:hidden" />
             <div>
-              <h2 className="text-xl font-extrabold tracking-tight">
+              <h2 className="text-xl font-bold tracking-tight">
                 {sp.student.first_name} {sp.student.last_name}
               </h2>
               <p className="text-sm text-muted-foreground">
@@ -109,7 +109,7 @@ export function TranscriptDocument({
         />
         <div className="rounded-xl border border-border/70 bg-card p-3 shadow-xs">
           <dt className="text-xs font-semibold text-muted-foreground">{t('transcript.earned')}</dt>
-          <dd className="mt-0.5 text-lg font-extrabold text-sky-700 tabular-nums dark:text-sky-300">
+          <dd className="mt-0.5 text-lg font-bold text-sky-700 tabular-nums dark:text-sky-300">
             {s.earned_ects}
             <span className="text-xs font-semibold text-muted-foreground"> / {s.required_ects} AKTS</span>
           </dd>
@@ -208,7 +208,7 @@ function TermSection({
   const shown = simulated ?? r
   return (
     <section
-      className="break-inside-avoid overflow-hidden rounded-2xl border bg-card shadow-xs print:rounded-none print:shadow-none"
+      className="break-inside-avoid overflow-hidden rounded-xl border bg-card shadow-xs print:rounded-none print:shadow-none"
       aria-label={termName(t, term.term)}
     >
       <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-muted/40 px-4 py-3">
@@ -311,7 +311,7 @@ function TermSection({
                     value={simulation.edits[c.enrollment_id] ?? ''}
                     onChange={(e) => simulation.onChange(c.enrollment_id, e.target.value || null)}
                     className={cn(
-                      'h-8 w-full max-w-24 min-w-16 cursor-pointer rounded-lg border border-input bg-card px-1.5 font-mono text-xs font-bold shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
+                      'h-8 w-full max-w-24 min-w-16 cursor-pointer rounded-lg border field-focus border-input bg-card px-1.5 font-mono text-xs font-bold shadow-xs',
                       simulation.edits[c.enrollment_id] &&
                         'border-violet-500 text-violet-700 ring-2 ring-violet-500/25 dark:text-violet-300',
                     )}

@@ -23,6 +23,7 @@ import {
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
+import { DescriptionList } from '@/shared/ui/description-list'
 import { PageHeader } from '@/shared/ui/page-header'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { ErrorState } from '@/shared/ui/states'
@@ -101,41 +102,33 @@ function Program({ program: sp }: { program: StudentProgram }) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <dl className="grid gap-x-8 gap-y-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
-            {(
+          <DescriptionList
+            className="xl:grid-cols-3"
+            items={[
+              [t('students.faculty'), sp.program.faculty.name_tr],
               [
-                [t('students.faculty'), sp.program.faculty.name_tr],
-                [
-                  t('students.admission'),
-                  `${sp.admission_year} · ${t(`students.admissionTypes.${sp.admission_type}`)}`,
-                ],
-                [
-                  t('students.semester'),
-                  t('students.semesterOf', {
-                    current: sp.current_semester,
-                    normal: sp.normal_semesters,
-                    max: sp.max_semesters,
-                  }),
-                ],
-                [t('registration.facts.gpa'), sp.gpa?.toFixed(2) ?? '—'],
-                [t('students.earned'), `${sp.earned_ects} ${t('catalog.ects')}`],
-                [
-                  t('registration.facts.advisor'),
-                  sp.advisor
-                    ? [sp.advisor.title, sp.advisor.first_name, sp.advisor.last_name]
-                        .filter(Boolean)
-                        .join(' ')
-                    : '—',
-                ],
-                [t('students.curriculum'), sp.curriculum?.name_tr ?? '—'],
-              ] as const
-            ).map(([label, value]) => (
-              <div key={label} className="flex justify-between gap-4 border-b border-dashed pb-1">
-                <dt className="text-muted-foreground">{label}</dt>
-                <dd className="text-right">{value}</dd>
-              </div>
-            ))}
-          </dl>
+                t('students.admission'),
+                `${sp.admission_year} · ${t(`students.admissionTypes.${sp.admission_type}`)}`,
+              ],
+              [
+                t('students.semester'),
+                t('students.semesterOf', {
+                  current: sp.current_semester,
+                  normal: sp.normal_semesters,
+                  max: sp.max_semesters,
+                }),
+              ],
+              [t('registration.facts.gpa'), sp.gpa?.toFixed(2) ?? '—'],
+              [t('students.earned'), `${sp.earned_ects} ${t('catalog.ects')}`],
+              [
+                t('registration.facts.advisor'),
+                sp.advisor
+                  ? [sp.advisor.title, sp.advisor.first_name, sp.advisor.last_name].filter(Boolean).join(' ')
+                  : '—',
+              ],
+              [t('students.curriculum'), sp.curriculum?.name_tr ?? '—'],
+            ]}
+          />
           {sp.current_semester > sp.max_semesters && (
             <p className="mt-3 text-sm text-destructive">{t('students.beyondMax')}</p>
           )}

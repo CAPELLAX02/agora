@@ -48,7 +48,7 @@ export function DashboardPage() {
   }
   if (!me) {
     return (
-      <div className="grid gap-5 md:grid-cols-2">
+      <div className="grid gap-5 xl:grid-cols-2">
         <Skeleton className="h-44 md:col-span-2" />
         <Skeleton className="h-40" />
         <Skeleton className="h-40" />
@@ -72,12 +72,12 @@ export function DashboardPage() {
           <h2 id="shortcuts" className="text-sm font-bold tracking-wider text-muted-foreground uppercase">
             {t('dashboard.shortcuts.title')}
           </h2>
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(11.5rem,1fr))]">
             {shortcuts.map(({ to, label, icon, tone }) => (
               <li key={to}>
                 <Link
                   to={to}
-                  className="group flex h-full items-center gap-3 rounded-2xl border border-border/70 bg-card p-3.5 text-sm font-semibold shadow-soft transition-all outline-none hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-lift focus-visible:ring-4 focus-visible:ring-ring/30"
+                  className="group flex h-full items-center gap-3 rounded-xl border border-border/70 bg-card p-3.5 text-sm font-semibold shadow-soft focus-ring transition-all hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-lift"
                 >
                   <IconChip
                     icon={icon}
@@ -97,7 +97,7 @@ export function DashboardPage() {
         </section>
       )}
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid gap-5 xl:grid-cols-2">
         {hasAny(['registration:manage_own', 'assessment_plan:manage']) && <TimelineCard />}
         {has('grade:read_own') && <GradesCard />}
         {has('assessment_plan:manage') && <TeachingCard />}
@@ -180,7 +180,7 @@ function Hero({
   )
 
   return (
-    <section className="relative overflow-hidden rounded-2xl bg-brand-gradient p-6 text-white shadow-lift sm:p-8">
+    <section className="relative overflow-hidden rounded-xl bg-brand-gradient p-6 text-white shadow-lift sm:p-8">
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="absolute -top-20 right-10 size-64 rounded-full bg-amber-300/30 blur-3xl" />
         <div className="absolute -bottom-24 -left-10 size-72 rounded-full bg-sky-300/30 blur-3xl" />
@@ -189,7 +189,7 @@ function Hero({
       <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0 space-y-3">
           <p className="text-sm font-semibold text-white/80">{today}</p>
-          <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
             {t('dashboard.greeting', { name: firstName })}
           </h1>
           {sp && (
@@ -205,7 +205,7 @@ function Hero({
               {roles.map((r) => (
                 <li
                   key={`${r.role}-${r.scope_id ?? ''}`}
-                  className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold ring-1 ring-white/25 backdrop-blur-md"
+                  className="rounded-md bg-white/15 px-3 py-1 text-xs font-semibold ring-1 ring-white/25 backdrop-blur-md"
                   title={scopeLabel(r)}
                 >
                   {roleName(r)}
@@ -228,10 +228,10 @@ function Hero({
             ).map(([key, value]) => (
               <div
                 key={key}
-                className="min-w-24 rounded-2xl bg-white/15 px-4 py-3 ring-1 ring-white/25 backdrop-blur-md"
+                className="min-w-24 rounded-xl bg-white/15 px-4 py-3 ring-1 ring-white/25 backdrop-blur-md"
               >
                 <dt className="text-xs font-semibold text-white/75">{t(`dashboard.hero.${key}`)}</dt>
-                <dd className="tabular text-2xl font-extrabold">{value}</dd>
+                <dd className="tabular text-2xl font-bold">{value}</dd>
               </div>
             ))}
           </dl>

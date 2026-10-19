@@ -77,7 +77,7 @@ export function Bubble({
     <li className={cn('group/bubble flex items-start gap-1', m.mine ? 'flex-row-reverse' : 'flex-row')}>
       <div
         className={cn(
-          'max-w-[80%] rounded-2xl px-3.5 py-2 text-sm shadow-xs',
+          'max-w-[80%] rounded-xl px-3.5 py-2 text-sm shadow-xs',
           m.mine
             ? 'rounded-br-md bg-gradient-to-br from-sky-500 to-blue-600 text-white'
             : 'rounded-bl-md border border-border/70 bg-muted/40',

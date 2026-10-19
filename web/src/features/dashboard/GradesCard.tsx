@@ -84,7 +84,7 @@ export function GradesCard() {
                   <LetterGrade letter={it.letter} className="min-w-11 py-1 text-sm" />
                 ) : (
                   <span className="text-right">
-                    <span className="block font-extrabold tabular-nums">
+                    <span className="block font-bold tabular-nums">
                       {it.component.absent ? t('grades.didNotSit') : num(it.component.score!)}
                     </span>
                     {it.component.class_average !== null && (

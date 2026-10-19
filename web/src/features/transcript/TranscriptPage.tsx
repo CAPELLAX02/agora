@@ -175,7 +175,7 @@ function SimulationBar({
   const delta = gpa !== null && actualGpa !== null ? Math.round((gpa - actualGpa) * 100) / 100 : 0
   return (
     <div
-      className="sticky top-20 z-10 mb-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-2xl border border-violet-400/40 bg-violet-50/95 p-3 shadow-soft backdrop-blur sm:p-4 dark:bg-violet-950/80 print:hidden"
+      className="sticky top-20 z-10 mb-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-xl border border-violet-400/40 bg-violet-50/95 p-3 shadow-soft backdrop-blur sm:p-4 dark:bg-violet-950/80 print:hidden"
       role="status"
       aria-label={t('transcript.sim.title')}
     >
@@ -191,7 +191,7 @@ function SimulationBar({
       <dl className="flex flex-wrap items-center gap-x-6 gap-y-1 sm:gap-x-8">
         <div>
           <dt className="text-xs font-semibold text-muted-foreground">{t('transcript.sim.gpa')}</dt>
-          <dd className="flex items-baseline gap-2 text-xl font-extrabold sm:text-2xl">
+          <dd className="flex items-baseline gap-2 text-xl font-bold sm:text-2xl">
             <Gpa value={gpa} />
             {delta !== 0 && (
               <span
@@ -209,7 +209,7 @@ function SimulationBar({
         </div>
         <div>
           <dt className="text-xs font-semibold text-muted-foreground">{t('transcript.sim.earned')}</dt>
-          <dd className="text-xl font-extrabold text-sky-700 tabular-nums sm:text-2xl dark:text-sky-300">
+          <dd className="text-xl font-bold text-sky-700 tabular-nums sm:text-2xl dark:text-sky-300">
             {ects}
             {ects !== actualEcts && (
               <span className="ml-1.5 text-sm font-bold text-muted-foreground">

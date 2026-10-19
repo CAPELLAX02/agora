@@ -24,7 +24,7 @@ export function MfaBanner() {
     <div className="px-4 pt-4 md:px-6 lg:px-8">
       <div
         role="alert"
-        className="mx-auto flex max-w-6xl flex-col gap-3 rounded-2xl border border-amber-400/40 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3 sm:flex-row sm:items-center dark:from-amber-500/10 dark:to-orange-500/5"
+        className="mx-auto flex max-w-6xl flex-col gap-3 rounded-xl border border-amber-400/40 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3 sm:flex-row sm:items-center dark:from-amber-500/10 dark:to-orange-500/5"
       >
         <IconChip icon={ShieldAlertIcon} tone="amber" />
         <div className="min-w-0 flex-1 text-sm">

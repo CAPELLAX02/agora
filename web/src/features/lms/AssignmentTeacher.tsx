@@ -201,7 +201,7 @@ export function AssignmentTeacher({ activityId, fileBase }: { activityId: string
           {t('lms.assignment.teacher.noMatch')}
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-border/70 bg-card shadow-xs">
+        <div className="overflow-x-auto rounded-xl border border-border/70 bg-card shadow-xs">
           <Table>
             <TableHeader>
               <TableRow>

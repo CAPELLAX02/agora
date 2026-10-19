@@ -224,7 +224,7 @@ function CourseRows({
               {c.code}
             </span>
           </TableCell>
-          <TableCell>
+          <TableCell className="min-w-48 whitespace-normal">
             <div className="flex flex-wrap items-center gap-2">
               <Link to={`/dersler/${c.id}`} className="font-medium hover:underline">
                 {localized(c)}
@@ -235,7 +235,7 @@ function CourseRows({
           <TableCell className="hidden font-mono text-xs sm:table-cell">{hours(c)}</TableCell>
           <TableCell className="hidden sm:table-cell">{c.national_credit}</TableCell>
           <TableCell>{c.ects}</TableCell>
-          <TableCell className="hidden text-muted-foreground lg:table-cell">
+          <TableCell className="hidden whitespace-normal text-muted-foreground lg:table-cell">
             {c.owner_department ? localized(c.owner_department) : t('catalog.universityCommon')}
           </TableCell>
         </TableRow>

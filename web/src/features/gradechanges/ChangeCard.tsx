@@ -70,7 +70,7 @@ export function ChangeCard({ change: c, actions }: { change: GradeChangeRequest;
     : undefined
   return (
     <article
-      className="overflow-hidden rounded-2xl border bg-card shadow-xs"
+      className="overflow-hidden rounded-xl border bg-card shadow-xs"
       aria-label={`${c.course.code} · ${c.student.first_name} ${c.student.last_name}`}
     >
       <header className="flex items-start justify-between gap-3 border-b bg-muted/30 px-4 py-3">

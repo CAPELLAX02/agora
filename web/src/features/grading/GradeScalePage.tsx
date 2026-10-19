@@ -77,9 +77,11 @@ export function GradeScalePage() {
                     <TableHead>{t('gradeScale.letter')}</TableHead>
                     <TableHead className="text-right">{t('gradeScale.coefficient')}</TableHead>
                     <TableHead>{t('gradeScale.range')}</TableHead>
-                    <TableHead className="text-center">{t('gradeScale.passing')}</TableHead>
-                    <TableHead className="text-center">{t('gradeScale.gpa')}</TableHead>
-                    <TableHead className="text-center">{t('gradeScale.ects')}</TableHead>
+                    <TableHead className="hidden text-center sm:table-cell">
+                      {t('gradeScale.passing')}
+                    </TableHead>
+                    <TableHead className="hidden text-center sm:table-cell">{t('gradeScale.gpa')}</TableHead>
+                    <TableHead className="hidden text-center sm:table-cell">{t('gradeScale.ects')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -91,16 +93,17 @@ export function GradeScalePage() {
                       <TableCell className="text-right tabular-nums">
                         {it.coefficient?.toFixed(2) ?? '—'}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-normal">
                         <Range item={it} />
                       </TableCell>
-                      <TableCell className="text-center">
+                      {/* Dar ekranda evet/hayır sütunları gizlenir: tablo yatay kaymaz. */}
+                      <TableCell className="hidden text-center sm:table-cell">
                         <Flag on={it.is_passing} label={t('gradeScale.passing')} />
                       </TableCell>
-                      <TableCell className="text-center">
+                      <TableCell className="hidden text-center sm:table-cell">
                         <Flag on={it.counts_in_gpa} label={t('gradeScale.gpa')} />
                       </TableCell>
-                      <TableCell className="text-center">
+                      <TableCell className="hidden text-center sm:table-cell">
                         <Flag on={it.earns_ects} label={t('gradeScale.ects')} />
                       </TableCell>
                     </TableRow>
@@ -173,11 +176,11 @@ function Regulations() {
           <TableBody>
             {data.items.map((p) => (
               <TableRow key={p.key}>
-                <TableCell>
+                <TableCell className="min-w-40 whitespace-normal">
                   <p className="text-sm">{p.description_tr}</p>
-                  <p className="font-mono text-xs text-muted-foreground">{p.key}</p>
+                  <p className="font-mono text-xs break-all text-muted-foreground">{p.key}</p>
                 </TableCell>
-                <TableCell>
+                <TableCell className="whitespace-normal">
                   <Value parameter={p} />
                 </TableCell>
                 <TableCell className="hidden text-sm text-muted-foreground md:table-cell">

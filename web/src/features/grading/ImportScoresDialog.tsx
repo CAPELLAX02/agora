@@ -205,7 +205,7 @@ export function ImportScoresDialog({
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
           className={cn(
-            'flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-emerald-400/50 bg-emerald-50/50 px-4 py-6 text-center transition-colors hover:bg-emerald-50 dark:bg-emerald-500/5',
+            'flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-emerald-400/50 bg-emerald-50/50 px-4 py-6 text-center transition-colors hover:bg-emerald-50 dark:bg-emerald-500/5',
             dragging && 'border-emerald-500 bg-emerald-100/60',
           )}
         >
@@ -277,7 +277,7 @@ export function ImportScoresDialog({
                   <dt className="text-xs font-semibold text-muted-foreground">
                     {t(`gradebook.import.summary.${k}`)}
                   </dt>
-                  <dd className="text-xl font-extrabold tabular-nums">{result.summary[k]}</dd>
+                  <dd className="text-xl font-bold tabular-nums">{result.summary[k]}</dd>
                 </div>
               ))}
             </dl>

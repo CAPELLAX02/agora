@@ -154,7 +154,7 @@ function Rows({
               </Link>
             </span>
           </TableCell>
-          <TableCell className="text-sm">{sp.program.name_tr}</TableCell>
+          <TableCell className="min-w-44 text-sm whitespace-normal">{sp.program.name_tr}</TableCell>
           <TableCell className="text-right tabular-nums">{sp.current_semester}</TableCell>
           <TableCell className="text-right">
             <Gpa value={sp.gpa} />

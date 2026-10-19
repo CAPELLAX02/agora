@@ -54,7 +54,7 @@ export function MySpacesPage() {
               <li key={s.section_id}>
                 <Link
                   to={`/derslerim/${s.section_id}`}
-                  className="group relative flex h-full flex-col gap-3 overflow-hidden rounded-2xl border border-border/70 bg-card p-5 pt-6 shadow-soft transition-all outline-none hover:-translate-y-0.5 hover:shadow-lift focus-visible:ring-4 focus-visible:ring-ring/30"
+                  className="group relative flex h-full flex-col gap-3 overflow-hidden rounded-xl border border-border/70 bg-card p-5 pt-6 shadow-soft focus-ring transition-all hover:-translate-y-0.5 hover:shadow-lift"
                 >
                   <span aria-hidden className={cn('absolute inset-x-0 top-0 h-1.5', toneFill[tone])} />
                   <div className="flex items-start justify-between gap-2">

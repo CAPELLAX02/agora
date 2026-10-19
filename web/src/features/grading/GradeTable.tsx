@@ -95,7 +95,7 @@ export function GradeTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-border/70 bg-card shadow-xs">
+    <div className="overflow-x-auto rounded-xl border border-border/70 bg-card shadow-xs">
       <table className="w-full min-w-max border-collapse text-sm">
         <thead>
           <tr className="border-b bg-muted text-left">
@@ -202,10 +202,9 @@ export function GradeTable({
                         onFocus={(e) => e.currentTarget.select()}
                         onKeyDown={(e) => onKeyDown(e, row, col, key)}
                         className={cn(
-                          'h-9 w-full min-w-20 rounded-lg border border-input bg-card px-2 text-center font-semibold uppercase tabular-nums outline-none',
-                          'focus-visible:border-primary/60 focus-visible:ring-4 focus-visible:ring-ring/20',
+                          'h-9 w-full min-w-20 rounded-lg border field-focus border-input bg-card px-2 text-center font-semibold uppercase tabular-nums',
                           dirty && 'border-amber-400 bg-amber-50 dark:bg-amber-400/10',
-                          invalid && 'border-destructive bg-rose-50 ring-destructive/20 dark:bg-rose-500/10',
+                          invalid && 'border-destructive bg-rose-50 dark:bg-rose-500/10',
                           /^(g|gr|abs|absent)$/i.test(draft ?? formatCell(saved, absentMark, decimal)) &&
                             'text-amber-700 dark:text-amber-300',
                         )}

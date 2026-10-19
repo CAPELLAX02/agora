@@ -70,7 +70,8 @@ export function GradesPage() {
         <EmptyState {...navTheme('/notlarim')}>{t('grades.none')}</EmptyState>
       ) : (
         <div className="space-y-6">
-          <nav aria-label={t('grades.terms')} className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+          {/* Dönemler sığmayınca alt satıra geçer: yatay kaydırma yok. */}
+          <nav aria-label={t('grades.terms')} className="flex flex-wrap gap-1.5">
             {[...data.terms].reverse().map((term) => (
               <button
                 key={term.id}
@@ -78,7 +79,7 @@ export function GradesPage() {
                 aria-current={term.id === data.term.id ? 'page' : undefined}
                 onClick={() => setParams({ donem: term.id })}
                 className={cn(
-                  'shrink-0 cursor-pointer rounded-full border px-3.5 py-1.5 text-sm font-semibold whitespace-nowrap transition-colors',
+                  'cursor-pointer rounded-md border px-3 py-1.5 text-sm font-semibold whitespace-nowrap focus-ring transition-colors',
                   term.id === data.term.id
                     ? 'border-transparent bg-brand-gradient text-white shadow-soft'
                     : 'border-border bg-card text-muted-foreground hover:text-foreground',
@@ -94,7 +95,7 @@ export function GradesPage() {
           {data.courses.length === 0 ? (
             <EmptyState {...navTheme('/notlarim')}>{t('grades.emptyTerm')}</EmptyState>
           ) : (
-            <div className={cn('grid gap-4 lg:grid-cols-2', isFetching && 'opacity-70 transition-opacity')}>
+            <div className={cn('grid gap-4 xl:grid-cols-2', isFetching && 'opacity-70 transition-opacity')}>
               {data.courses.map((c) => (
                 <CourseCard key={c.enrollment_id} course={c} />
               ))}
@@ -113,7 +114,7 @@ function CourseCard({ course: c }: { course: Course }) {
   const absent = c.attendance_status === 'ATTENDANCE_FAIL'
   return (
     <article
-      className="relative overflow-hidden rounded-2xl border bg-card shadow-xs"
+      className="relative overflow-hidden rounded-xl border bg-card shadow-xs"
       aria-label={`${c.course.code} ${localized(c.course)}`}
     >
       <span aria-hidden className={cn('absolute inset-y-0 left-0 w-1.5', toneFill[tone])} />
@@ -200,7 +201,7 @@ function ComponentRow({ component: comp }: { component: Component }) {
         ) : comp.absent ? (
           <Badge variant="destructive">{t('grades.didNotSit')}</Badge>
         ) : (
-          <span className="shrink-0 text-base font-extrabold tabular-nums">{comp.score ?? '—'}</span>
+          <span className="shrink-0 text-base font-bold tabular-nums">{comp.score ?? '—'}</span>
         )}
       </div>
       {published && (comp.score !== null || comp.class_average !== null) && (

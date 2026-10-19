@@ -48,7 +48,7 @@ export function GradeChangesPage() {
       ) : data.items.length === 0 ? (
         <EmptyState {...navTheme('/not-duzeltme')}>{t('gradeChanges.empty')}</EmptyState>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-4 xl:grid-cols-2">
           {data.items.map((c) => (
             <ChangeCard
               key={c.id}
