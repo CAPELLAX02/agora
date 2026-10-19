@@ -266,6 +266,11 @@ stateDiagram-v2
 
 | Tablo | Sütunlar | Not |
 | --- | --- | --- |
+| `class_sessions` | id, section_id FK, term_id, schedule_slot_id null (telafide boş), session_type CK(`THEORY, PRACTICE, LAB`), kind CK(`REGULAR, MAKEUP`), starts_at, ends_at, classroom_id, status CK(`SCHEDULED, HELD, CANCELLED`), topic, taken_at, taken_by, version | Faz 7'de uygulandı (§5 #21). UQ(section_id, starts_at); CK: HELD ⇔ taken_at dolu. Şubenin haftalık programından **üretilir**: derslerin sürdüğü dönemde (`CLASSES` olayı; fakültenin kendisi üniversitenin yerine geçer) her blok her hafta bir oturum, yayımlanmış `HOLIDAY` olayına değen oturum yok. Eşitleme tekrar edilebilir (worker günlük, oturum listesi açılırken): programdan kalkmış gelecekteki boş oturum silinir, geçmiş, yoklaması alınmış, iptal edilmiş ve telafi oturumlarına dokunulmaz |
+| `attendance_records` | term_id, session_id, enrollment_id, status CK(`PRESENT, ABSENT, LATE, EXCUSED`), method CK(`MANUAL, QR`), recorded_by, recorded_at — PK(term_id, session_id, enrollment_id) | Faz 7'de uygulandı. **Dönem başına liste partition'ı** (`term_id`; varsayılan partition yok, `attendance.ensure_term_partition` yazmadan önce açar). Hacim: ~92k öğrenci × ~7 ders × ~42 oturum ≈ 25M satır/dönem. Kısmi index(enrollment_id) `WHERE status = 'ABSENT'` |
+| `warnings_sent` | enrollment_id, session_group CK(`THEORY, PRACTICE`), level CK(`NEAR, OVER`), sent_at — PK üçü | Faz 7'de uygulandı. Devamsızlık sınırın %70'ine ulaşınca ve sınır aşılınca birer kez bildirim (`attendance.warning`). Sınır: yönetmelik parametresi `attendance_max_absence_pct` × iptal edilmeyen oturumlar (uygulama grubu = uygulama + laboratuvar), aşağı yuvarlanır |
+
+--- | --- | --- |
 | `class_sessions` | id, section_id FK, schedule_slot_id null, starts_at, ends_at, session_type, classroom_id, status CK(`SCHEDULED, HELD, CANCELLED, MAKEUP`), topic | UQ(section_id, starts_at). Dönem başında programdan **otomatik üretilir** (tatiller hariç: `HOLIDAY` olayları) |
 | `attendance_records` | id bigint identity, class_session_id, enrollment_id, status CK(`PRESENT, ABSENT, LATE, EXCUSED`), method CK(`MANUAL, QR, LIVE_SESSION`), recorded_by, recorded_at | **Partition**: `recorded_at` aylık. Hacim: ~92k öğrenci × ~7 ders × ~42 oturum ≈ 25M satır/dönem |
 

@@ -374,6 +374,16 @@ canMessage(actor, peer):                                         # uygulandı (F
     # yönetici). Şube grubunun üyeleri şubenin öğretim elemanları ve bırakmamış öğrencileridir;
     # öğretim elemanı grubun yöneticisidir. Konuşmaya erişemeyene konuşma yokmuş gibi 404.
 
+canTakeAttendance(actor, section):                               # uygulandı (Faz 7)
+    roleIn(actor, section) IN ('PRIMARY', 'CO_INSTRUCTOR', 'ASSISTANT')   # ilişki: asistan da alır
+    # Oturum listesi, telafi ve iptal, yoklama listesi ve şubenin devamsızlık özeti de aynı
+    # politikadır; başkasına 403. Yoklama oturum başlamadan en çok 30 dakika önce alınır,
+    # iptal edilmiş oturumun yoklaması alınmaz, yoklaması alınmış oturum iptal edilmez.
+    # Devamsızlıktan kalma (ATTENDANCE_FAIL) kararı not tablosunda öğretim elemanınındır.
+
+canReadOwnAttendance(actor):                                     # uygulandı (Faz 7)
+    has(actor, "attendance:read_own")                                # sadece kendi kesin kayıtları
+
 canEditAssessmentPlan(actor, section):                           # uygulandı (Faz 2)
     ( has(actor, "assessment_plan:manage")
       AND roleIn(actor, section) IN ('PRIMARY', 'CO_INSTRUCTOR') )   # ilişki: section_instructors
