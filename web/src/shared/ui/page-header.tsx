@@ -30,7 +30,7 @@ export function PageHeader({
       <div className="flex min-w-0 items-center gap-4">
         {icon && <IconChip icon={icon} tone={tone} size="lg" solid className="hidden sm:inline-flex" />}
         <div className="min-w-0 space-y-1">
-          <h1 className="text-2xl font-extrabold tracking-tight sm:text-[1.7rem]">{title}</h1>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-[1.65rem]">{title}</h1>
           {description && <p className="text-sm text-muted-foreground">{description}</p>}
         </div>
       </div>

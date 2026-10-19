@@ -5,13 +5,13 @@ import { cn } from '@/shared/lib/utils'
 import { toneSoft, toneSolid, type Tone } from './tone'
 
 const sizes = {
-  sm: 'size-7 rounded-lg [&>svg]:size-3.5',
-  md: 'size-9 rounded-xl [&>svg]:size-[18px]',
-  lg: 'size-11 rounded-xl [&>svg]:size-5',
-  xl: 'size-14 rounded-2xl [&>svg]:size-7',
+  sm: 'size-7 [&>svg]:size-3.5',
+  md: 'size-9 [&>svg]:size-[18px]',
+  lg: 'size-11 [&>svg]:size-5',
+  xl: 'size-14 [&>svg]:size-7',
 } as const
 
-/** IconChip, bir ikonu renkli, yuvarlak köşeli bir kutuda gösterir. */
+/** IconChip, bir ikonu renkli, tamamen yuvarlak bir kutuda gösterir (her yerde aynı biçim). */
 export function IconChip({
   icon: Icon,
   tone = 'indigo',
@@ -30,7 +30,7 @@ export function IconChip({
     <span
       aria-hidden
       className={cn(
-        'inline-flex shrink-0 items-center justify-center',
+        'inline-flex shrink-0 items-center justify-center rounded-full',
         sizes[size],
         solid ? cn(toneSolid[tone], 'shadow-sm') : toneSoft[tone],
         className,

@@ -33,7 +33,7 @@ export function EmptyState({
         className,
       )}
     >
-      <IconChip icon={icon} tone={tone} size="xl" className="mb-1 rounded-full" />
+      <IconChip icon={icon} tone={tone} size="xl" className="mb-1" />
       <div className="max-w-sm leading-relaxed">{children}</div>
       {action}
     </div>

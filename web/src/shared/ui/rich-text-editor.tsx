@@ -47,7 +47,7 @@ function ToolButton({
       onMouseDown={(e) => e.preventDefault()}
       onClick={() => onClick(editor)}
       className={cn(
-        'inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40',
+        'inline-flex size-8 items-center justify-center rounded-md text-muted-foreground focus-ring transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40',
         active && 'bg-primary/10 text-primary',
       )}
     >
@@ -133,7 +133,7 @@ export function RichTextEditor({
     e.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
   }
   return (
-    <div className="overflow-hidden rounded-lg border border-input bg-card focus-within:border-primary/60 focus-within:ring-4 focus-within:ring-ring/20">
+    <div className="overflow-hidden rounded-lg border field-focus border-input bg-card shadow-xs transition-[box-shadow,border-color]">
       <div
         role="toolbar"
         aria-label={t('richText.toolbar')}

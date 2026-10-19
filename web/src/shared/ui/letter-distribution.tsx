@@ -32,7 +32,7 @@ export function LetterDistributionChart({
           <span
             aria-hidden
             className={cn(
-              'w-full max-w-12 rounded-t-lg transition-all',
+              'w-full max-w-12 rounded-t-sm transition-all',
               letterBars[d.letter] ?? 'bg-muted-foreground/40',
               d.count === 0 && 'opacity-25',
               highlight === d.letter && 'ring-4 ring-primary/40',

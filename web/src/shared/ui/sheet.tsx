@@ -32,7 +32,7 @@ export function SheetContent({
         {...props}
       >
         {children}
-        <SheetPrimitive.Close className="absolute top-4 right-4 cursor-pointer rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-4 focus-visible:ring-ring/30 focus-visible:outline-none">
+        <SheetPrimitive.Close className="absolute top-4 right-4 cursor-pointer rounded-full p-1.5 text-muted-foreground focus-ring transition-colors hover:bg-muted hover:text-foreground">
           <XIcon className="size-4" />
           <span className="sr-only">{closeLabel}</span>
         </SheetPrimitive.Close>

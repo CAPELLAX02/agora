@@ -7,7 +7,7 @@ export function LetterGrade({ letter, className }: { letter: string; className?:
   return (
     <span
       className={cn(
-        'inline-flex min-w-9 items-center justify-center rounded-lg px-1.5 py-0.5 font-mono text-xs font-extrabold shadow-xs',
+        'inline-flex min-w-9 items-center justify-center rounded-md px-1.5 py-0.5 font-mono text-xs font-bold shadow-xs',
         letterColors[letter] ?? 'bg-muted text-muted-foreground',
         className,
       )}

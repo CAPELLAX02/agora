@@ -26,14 +26,14 @@ export function StatTile({
   return (
     <div
       className={cn(
-        'flex items-center gap-3 rounded-xl border border-border/70 bg-card p-3 shadow-xs',
+        'flex items-center gap-3 rounded-lg border border-border/70 bg-card p-3 shadow-xs',
         className,
       )}
     >
       {icon && <IconChip icon={icon} tone={tone} />}
       <div className="min-w-0">
         <dt className="text-xs leading-tight font-semibold text-muted-foreground">{label}</dt>
-        <dd className={cn('text-lg font-extrabold whitespace-nowrap tabular-nums', toneText[tone])}>
+        <dd className={cn('text-lg font-bold whitespace-nowrap tabular-nums', toneText[tone])}>
           {value}
           {suffix && (
             <>
