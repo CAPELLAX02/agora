@@ -296,3 +296,127 @@ func containsID(list []attendance.Session, id string) bool {
 	}
 	return false
 }
+
+func TestAbsenceReportAndWarnings(t *testing.T) {
+	pool := dbtest.New(t)
+	f := seed(t, pool)
+	ctx := context.Background()
+	svc := attendance.NewService(pool, time.Now)
+	list, err := svc.Sessions(ctx, f.section)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var labs, theory []attendance.Session
+	var futureTheory attendance.Session
+	for _, x := range list {
+		switch {
+		case x.StartsAt.After(time.Now()):
+			if x.Type == attendance.TypeTheory && futureTheory.ID == "" {
+				futureTheory = x
+			}
+		case x.Type == attendance.TypeLab:
+			labs = append(labs, x)
+		default:
+			theory = append(theory, x)
+		}
+	}
+	take := func(x attendance.Session, statuses map[string]string) {
+		t.Helper()
+		cur, err := svc.Session(ctx, pool, x.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := svc.Take(ctx, f.teacher, x.ID, cur.Version, statuses); err != nil {
+			t.Fatal(err)
+		}
+	}
+	warnings := func(enrollment string) []string {
+		t.Helper()
+		rows, err := pool.Query(ctx, `
+			SELECT n.payload->>'level' FROM communication.notifications n
+			JOIN iam.users u ON u.id = n.user_id JOIN people.students st ON st.person_id = u.person_id
+			JOIN enrollment.student_programs sp ON sp.student_id = st.id JOIN enrollment.enrollments e ON e.student_program_id = sp.id
+			WHERE e.id = $1 AND n.type_code = 'attendance.warning' ORDER BY n.id`, enrollment)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out []string
+		for rows.Next() {
+			var s string
+			if err := rows.Scan(&s); err != nil {
+				t.Fatal(err)
+			}
+			out = append(out, s)
+		}
+		return out
+	}
+
+	// Ders dönemi tam 8 hafta: teori 7 oturum (biri tatil), sınır %30 → 2; laboratuvar 8 oturum,
+	// sınır %20 → 1. Ali iki laboratuvara gelmez: birincide sınıra yaklaşır, ikincide aşar.
+	take(labs[0], map[string]string{f.ali: attendance.Absent})
+	if got := warnings(f.ali); len(got) != 1 || got[0] != "NEAR" {
+		t.Fatalf("ilk devamsızlık: %v", got)
+	}
+	take(labs[1], map[string]string{f.ali: attendance.Absent, f.can: attendance.Late})
+	take(labs[1], map[string]string{f.ali: attendance.Absent}) // düzeltme yeni uyarı göndermez
+	if got := warnings(f.ali); len(got) != 2 || got[1] != "OVER" {
+		t.Fatalf("sınır aşımı: %v", got)
+	}
+	// Teoride bir devamsızlık sınırın (2) %70'ine ulaşmaz.
+	take(theory[0], map[string]string{f.ece: attendance.Absent})
+	if got := warnings(f.ece); len(got) != 0 {
+		t.Errorf("teoride erken uyarı: %v", got)
+	}
+
+	mine, err := svc.Mine(ctx, f.aliUser(t, pool), f.term)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(mine) != 1 || mine[0].CourseCode != "BIL1001" || len(mine[0].Usage) != 2 || len(mine[0].Sessions) != len(list) {
+		t.Fatalf("öğrencinin raporu: %+v", mine)
+	}
+	th, pr := mine[0].Usage[0], mine[0].Usage[1]
+	if th.Group != attendance.GroupTheory || th.Planned != 7 || th.Absences != 0 || *th.Limit != 2 || th.Pct != 30 {
+		t.Errorf("teori: %+v", th)
+	}
+	if pr.Group != attendance.GroupPractice || pr.Planned != 8 || pr.Absences != 2 || *pr.Limit != 1 || !pr.Exceeded() {
+		t.Errorf("uygulama: %+v", pr)
+	}
+	absent := 0
+	for _, x := range mine[0].Sessions {
+		if x.Record == attendance.Absent {
+			absent++
+		}
+	}
+	if absent != 2 {
+		t.Errorf("rapordaki devamsız oturumlar: %d", absent)
+	}
+
+	// İptal edilen oturum planlanandan düşer: teoride 6 oturum, sınır 1.
+	if err := svc.UpdateSession(ctx, f.teacher, futureTheory.ID, futureTheory.Version, attendance.SessionUpdate{Cancelled: true}); err != nil {
+		t.Fatal(err)
+	}
+	summary, err := svc.Summary(ctx, f.section)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(summary) != 3 || summary[0].StudentNo != "25000001" {
+		t.Fatalf("şube özeti: %+v", summary)
+	}
+	if u := summary[1].Usage[0]; u.Planned != 6 || *u.Limit != 1 || u.Absences != 1 || !u.Near() || u.Exceeded() {
+		t.Errorf("Ece teori: %+v", u)
+	}
+	if u := summary[0].Usage[1]; !u.Exceeded() || summary[0].AttendanceStatus != "CONTINUING" {
+		t.Errorf("Ali uygulama: %+v %s", u, summary[0].AttendanceStatus)
+	}
+}
+
+// aliUser, Ali'nin kullanıcı kimliğidir.
+func (f fixture) aliUser(t *testing.T, pool *pgxpool.Pool) string {
+	t.Helper()
+	var id string
+	if err := pool.QueryRow(context.Background(), `SELECT id FROM iam.users WHERE username = '25000001'`).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}

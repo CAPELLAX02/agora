@@ -49,6 +49,8 @@ const (
 
 	MessageReceived Type = "message.received"
 
+	AttendanceWarning Type = "attendance.warning"
+
 	WindowOpening Type = "reminder.window_opening"
 	WindowClosing Type = "reminder.window_closing"
 	AssignmentDue Type = "reminder.assignment_due"

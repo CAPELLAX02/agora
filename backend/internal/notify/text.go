@@ -176,6 +176,12 @@ var texts = map[Type]Text{
 		BodyEN:  "{{.window_en}} ends on {{.at_en}}; don't forget to complete your steps.",
 	},
 	// Veri: course_code, title, due_tr, due_en.
+	AttendanceWarning: {
+		TitleTR: "{{.course_code}} · {{if eq .level \"OVER\"}}devamsızlık sınırını aştınız{{else}}devamsızlık sınırına yaklaşıyorsunuz{{end}}",
+		TitleEN: "{{.course_code}} · {{if eq .level \"OVER\"}}you exceeded the absence limit{{else}}you are close to the absence limit{{end}}",
+		BodyTR:  "{{.group_tr}} oturumlarında {{.absences}} devamsızlığınız var; sınır {{.limit}}.{{if eq .level \"OVER\"}} Öğretim elemanı devamsızlıktan kalma kararı verebilir.{{end}}",
+		BodyEN:  "You have {{.absences}} absences in {{.group_en}} sessions; the limit is {{.limit}}.{{if eq .level \"OVER\"}} Your instructor may fail you for non-attendance.{{end}}",
+	},
 	AssignmentDue: {
 		TitleTR: "{{.course_code}} · “{{.title}}” için son tarih yaklaşıyor",
 		TitleEN: "{{.course_code}} · “{{.title}}” is due soon",

@@ -52,7 +52,8 @@ const earlyTake = 30 * time.Minute
 
 // Take, oturumun yoklamasını yazar (iyimser kilitle): statuses kesin kayıt başına durumdur,
 // listede olmayan öğrenciler gelmiş sayılır. Oturum yoklaması alınmış (HELD) olur; tekrar
-// yazmak düzeltmedir. İptal edilmiş ve henüz başlamamış oturumun yoklaması alınmaz.
+// yazmak düzeltmedir. İptal edilmiş ve henüz başlamamış oturumun yoklaması alınmaz. Sınırın
+// %70'ine ulaşan ya da sınırı aşan öğrenciye aynı transaction'da uyarı bildirilir.
 func (s *Service) Take(ctx context.Context, actorID, sessionID string, version int, statuses map[string]string) error {
 	for id, st := range statuses {
 		if st != Present && st != Absent && st != Late && st != Excused {
@@ -61,14 +62,14 @@ func (s *Service) Take(ctx context.Context, actorID, sessionID string, version i
 	}
 	return db.InTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var (
-			sectionID, termID, status string
-			current                   int
-			early                     bool
+			sectionID, termID, status, group string
+			current                          int
+			early                            bool
 		)
 		err := tx.QueryRow(ctx, `
-			SELECT section_id, term_id, status, version, starts_at - $2::interval > now()
-			FROM attendance.class_sessions WHERE id = $1 FOR UPDATE`,
-			sessionID, fmt.Sprintf("%d seconds", int(earlyTake.Seconds()))).Scan(&sectionID, &termID, &status, &current, &early)
+			SELECT c.section_id, c.term_id, c.status, `+groupExpr+`, c.version, c.starts_at - $2::interval > now()
+			FROM attendance.class_sessions c WHERE c.id = $1 FOR UPDATE`,
+			sessionID, fmt.Sprintf("%d seconds", int(earlyTake.Seconds()))).Scan(&sectionID, &termID, &status, &group, &current, &early)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrNotFound
 		}
@@ -129,6 +130,9 @@ func (s *Service) Take(ctx context.Context, actorID, sessionID string, version i
 			UPDATE attendance.class_sessions SET status = 'HELD', taken_at = now(), taken_by = $2, version = version + 1, updated_at = now()
 			WHERE id = $1`, sessionID, actorID); err != nil {
 			return fmt.Errorf("attendance: oturum güncellenemedi: %w", err)
+		}
+		if err := warn(ctx, tx, termID, group, ids); err != nil {
+			return err
 		}
 		return audit.Record(ctx, tx, audit.Entry{ActorUserID: actorID, Action: "attendance.take", EntityType: "class_session",
 			EntityID: sessionID, After: map[string]any{"students": len(roster), "absent": absent, "correction": status == StatusHeld}})
