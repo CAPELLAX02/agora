@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { NavLink } from 'react-router'
 
 import { usePermissions } from '@/features/auth/usePermissions'
+import { useGetMyUnreadMessageCountQuery } from '@/shared/api/generated'
 import { cn } from '@/shared/lib/utils'
 import { Brand } from '@/shared/ui/brand'
 import { toneSoft, toneSolid } from '@/shared/ui/tone'
@@ -25,7 +26,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
               {t(group.label)}
             </p>
             <ul className="space-y-0.5">
-              {items.map(({ to, label, icon: Icon, tone, end }) => (
+              {items.map(({ to, label, icon: Icon, tone, end, count }) => (
                 <li key={to}>
                   <NavLink
                     to={to}
@@ -54,7 +55,8 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                         >
                           <Icon />
                         </span>
-                        {t(label)}
+                        <span className="flex-1">{t(label)}</span>
+                        {count === 'messages' && <UnreadMessages />}
                       </>
                     )}
                   </NavLink>
@@ -65,6 +67,23 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
         )
       })}
     </nav>
+  )
+}
+
+/** UnreadMessages, menüdeki okunmamış ileti sayacıdır. */
+function UnreadMessages() {
+  const { t } = useTranslation()
+  const { data } = useGetMyUnreadMessageCountQuery()
+  if (!data?.count) {
+    return null
+  }
+  return (
+    <span
+      className="min-w-5 rounded-full bg-gradient-to-br from-sky-500 to-blue-600 px-1.5 text-center text-[11px] leading-5 font-bold text-white tabular-nums"
+      aria-label={t('messages.unread', { count: data.count })}
+    >
+      {data.count > 99 ? '99+' : data.count}
+    </span>
   )
 }
 

@@ -56,6 +56,13 @@ export const routes: RouteObject[] = [
                   { path: 'profil', element: <ProfilePage /> },
                   { path: 'guvenlik', element: <SecurityPage /> },
                   {
+                    path: 'mesajlar/:id?',
+                    lazy: async () => {
+                      const { MessagesPage } = await import('@/features/messages/MessagesPage')
+                      return { element: <MessagesPage /> }
+                    },
+                  },
+                  {
                     path: 'duyurular',
                     lazy: async () => {
                       const { AnnouncementsPage } = await import('@/features/announcements/AnnouncementsPage')

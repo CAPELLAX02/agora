@@ -110,7 +110,8 @@
     "gradeChangeReview": "Correction approvals",
     "communication": "Communication",
     "announcements": "Announcements",
-    "manageAnnouncements": "Manage announcements"
+    "manageAnnouncements": "Manage announcements",
+    "messages": "Messages"
   },
   "auth": {
     "restoring": "Signing you in…",
@@ -2363,5 +2364,44 @@
       "titleRequired": "Enter a title.",
       "audienceRequired": "Choose a scope and unit for each target."
     }
+  },
+  "messages": {
+    "title": "Messages",
+    "description": "Write to your instructors, your advisor and your course groups.",
+    "conversations": "Conversations",
+    "search": "Search conversations",
+    "empty": "You have no conversations yet.",
+    "noMatch": "No conversation matches.",
+    "pick": "Pick a conversation on the left or start a new one.",
+    "noMessages": "No messages yet",
+    "deleted": "This message was deleted.",
+    "you": "You: ",
+    "unread_one": "{{count}} unread message",
+    "unread_other": "{{count}} unread messages",
+    "back": "Back to conversations",
+    "staff": "Staff",
+    "members_one": "{{count}} member",
+    "members_other": "{{count}} members",
+    "history": "Messages",
+    "loadOlder": "Earlier messages",
+    "start": "Write the first message.",
+    "edited": "edited",
+    "placeholder": "Write a message… (Enter sends, Shift+Enter for a new line)",
+    "compose": "Message",
+    "send": "Send",
+    "new": "New conversation",
+    "newHintStudent": "You can write to the instructors of your sections and your advisor; you talk with classmates in the course group.",
+    "newHintStaff": "Search by name or number to write directly, or create a group with several people.",
+    "direct": "Direct",
+    "group": "Group",
+    "groupTitle": "Group name",
+    "filterContacts": "Filter contacts",
+    "searchPeople": "Search by name or number",
+    "contacts": "Contacts",
+    "typeToSearch": "Type at least two letters to search.",
+    "noContacts": "No one found.",
+    "picked_one": "{{count}} person selected",
+    "picked_other": "{{count}} people selected",
+    "createGroup": "Create group"
   }
 }

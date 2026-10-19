@@ -110,7 +110,8 @@
     "gradeChangeReview": "Not düzeltme onayları",
     "communication": "İletişim",
     "announcements": "Duyurular",
-    "manageAnnouncements": "Duyuru yönetimi"
+    "manageAnnouncements": "Duyuru yönetimi",
+    "messages": "Mesajlar"
   },
   "auth": {
     "restoring": "Oturum açılıyor…",
@@ -2363,5 +2364,44 @@
       "titleRequired": "Başlık yazın.",
       "audienceRequired": "Her hedef için kapsam ve birim seçin."
     }
+  },
+  "messages": {
+    "title": "Mesajlar",
+    "description": "Öğretim elemanlarınız, danışmanınız ve ders gruplarınızla yazışın.",
+    "conversations": "Konuşmalar",
+    "search": "Konuşmalarda ara",
+    "empty": "Henüz konuşmanız yok.",
+    "noMatch": "Aramaya uyan konuşma yok.",
+    "pick": "Soldan bir konuşma seçin ya da yeni bir konuşma başlatın.",
+    "noMessages": "Henüz ileti yok",
+    "deleted": "Bu ileti silindi.",
+    "you": "Sen: ",
+    "unread_one": "{{count}} okunmamış ileti",
+    "unread_other": "{{count}} okunmamış ileti",
+    "back": "Konuşmalara dön",
+    "staff": "Personel",
+    "members_one": "{{count}} üye",
+    "members_other": "{{count}} üye",
+    "history": "İletiler",
+    "loadOlder": "Önceki iletiler",
+    "start": "İlk iletiyi siz yazın.",
+    "edited": "düzenlendi",
+    "placeholder": "İleti yazın… (Enter gönderir, Shift+Enter satır atlatır)",
+    "compose": "İleti",
+    "send": "Gönder",
+    "new": "Yeni konuşma",
+    "newHintStudent": "Şubelerinizin öğretim elemanlarına ve danışmanınıza yazabilirsiniz; ders arkadaşlarınızla ders grubunda yazışırsınız.",
+    "newHintStaff": "Ad ya da numarayla arayıp birebir yazın ya da birden çok kişiyle grup kurun.",
+    "direct": "Birebir",
+    "group": "Grup",
+    "groupTitle": "Grup adı",
+    "filterContacts": "Kişilerde ara",
+    "searchPeople": "Ad ya da numarayla ara",
+    "contacts": "Kişiler",
+    "typeToSearch": "Aramak için en az iki harf yazın.",
+    "noContacts": "Kişi bulunamadı.",
+    "picked_one": "{{count}} kişi seçildi",
+    "picked_other": "{{count}} kişi seçildi",
+    "createGroup": "Grubu kur"
   }
 }

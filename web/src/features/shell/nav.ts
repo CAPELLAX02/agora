@@ -7,6 +7,7 @@ import {
   ListChecksIcon,
   LockIcon,
   MegaphoneIcon,
+  MessageCircleIcon,
   MonitorPlayIcon,
   NotebookTextIcon,
   UsersRoundIcon,
@@ -43,6 +44,8 @@ export type NavItem = {
   /** scoped, yetkinin bir birimi kapsaması gerektiğini söyler (ilişkiye dayalı veriliş yetmez). */
   scoped?: boolean
   end?: boolean
+  /** count, öğenin yanında gösterilen sayaçtır (ör. okunmamış iletiler). */
+  count?: 'messages'
 }
 
 export type NavGroup = { label: Key; items: NavItem[] }
@@ -180,6 +183,7 @@ export const navGroups: NavGroup[] = [
   {
     label: 'nav.communication',
     items: [
+      { to: '/mesajlar', label: 'nav.messages', tone: 'sky', icon: MessageCircleIcon, count: 'messages' },
       {
         to: '/duyurular',
         label: 'nav.announcements',
