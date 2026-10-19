@@ -162,6 +162,26 @@ var texts = map[Type]Text{
 		BodyTR:  "{{if .conversation}}{{.conversation}}: {{end}}{{.preview}}",
 		BodyEN:  "{{if .conversation}}{{.conversation}}: {{end}}{{.preview}}",
 	},
+	// Hatırlatmalar. Veri: window_tr, window_en, at_tr, at_en (açılış ya da kapanış anı).
+	WindowOpening: {
+		TitleTR: "{{.window_tr}} yakında başlıyor",
+		TitleEN: "{{.window_en}} starts soon",
+		BodyTR:  "{{.window_tr}} {{.at_tr}} tarihinde başlıyor.",
+		BodyEN:  "{{.window_en}} starts on {{.at_en}}.",
+	},
+	WindowClosing: {
+		TitleTR: "{{.window_tr}} yakında sona eriyor",
+		TitleEN: "{{.window_en}} ends soon",
+		BodyTR:  "{{.window_tr}} {{.at_tr}} tarihinde sona eriyor; işlemlerinizi tamamlamayı unutmayın.",
+		BodyEN:  "{{.window_en}} ends on {{.at_en}}; don't forget to complete your steps.",
+	},
+	// Veri: course_code, title, due_tr, due_en.
+	AssignmentDue: {
+		TitleTR: "{{.course_code}} · “{{.title}}” için son tarih yaklaşıyor",
+		TitleEN: "{{.course_code}} · “{{.title}}” is due soon",
+		BodyTR:  "Ödevinizi henüz göndermediniz. Son tarih: {{.due_tr}}.",
+		BodyEN:  "You haven't submitted this assignment yet. Due: {{.due_en}}.",
+	},
 }
 
 // compiled, şablonların derlenmiş hâlidir: [tür][alan]. Bozuk bir şablon uygulamanın hiç

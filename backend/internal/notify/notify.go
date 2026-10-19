@@ -48,6 +48,10 @@ const (
 	AnnouncementUrgent    Type = "announcement.urgent"
 
 	MessageReceived Type = "message.received"
+
+	WindowOpening Type = "reminder.window_opening"
+	WindowClosing Type = "reminder.window_closing"
+	AssignmentDue Type = "reminder.assignment_due"
 )
 
 // ErrNotFound: bildirim yok ya da başka bir kullanıcının.
