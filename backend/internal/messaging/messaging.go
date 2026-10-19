@@ -352,8 +352,8 @@ const unreadExpr = `(SELECT count(*) FROM communication.messages x
 	WHERE x.conversation_id = c.id AND x.sender_id <> $1 AND x.deleted_at IS NULL
 	  AND (m.last_read_message_id IS NULL OR x.id > m.last_read_message_id))`
 
-// Conversations, kullanıcının konuşmalarıdır: son iletiye göre yeniden eskiye, okunmamış sayısı,
-// son ileti ve kişisel durumla.
+// Conversations, kullanıcının konuşmalarıdır: son iletiye göre yeniden eskiye (iletisi olmayanlar
+// sonda), okunmamış sayısı, son ileti ve kişisel durumla.
 func (s *Service) Conversations(ctx context.Context, userID string) ([]Conversation, error) {
 	if err := s.ensureSections(ctx, userID); err != nil {
 		return nil, err
@@ -386,7 +386,7 @@ func (s *Service) Conversations(ctx context.Context, userID string) ([]Conversat
 			FROM communication.messages x JOIN iam.users su ON su.id = x.sender_id JOIN people.persons sp ON sp.id = su.person_id
 			WHERE x.conversation_id = c.id ORDER BY x.id DESC LIMIT 1
 		) lm ON true
-		ORDER BY coalesce(c.last_message_at, c.created_at) DESC, c.id DESC`, userID)
+		ORDER BY c.last_message_at DESC NULLS LAST, c.created_at DESC, c.id DESC`, userID)
 	if err != nil {
 		return nil, fmt.Errorf("messaging: konuşmalar okunamadı: %w", err)
 	}

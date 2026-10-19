@@ -254,6 +254,9 @@ func TestMessagesUnreadAndSectionGroup(t *testing.T) {
 		t.Errorf("gönderenin okunmamışı: %v", n)
 	}
 	list := items(s.do("GET", "/api/v1/me/conversations", fx.teacher, nil))
+	if list[0]["kind"] != "DIRECT" {
+		t.Errorf("iletisi olan konuşma, iletisiz şube grubunun önünde olmalı: %v", list)
+	}
 	var direct map[string]any
 	for _, c := range list {
 		if c["kind"] == "DIRECT" {
