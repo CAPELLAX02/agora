@@ -97,6 +97,11 @@ tags:
     description: >-
       Kullanıcının bildirim merkezi: olaylardan üretilen bildirimler (güvenlik, ders kaydı, notlar,
       dersler, duyurular), okunmamış sayısı, okundu ve arşiv
+  - name: Yoklama
+    description: >-
+      Şubenin haftalık programından üretilen oturumlar (tatiller hariç), telafi ve iptal, oturum
+      oturum yoklama ve yönetmelikteki sınıra göre devamsızlık. Şubeye özgü uçlarda yetki şubeyle
+      ilişkiden gelir (şubenin öğretim elemanları, asistan dahil); öğrenci kendi devamsızlığını görür
 
 paths:
   /healthz:
@@ -7956,6 +7961,236 @@ paths:
               schema: { $ref: "#/components/schemas/Program" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/v1/sections/{id}/sessions:
+    get:
+      tags: [Yoklama]
+      summary: Şubenin oturumları
+      description: >-
+        Önce programla eşitlenir: eksik oturumlar eklenir, programdan kalkmış gelecekteki boş
+        oturumlar silinir. Sadece şubenin öğretim elemanları.
+      operationId: listSectionSessions
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Oturumlar, zaman sırasıyla
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [section, items]
+                properties:
+                  section: { $ref: "#/components/schemas/AttendanceSection" }
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/ClassSession" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [Yoklama]
+      summary: Telafi oturumu ekle
+      description: Dönemin içinde, en çok 6 saat; şubenin aynı anda başlayan başka oturumu olamaz.
+      operationId: addMakeupSession
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [session_type, starts_at, ends_at]
+              properties:
+                session_type: { type: string, enum: [THEORY, PRACTICE, LAB] }
+                starts_at: { type: string, format: date-time }
+                ends_at: { type: string, format: date-time }
+                topic: { type: string, maxLength: 300 }
+      responses:
+        "201":
+          description: Telafi oturumu
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClassSession" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/sections/{id}/attendance-summary:
+    get:
+      tags: [Yoklama]
+      summary: Şubenin devamsızlık özeti
+      description: Öğrenci başına oturum grubundaki devamsızlık ve sınır. Sadece şubenin öğretim elemanları.
+      operationId: getSectionAttendanceSummary
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Öğrenciler, numara sırasıyla
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [section, items]
+                properties:
+                  section: { $ref: "#/components/schemas/AttendanceSection" }
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/StudentAttendanceUsage" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/v1/sessions/{id}:
+    put:
+      tags: [Yoklama]
+      summary: Oturumu güncelle
+      description: >-
+        İptal eder (`cancelled: true`) ya da iptali geri alır ve konuyu yazar. Yoklaması alınmış
+        oturum iptal edilemez (409 `SESSION_HELD`). İyimser kilit, `If-Match` zorunlu.
+      operationId: updateClassSession
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cancelled]
+              properties:
+                cancelled: { type: boolean }
+                topic: { type: string, maxLength: 300 }
+      responses:
+        "200":
+          description: Oturum
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClassSession" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`SESSION_HELD`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "412": { $ref: "#/components/responses/VersionMismatch" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
+
+  /api/v1/sessions/{id}/attendance:
+    get:
+      tags: [Yoklama]
+      summary: Oturumun yoklama listesi
+      description: Şubede bırakmamış kesin kaydı olan öğrenciler ve oturumdaki durumları (alınmamışsa null).
+      operationId: getSessionAttendance
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      responses:
+        "200":
+          description: Yoklama listesi
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SessionRoll" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Yoklama]
+      summary: Yoklamayı yaz
+      description: >-
+        Listede olmayan öğrenciler gelmiş sayılır; tekrar yazmak düzeltmedir. İptal edilmiş oturumun
+        (409 `SESSION_CANCELLED`) ve 30 dakikadan daha sonra başlayacak oturumun yoklaması alınmaz.
+        Sınırın %70'ine ulaşan ya da sınırı aşan öğrenciye bir kez bildirim gider. `If-Match` zorunlu.
+      operationId: takeSessionAttendance
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    required: [enrollment_id, status]
+                    properties:
+                      enrollment_id: { type: string, format: uuid }
+                      status: { $ref: "#/components/schemas/AttendanceMark" }
+      responses:
+        "200":
+          description: Yoklama listesi
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SessionRoll" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "`SESSION_CANCELLED`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "412": { $ref: "#/components/responses/VersionMismatch" }
+        "428": { $ref: "#/components/responses/PreconditionRequired" }
+
+  /api/v1/me/attendance:
+    get:
+      tags: [Yoklama]
+      summary: Devamsızlığım
+      description: Dönemdeki derslerin devamsızlığı (oturum grubu başına sınırla) ve oturumlar; dönem verilmezse içinde bulunulan dönem.
+      operationId: getMyAttendance
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: term_id
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Dersler, koda göre
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/CourseAttendance" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -8147,6 +8382,114 @@ components:
           schema: { $ref: "#/components/schemas/Problem" }
 
   schemas:
+    AttendanceSection:
+      type: object
+      required: [id, section_code, course_code, course_name_tr, course_name_en]
+      properties:
+        id: { type: string, format: uuid }
+        section_code: { type: string }
+        course_code: { type: string }
+        course_name_tr: { type: string }
+        course_name_en: { type: string }
+    AttendanceMark:
+      type: string
+      description: "`ABSENT` devamsızlıktır; `LATE` gelmiş, `EXCUSED` (raporlu) devamsız sayılmaz"
+      enum: [PRESENT, ABSENT, LATE, EXCUSED]
+    ClassSession:
+      type: object
+      required: [id, session_type, kind, status, starts_at, ends_at, classroom, topic, taken_at, present, absent, version]
+      properties:
+        id: { type: string, format: uuid }
+        session_type: { type: string, enum: [THEORY, PRACTICE, LAB] }
+        kind: { type: string, enum: [REGULAR, MAKEUP] }
+        status:
+          type: string
+          description: "`HELD`: yoklaması alındı. İptal edilen oturum devamsızlık sınırında sayılmaz"
+          enum: [SCHEDULED, HELD, CANCELLED]
+        starts_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time }
+        classroom: { type: [string, "null"], description: Derslik kodu; telafide ve çevrim içi oturumda boş }
+        topic: { type: string }
+        taken_at: { type: [string, "null"], format: date-time }
+        present: { type: integer, description: Gelen (geç kalan dahil) }
+        absent: { type: integer }
+        version: { type: integer }
+    SessionRoll:
+      type: object
+      required: [section, session, items]
+      properties:
+        section: { $ref: "#/components/schemas/AttendanceSection" }
+        session: { $ref: "#/components/schemas/ClassSession" }
+        items:
+          type: array
+          items:
+            type: object
+            required: [enrollment_id, student_no, first_name, last_name, status]
+            properties:
+              enrollment_id: { type: string, format: uuid }
+              student_no: { type: string }
+              first_name: { type: string }
+              last_name: { type: string }
+              status:
+                oneOf:
+                  - { $ref: "#/components/schemas/AttendanceMark" }
+                  - { type: "null" }
+    AttendanceUsage:
+      type: object
+      description: Bir oturum grubundaki devamsızlık (uygulama grubu uygulama ve laboratuvar oturumlarıdır)
+      required: [group, planned, held, absences, max_absence_pct, limit, near_limit, exceeded]
+      properties:
+        group: { type: string, enum: [THEORY, PRACTICE] }
+        planned: { type: integer, description: İptal edilmeyen oturumlar (telafi dahil) }
+        held: { type: integer }
+        absences: { type: integer }
+        max_absence_pct: { type: integer, description: Yönetmelikteki yüzde; tanımlı değilse 0 }
+        limit: { type: [integer, "null"], description: Planlanan oturumların yüzdesi (aşağı yuvarlanır) }
+        near_limit: { type: boolean, description: Sınırın %70'ine ulaştı }
+        exceeded: { type: boolean }
+    StudentAttendanceUsage:
+      type: object
+      required: [enrollment_id, student_no, first_name, last_name, attendance_status, usage]
+      properties:
+        enrollment_id: { type: string, format: uuid }
+        student_no: { type: string }
+        first_name: { type: string }
+        last_name: { type: string }
+        attendance_status: { $ref: "#/components/schemas/AttendanceStatus" }
+        usage:
+          type: array
+          items: { $ref: "#/components/schemas/AttendanceUsage" }
+    CourseAttendance:
+      type: object
+      required: [enrollment_id, section_id, section_code, course_code, course_name_tr, course_name_en, attendance_status, usage, sessions]
+      properties:
+        enrollment_id: { type: string, format: uuid }
+        section_id: { type: string, format: uuid }
+        section_code: { type: string }
+        course_code: { type: string }
+        course_name_tr: { type: string }
+        course_name_en: { type: string }
+        attendance_status: { $ref: "#/components/schemas/AttendanceStatus" }
+        usage:
+          type: array
+          items: { $ref: "#/components/schemas/AttendanceUsage" }
+        sessions:
+          type: array
+          items:
+            type: object
+            required: [id, session_type, kind, status, starts_at, ends_at, topic, record]
+            properties:
+              id: { type: string, format: uuid }
+              session_type: { type: string, enum: [THEORY, PRACTICE, LAB] }
+              kind: { type: string, enum: [REGULAR, MAKEUP] }
+              status: { type: string, enum: [SCHEDULED, HELD, CANCELLED] }
+              starts_at: { type: string, format: date-time }
+              ends_at: { type: string, format: date-time }
+              topic: { type: string }
+              record:
+                oneOf:
+                  - { $ref: "#/components/schemas/AttendanceMark" }
+                  - { type: "null" }
     Problem:
       type: object
       description: RFC 9457 Problem Details

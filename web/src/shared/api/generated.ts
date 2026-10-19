@@ -21,6 +21,7 @@ export const addTagTypes = [
   'Organizasyon',
   '\u00D6\u011Frenciler',
   'Ders se\u00E7me',
+  'Yoklama',
 ] as const
 const injectedRtkApi = api
   .enhanceEndpoints({
@@ -2137,6 +2138,66 @@ const injectedRtkApi = api
         query: (queryArg) => ({ url: `/api/v1/programs/${queryArg.id}` }),
         providesTags: ['Organizasyon'],
       }),
+      listSectionSessions: build.query<ListSectionSessionsApiResponse, ListSectionSessionsApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/sections/${queryArg.id}/sessions`,
+        }),
+        providesTags: ['Yoklama'],
+      }),
+      addMakeupSession: build.mutation<AddMakeupSessionApiResponse, AddMakeupSessionApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/sections/${queryArg.id}/sessions`,
+          method: 'POST',
+          body: queryArg.body,
+        }),
+        invalidatesTags: ['Yoklama'],
+      }),
+      getSectionAttendanceSummary: build.query<
+        GetSectionAttendanceSummaryApiResponse,
+        GetSectionAttendanceSummaryApiArg
+      >({
+        query: (queryArg) => ({
+          url: `/api/v1/sections/${queryArg.id}/attendance-summary`,
+        }),
+        providesTags: ['Yoklama'],
+      }),
+      updateClassSession: build.mutation<UpdateClassSessionApiResponse, UpdateClassSessionApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/sessions/${queryArg.id}`,
+          method: 'PUT',
+          body: queryArg.body,
+          headers: {
+            'If-Match': queryArg['If-Match'],
+          },
+        }),
+        invalidatesTags: ['Yoklama'],
+      }),
+      getSessionAttendance: build.query<GetSessionAttendanceApiResponse, GetSessionAttendanceApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/sessions/${queryArg.id}/attendance`,
+        }),
+        providesTags: ['Yoklama'],
+      }),
+      takeSessionAttendance: build.mutation<TakeSessionAttendanceApiResponse, TakeSessionAttendanceApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/sessions/${queryArg.id}/attendance`,
+          method: 'PUT',
+          body: queryArg.body,
+          headers: {
+            'If-Match': queryArg['If-Match'],
+          },
+        }),
+        invalidatesTags: ['Yoklama'],
+      }),
+      getMyAttendance: build.query<GetMyAttendanceApiResponse, GetMyAttendanceApiArg>({
+        query: (queryArg) => ({
+          url: `/api/v1/me/attendance`,
+          params: {
+            term_id: queryArg.termId,
+          },
+        }),
+        providesTags: ['Yoklama'],
+      }),
     }),
     overrideExisting: false,
   })
@@ -4105,6 +4166,68 @@ export type GetProgramApiResponse = /** status 200 Program */ Program
 export type GetProgramApiArg = {
   /** Geçerli bir UUID değilse 404 döner. */
   id: string
+}
+export type ListSectionSessionsApiResponse = /** status 200 Oturumlar, zaman sırasıyla */ {
+  section: AttendanceSection
+  items: ClassSession[]
+}
+export type ListSectionSessionsApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type AddMakeupSessionApiResponse = /** status 201 Telafi oturumu */ ClassSession
+export type AddMakeupSessionApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  body: {
+    session_type: 'THEORY' | 'PRACTICE' | 'LAB'
+    starts_at: string
+    ends_at: string
+    topic?: string
+  }
+}
+export type GetSectionAttendanceSummaryApiResponse = /** status 200 Öğrenciler, numara sırasıyla */ {
+  section: AttendanceSection
+  items: StudentAttendanceUsage[]
+}
+export type GetSectionAttendanceSummaryApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type UpdateClassSessionApiResponse = /** status 200 Oturum */ ClassSession
+export type UpdateClassSessionApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
+  'If-Match': string
+  body: {
+    cancelled: boolean
+    topic?: string
+  }
+}
+export type GetSessionAttendanceApiResponse = /** status 200 Yoklama listesi */ SessionRoll
+export type GetSessionAttendanceApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+}
+export type TakeSessionAttendanceApiResponse = /** status 200 Yoklama listesi */ SessionRoll
+export type TakeSessionAttendanceApiArg = {
+  /** Geçerli bir UUID değilse 404 döner. */
+  id: string
+  /** Kaydı okurken alınan ETag (iyimser kilit). Kayıt bu arada değiştiyse 412 döner. */
+  'If-Match': string
+  body: {
+    items: {
+      enrollment_id: string
+      status: AttendanceMark
+    }[]
+  }
+}
+export type GetMyAttendanceApiResponse = /** status 200 Dersler, koda göre */ {
+  items: CourseAttendance[]
+}
+export type GetMyAttendanceApiArg = {
+  termId?: string
 }
 export type Readiness = {
   status: 'ready' | 'not_ready'
@@ -6387,6 +6510,84 @@ export type Program = {
   faculty: Ref
   is_active: boolean
 }
+export type AttendanceSection = {
+  id: string
+  section_code: string
+  course_code: string
+  course_name_tr: string
+  course_name_en: string
+}
+export type ClassSession = {
+  id: string
+  session_type: 'THEORY' | 'PRACTICE' | 'LAB'
+  kind: 'REGULAR' | 'MAKEUP'
+  /** `HELD`: yoklaması alındı. İptal edilen oturum devamsızlık sınırında sayılmaz */
+  status: 'SCHEDULED' | 'HELD' | 'CANCELLED'
+  starts_at: string
+  ends_at: string
+  /** Derslik kodu; telafide ve çevrim içi oturumda boş */
+  classroom: string | null
+  topic: string
+  taken_at: string | null
+  /** Gelen (geç kalan dahil) */
+  present: number
+  absent: number
+  version: number
+}
+export type AttendanceUsage = {
+  group: 'THEORY' | 'PRACTICE'
+  /** İptal edilmeyen oturumlar (telafi dahil) */
+  planned: number
+  held: number
+  absences: number
+  /** Yönetmelikteki yüzde; tanımlı değilse 0 */
+  max_absence_pct: number
+  /** Planlanan oturumların yüzdesi (aşağı yuvarlanır) */
+  limit: number | null
+  /** Sınırın %70'ine ulaştı */
+  near_limit: boolean
+  exceeded: boolean
+}
+export type StudentAttendanceUsage = {
+  enrollment_id: string
+  student_no: string
+  first_name: string
+  last_name: string
+  attendance_status: AttendanceStatus
+  usage: AttendanceUsage[]
+}
+export type AttendanceMark = 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED'
+export type SessionRoll = {
+  section: AttendanceSection
+  session: ClassSession
+  items: {
+    enrollment_id: string
+    student_no: string
+    first_name: string
+    last_name: string
+    status: AttendanceMark | null
+  }[]
+}
+export type CourseAttendance = {
+  enrollment_id: string
+  section_id: string
+  section_code: string
+  course_code: string
+  course_name_tr: string
+  course_name_en: string
+  attendance_status: AttendanceStatus
+  usage: AttendanceUsage[]
+  sessions: {
+    id: string
+    session_type: 'THEORY' | 'PRACTICE' | 'LAB'
+    kind: 'REGULAR' | 'MAKEUP'
+    status: 'SCHEDULED' | 'HELD' | 'CANCELLED'
+    starts_at: string
+    ends_at: string
+    topic: string
+    record: AttendanceMark | null
+  }[]
+}
 export const {
   useHealthzQuery,
   useLazyHealthzQuery,
@@ -6752,4 +6953,15 @@ export const {
   useLazyListProgramsQuery,
   useGetProgramQuery,
   useLazyGetProgramQuery,
+  useListSectionSessionsQuery,
+  useLazyListSectionSessionsQuery,
+  useAddMakeupSessionMutation,
+  useGetSectionAttendanceSummaryQuery,
+  useLazyGetSectionAttendanceSummaryQuery,
+  useUpdateClassSessionMutation,
+  useGetSessionAttendanceQuery,
+  useLazyGetSessionAttendanceQuery,
+  useTakeSessionAttendanceMutation,
+  useGetMyAttendanceQuery,
+  useLazyGetMyAttendanceQuery,
 } = injectedRtkApi
