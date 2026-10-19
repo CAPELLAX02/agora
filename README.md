@@ -147,6 +147,23 @@ Her şubenin bir ders alanı vardır: öğretim elemanları (sorumlu, ortak, asi
 
 `make seed` ders alanı kurulmuş şubeye dokunmaz.
 
+### İletişim demosu
+
+Bildirimler zil menüsünde canlı (Server-Sent Events) gelir; ders kaydı, notlar, ödevler, forum, duyurular ve hatırlatmalar bildirim üretir. Her kullanıcı türe göre uygulama içi ve e-posta kanalını "Bildirim tercihleri"nden açıp kapatır (güvenlik bildirimleri zorunludur). E-postalar worker'la gönderilir, geliştirmede Mailpit'te görünür. `make seed` şunları kurar:
+
+- **Duyurular:** üniversite (`P20002`: sabitlenmiş akademik takvim duyurusu ve öğrencilere acil bir duyuru), fakülte (`P20001`: Mühendislik öğrencilerine etkinlik) ve bölüm (`P10002`: sabitlenmiş tanışma toplantısı, bir gün sonra yayımlanacak ara sınav programı, bir taslak). Yayımlananlar hedef kitleye bildirilmiştir; demo sınıfının yarısı sabitlenmiş duyuruları okumuştur.
+- **Konuşmalar:** danışman `P10001` ile öğrencisi `26290004` (öğrenci son iletiyi okumamış), COM1007-1 şube grubu (`P10001`, asistan `P10007`, öğrenciler) ve `P10002`'nin kurduğu "BIL öğretim elemanları" grubu.
+
+| Ne denenir | Hesap | Not |
+| ---------- | ----- | --- |
+| Duyuru yazma, hedef kitle, ileri tarihli yayın, sabitleme, okunma oranı | `P10002` (bölüm), `P20001` (fakülte), `P20002` (üniversite) | Duyuru yönetimi. Yayımlanan duyuru hedef kitlede çevrimiçi olanların zilinde hemen belirir; hedef dışındakiler görmez |
+| Duyuru akışı, ana sayfa kartı, okundu | öğrenciler | Duyurular; acil duyurular e-postayla da gelir |
+| Birebir mesaj, yanıt, ek, düzenleme ve silme, yıldız, sessize alma | `26290004` ve `P10001` | Mesajlar. Öğrenci şubelerinin öğretim elemanlarına ve danışmanına yazabilir; personel herkese. İleti karşı tarafa canlı gelir |
+| Şube grubu ve grup yönetimi | `P10001`, `P10002` | Şube grubunu öğretim elemanı yönetir (ileti silme); grubu kuran üye ekler |
+| Bildirim tercihleri | herkes | Zil → Bildirim tercihleri; kapatılan kanaldan bildirim gelmez |
+
+Hatırlatmalar worker'dadır: işlem pencerelerinin (ders seçme, ekle-bırak, not girişi) açılışından ve kapanışından, gönderilmemiş ödevin son tarihinden 24 saat önce bir kez gönderilir.
+
 ### Büyük veri seti
 
 ```bash
