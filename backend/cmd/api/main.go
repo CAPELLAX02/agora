@@ -45,6 +45,7 @@ type application struct {
 	registrationMetrics *metrics.Registration
 	gradingMetrics      *metrics.Grading
 	lmsMetrics          *metrics.LMS
+	communication       *metrics.Communication
 	files               *files.Service
 	notifications       *notify.Hub      // canlı bildirim akışlarının dağıtıcısı
 	registrationLimit   httpx.Middleware // ders seçme değiştirici uçlarının kullanıcı başına hız sınırı
@@ -126,6 +127,9 @@ func run() error {
 	registrationLimiter.OnReject(authMetrics.RateLimited)
 	messageLimiter.OnReject(authMetrics.RateLimited)
 
+	communication := metrics.NewCommunication(reg, notify.Types())
+	notify.SetMetrics(communication)
+
 	// Canlı bildirimler: PostgreSQL kanalı tek bağlantıyla dinlenir, açık akışlar uyandırılır.
 	hub := notify.NewHub(pool, logger)
 	go hub.Run(ctx)
@@ -152,6 +156,7 @@ func run() error {
 		registrationMetrics: metrics.NewRegistration(reg),
 		gradingMetrics:      metrics.NewGrading(reg),
 		lmsMetrics:          metrics.NewLMS(reg),
+		communication:       communication,
 		files:               fileService,
 		notifications:       hub,
 		registrationLimit:   registrationLimiter.ByUser(logger),

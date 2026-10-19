@@ -105,6 +105,37 @@ func TestLMS(t *testing.T) {
 	}
 }
 
+func TestCommunication(t *testing.T) {
+	reg := prometheus.NewRegistry()
+	m := NewCommunication(reg, []string{"forum.reply", "message.received"})
+
+	if n := testutil.CollectAndCount(m.notifications); n != 4 {
+		t.Errorf("bildirim serileri = %d, want 4", n)
+	}
+	m.Delivered("forum.reply", "in_app", 3)
+	m.Delivered("forum.reply", "email", 2)
+	m.Delivered("forum.reply", "in_app", 1)
+	m.MessageSent("section")
+	m.AnnouncementPublished()
+	m.AnnouncementRead()
+	m.AnnouncementRead()
+	if got := testutil.ToFloat64(m.notifications.WithLabelValues("forum.reply", "in_app")); got != 4 {
+		t.Errorf("uygulama içi = %v, want 4", got)
+	}
+	if got := testutil.ToFloat64(m.notifications.WithLabelValues("message.received", "email")); got != 0 {
+		t.Errorf("ileti e-postası = %v, want 0", got)
+	}
+	if got := testutil.ToFloat64(m.messages.WithLabelValues("section")); got != 1 {
+		t.Errorf("şube iletisi = %v, want 1", got)
+	}
+	if got := testutil.ToFloat64(m.published); got != 1 {
+		t.Errorf("yayımlanan = %v, want 1", got)
+	}
+	if got := testutil.ToFloat64(m.reads); got != 2 {
+		t.Errorf("okuma = %v, want 2", got)
+	}
+}
+
 func TestNotificationStreams(t *testing.T) {
 	reg := prometheus.NewRegistry()
 	open := 3

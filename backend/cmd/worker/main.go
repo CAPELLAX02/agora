@@ -123,6 +123,9 @@ func run() error {
 		return lag.Seconds()
 	}))
 
+	// İleri tarihli duyuruların ve hatırlatmaların bildirimleri; yayımlama ve okuma API'de sayılır.
+	notify.SetMetrics(metrics.NewCommunication(reg, notify.Types()))
+
 	dispatcher := mail.NewDispatcher(pool, renderer, sender, mail.DefaultDispatcherConfig, logger,
 		func(result string) { emails.WithLabelValues(result).Inc() })
 
