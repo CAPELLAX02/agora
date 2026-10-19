@@ -56,6 +56,30 @@ func TestHistory(t *testing.T) {
 		if err := seedSpaceDemo(ctx, pool, config.Config{S3Endpoint: "localhost:1", S3Bucket: "agora", MaxUploadBytes: 50 << 20}); err != nil {
 			t.Fatal(err)
 		}
+		if err := seedCommunicationDemo(ctx, pool); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// İletişim demosu: altı duyuru (biri ileri tarihli, biri taslak), hedef kitleye bildirim; üç
+	// konuşma, öğrenci danışmanının son iletisini okumamış.
+	var announcements, scheduled, notes, conversations, messages, unread int
+	if err := pool.QueryRow(ctx, `
+		SELECT (SELECT count(*) FROM communication.announcements),
+		       (SELECT count(*) FROM communication.announcements WHERE status = 'PUBLISHED' AND notified_at IS NULL),
+		       (SELECT count(*) FROM communication.notifications n JOIN iam.users u ON u.id = n.user_id
+		        WHERE u.username = '26290004' AND n.type_code LIKE 'announcement.%'),
+		       (SELECT count(*) FROM communication.conversations WHERE last_message_at IS NOT NULL),
+		       (SELECT count(*) FROM communication.messages),
+		       (SELECT count(*) FROM communication.messages m JOIN communication.conversation_members cm ON cm.conversation_id = m.conversation_id
+		        JOIN iam.users u ON u.id = cm.user_id
+		        WHERE u.username = '26290004' AND m.sender_id <> cm.user_id AND (cm.last_read_message_id IS NULL OR m.id > cm.last_read_message_id))`).
+		Scan(&announcements, &scheduled, &notes, &conversations, &messages, &unread); err != nil {
+		t.Fatal(err)
+	}
+	// Öğrenci: üniversite (akademik takvim, acil), fakülte ve bölüm duyuruları.
+	if announcements != 6 || scheduled != 1 || notes != 4 || conversations != 3 || messages != 12 || unread != 1 {
+		t.Errorf("iletişim demosu: %d duyuru, %d ileri tarihli, %d bildirim, %d konuşma, %d ileti, %d okunmamış",
+			announcements, scheduled, notes, conversations, messages, unread)
 	}
 	var activities, files, submissions int
 	if err := pool.QueryRow(ctx, `
