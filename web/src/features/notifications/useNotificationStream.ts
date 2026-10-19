@@ -25,17 +25,23 @@ function open(token: string | null, lastId: string | null, signal: AbortSignal) 
   return fetch(url, { headers, signal, credentials: 'same-origin' })
 }
 
+/** StreamHandlers, canlı akışın olaylarıdır: yeni bildirim ve konuşmada yeni ileti. */
+export type StreamHandlers = {
+  onNotification: (n: Notification) => void
+  onMessage?: (conversationId: string) => void
+}
+
 /**
- * useNotificationStream, canlı bildirim akışını açık tutar ve her yeni bildirimde onNotification'ı
- * çağırır. EventSource yerine fetch akışı: access token Authorization başlığında gider. Süresi
- * dolmuş token sessizce yenilenir; kopan akış son alınan kimlikle (Last-Event-ID) yeniden açılır,
- * böylece aradaki bildirimler kaçmaz.
+ * useNotificationStream, canlı akışı açık tutar: her yeni bildirimde onNotification, konuşmada yeni
+ * ileti olunca onMessage çağrılır. EventSource yerine fetch akışı: access token Authorization
+ * başlığında gider. Süresi dolmuş token sessizce yenilenir; kopan akış son alınan bildirim
+ * kimliğiyle (Last-Event-ID) yeniden açılır, böylece aradaki bildirimler kaçmaz.
  */
-export function useNotificationStream(onNotification: (n: Notification) => void) {
+export function useNotificationStream(handlers: StreamHandlers) {
   const store = useStore<{ auth: AuthState }>()
-  const handler = useRef(onNotification)
+  const handler = useRef(handlers)
   useEffect(() => {
-    handler.current = onNotification
+    handler.current = handlers
   })
 
   useEffect(() => {
@@ -73,7 +79,9 @@ export function useNotificationStream(onNotification: (n: Notification) => void)
             lastId = e.id
           }
           if (e.event === 'notification') {
-            handler.current(JSON.parse(e.data) as Notification)
+            handler.current.onNotification(JSON.parse(e.data) as Notification)
+          } else if (e.event === 'message') {
+            handler.current.onMessage?.((JSON.parse(e.data) as { conversation_id: string }).conversation_id)
           }
         })
         const reader = res.body.getReader()

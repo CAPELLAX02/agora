@@ -48,13 +48,19 @@ export function NotificationBell() {
   const [markRead] = useMarkMyNotificationReadMutation()
   const [markAllRead, markingAll] = useMarkAllMyNotificationsReadMutation()
 
-  useNotificationStream((n) => {
-    dispatch(agoraApi.util.invalidateTags(['Bildirimler']))
-    const { title, body } = notificationText(n, en)
-    toast(title, {
-      description: body,
-      action: n.link ? { label: t('notifications.open'), onClick: () => void navigate(n.link!) } : undefined,
-    })
+  useNotificationStream({
+    onNotification: (n) => {
+      dispatch(agoraApi.util.invalidateTags(['Bildirimler']))
+      const { title, body } = notificationText(n, en)
+      toast(title, {
+        description: body,
+        action: n.link
+          ? { label: t('notifications.open'), onClick: () => void navigate(n.link!) }
+          : undefined,
+      })
+    },
+    // Yeni ileti: konuşma listesi, açık konuşma ve okunmamış sayısı tazelenir.
+    onMessage: () => dispatch(agoraApi.util.invalidateTags(['Mesajlar'])),
   })
 
   const count = unread?.count ?? 0
