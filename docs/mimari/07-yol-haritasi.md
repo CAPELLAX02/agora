@@ -1,6 +1,6 @@
 # 07 · Yol Haritası ve Geliştirme Sırası
 
-> **Durum:** v0.5 · Faz 0–4 tamamlandı (güz dönemi hedefi, 2026-10-14) · Kararlar §5'te · İlerleme ve "Bitti" kontrol listesi §6'da.
+> **Durum:** v0.7 · Faz 0–4 tamamlandı (güz dönemi hedefi, 2026-10-14), Faz 5 (ders alanı) ve Faz 6 (iletişim, 2026-10-19) tamamlandı · Kararlar §5'te · İlerleme ve "Bitti" kontrol listesi §6'da.
 
 ## 1. Kritik Karar: Önce Backend mi, Frontend mi?
 
@@ -402,8 +402,8 @@ flowchart LR
 
 | Durum | Madde |
 | --- | --- |
-| ⬜ | Playwright e2e: duyuru hedef kitledeki öğrenciye canlı bildirim olarak düşer, dışındakine düşmez; tercih kapatılınca e-posta gitmez (Mailpit); öğrenci danışmanına mesaj yazar, danışman canlı görür ve yanıtlar |
-| ⬜ | Sözleşme ve dokümanlar güncel (veri modeli, politikalar, README'de demo rehberi), CI yeşil |
+| ✅ | Playwright e2e (`e2e/communication.spec.ts`, ayrı tarayıcı bağlamlarında açık oturumlarla): bölüm başkanının duyurusu hedef kitledeki öğrencinin açık sayfasına canlı bildirim olarak düşer, aynı bölümün öğretim elemanı (kitle öğrenciler) ne bildirim alır ne duyuruyu görür, yayımlayan okunma sayısını görür; acil duyuru e-postasını kapatan öğrenciye e-posta gitmez, varsayılandaki öğrenciye gider (Mailpit), uygulama içinde ikisi de görür; öğrenci danışmanına yazar, danışmanın açık listesinde konuşma okunmamışla belirir, yanıt öğrencinin açık konuşmasına canlı gelir |
+| ✅ | Sözleşme ve dokümanlar güncel (veri modeli, politikalar, gözlemlenebilirlik, README'de iletişim demosu rehberi), CI yeşil |
 
 ### Faz 7 ve sonrası
 
