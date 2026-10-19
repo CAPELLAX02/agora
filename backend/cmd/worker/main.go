@@ -1,8 +1,8 @@
 // Komut worker, API'den bağımsız çalışan arka plan işlerini yürütür: e-posta outbox'ı, alan
 // olaylarının dağıtımı (outbox), ders seçme penceresi biten taslakların serbest bırakılması,
-// ileri tarihli duyuruların bildirimi, pencere ve ödev hatırlatmaları, denetim ve bildirim
-// partition'larının bakımı, süresi dolmuş kayıtların temizliği ve dönem sonuçlarının günlük
-// doğrulaması.
+// ileri tarihli duyuruların bildirimi, pencere ve ödev hatırlatmaları, yoklama oturumlarının
+// programla eşitlenmesi, denetim ve bildirim partition'larının bakımı, süresi dolmuş kayıtların
+// temizliği ve dönem sonuçlarının günlük doğrulaması.
 //
 // API yatayda çoğaltıldığında zamanlanmış işler her kopyada çalışmasın diye ayrı bir
 // süreçtir. Birden fazla worker da güvenle çalışabilir: outbox kayıtları
@@ -25,6 +25,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/CAPELLAX02/agora/backend/internal/announce"
+	"github.com/CAPELLAX02/agora/backend/internal/attendance"
 	"github.com/CAPELLAX02/agora/backend/internal/audit"
 	"github.com/CAPELLAX02/agora/backend/internal/enrollment"
 	"github.com/CAPELLAX02/agora/backend/internal/files"
@@ -333,6 +334,12 @@ func maintain(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger) {
 	}
 	if err := notify.EnsurePartitions(ctx, pool, 3); err != nil {
 		logger.Error("bildirim partition'ları açılamadı", "err", err)
+	}
+	// Dönemin yoklama oturumları programla eşitlenir: devamsızlık sınırı planlanan oturumlara dayanır.
+	if n, err := attendance.GenerateCurrent(ctx, pool); err != nil {
+		logger.Error("yoklama oturumları üretilemedi", "err", err)
+	} else if n > 0 {
+		logger.Info("yoklama oturumları programla eşitlendi", "sections", n)
 	}
 	if n, err := notify.DropExpired(ctx, pool, notificationRetentionDays); err != nil {
 		logger.Error("eski bildirim partition'ları düşürülemedi", "err", err)

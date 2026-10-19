@@ -6,6 +6,7 @@ import (
 
 	"github.com/CAPELLAX02/agora/backend/internal/academic"
 	"github.com/CAPELLAX02/agora/backend/internal/announce"
+	"github.com/CAPELLAX02/agora/backend/internal/attendance"
 	"github.com/CAPELLAX02/agora/backend/internal/audit"
 	"github.com/CAPELLAX02/agora/backend/internal/curriculum"
 	"github.com/CAPELLAX02/agora/backend/internal/enrollment"
@@ -74,6 +75,7 @@ func (app *application) routes() http.Handler {
 		lms.NewHandler(lmsService, app.logger).Register(rt)
 	}
 	grading.NewGradebookHandler(grades, app.logger).Register(rt)
+	attendance.NewHandler(attendance.NewService(app.db, time.Now), app.logger).Register(rt)
 	// Ders seçme açılışı: değiştirici uçlarda kullanıcı başına hız sınırı ve Idempotency-Key.
 	var mutations []httpx.Middleware
 	if app.registrationLimit != nil {

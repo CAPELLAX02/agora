@@ -200,6 +200,20 @@ func GenerateTerm(ctx context.Context, pool *pgxpool.Pool, termID string) (int, 
 	return len(ids), nil
 }
 
+// GenerateCurrent, içinde bulunulan dönemin oturumlarını programla eşitler (worker'da günlük);
+// dönem yoksa bir şey yapmaz.
+func GenerateCurrent(ctx context.Context, pool *pgxpool.Pool) (int, error) {
+	var termID string
+	err := pool.QueryRow(ctx, `SELECT id FROM academic.terms WHERE is_current`).Scan(&termID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, fmt.Errorf("attendance: dönem okunamadı: %w", err)
+	}
+	return GenerateTerm(ctx, pool, termID)
+}
+
 const sessionColumns = `c.id, c.section_id, c.term_id, c.session_type, c.kind, c.status, c.starts_at, c.ends_at,
 	coalesce(cr.code, ''), coalesce(c.topic, ''), c.taken_at, c.version,
 	(SELECT count(*) FROM attendance.attendance_records r WHERE r.term_id = c.term_id AND r.session_id = c.id AND r.status IN ('PRESENT', 'LATE')),
