@@ -1,7 +1,8 @@
 // Komut worker, API'den bağımsız çalışan arka plan işlerini yürütür: e-posta outbox'ı, alan
 // olaylarının dağıtımı (outbox), ders seçme penceresi biten taslakların serbest bırakılması,
-// ileri tarihli duyuruların bildirimi, denetim ve bildirim partition'larının bakımı, süresi
-// dolmuş kayıtların temizliği ve dönem sonuçlarının günlük doğrulaması.
+// ileri tarihli duyuruların bildirimi, pencere ve ödev hatırlatmaları, denetim ve bildirim
+// partition'larının bakımı, süresi dolmuş kayıtların temizliği ve dönem sonuçlarının günlük
+// doğrulaması.
 //
 // API yatayda çoğaltıldığında zamanlanmış işler her kopyada çalışmasın diye ayrı bir
 // süreçtir. Birden fazla worker da güvenle çalışabilir: outbox kayıtları
@@ -37,6 +38,7 @@ import (
 	"github.com/CAPELLAX02/agora/backend/internal/platform/metrics"
 	"github.com/CAPELLAX02/agora/backend/internal/platform/outbox"
 	"github.com/CAPELLAX02/agora/backend/internal/registration"
+	"github.com/CAPELLAX02/agora/backend/internal/reminders"
 )
 
 const (
@@ -45,7 +47,9 @@ const (
 	expireInterval = 10 * time.Minute
 	// İleri tarihli duyurular yayın zamanı gelince bildirilir.
 	announcementInterval = 15 * time.Second
-	maintenanceInterval  = 24 * time.Hour
+	// Pencere ve ödev hatırlatmaları (24 saat kala, bir kez).
+	reminderInterval    = 5 * time.Minute
+	maintenanceInterval = 24 * time.Hour
 	// Bağlanmayan dosyaların temizliği: saatte bir, bir günden eski olanlar.
 	fileCleanupInterval     = time.Hour
 	unattachedFileRetention = 24 * time.Hour
@@ -214,6 +218,20 @@ func run() error {
 	wg.Go(func() {
 		every(ctx, maintenanceInterval, func(ctx context.Context) {
 			maintain(ctx, pool, logger)
+		})
+	})
+	wg.Go(func() {
+		every(ctx, reminderInterval, func(ctx context.Context) {
+			r, err := reminders.Run(ctx, pool)
+			if err != nil {
+				if ctx.Err() == nil {
+					logger.Error("hatırlatmalar gönderilemedi", "err", err)
+				}
+				return
+			}
+			if n := r.Opening + r.Closing + r.AssignmentDue; n > 0 {
+				logger.Info("hatırlatmalar gönderildi", "opening", r.Opening, "closing", r.Closing, "assignment_due", r.AssignmentDue)
+			}
 		})
 	})
 	announcements := announce.NewService(pool, time.Now)
