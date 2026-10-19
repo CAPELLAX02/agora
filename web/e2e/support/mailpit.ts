@@ -28,3 +28,10 @@ export async function linkFromLatestEmail(to: string, since: Date): Promise<stri
     .not.toBe('')
   return link
 }
+
+/** subjectsSince, adrese since'ten sonra gelen e-postaların konularıdır (en yeni önce). */
+export async function subjectsSince(to: string, since: Date): Promise<string[]> {
+  const res = await fetch(`${mailpit}/api/v1/search?query=${encodeURIComponent(`to:${to}`)}&limit=20`)
+  const { messages } = (await res.json()) as { messages: (Summary & { Subject: string })[] }
+  return messages.filter((m) => new Date(m.Created) >= since).map((m) => m.Subject)
+}
